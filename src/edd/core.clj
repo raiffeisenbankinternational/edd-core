@@ -29,16 +29,16 @@
 (defn reg-event
   [ctx event-id reg-fn]
   (log/info "Registering apply" event-id)
-  (update ctx :apply
+  (update ctx :def-apply
           #(assoc % event-id reg-fn)))
 
 (defn reg-agg-filter
   [ctx reg-fn]
   (log/info "Registering aggregate filter")
   (assoc ctx :agg-filter
-         (conj
-          (get ctx :agg-filter [])
-          reg-fn)))
+             (conj
+               (get ctx :agg-filter [])
+               reg-fn)))
 
 (defn reg-query
   [ctx query-id reg-fn & {:keys [spec]}]
@@ -66,19 +66,18 @@
   [{:keys [body] :as ctx}]
   (log/debug "Dispatching" body)
   (assoc
-   ctx
-   :resp   (cond
-             (contains? body :apply) (event/handle-event
+    ctx
+    :resp (cond
+            (contains? body :apply) (event/handle-event (-> ctx
+                                                            (assoc :apply (:apply body))))
+            (contains? body :query) (query/handle-query
                                       ctx
                                       body)
-             (contains? body :query) (query/handle-query
-                                      ctx
-                                      body)
-             (contains? body :commands) (cmd/handle-commands
+            (contains? body :commands) (cmd/handle-commands
                                          ctx
                                          body)
-             (contains? body :error) body
-             :else {:error :invalid-request})))
+            (contains? body :error) body
+            :else {:error :invalid-request})))
 
 (defn filter-queue-request
   "If request is coming from queue we need to get out all request bodies"
@@ -101,15 +100,15 @@
                        {:result resp}
                        resp)]
     (assoc ctx
-           :resp (-> wrapped-resp
-                     (assoc
-                      :request-id (:request-id ctx)
-                      :interaction-id (:interaction-id ctx))))))
+      :resp (-> wrapped-resp
+                (assoc
+                  :request-id (:request-id ctx)
+                  :interaction-id (:interaction-id ctx))))))
 
 (defn prepare-request
   [{:keys [body] :as ctx}]
   (-> ctx
-      (assoc :request-id     (:request-id body)
+      (assoc :request-id (:request-id body)
              :interaction-id (:interaction-id body))))
 
 (def schema
@@ -130,9 +129,9 @@
   (if (m/validate schema body)
     ctx
     (assoc ctx
-           :body {:error (->> body
-                              (m/explain schema)
-                              (me/humanize))})))
+      :body {:error (->> body
+                         (m/explain schema)
+                         (me/humanize))})))
 
 (defn handler
   [ctx body]

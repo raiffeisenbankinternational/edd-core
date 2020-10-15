@@ -2,7 +2,9 @@
   (:require [clojure.test :refer :all]
             [clojure.tools.logging :as log]
             [lambda.util :as util]
-            [edd.test.fixture.search :as search-mock]
+            [edd.memory.view-store :as memory-view-store]
+            [edd.elastic.view-store :as elastic-view-store]
+            [edd.search :as search]
             [lambda.test.fixture.state :as state]
             [edd.search :as search]
             [lambda.elastic :as el]
@@ -54,8 +56,12 @@
           :body (util/to-json body)))
       (load-data local-ctx)
       (Thread/sleep 2000)
-      (let [el-result (search/advanced-search local-ctx q)
-            mock-result (search-mock/advanced-search local-ctx q)]
+      (let [el-result (search/advanced-search (-> local-ctx
+                                                  (elastic-view-store/register)
+                                                  (assoc :query q)))
+            mock-result (search/advanced-search (-> local-ctx
+                                                    (memory-view-store/register)
+                                                    (assoc :query q)))]
         (log/info el-result)
         (log/info mock-result)
         (el/query

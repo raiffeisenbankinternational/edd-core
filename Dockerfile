@@ -1,7 +1,7 @@
 ARG DOCKER_URL
 ARG DOCKER_ORG
 
-FROM ${DOCKER_URL}/${DOCKER_ORG}/common-img:b88
+FROM ${DOCKER_URL}/${DOCKER_ORG}/common-img:b93
 
 ARG DOCKER_URL
 ARG DOCKER_ORG
@@ -32,7 +32,7 @@ RUN set -e &&\
     echo "Found domain ${domain_name}" &&\
     domain_url=$(aws es describe-elasticsearch-domain --domain-name ${domain_name} | jq -r '.DomainStatus.Endpoints.vpc') &&\
     export IndexDomainEndpoint=$domain_url &&\
-    export DatabaseEndpoint=$(aws rds describe-db-instances --query 'DBInstances[].Endpoint.Address' --filter "Name=engine,Values=postgres" --output text) &&\
+    export DatabaseEndpoint="$(aws rds describe-db-instances --query 'DBInstances[].Endpoint.Address' --filter "Name=engine,Values=postgres" --output text)" &&\
     clj -A:test:it
 
 ARG BUILD_ID

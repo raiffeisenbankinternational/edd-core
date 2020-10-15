@@ -1,13 +1,13 @@
 (ns edd.search-test
   (:require [clojure.test :refer :all]
-            [edd.search :as search]))
+            [edd.elastic.view-store :as view-store]))
 
 (deftest sort-forming
   (is (= [{"a.keyword" {:order "asc"}}
           {"b.keyword" {:order "desc"}}
           {"c.number" {:order "asc"}}
           {"d.number" {:order "desc"}}]
-         (search/form-sorting
+         (view-store/form-sorting
           [:a :asc
            :b :desc
            :c :asc-number

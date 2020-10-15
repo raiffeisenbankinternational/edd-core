@@ -6,6 +6,7 @@
             [edd.el.cmd :as cmd]
             [edd.core :as edd]
             [lambda.test.fixture.client :as client]
+            [edd.memory.event-store :as event-store]
             [edd.test.fixture.dal :as mock]))
 
 (def cmd-id #uuid "11111eeb-e677-4d73-a10a-1d08b45fe4dd")
@@ -16,31 +17,32 @@
 (deftest test-prepare-context-for-command-with-remote-query
   "Test if context if properly prepared for remote queries"
   (mock/with-mock-dal
-    {:dps [{:service :remote-svc
+    {:dps [{:service        :remote-svc
             :request-id     request-id
             :interaction-id interaction-id
-            :query   {:param "Some Value"}
-            :resp    {:remote :response}}]}
+            :query          {:param "Some Value"}
+            :resp           {:remote :response}}]}
     (let [ctx (cmd/resolve-dependencies-to-context
-               {:dps            {:test-cmd
-                                 {:test-value {:query   (fn [cmd]
-                                                          {:param (:value cmd)})
-                                               :service :remote-svc}}}
-                :request-id     request-id
-                :interaction-id interaction-id}
-               {:commands [{:cmd-id :test-cmd
-                            :id     cmd-id
-                            :value  "Some Value"}]})]
+                (-> {:dps            {:test-cmd
+                                      {:test-value {:query   (fn [cmd]
+                                                               {:param (:value cmd)})
+                                                    :service :remote-svc}}}
+                     :commands       [{:cmd-id :test-cmd
+                                       :id     cmd-id
+                                       :value  "Some Value"}]
+                     :request-id     request-id
+                     :interaction-id interaction-id}
+                    (event-store/register)))]
       (is (= {:request-id     request-id
               :interaction-id interaction-id
               :dps-resolved   [{:test-value
                                 {:remote :response}}]}
-             (dissoc ctx :dps)))
+             (dissoc ctx :dps :commands :event-store)))
 
       (client/verify-traffic [{:body    (util/to-json
-                                         {:query          {:param "Some Value"}
-                                          :request-id     request-id
-                                          :interaction-id interaction-id})
+                                          {:query          {:param "Some Value"}
+                                           :request-id     request-id
+                                           :interaction-id interaction-id})
                                :headers {"X-Authorization" "#mock-id-token"
                                          "Content-Type"    "application/json"}
                                :method  :post
@@ -53,24 +55,24 @@
                 util/get-env (fn [v]
                                (get {"PrivateHostedZoneName" "mock.com"} v))]
     (client/mock-http
-     [{:post "https://some-remote-service.mock.com/query"
-       :body (util/to-json {:result {:a :b}})}]
-     (is (= {:a :b}
-            (cmd/resolve-remote-dependency
-             {:request-id     request-id
-              :interaction-id interaction-id}
-             {}
-             {:query   (fn [cmd] {:a :b})
-              :service :some-remote-service})))
-     (client/verify-traffic [{:body    (util/to-json
-                                        {:query          {:a :b}
-                                         :request-id     request-id
-                                         :interaction-id interaction-id})
-                              :headers {"X-Authorization" "#id-token"
-                                        "Content-Type"    "application/json"}
-                              :method  :post
-                              :timeout 10000
-                              :url     "https://some-remote-service.mock.com/query"}]))))
+      [{:post "https://some-remote-service.mock.com/query"
+        :body (util/to-json {:result {:a :b}})}]
+      (is (= {:a :b}
+             (cmd/resolve-remote-dependency
+               {:request-id     request-id
+                :interaction-id interaction-id}
+               {}
+               {:query   (fn [cmd] {:a :b})
+                :service :some-remote-service})))
+      (client/verify-traffic [{:body    (util/to-json
+                                          {:query          {:a :b}
+                                           :request-id     request-id
+                                           :interaction-id interaction-id})
+                               :headers {"X-Authorization" "#id-token"
+                                         "Content-Type"    "application/json"}
+                               :method  :post
+                               :timeout 10000
+                               :url     "https://some-remote-service.mock.com/query"}]))))
 
 
 
@@ -90,11 +92,11 @@
   {:cmd-id :cmd-2
    :id     cmd-id-2})
 
-(def ctx (-> {}
+(def ctx (-> mock/ctx
              (edd/reg-query :query-1 (fn [ctx query]
                                        (get
-                                        cmd-1-deps
-                                        (:id query))))
+                                         cmd-1-deps
+                                         (:id query))))
              (edd/reg-cmd :cmd-1 (fn [ctx cmd]
                                    {:event-id :event-1
                                     :value    (:value cmd)})
@@ -103,13 +105,27 @@
                           :id-fn (fn [ctx cmd]
                                    (get-in ctx [:c1 :id])))))
 
-(deftest test-id-fn
+(deftest if-fn-to-context-test
+  (is (= [cmd-1
+          {:cmd-id      :cmd-1
+           :value       :2
+           :id          cmd-id-deps
+           :original-id cmd-id-2}]
+         (:commands
+           (cmd/resolve-commands-id-fn (assoc ctx
+                                         :dps-resolved [{} {:c1 {:id cmd-id-deps}}]
+                                         :commands [cmd-1
+                                                    {:cmd-id :cmd-1
+                                                     :value  :2
+                                                     :id     cmd-id-2}]))))))
+
+(deftest test-id-fn-integration
   (mock/with-mock-dal
-    (cmd/get-commands-response ctx
-                               {:commands [cmd-1
-                                           {:cmd-id :cmd-1
-                                            :value  :2
-                                            :id     cmd-id-2}]})
+    (cmd/handle-commands ctx
+                         {:commands [cmd-1
+                                     {:cmd-id :cmd-1
+                                      :value  :2
+                                      :id     cmd-id-2}]})
     (mock/verify-state :event-store [{:event-id  :event-1
                                       :event-seq 1
                                       :value     :2

@@ -1,66 +1,77 @@
 (ns edd.el.event
   (:require
-   [clojure.tools.logging :as log]
-   [edd.dal :as dal]))
+    [edd.flow :refer :all]
+    [clojure.tools.logging :as log]
+    [edd.dal :as dal]
+    [edd.search :as search]))
 
 (defn apply-event
   [agr event func]
   (if func
     (assoc
-     (apply func [agr event])
-     :id
-     (:id event))))
+      (apply func [agr event])
+      :id
+      (:id event))))
 
 (defn get-current-state
-  [ctx agg-id]
-  (log/debug "Updating aggregates" agg-id)
-  (let [events (:events ctx)]
-    (log/debug "Events: " events)
+  [{:keys [id events] :as ctx}]
+  {:pre [id events]}
+  (log/debug "Updating aggregates" id)
+  (log/debug "Events: " events)
 
-    (if (> (count events) 0)
-      (let [result-aggregate (reduce
-                              (fn [agr event]
-                                (log/debug "Attempting to apply" event)
-                                (let [apply-functions (:apply ctx)
-                                      event-id (keyword (:event-id event))]
+  (cond
+    (:error events) (assoc ctx :error events)
+    (> (count events) 0) (let [result-aggregate (reduce
+                                                  (fn [agr event]
+                                                    (log/debug "Attempting to apply" event)
+                                                    (let [apply-functions (:def-apply ctx)
+                                                          event-id (keyword (:event-id event))]
 
-                                  (if (contains? apply-functions event-id)
-                                    (apply-event
-                                     agr
-                                     event
-                                     (event-id apply-functions))
-                                    agr)))
-                              nil
-                              events)]
-        (reduce
-         (fn [v f]
-           (f (assoc
-               ctx
-               :agg v)))
-         result-aggregate
-         (get ctx :agg-filter [])))
-      nil)))
+                                                      (if (contains? apply-functions event-id)
+                                                        (apply-event
+                                                          agr
+                                                          event
+                                                          (event-id apply-functions))
+                                                        agr)))
+                                                  nil
+                                                  events)]
+                           (log/info "RE" result-aggregate)
+                           (assoc
+                             ctx
+                             :aggregate (reduce
+                                          (fn [v f]
+                                            (f (assoc
+                                                 ctx
+                                                 :agg v)))
+                                          result-aggregate
+                                          (get ctx :agg-filter []))))
 
-(defn fetch-events-to-ctx
-  [ctx agg-id]
-  (dal/get-events ctx agg-id))
+    :else (assoc ctx :error :no-events-found)))
+
+(defn fetch-events
+  [ctx]
+  (let [events (-> ctx
+                   (assoc :id (get-in ctx [:apply :aggregate-id]))
+                   (dal/get-events))]
+    (assoc ctx :events events)))
+
+
+
+
+(defn summarize-result
+  [{:keys [aggregate]}]
+  (if aggregate
+    {:apply true}
+    {:error :no-aggregate-found}))
 
 (defn handle-event
-  [ctx body]
-  (let [agg-id (:aggregate-id (:apply body))
-        events (fetch-events-to-ctx ctx agg-id)]
-    (log/info "Updating aggregate " agg-id)
-    (log/info "Events" events)
-    (if (:error events)
-      events
-      (let [current-state (get-current-state
-                           (assoc ctx
-                                  :events
-                                  events)
-                           agg-id)]
-        (if current-state
-          (dal/update-aggregate ctx current-state)
-          {:apply true})))))
+  [{:keys [apply] :as ctx}]
+  (e-> ctx
+       (fetch-events)
+       (assoc :id (:aggregate-id apply))
+       (get-current-state)
+       (search/update-aggregate)
+       (summarize-result)))
 
 
 

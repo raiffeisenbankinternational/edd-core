@@ -2,15 +2,19 @@
   (:require
     [lambda.core :refer [handle-request]]
     [edd.el.cmd :as cmd]
+    [edd.memory.event-store :as event-store]
+    [edd.memory.view-store :as view-store]
+    [edd.test.fixture.dal :as mock]
     [edd.core :as edd]
     [edd.local :as local]
     [lambda.uuid :as uuid]))
 (use 'clojure.test)
 
 
-(defn register
-  [ctx]
-  (-> ctx
+(def ctx
+  (-> {}
+      (event-store/register)
+      (view-store/register)
       (edd/reg-cmd :create-1 (fn [ctx cmd]
                                [{:identity (:name cmd)
                                  :id       (:id cmd)}
@@ -25,57 +29,71 @@
                                   {:event-id :e3
                                    :name     "e3"})))))
 
+(defn register
+  [ctx]
+  )
+
 (deftest test-identity
-  (let [id (uuid/gen)
-        resp (cmd/get-response (register {})
-                               {:commands [{:cmd-id :create-1
-                                            :id     id
-                                            :name   "e1"}]})]
-    (is (= {:events
-                        [{:event-id :e1
-                          :name "e1"
-                          :event-seq 1
-                          :id id}],
-            :identities [{:identity "e1",
-                          :id       id}],
-            :sequences  []
-            :commands   []}
-           resp))))
+  (mock/with-mock-dal
+    (let [id (uuid/gen)
+          resp (mock/execute-cmd ctx
+                                 {:cmd-id :create-1
+                                  :id     id
+                                  :name   "e1"})]
+      (mock/verify-state :event-store [{:event-id  :e1
+                                        :name      "e1"
+                                        :event-seq 1
+                                        :id        id}])
+      (mock/verify-state :identity-store [{:identity "e1",
+                                           :id       id}])
+      (is (= {:effects    []
+              :events     1
+              :identities 1
+              :meta       [{:create-1 {:id id}}]
+              :sequences  0
+              :success    true}
+             resp)))))
 
 (deftest test-handler-returns-vector
   "Command response can contain nil, can return list or vector or map. We should handle it"
-  (let [id (uuid/gen)
-        resp (cmd/get-response (register {})
-                               {:commands [{:cmd-id :create-2
-                                            :id     id
-                                            :name   "e2"}]})]
-    (is (= {:events
-                        [{:event-id :e2
-                          :name "e2"
-                          :event-seq 1
-                          :id id}],
-            :identities [],
-            :sequences  [],
-            :commands   []}
-           resp))))
+  (mock/with-mock-dal
+    (let [id (uuid/gen)
+          resp (mock/execute-cmd ctx
+                                 {:cmd-id :create-2
+                                  :id     id
+                                  :name   "e2"})]
+      (mock/verify-state :event-store [{:event-id  :e2
+                                        :name      "e2"
+                                        :event-seq 1
+                                        :id        id}])
+      (is (= {:effects    []
+              :events     1
+              :identities 0
+              :meta      [{:create-2 {:id id}}]
+              :sequences  0
+              :success    true}
+             resp)))))
 
 
 (deftest test-handler-returns-list
   "Command response can contain nil, can return list or vector or map. We should handle it"
-  (let [id (uuid/gen)
-        resp (cmd/get-response (register {})
-                               {:commands [{:cmd-id :create-3
-                                            :id     id
-                                            :name   "e3"}]})]
-    (is (= {:events
-                        [{:event-id :e3
-                          :name "e3"
-                          :event-seq 1
-                          :id id}],
-            :identities [],
-            :sequences  [],
-            :commands   []}
-           resp))))
+  (mock/with-mock-dal
+    (let [id (uuid/gen)
+          resp (mock/execute-cmd ctx
+                                 {:cmd-id :create-3
+                                  :id     id
+                                  :name   "e3"})]
+      (mock/verify-state :event-store [{:event-id  :e3
+                                        :name      "e3"
+                                        :event-seq 1
+                                        :id        id}])
+      (is (= {:effects    []
+              :events     1
+              :identities 0
+              :meta       [{:create-3 {:id id}}]
+              :sequences  0
+              :success    true}
+             resp)))))
 
 (defn test-db
   []

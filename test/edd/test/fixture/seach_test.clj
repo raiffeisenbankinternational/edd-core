@@ -1,8 +1,9 @@
 (ns edd.test.fixture.seach-test
   (:require [clojure.test :refer :all]
-            [edd.search :refer [parse]]
+            [edd.search :refer [advanced-search parse]]
             [lambda.test.fixture.state :as state]
-            [edd.test.fixture.search :as search]))
+            [edd.test.fixture.dal :refer [ctx]]
+            [edd.memory.search :as search]))
 
 (deftest and-test-1
   (with-redefs [parse (fn [ctx p]
@@ -360,9 +361,11 @@
                        :c :d}]
               :size  50
               :total 1}
-             (search/advanced-search {} {:filter [:exists :a.b]})))
+             (advanced-search (assoc ctx
+                                :query {:filter [:exists :a.b]}))))
       (is (= {:from  0
               :hits  [{:c :d}]
               :size  50
               :total 1}
-             (search/advanced-search {} {:filter [:not [:exists :a]]}))))))
+             (advanced-search (assoc ctx
+                                :query {:filter [:not [:exists :a]]})))))))

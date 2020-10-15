@@ -14,11 +14,10 @@
                 dal/log-dps (fn [ctx] ctx)
                 dal/get-max-event-seq (fn [ctx id] 0)]
     (let [ctx (cmd/resolve-dependencies-to-context
-               {}
-               {:commands [{:cmd-id :test-cmd
-                            :id     cmd-id}]})]
+                {:commands [{:cmd-id :test-cmd
+                             :id     cmd-id}]})]
       (is (= {:dps-resolved [{}]}
-             ctx)))))
+             (dissoc ctx :commands))))))
 
 (deftest test-prepare-context-for-command-local
   "Test if context if properly prepared for local queries. If local query return nill
@@ -31,17 +30,19 @@
                 dal/log-dps (fn [ctx] ctx)
                 dal/get-max-event-seq (fn [ctx id] 0)]
     (let [ctx (cmd/resolve-dependencies-to-context
-               {:dps {:test-cmd
-                      {:test-value   (fn [cmd]
-                                       {:query-id :q1
-                                        :query    {}})
-                       :test-value-2 (fn [cmd]
-                                       {:query-id :q2
-                                        :query    {}})}}}
-               {:commands [{:cmd-id :test-cmd
-                            :id     cmd-id}]})]
+                {:dps      {:test-cmd
+                            {:test-value   (fn [cmd]
+                                             {:query-id :q1
+                                              :query    {}})
+                             :test-value-2 (fn [cmd]
+                                             {:query-id :q2
+                                              :query    {}})}}
+                 :commands [{:cmd-id :test-cmd
+                             :id     cmd-id}]})]
       (is (= {:dps-resolved [{:test-value {:response true}}]}
-             (dissoc ctx :dps))))))
+             (dissoc ctx
+                     :dps
+                     :commands))))))
 
 (def id-1 (uuid/gen))
 (def id-2 (uuid/gen))
@@ -49,23 +50,23 @@
 (deftest test-resolve-id
   "Test if id is properly resolved"
   (let [id (cmd/resolve-command-id
-            {}
-            {:cmd-id :dummy-cmd
-             :id     id-1}
-            0)]
+             {}
+             {:cmd-id :dummy-cmd
+              :id     id-1}
+             0)]
     (is (= id {:cmd-id :dummy-cmd
                :id     id-1}))))
 
 (deftest test-resolve-id-when-id-override-present
   "Test if id is properly resolved when override present"
   (let [id (cmd/resolve-command-id
-            {:id-fn        {:dummy-cmd (fn [ctx cmd] (+ (:dps-1 ctx)
-                                                        (:dps-2 ctx)))}
-             :dps-1        2
-             :dps-resolved [{:dps-2 3}]}
-            {:cmd-id :dummy-cmd
-             :id     id-1}
-            0)]
+             {:id-fn        {:dummy-cmd (fn [ctx cmd] (+ (:dps-1 ctx)
+                                                         (:dps-2 ctx)))}
+              :dps-1        2
+              :dps-resolved [{:dps-2 3}]}
+             {:cmd-id :dummy-cmd
+              :id     id-1}
+             0)]
     (is (= id {:cmd-id      :dummy-cmd
                :id          5
                :original-id id-1}))))
@@ -73,10 +74,10 @@
 (deftest test-resolve-id-when-id-override-returns-nil
   "Test if id is properly resolved when override method return nil, we should fallback to (:id cmd)"
   (let [id (cmd/resolve-command-id
-            {:id-fn {:dummy-cmd (fn [ctx cmd] nil)}}
-            {:cmd-id :dummy-cmd
-             :id     id-1}
-            0)]
+             {:id-fn {:dummy-cmd (fn [ctx cmd] nil)}}
+             {:cmd-id :dummy-cmd
+              :id     id-1}
+             0)]
     (is (= id {:cmd-id :dummy-cmd
                :id     id-1}))))
 

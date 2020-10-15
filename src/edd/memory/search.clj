@@ -1,9 +1,8 @@
-(ns edd.test.fixture.search
+(ns edd.memory.search
   (:require
     [clojure.pprint :refer [pprint]]
     [clojure.string :as str]
-    [edd.search :refer [parse]]
-    [edd.search :as search]
+    [edd.search :refer [advanced-search parse default-size]]
     [lambda.test.fixture.state :as state]))
 
 (defn to-keywords
@@ -170,21 +169,22 @@
 
     items))
 
-(defn advanced-search
-  [ctx q]
+(defn advanced-search-impl
+  [{:keys [query]}]
+  {:pre [query]}
   (let [state (->> @state/*dal-state*
                    (:aggregate-store))
-        apply-filter (if (:filter q)
-                       (parse mock (:filter q))
+        apply-filter (if (:filter query)
+                       (parse mock (:filter query))
                        (fn [%] true))
-        apply-search (if (:search q)
-                       (partial search-fn q)
+        apply-search (if (:search query)
+                       (partial search-fn query)
                        (fn [%] true))
-        apply-select (if (:select q)
-                       (partial select-fn q)
+        apply-select (if (:select query)
+                       (partial select-fn query)
                        (fn [%] %))
-        apply-sort (if (:sort q)
-                     (partial sort-fn q)
+        apply-sort (if (:sort query)
+                     (partial sort-fn query)
                      (fn [%] %))
         hits (->> state
                   (filter apply-filter)
@@ -192,13 +192,13 @@
                   (map apply-select)
                   (apply-sort)
                   (into []))
-        to (+ (get q :from 0)
-              (get q :size (count hits)))]
+        to (+ (get query :from 0)
+              (get query :size (count hits)))]
     {:total (count hits)
-     :from  (get q :from 0)
-     :size  (get q :size search/default-size)
+     :from  (get query :from 0)
+     :size  (get query :size default-size)
      :hits  (subvec hits
-                    (get q :from 0)
+                    (get query :from 0)
                     (if (> to (count hits))
                       (count hits)
                       to))}))

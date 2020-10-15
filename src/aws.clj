@@ -27,6 +27,10 @@
     (. DateTimeFormatter ofPattern "yyyyMMdd'T'HHmmss'Z'")
     (. OffsetDateTime now (. ZoneOffset UTC))))
 
+(defn authorize
+  [req]
+  (awssign/authorize req))
+
 (defn get-object
   [object]
   (let [req {:method     "GET"

@@ -1,83 +1,20 @@
 (ns edd.el.cmd
   (:require
+    [edd.flow :refer :all]
     [clojure.tools.logging :as log]
     [lambda.util :as util]
     [edd.dal :as dal]
     [edd.schema :as s]
     [edd.el.query :as query]
     [malli.core :as m]
-    [malli.error :as me]))
+    [aws :as aws]
+    [malli.error :as me]
+    [malli.util :as mu]))
 
-(defn wrap-commands
-  [ctx commands]
-  (if-not (contains? (into [] commands) :commands)
-    (into []
-          (map
-            (fn [cmd]
-              (if-not (contains? cmd :commands)
-                {:service  (:service-name ctx)
-                 :commands [cmd]}
-                cmd))
-            (if (map? commands)
-              [commands]
-              commands)))
-    [commands]))
 
-(defn store-commands
-  [ctx commands]
-  (log/debug "Storing effects" commands)
-  (let [clean-commands (->> commands
-                            (remove nil?)
-                            (wrap-commands ctx))]
 
-    (doall
-      (for [cmd clean-commands]
-        (dal/store-cmd ctx (assoc
-                             cmd
-                             :request-id (:request-id ctx)
-                             :interaction-id (:interaction-id ctx)))))
-    clean-commands))
 
-(defn store-events-in-realm
-  [ctx realm events]
-  (log/debug "Storing events in realm" (:id realm) (:name (:data realm)))
-  (doall
-    (for [event (flatten events)]
-      (dal/store-event ctx realm event)))
-  events)
 
-(defn store-identities
-  [ctx identities]
-  (log/debug "Storing identities" identities)
-  (doall
-    (for [ident identities]
-      (dal/store-identity ctx ident)))
-  identities)
-
-(defn store-sequences
-  [ctx sequences]
-  (log/debug "Storing sequences" sequences)
-  (doall
-    (for [sequence sequences]
-      (dal/store-sequence ctx sequence)))
-  sequences)
-
-(defn persist-events
-  [ctx resp]
-  (let [realm (dal/read-realm ctx)]
-    (let [response
-          {:events     (store-events-in-realm
-                         ctx
-                         realm
-                         (:events resp))
-
-           :identities (if (> (count (:identities resp)) 0)
-                         (store-identities ctx (:identities resp))
-                         [])
-           :commands   (store-commands
-                         ctx
-                         (:commands resp))}]
-      response)))
 
 (defn calc-service-url
   [service]
@@ -119,7 +56,7 @@
 (defn fetch-dependencies-for-command
   [ctx cmd]
   (let [cmd-id (:cmd-id cmd)
-        dps (cmd-id (:dps ctx))
+        dps (get-in ctx [:dps cmd-id] [])
         dps-value (reduce
                     (fn [p [key req]]
                       (log/debug "Query for dependency" key req)
@@ -136,16 +73,19 @@
     (update ctx :dps-resolved #(conj % dps-value))))
 
 (defn handle-effects
-  [ctx events]
-  (reduce
-    (fn [cmd fx]
-      (let [resp (fx ctx events)]
-        (into cmd
-              (if (map? resp)
-                [resp]
-                resp))))
-    []
-    (:fx ctx)))
+  [{:keys [resp] :as ctx}]
+  (let [events (:events resp)
+        effects (reduce
+                  (fn [cmd fx]
+                    (let [resp (fx ctx events)]
+                      (into cmd
+                            (if (map? resp)
+                              [resp]
+                              resp))))
+                  []
+                  (:fx ctx))
+        effects (flatten effects)]
+    (assoc-in ctx [:resp :commands] effects)))
 
 (defn to-clean-vector
   [resp]
@@ -157,24 +97,49 @@
       [resp]
       [])))
 
+(defn add-user-to-events
+  [{:keys [user] :as ctx}]
+  (if-not user
+    ctx
+    (update-in
+      ctx
+      [:resp :events]
+      (fn
+        [events]
+        (map #(assoc %
+                :user (:id user)
+                :role (:role user))
+             events)))))
+
 (defn handle-command
-  [ctx cmd]
+  [{:keys [idx cmd command-handlers] :as ctx}]
   (log/debug "Handling individual command" (:cmd-id cmd) cmd)
   (let [cmd-id (:cmd-id cmd)
-        command-handler (cmd-id (:command-handlers ctx))]
-    (log/debug "Discovered command handler" command-handler)
-    (if command-handler
-      (let [resp (command-handler
-                   ctx
-                   cmd)
-            respond-list (to-clean-vector resp)
-            assigned-id (map #(assoc
-                                %
-                                :id (:id cmd))
-                             respond-list)]
-        (log/debug "Handler response" resp)
-        {:events   assigned-id
-         :commands (handle-effects ctx (flatten assigned-id))}))))
+        command-handler (get command-handlers cmd-id (fn [_ _]
+                                                       {:error :handler-no-found}))
+        resp (->> ctx
+                  (merge (get-in ctx [:dps-resolved idx]))
+                  (#(command-handler % cmd))
+                  (to-clean-vector)
+                  (map #(assoc
+                          %
+                          :id (:id cmd)))
+                  (remove nil?)
+                  (reduce
+                    (fn [p event]
+                      (cond-> p
+                              (contains? event :error) (update :events conj event)
+                              (contains? event :identity) (update :identities conj event)
+                              (contains? event :sequence) (update :sequences conj event)
+                              (contains? event :event-id) (update :events conj event)))
+                    {:events     []
+                     :identities []
+                     :sequences  []}))]
+    (-> ctx
+        (assoc :resp resp)
+        (add-user-to-events)
+        (handle-effects)
+        (:resp))))
 
 (defn handle-identities
   [ctx events]
@@ -189,65 +154,45 @@
     sequence))
 
 (defn assign-events-seq
-  [ctx events]
-  (if (empty? events)
-    '()
-    (let [event (first events)
-          event-id (:id event)
-          current-seq (get-in ctx [:last-event-seq event-id] 0)]
-      (cons
-        (assoc event :event-seq (+ current-seq 1))
-        (assign-events-seq
-          (assoc-in ctx [:last-event-seq event-id] (+ current-seq 1))
-          (rest events))))))
+  [{:keys [resp] :as ctx}]
+  (assoc-in
+    ctx
+    [:resp :events]
+    (loop [c ctx
+           events (get resp :events '())
+           result []]
+      (if (empty? events)
+        result
+        (let [event (first events)
+              id (:id event)
+              current-seq (get-in c [:last-event-seq id] 0)
+              new-seq (inc current-seq)]
+          (recur
+            (assoc-in c [:last-event-seq id] new-seq)
+            (rest events)
+            (conj
+              result
+              (assoc event :event-seq new-seq)
+              )))))))
 
 (defn get-command-response
-  [ctx cmd idx]
-  (let [cmd-ctx (merge ctx
-                       (get-in ctx [:dps-resolved idx]))]
-    (->> cmd
-         (handle-command cmd-ctx))))
+  [{:keys [commands] :as ctx}]
+  (assoc ctx
+    :resp
+    (reduce-kv
+      (fn [p idx cmd]
+        (merge-with
+          concat
+          p
+          (handle-command (-> ctx
+                              (assoc :cmd cmd
+                                     :idx idx)))))
+      {:events     []
+       :commands   []
+       :sequences  []
+       :identities []}
+      (vec commands))))
 
-(defn add-user-to-events
-  [{:keys [user]} event]
-  (if user
-    (assoc event
-      :user (:id user)
-      :role (:role user))
-    event))
-
-(defn get-response
-  [ctx body]
-  (let [cmd-resp
-        (map-indexed
-          (fn [idx cmd]
-            (get-command-response ctx cmd idx))
-          (:commands body))
-        response-events (flatten (map #(:events %) cmd-resp))
-        cmd-identities (remove nil? (handle-identities ctx response-events))
-        cmd-sequences (remove nil? (handle-sequences ctx response-events))]
-
-    (log/debug "Response for all commands" cmd-resp)
-    (let [error (first
-                  (filter
-                    #(contains? % :error)
-                    response-events))
-          only-events (remove
-                        #(or (contains? % :identity)
-                             (contains? % :sequence))
-                        response-events)
-          assigned-event-seq (vec
-                               (assign-events-seq
-                                 ctx
-                                 only-events))]
-      (if error
-        error
-        {:events     (mapv
-                       (partial add-user-to-events ctx)
-                       assigned-event-seq)
-         :identities (into [] cmd-identities)
-         :sequences  (into [] cmd-sequences)
-         :commands   (into [] (flatten (map #(:commands %) cmd-resp)))}))))
 
 (defn resolve-command-id
   "Resolving command id. Taking into account override function of id.
@@ -270,15 +215,16 @@
           cmd))
       cmd)))
 
-(defn prepare-commands
-  [ctx body]
-  {:commands
-   (map-indexed
-     (fn [idx cmd] (resolve-command-id ctx cmd idx))
-     (:commands body))})
+(defn resolve-commands-id-fn
+  [{:keys [commands] :as ctx}]
+  (assoc ctx
+    :commands
+    (map-indexed
+      (fn [idx cmd] (resolve-command-id ctx cmd idx))
+      commands)))
 
 (defn fetch-event-sequences-for-commands
-  [ctx commands]
+  [{:keys [commands] :as ctx}]
   (reduce
     (fn [v cmd]
       (let [cmd-id (:cmd-id cmd)
@@ -286,99 +232,117 @@
         (log/debug "Fetching sequences for" cmd-id id)
         (assoc-in v [:last-event-seq id]
                   (dal/get-max-event-seq
-                    v
-                    id))))
+                    (assoc v :id id)))))
     ctx
-    (:commands commands)))
+    commands))
 
 (defn resolve-dependencies-to-context
-  [ctx body]
-  (log/debug "Context preparation started" body)
+  [{:keys [commands] :as ctx}]
+  (log/debug "Context preparation started" commands)
   (-> (reduce
         (fn [v cmd]
           (log/debug "Preparing context" cmd)
           (fetch-dependencies-for-command v cmd))
         (assoc ctx
           :dps-resolved [])
-        (:commands body))
+        commands)
       (dal/log-dps)))
 
-(defn persist-sequences
-  [ctx resp transaction-response]
-  (if-not (:error transaction-response)
-    (assoc transaction-response
-      :sequences (if (> (count (:sequences resp)) 0)
-                   (store-sequences ctx (:sequences resp))
-                   []))
-    transaction-response))
+
 
 (defn add-metadata
-  [ctx ready-body transaction-response]
-  (assoc transaction-response
-    :meta (reduce
-            (fn [v cmd]
-              (assoc v
-                (:cmd-id cmd) {:id (:id cmd)}))
-            {}
-            (:commands ready-body))))
+  [{:keys [resp commands] :as ctx}]
+  (assoc-in ctx
+            [:resp :meta]
+            (mapv
+              (fn [cmd]
+                {(:cmd-id cmd) {:id (:id cmd)}})
+              commands)))
 
-(defn validate-spec
-  [ctx body]
-  (reduce
-    #(and %1 (m/validate (get-in ctx [:spec (:cmd-id %2)]) %2))
-    true
-    (:commands body)))
+(def default-command-schema
+  [:map [:cmd-id keyword?]])
 
-(defn explain-spec
-  [ctx body]
-  {:error
-   (doall
-     (map
-       #(let [spec (get-in ctx [:spec (:cmd-id %)])]
-          (->> %
-               (m/explain spec)
-               (me/humanize)))
+(defn validate-commands
+  "Validate if commands match spec and if they are valid commands"
+  [{:keys [commands] :as ctx}]
+  (let [result (mapv
+                 (fn [{:keys [cmd-id] :as cmd}]
+                   (let [schema (get-in ctx [:spec cmd-id]
+                                        default-command-schema)
+                         schema (mu/merge default-command-schema
+                                          schema)]
+                     (if (m/validate schema cmd)
+                       :valid
+                       (->> cmd
+                            (m/explain schema)
+                            (me/humanize)))))
+                 commands)]
+    (cond-> ctx
+            (empty? commands) (assoc-in [:error :commands] :empty)
+            (some #(not= % :valid) result) (assoc-in [:error :spec] result))))
 
-       (:commands body)))})
+(defn set-response-summary
+  [{:keys [resp]}]
+  (if-not (:error resp)
+    {:success    true
+     :effects    (reduce
+                   (fn [p v]
+                     (concat
+                       p
+                       (map
+                         (fn [%] {:id           (:id %)
+                                  :cmd-id       (:cmd-id %)
+                                  :service-name (:service v)})
+                         (:commands v))))
+                   []
+                   (:commands resp))
+     :events     (count (:events resp))
+     :meta       (:meta resp)
+     :identities (count (:identities resp))
+     :sequences  (count (:sequences resp))}
+    resp))
+(defn check-for-errors
+  [{:keys [resp] :as ctx}]
+  (let [events (:events resp)
+        errors (filter #(contains? % :error) events)]
+    (if-not (empty? errors)
+      (assoc ctx :error errors)
+      ctx)))
 
-(defn get-commands-response
-  [ctx body]
-  (dal/log-request ctx)
-  (if (validate-spec ctx body)
-    (let [dps-context (resolve-dependencies-to-context ctx body)
-          ready-body (prepare-commands dps-context body)
-          ready-context (fetch-event-sequences-for-commands dps-context ready-body)
-          resp (get-response
-                 ready-context
-                 ready-body)]
+(defn wrap-commands
+  [ctx commands]
+  (if-not (contains? (into [] commands) :commands)
+    (into []
+          (map
+            (fn [cmd]
+              (if-not (contains? cmd :commands)
+                {:service  (:service-name ctx)
+                 :commands [cmd]}
+                cmd))
+            (if (map? commands)
+              [commands]
+              commands)))
+    [commands]))
 
-      (if-not (:error resp)
-        (->> (dal/with-transaction
-               ready-context
-               #(persist-events % resp))
-             (persist-sequences ready-context resp)
-             (add-metadata ready-context ready-body))
-        resp))
-    (explain-spec ctx body)))
+(defn clean-effects
+  [ctx]
+  (update-in ctx [:resp :commands]
+             (fn [effects]
+               (->> effects
+                    (remove nil?)
+                    (wrap-commands ctx)))))
 
 (defn handle-commands
   [ctx body]
-  (let [resp (get-commands-response ctx body)]
-    (if-not (:error resp)
-      {:success    true
-       :fx         (reduce
-                     (fn [p v]
-                       (concat
-                         p
-                         (map
-                           (fn [%] {:id           (:id %)
-                                    :cmd-id       (:cmd-id %)
-                                    :service-name (:service v)})
-                           (:commands v))))
-                     []
-                     (:commands resp))
-       :events     (count (:events resp))
-       :meta       (:meta resp)
-       :identities (count (:identities resp))
-       :sequences  (count (:sequences resp))}
-      resp)))
+  (e-> (assoc ctx :commands (:commands body))
+       (validate-commands)
+       (resolve-dependencies-to-context)
+       (resolve-commands-id-fn)
+       (fetch-event-sequences-for-commands)
+       (get-command-response)
+       (check-for-errors)
+       (assign-events-seq)
+       (clean-effects)
+       (dal/store-results)
+       (add-metadata)
+       (set-response-summary)))

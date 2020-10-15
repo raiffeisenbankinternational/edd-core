@@ -1,15 +1,17 @@
 (ns edd.sequence-test
   (:require
-   [lambda.core :refer [handle-request]]
-   [edd.el.cmd :as cmd]
-   [edd.core :as edd]
-   [edd.core-test :as edd-test]
-   [edd.local :as local]
-   [lambda.uuid :as uuid]))
-(use 'clojure.test)
+    [clojure.test :refer :all]
+    [lambda.core :refer [handle-request]]
+    [edd.test.fixture.dal :as mock]
+    [edd.core :as edd]
+    [edd.memory.view-store :as view-store]
+    [edd.memory.event-store :as event-store]
+    [lambda.uuid :as uuid]))
 
-(defn register [ctx]
-  (-> ctx
+(def ctx
+  (-> {}
+      (view-store/register)
+      (event-store/register)
       (edd/reg-cmd :create-1 (fn [ctx cmd]
                                [{:sequence :limit-application
                                  :id       (:id cmd)}
@@ -17,17 +19,20 @@
                                  :name     (:name cmd)}]))))
 
 (deftest test-sequence-generation
-  (let [id (uuid/gen)
-        resp (cmd/get-response (register {})
-                               {:commands [{:cmd-id :create-1
-                                            :id     id
-                                            :name   "e1"}]})]
-    (is (= {:events     [{:event-id  :e1
-                          :name      "e1"
-                          :id        id
-                          :event-seq 1}],
-            :identities [],
-            :sequences  [{:sequence :limit-application
-                          :id       id}]
-            :commands   []}
-           resp))))
+  (mock/with-mock-dal
+    (let [id (uuid/gen)
+          resp (mock/execute-cmd
+                 ctx
+                 {:cmd-id :create-1
+                  :id     id
+                  :name   "e1"})]
+
+      (mock/verify-state :sequence-store [{:value 1
+                                           :id    id}])
+      (is (= {:effects    []
+              :events     1
+              :identities 0
+              :meta      [{:create-1 {:id id}}]
+              :sequences  1
+              :success    true}
+             resp)))))
