@@ -2,6 +2,7 @@
 
 Simple lib to support building Event-Sourcing applications. 
 
+
 ## Philosophy
 <blockquote>
   It is not a framework!
