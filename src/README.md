@@ -35,14 +35,43 @@ Currently, implementations supports following event store implementation:
 Currently, only one aggregate store is supported:
 * ElasticSearch
 
+# Architecture
 
->![Diagram](diagrams/1.svg)
-## Commands
-To register commands user `reg-cmd`
+```puml
+@startuml;
 
+interface "Command" as CMD
+component "Service" as S1
+
+database "EventStorage" {
+  component "Postgres or DynamoDB" as EDB
+}
+
+database "AgragateStorage" {
+  component ElasticSearch as ADB
+}
+
+queue "EventsQueue" as EQ 
+
+CMD --> [S1] : 1.
+S1 --> EDB :2.
+EDB -> EQ : 3. (CDC, Async)
+EQ -u-> S1 :4.
+S1 -d-> ADB :5.
+
+@enduml
 ```
-==>(:require 
-       [edd.]))
+
+## Commands
+To register commands user `edd.core/reg-cmd`
+
+``` clojure
+(:require 
+  [edd.core :as edd]))
+
+(edd/reg-cmd :some-command 
+   (fn [ctx cmd]
+      (implementation here))
 ```
 
 ## JSON Serialization and De-Serialization

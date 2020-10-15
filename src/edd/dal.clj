@@ -24,9 +24,9 @@
 (defn read-realm
   [ctx]
   (jdbc/execute-one!
-   (:con ctx)
-   ["SELECT * FROM glms.realm LIMIT 1"]
-   {:builder-fn rs/as-unqualified-lower-maps}))
+    (:con ctx)
+    ["SELECT * FROM glms.realm LIMIT 1"]
+    {:builder-fn rs/as-unqualified-lower-maps}))
 
 (defn store-event
   [ctx realm event]
@@ -67,12 +67,12 @@
                                                           data)
                             VALUES (?,?,?,?,?)"])
           params (map-indexed
-                  (fn [idx itm] [request-id
-                                 interaction-id
-                                 service-name
-                                 idx
-                                 itm])
-                  (:commands body))]
+                   (fn [idx itm] [request-id
+                                  interaction-id
+                                  service-name
+                                  idx
+                                  itm])
+                   (:commands body))]
       (p/execute-batch! ps params))))
 
 (defn log-dps
@@ -87,12 +87,12 @@
                                                           data)
                             VALUES (?,?,?,?,?)"])
           params (map-indexed
-                  (fn [idx itm] [request-id
-                                 interaction-id
-                                 service-name
-                                 idx
-                                 itm])
-                  dps-resolved)]
+                   (fn [idx itm] [request-id
+                                  interaction-id
+                                  service-name
+                                  idx
+                                  itm])
+                   dps-resolved)]
       (p/execute-batch! ps params))
     ctx))
 
@@ -144,14 +144,14 @@
   {:pre [(:id query)]}
   (let [service-name (:service-name ctx)
         result (jdbc/execute-one!
-                (:con ctx)
-                ["SELECT value
+                 (:con ctx)
+                 ["SELECT value
                      FROM glms.sequence_store
                     WHERE aggregate_id = ?
                       AND service_name = ?"
-                 (:id query)
-                 service-name]
-                {:builder-fn rs/as-unqualified-lower-maps})]
+                  (:id query)
+                  service-name]
+                 {:builder-fn rs/as-unqualified-lower-maps})]
     (:value result)))
 
 (defn query-id-for-sequence-number
@@ -159,14 +159,14 @@
   {:pre [(:value query)]}
   (let [service-name (:service-name ctx)
         result (jdbc/execute-one!
-                (:con ctx)
-                ["SELECT aggregate_id
+                 (:con ctx)
+                 ["SELECT aggregate_id
                      FROM glms.sequence_store
                     WHERE value = ?
                       AND service_name = ?"
-                 (:value query)
-                 service-name]
-                {:builder-fn rs/as-unqualified-lower-maps})]
+                  (:value query)
+                  service-name]
+                 {:builder-fn rs/as-unqualified-lower-maps})]
     (:aggregate_id result)))
 
 (defn get-events
@@ -182,25 +182,26 @@
     (if (:error data)
       data
       (flatten
-       (rest
-         data)))))
+        (rest
+          data)))))
 
 (defn get-max-event-seq
   [ctx id]
   (log/debug "Fetching max event-seq for aggregate" id)
   (:max
-   (jdbc/execute-one! (:con ctx)
-                      ["SELECT COALESCE(MAX(event_seq), 0) AS max
+    (jdbc/execute-one! (:con ctx)
+                       ["SELECT COALESCE(MAX(event_seq), 0) AS max
                          FROM glms.event_store WHERE aggregate_id=?" id]
-                      {:builder-fn rs/as-unqualified-lower-maps})))
+                       {:builder-fn rs/as-unqualified-lower-maps})))
 
 (defn update-aggregate
   [ctx agr]
   (log/debug "Updating aggregate" agr)
   (let [index (str/replace (:service-name ctx) "-" "_")]
-    (elastic/query "POST"
-                   (str "/" index "/_doc/" (:id agr))
-                   (util/to-json agr))))
+    (elastic/query (assoc ctx
+                     :method "POST"
+                     :path (str "/" index "/_doc/" (:id agr))
+                     :body (util/to-json agr)))))
 
 (defn flatten-paths
   ([m separator]
@@ -223,13 +224,13 @@
 (defn create-simple-query
   [query]
   (util/to-json
-   {:size  600
-    :query {:bool
-            {:must (mapv
-                    (fn [%]
-                      {:term {(add-to-keyword (first %) ".keyword")
-                              (second %)}})
-                    (seq (flatten-paths query ".")))}}}))
+    {:size  600
+     :query {:bool
+             {:must (mapv
+                      (fn [%]
+                        {:term {(add-to-keyword (first %) ".keyword")
+                                (second %)}})
+                      (seq (flatten-paths query ".")))}}}))
 
 (defn simple-search
   [ctx query]
@@ -238,22 +239,26 @@
                                 (:service-name ctx)) "-" "_")
         param (dissoc query :query-id)
         body (elastic/query
-              "POST"
-              (str "/" index "/_search")
-              (create-simple-query param))]
-
+               (assoc ctx
+                 :method "POST"
+                 :path (str "/" index "/_search")
+                 :body (create-simple-query param)))]
     (mapv
-     (fn [%]
-       (get % :_source))
-     (get-in
-      body
-      [:hits :hits]
-      []))))
+      (fn [%]
+        (get % :_source))
+      (get-in
+        body
+        [:hits :hits]
+        []))))
 
 (defn with-transaction
   [ctx func]
   (jdbc/with-transaction
     [tx (:con ctx)]
     (try-to-data
-     #(func
-       (assoc ctx :con tx)))))
+      #(func
+         (assoc ctx :con tx)))))
+
+
+(def dal
+  {})

@@ -3,53 +3,65 @@
             [clojure.tools.logging :as log]
             [lambda.util :as util]
             [edd.test.fixture.search :as search-mock]
-            [edd.test.fixture.dal :as dal-mock]
-            [edd.test.fixture.state :as state]
+            [lambda.test.fixture.state :as state]
             [edd.search :as search]
-            [clojure.pprint :refer [pprint]]
             [lambda.elastic :as el]
             [lambda.uuid :as uuid]
             [clojure.string :as str]))
 
+(def ctx
+  {:elastic-search {:url (util/get-env "IndexDomainEndpoint")}
+   :aws            {:region                (util/get-env "AWS_DEFAULT_REGION")
+                    :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID")
+                    :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY")
+                    :aws-session-token     (util/get-env "AWS_SESSION_TOKEN")}})
 (defn load-data
   [ctx]
   (doseq [i (:aggregate-store @state/*dal-state*)]
-    (pprint (el/query
-             "POST"
-             (str "/" (:service-name ctx) "/_doc")
-             (util/to-json
-              i)))))
+    (log/info (el/query
+                (assoc ctx
+                  :method "POST"
+                  :path (str "/" (:service-name ctx) "/_doc")
+                  :body (util/to-json
+                          i))))))
 
 (defn test-query
   [data q]
   (binding [state/*dal-state* (atom {:aggregate-store data})]
     (let [service-name (str/replace (str "test-" (uuid/gen)) "-" "_")
-          ctx {:service-name service-name}]
+          local-ctx (assoc ctx :service-name service-name)
+          body {:settings
+                {:index
+                 {:number_of_shards   1
+                  :number_of_replicas 0}}
+                :mappings
+                {:dynamic_templates
+                 [{:integers
+                   {:match_mapping_type "long",
+                    :mapping
+                                        {:type "integer",
+                                         :fields
+                                               {:number {:type "long"},
+                                                :keyword
+                                                        {:type         "keyword",
+                                                         :ignore_above 256}}}}}]}}]
+
       (log/info "Index name" service-name)
       (el/query
-       "PUT"
-       (str "/" service-name)
-       (util/to-json {:settings
-                      {:index
-                       {:number_of_shards   1
-                        :number_of_replicas 1}}
-                      :mappings
-                      {:dynamic_templates
-                       [{:integers
-                         {:match_mapping_type "long",
-                          :mapping
-                          {:type "integer",
-                           :fields
-                           {:number {:type "long"},
-                            :keyword
-                            {:type         "keyword",
-                             :ignore_above 256}}}}}]}}))
-      (load-data ctx)
+        (assoc local-ctx
+          :method "PUT"
+          :path (str "/" service-name)
+          :body (util/to-json body)))
+      (load-data local-ctx)
       (Thread/sleep 2000)
-      (let [el-result (search/advanced-search ctx q)
-            mock-result (search-mock/advanced-search ctx q)]
-        (pprint el-result)
-        (pprint mock-result)
+      (let [el-result (search/advanced-search local-ctx q)
+            mock-result (search-mock/advanced-search local-ctx q)]
+        (log/info el-result)
+        (log/info mock-result)
+        (el/query
+          (assoc local-ctx
+            :method "DELETE"
+            :path (str "/" service-name)))
         [el-result mock-result]))))
 
 (deftest test-elastic-mock-parity-1
@@ -466,7 +478,7 @@
                        :top-gcc-id    #uuid "2222a4b3-1c40-48ec-b6c9-b9cceeea6bb8"}}
               {:attrs {:top-parent-id #uuid "2222a4b3-1c40-48ec-b6c9-b9cceeea6bb8"
                        :top-gcc-id    #uuid "8888a4b3-1c40-48ec-b6c9-b9cceeea6bb8"}}]
-        query {:filter [:exists :top-parent-id]}
+        query {:filter [:exists :attrs.top-parent-id]}
         expected {:total 4
                   :from  0
                   :size  50
@@ -486,7 +498,7 @@
                        :top-gcc-id    #uuid "2222a4b3-1c40-48ec-b6c9-b9cceeea6bb8"}}
               {:attrs {:top-parent-id #uuid "2222a4b3-1c40-48ec-b6c9-b9cceeea6bb8"
                        :top-gcc-id    #uuid "8888a4b3-1c40-48ec-b6c9-b9cceeea6bb8"}}]
-        query {:filter [:not [:exists :top-parent-id]]}
+        query {:filter [:not [:exists :attrs.top-parent-id]]}
         expected {:total 0
                   :from  0
                   :size  50

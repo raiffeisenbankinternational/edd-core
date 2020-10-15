@@ -85,6 +85,15 @@
       (assoc resp
         :body (to-edn (:body resp))))))
 
+(defn http-delete
+  [url request & {:keys [raw]}]
+  (let [resp @(http/delete url request)]
+    (log/debug "Response" resp)
+    (if raw
+      resp
+      (assoc resp
+        :body (to-edn (:body resp))))))
+
 (defn http-put
   [url request & {:keys [raw]}]
   (log/debug url request)

@@ -1,45 +1,45 @@
 (ns edd.test.fixture.search
   (:require
-   [clojure.pprint :refer [pprint]]
-   [clojure.string :as str]
-   [edd.search :refer [parse]]
-   [edd.search :as search]
-   [lambda.test.fixture.state :as state]))
+    [clojure.pprint :refer [pprint]]
+    [clojure.string :as str]
+    [edd.search :refer [parse]]
+    [edd.search :as search]
+    [lambda.test.fixture.state :as state]))
 
 (defn to-keywords
   [a]
   (cond
     (keyword? a) (to-keywords (name a))
     (vector? a) (vec
-                 (reduce
-                  (fn [v p]
-                    (concat v (to-keywords p)))
-                  []
-                  a))
+                  (reduce
+                    (fn [v p]
+                      (concat v (to-keywords p)))
+                    []
+                    a))
     :else (map
-           keyword
-           (remove
-            empty?
-            (str/split a #"\.")))))
+            keyword
+            (remove
+              empty?
+              (str/split a #"\.")))))
 
 (defn and-fn
   [ctx & r]
   (fn [%]
     (let [result (every?
-                  (fn [p]
-                    (let [rest-fn (parse ctx p)]
-                      (rest-fn %)))
-                  r)]
+                   (fn [p]
+                     (let [rest-fn (parse ctx p)]
+                       (rest-fn %)))
+                   r)]
       result)))
 
 (defn or-fn
   [mock & r]
   (fn [%]
     (let [result (some
-                  (fn [p]
-                    (let [rest-fn (parse mock p)]
-                      (rest-fn %)))
-                  r)]
+                   (fn [p]
+                     (let [rest-fn (parse mock p)]
+                       (rest-fn %)))
+                   r)]
       (if result
         result
         false))))
@@ -66,17 +66,23 @@
     (let [keys (to-keywords key)
           value (get-in p keys)]
       (if (some
-           #(= % value)
-           values)
+            #(= % value)
+            values)
         true
         false))))
+(defn exists-fn
+  [_ key & [values]]
+  (fn [p]
+    (let [keys (to-keywords key)]
+      (not= (get-in p keys :nil) :nil))))
 
 (def mock
-  {:and and-fn
-   :or  or-fn
-   :eq  eq-fn
-   :not not-fn
-   :in  in-fn})
+  {:and    and-fn
+   :or     or-fn
+   :exists exists-fn
+   :eq     eq-fn
+   :not    not-fn
+   :in     in-fn})
 
 (defn search-fn
   [q p]
@@ -85,10 +91,10 @@
     (pprint fields)
     (pprint value)
     (if (some
-         #(let [v (get-in p (to-keywords %) "")]
-            (println v (str (.contains v value)))
-            (.contains v value))
-         fields)
+          #(let [v (get-in p (to-keywords %) "")]
+             (println v (str (.contains v value)))
+             (.contains v value))
+          fields)
       true
       false)))
 
@@ -96,30 +102,30 @@
   [p]
   (cond
     (string? p) (map
-                 keyword
-                 (str/split p #"\."))
-    (keyword? p) (map
                   keyword
-                  (str/split (name p) #"\."))))
+                  (str/split p #"\."))
+    (keyword? p) (map
+                   keyword
+                   (str/split (name p) #"\."))))
 
 (defn select-fn
   [q %]
   (reduce
-   (fn [v p]
-     (assoc-in v p
-               (get-in % p)))
-   {}
-   (map
-    field-to-kw-list
-    (get q :select []))))
+    (fn [v p]
+      (assoc-in v p
+                (get-in % p)))
+    {}
+    (map
+      field-to-kw-list
+      (get q :select []))))
 
 (defn get-items
   [q item]
   (reduce
-   (fn [p v]
-     (str p (get-in item (to-keywords v))))
-   ""
-   (:sort q)))
+    (fn [p v]
+      (str p (get-in item (to-keywords v))))
+    ""
+    (:sort q)))
 
 (defn compare-as-number
   [a b]
@@ -146,7 +152,7 @@
     (cond
       (empty? attrs) 0
       (= value_a value_b) (compare-item
-                           (rest attrs) a b)
+                            (rest attrs) a b)
       (= order :asc) (compare value_a value_b)
       (= order :desc) (- (compare value_a value_b))
       (= order :desc-number) (- (compare-as-number value_a value_b))
@@ -155,14 +161,14 @@
 (defn sort-fn
   [q items]
   (sort
-   (fn [a b]
-     (let [attrs (mapv
-                  (fn [[k v]]
-                    [(to-keywords k) (keyword v)])
-                  (partition 2 (:sort q)))]
-       (compare-item attrs a b)))
+    (fn [a b]
+      (let [attrs (mapv
+                    (fn [[k v]]
+                      [(to-keywords k) (keyword v)])
+                    (partition 2 (:sort q)))]
+        (compare-item attrs a b)))
 
-   items))
+    items))
 
 (defn advanced-search
   [ctx q]

@@ -27,27 +27,27 @@
   (get (System/getenv) name default))
 
 (defn query
-  [method path body]
-  (let [req {:method     method
-             :uri        path
-             :query      ""
-             :payload    body
-             :headers    {"Host"         (util/get-env "IndexDomainEndpoint")
-                          "Content-Type" "application/json"
-                          "X-Amz-Date"   (create-date)}
-             :service    "es"
-             :region     "eu-central-1"
-             :access-key (util/get-env "AWS_ACCESS_KEY_ID")
-             :secret-key (util/get-env "AWS_SECRET_ACCESS_KEY")}
+  [{:keys [method path body elastic-search aws]}]
+  (let [req (cond-> {:method     method
+                     :uri        path
+                     :query      ""
+                     :headers    {"Host"         (:url elastic-search)
+                                  "Content-Type" "application/json"
+                                  "X-Amz-Date"   (create-date)}
+                     :service    "es"
+                     :region     (:region aws)
+                     :access-key (:aws-access-key-id aws)
+                     :secret-key (:aws-secret-access-key aws)}
+                    body (assoc :payload body))
         auth (awssign/authorize req)
-        body {:body      (:payload req)
-              :headers   (-> (:headers req)
-                             (dissoc "Host")
-                             (assoc
-                               "X-Amz-Security-Token" (util/get-env "AWS_SESSION_TOKEN")
-                               "Authorization" auth))
-              :timeout   10000
-              :keepalive 300000}]
+        body (cond-> {:headers   (-> (:headers req)
+                                     (dissoc "Host")
+                                     (assoc
+                                       "X-Amz-Security-Token" (:aws-session-token aws)
+                                       "Authorization" auth))
+                      :timeout   10000
+                      :keepalive 300000}
+                     body (assoc :body body))]
 
     (let [url (str "https://"
                    (get (:headers req) "Host")
@@ -60,7 +60,11 @@
                      (= method "PUT") (util/http-put
                                         url
                                         body
-                                        :raw true))]
+                                        :raw true)
+                     (= method "DELETE") (util/http-delete
+                                           url
+                                           body
+                                           :raw true))]
       (log/info "Auth response" (:error response) (:status response))
       (log/info response)
       (cond

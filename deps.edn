@@ -18,8 +18,10 @@
                                     "-m" "--copy-source "]},
            :test     {:extra-paths ["test"],
                       :extra-deps  {org.clojure/test.check {:mvn/version "1.0.0"}}},
-           :runner   {:extra-deps {lambdaisland/kaocha {:mvn/version "1.0.700"}},
-                      :main-opts  ["-m" "kaocha.runner"]}
+           :unit     {:extra-deps {lambdaisland/kaocha {:mvn/version "1.0.700"}},
+                      :main-opts  ["-m" "kaocha.runner", "unit"]}
+           :it       {:extra-deps {lambdaisland/kaocha {:mvn/version "1.0.700"}},
+                      :main-opts  ["-m" "kaocha.runner", "it"]}
            :readme   {:extra-paths ["target/src"]
                       :extra-deps  {alpha-prosoft/readme {:mvn/version "1.7"}}
                       :main-opts   ["-m" "seancorfield.readme"]}
