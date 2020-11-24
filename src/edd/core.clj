@@ -10,7 +10,9 @@
             [lambda.uuid :as uuid]
             [malli.util :as mu]
             [malli.error :as me]
-            [malli.core :as m]))
+            [malli.core :as m]
+            [edd.dal :as dal]
+            [edd.search :as search]))
 
 (defn reg-cmd
   [ctx cmd-id reg-fn & {:keys [dps id-fn spec]}]
@@ -52,15 +54,7 @@
   (update ctx :fx
           #(conj % reg-fn)))
 
-(defn with-db-con
-  [handler & params]
-  (let [ctx (db/init {:service-name (get (System/getenv)
-                                         "ServiceName"
-                                         "local-test")})]
-    (with-open [con (jdbc/get-connection (:ds ctx))]
-      (if params
-        (apply handler (conj params (assoc ctx :con con)))
-        (handler (assoc ctx :con con))))))
+
 
 (defn dispatch-request
   [{:keys [body] :as ctx}]
@@ -133,14 +127,23 @@
                          (m/explain schema)
                          (me/humanize))})))
 
+(defn with-stores
+  [ctx body-fn]
+  (search/with-init
+    ctx
+    #(dal/with-init
+       % body-fn)))
+
 (defn handler
   [ctx body]
   (log/debug "Handler body" body)
   (log/debug "Context" ctx)
-  (-> (assoc ctx :body body)
-      (filter-queue-request)
-      (validate-request)
-      (prepare-request)
-      (dispatch-request)
-      (prepare-response)
-      (:resp)))
+  (with-stores
+    ctx
+    #(-> (assoc % :body body)
+         (filter-queue-request)
+         (validate-request)
+         (prepare-request)
+         (dispatch-request)
+         (prepare-response)
+         (:resp))))

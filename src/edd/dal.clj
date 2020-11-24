@@ -1,4 +1,5 @@
-(ns edd.dal)
+(ns edd.dal
+  (:require [clojure.tools.logging :as log]))
 
 
 (defmulti get-events
@@ -38,3 +39,12 @@
 (defmulti store-results
           (fn [ctx] (:event-store ctx)))
 
+
+(defmulti with-init
+          (fn [ctx body-fn] (:event-store ctx)))
+
+(defmethod with-init
+  :default
+  [ctx body-fn]
+  (log/info "Default event init")
+  (body-fn ctx))

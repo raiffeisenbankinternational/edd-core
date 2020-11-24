@@ -2,72 +2,87 @@
   (:require [clojure.test :refer :all]
             [clojure.tools.logging :as log]
             [lambda.util :as util]
-            [edd.memory.view-store :as memory-view-store]
-            [edd.elastic.view-store :as elastic-view-store]
-            [edd.dal :as dal]
-            [lambda.test.fixture.state :as state]
-            [edd.search :as search]
-            [lambda.elastic :as el]
             [lambda.uuid :as uuid]
-            [clojure.string :as str]))
+            [edd.dal :as dal]
+            [edd.memory.event-store :as memory]
+            [edd.postgres.event-store :as postgres]
+            [edd.dynamodb.event-store :as dynamodb]
+            [lambda.test.fixture.state :as state]
+            [edd.core :as edd]))
 
 (def ctx
-  {:elastic-search {:url (util/get-env "IndexDomainEndpoint")}
-   :aws            {:region                (util/get-env "AWS_DEFAULT_REGION")
-                    :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID")
-                    :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY")
-                    :aws-session-token     (util/get-env "AWS_SESSION_TOKEN")}})
-(defn load-data
-  [ctx]
-  (doseq [i (:aggregate-store @state/*dal-state*)]
-    (log/info (el/query
-                (assoc ctx
-                  :method "POST"
-                  :path (str "/" (:service-name ctx) "/_doc")
-                  :body (util/to-json
-                          i))))))
+  {:service-name           "alpha-dynamodb-svc"
+   :environment-name-lower "pipeline"
+   :elastic-search         {:url (util/get-env "IndexDomainEndpoint")}
+   :db                     {:endpoint (util/get-env "DatabaseEndpoint")
+                            :port     "5432"
+                            :password (util/get-env "DatabasePassword")}
+   :aws                    {:region                (util/get-env "AWS_DEFAULT_REGION")
+                            :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID")
+                            :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY")
+                            :aws-session-token     (util/get-env "AWS_SESSION_TOKEN")}})
 
-(defn test-query
-  [data q]
-  (binding [state/*dal-state* (atom {:aggregate-store data})]
-    (let [service-name (str/replace (str "test-" (uuid/gen)) "-" "_")
-          local-ctx (assoc ctx :service-name service-name)
-          body {:settings
-                {:index
-                 {:number_of_shards   1
-                  :number_of_replicas 0}}
-                :mappings
-                {:dynamic_templates
-                 [{:integers
-                   {:match_mapping_type "long",
-                    :mapping
-                                        {:type "integer",
-                                         :fields
-                                               {:number {:type "long"},
-                                                :keyword
-                                                        {:type         "keyword",
-                                                         :ignore_above 256}}}}}]}}]
+(def agg-id (uuid/gen))
+(def agg-id-2 (uuid/gen))
 
-      (log/info "Index name" service-name)
-      (el/query
-        (assoc local-ctx
-          :method "PUT"
-          :path (str "/" service-name)
-          :body (util/to-json body)))
-      (load-data local-ctx)
-      (Thread/sleep 2000)
-      (let [el-result (search/advanced-search (-> local-ctx
-                                                  (elastic-view-store/register)
-                                                  (assoc :query q)))
-            mock-result (search/advanced-search (-> local-ctx
-                                                    (memory-view-store/register)
-                                                    (assoc :query q)))]
-        (log/info el-result)
-        (log/info mock-result)
-        (el/query
-          (assoc local-ctx
-            :method "DELETE"
-            :path (str "/" service-name)))
-        [el-result mock-result]))))
+(defn run-test
+  [test-fn]
+  (edd/with-stores
+    (postgres/register ctx)
+    test-fn)
+  (edd/with-stores
+    (memory/register ctx)
+    test-fn)
+  (edd/with-stores
+    (dynamodb/register ctx)
+    test-fn))
+
+(deftest test-simple-event
+  (let [events [{:event-id  :e1
+                 :event-seq 1
+                 :id        agg-id}
+                {:event-id  :e2
+                 :event-seq 2
+                 :id        agg-id}]
+        events-2 [{:event-id  :e-2-1
+                   :event-seq 1
+                   :id        agg-id-2}]]
+    (run-test
+      #(do
+         (dal/store-results (assoc %
+                              :resp {:events     (concat events
+                                                         events-2)
+                                     :commands   []
+                                     :sequences  []
+                                     :identities []}))
+         (is (= events
+                (dal/get-events (assoc % :id agg-id))))
+         (is (= 2
+                (dal/get-max-event-seq (assoc % :id agg-id))))
+         (is (= 1
+                (dal/get-max-event-seq (assoc % :id agg-id-2))))))))
+
+(deftest test-identities
+  (let [id-1 (str "id-" (uuid/gen))
+        identity {:identity id-1
+                  :id       agg-id}
+        id-2 (str "id-2-" (uuid/gen))
+        identity-2 {:identity id-2
+                    :id       agg-id-2}]
+    (run-test
+      #(do
+         (dal/store-results (assoc %
+                              :resp {:events     []
+                                     :commands   []
+                                     :sequences  []
+                                     :identities [identity identity-2]}))
+         (is (= agg-id
+                (dal/get-aggregate-id-by-identity (assoc % :identity id-1))))
+         (is (= agg-id-2
+                (dal/get-aggregate-id-by-identity (assoc % :identity id-2))))
+         (is (= nil
+                (dal/get-aggregate-id-by-identity (assoc % :identity "agg-id-3"))))))))
+
+
 
 

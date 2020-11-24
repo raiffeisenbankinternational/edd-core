@@ -6,14 +6,13 @@
 
 
 
-
 (defn make-request
-  [{:keys [aws body] :as ctx}]
+  [{:keys [aws action body] :as ctx}]
   (let [req {:method     "POST"
              :uri        "/"
              :query      ""
              :payload    (util/to-json body)
-             :headers    {"X-Amz-Target"         "DynamoDB_20120810.ListTables"
+             :headers    {"X-Amz-Target"         (str "DynamoDB_20120810." action)
                           "Host"                 (str "dynamodb." (:region aws) ".amazonaws.com")
                           "Content-Type"         "application/x-amz-json-1.0"
                           "X-Amz-Security-Token" (:aws-session-token aws)
@@ -41,4 +40,5 @@
 (defn list-tables
   [ctx]
   (make-request
-    (assoc ctx :body {})))
+    (assoc ctx :action "ListTables"
+               :body {})))

@@ -2,7 +2,9 @@
   (:require
     [clojure.tools.logging :as log]
     [lambda.test.fixture.state :refer [*dal-state*]]
-    [edd.dal :refer [get-events
+    [lambda.test.fixture.state :refer [*dal-state*]]
+    [edd.dal :refer [with-init
+                     get-events
                      get-max-event-seq
                      get-sequence-number-for-id
                      get-id-for-sequence-number
@@ -66,12 +68,12 @@
                                                        :request-id))))))))
 (defn store-events
   [events]
-  (doseq [i events]
-    (store-event i)))
+  )
 
 (defn store-results-impl
   [{:keys [resp] :as ctx}]
-  (store-events (:events resp))
+  (doseq [i (:events resp)]
+    (store-event i))
   (doseq [i (:identities resp)]
     (store-identity i))
   (doseq [i (:sequences resp)]
@@ -170,6 +172,14 @@
   (swap! *dal-state*
          #(update % :response-log (fn [v] (conj v resp)))))
 
+(defmethod with-init
+  :memory
+  [ctx body-fn]
+  (log/debug "Initializing memory event store")
+  (if (bound? #'*dal-state*)
+    (body-fn ctx)
+    (binding [*dal-state* (atom {})]
+      (body-fn ctx))))
 
 (defn register
   [ctx]

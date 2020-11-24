@@ -11,5 +11,7 @@
                     :aws-session-token     (util/get-env "AWS_SESSION_TOKEN")}})
 
 (deftest test-list-tables
-  (is (= {:TableNames ["pipeline-alpha-db-svc-event-store-ddb"]}
+  (is (= {:TableNames ["pipeline-alpha-dynamodb-svc-effects-store-ddb"
+                       "pipeline-alpha-dynamodb-svc-event-store-ddb"
+                       "pipeline-alpha-dynamodb-svc-identity-store-ddb"]}
          (ddb/list-tables ctx))))

@@ -1,8 +1,10 @@
 (ns edd.dynamodb.event-store
   (:require
     [clojure.tools.logging :as log]
+    [aws.dynamodb :as dynamodb]
     [lambda.test.fixture.state :refer [*dal-state*]]
-    [edd.dal :refer [get-events
+    [edd.dal :refer [with-init
+                     get-events
                      get-max-event-seq
                      get-sequence-number-for-id
                      get-id-for-sequence-number
@@ -10,59 +12,134 @@
                      log-dps
                      log-request
                      log-response
-                     store-results]]))
+                     store-results]]
+    [lambda.util :as util]))
+
+(defn table-name
+  [ctx table]
+  (str
+    (:environment-name-lower ctx)
+    "-"
+    (:service-name ctx)
+    "-"
+    (name table)
+    "-ddb"))
 
 (defmethod log-request
-  :postgres
+  :dynamodb
   [{:keys [body request-id interaction-id service-name] :as ctx}]
   )
 
 (defmethod log-dps
-  :postgres
+  :dynamodb
   [{:keys [dps-resolved request-id interaction-id service-name] :as ctx}]
   )
 
 (defmethod log-response
-  :postgres
+  :dynamodb
   [{:keys [resp request-id interaction-id service-name] :as ctx}]
   )
 
-
-
 (defmethod get-sequence-number-for-id
-  :postgres
+  :dynamodb
   [ctx query]
   {:pre [(:id query)]}
   )
 
 (defmethod get-id-for-sequence-number
-  :postgres
+  :dynamodb
   [{:keys [sequence] :as ctx}]
   {:pre [sequence]}
   )
 
 (defmethod get-aggregate-id-by-identity
-  :potgres
-  [ctx identity]
+  :dynamodb
+  [{:keys [identity] :as ctx}]
+  (let [resp (dynamodb/make-request
+               (assoc ctx :action "GetItem"
+                          :body {:Key       {:Id
+                                             {:S (str
+                                                   (:service-name ctx)
+                                                   "/"
+                                                   identity)}}
+                                 :TableName (table-name ctx :identity-store)}))]
+    (get-in resp [:Item :AggregateId :S]))
   )
 
 (defmethod get-events
-  :postgres
+  :dynamodb
   [{:keys [id] :as ctx}]
-  )
+  (let [resp (dynamodb/make-request
+               (assoc ctx :action "Query"
+                          :body {:KeyConditions {:Id
+                                                 {:AttributeValueList [{:S id}]
+                                                  :ComparisonOperator "EQ"}}
+                                 :TableName     (table-name ctx :event-store)}))]
+    (map
+      (fn [event]
+        (util/to-edn (get-in event [:Data :S])))
+      (get resp :Items []))))
 
 (defmethod get-max-event-seq
-  :postgres
-  [ctx id]
-  )
+  :dynamodb
+  [{:keys [id] :as ctx}]
+  (let [resp (dynamodb/make-request
+               (assoc ctx :action "Query"
+                          :body {:KeyConditions    {:Id
+                                                    {:AttributeValueList [{:S id}]
+                                                     :ComparisonOperator "EQ"}}
+                                 :ScanIndexForward false
+                                 :Limit            1
+                                 :TableName        (table-name ctx :event-store)}))
+        event (first (get resp :Items []))]
+    (Integer/parseInt (get-in event [:EventSeq :N] 0))))
 
-
+#_((doseq [i (:events resp)]
+     (store-event i))
+   (doseq [i (:identities resp)]
+     (store-identity i))
+   (doseq [i (:sequences resp)]
+     (store-sequence i))
+   (doseq [i (:commands resp)]
+     (store-command i)))
 
 (defmethod store-results
   :dynamodb
-  [ctx func]
-  )
+  [{:keys [resp] :as ctx}]
+  (dynamodb/make-request
+    (assoc ctx :action "TransactWriteItems"
+               :body {:TransactItems
+                      (concat (map
+                                (fn [event]
+                                  {:Put
+                                   {:Item      {"Id"
+                                                {:S (:id event)}
+                                                "EventSeq"
+                                                {:N (str (:event-seq event))}
+                                                "Data"
+                                                {:S (util/to-json event)}},
+                                    :TableName (table-name ctx :event-store)}})
+                                (:events resp))
+                              (map
+                                (fn [item]
+                                  {:Put
+                                   {:Item      {"Id"
+                                                {:S (str
+                                                      (:service-name ctx)
+                                                      "/"
+                                                      (:identity item))}
+                                                "AggregateId"
+                                                {:S (:id item)}
+                                                "Data"
+                                                {:S (util/to-json item)}},
+                                    :TableName (table-name ctx :identity-store)}})
+                                (:identities resp)))})))
 
+(defmethod with-init
+  :dynamodb
+  [ctx body-fn]
+  (log/debug "Initializing")
+  (body-fn ctx))
 
 (defn register
   [ctx]

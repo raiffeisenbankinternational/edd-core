@@ -1,19 +1,19 @@
 (ns edd.db
   (:require
-   [lambda.util :as util]
-   [next.jdbc.result-set :as result-set]
-   [next.jdbc.prepare :as prepare]
-   [clojure.tools.logging :as log]
-   [aws :as aws])
+    [lambda.util :as util]
+    [next.jdbc.result-set :as result-set]
+    [next.jdbc.prepare :as prepare]
+    [clojure.tools.logging :as log]
+    [aws :as aws])
   (:import
-   (clojure.lang IPersistentMap IPersistentVector)
-   (java.sql Date Timestamp PreparedStatement)
-   (org.postgresql.util PGobject)
-   (java.time LocalDate LocalDateTime OffsetDateTime ZoneOffset)
+    (clojure.lang IPersistentMap IPersistentVector)
+    (java.sql Date Timestamp PreparedStatement)
+    (org.postgresql.util PGobject)
+    (java.time LocalDate LocalDateTime OffsetDateTime ZoneOffset)
 
-   (java.time.format DateTimeFormatter)
-   (org.postgresql.jdbc PgPreparedStatement)
-   (java.util UUID)))
+    (java.time.format DateTimeFormatter)
+    (org.postgresql.jdbc PgPreparedStatement)
+    (java.util UUID)))
 
 (def date-format "dd/MM/yyyy")
 
@@ -59,31 +59,15 @@
     (.setObject s i
                 (Timestamp/from v))))
 
-(defn db_host
-  []
-  (if (System/getenv "PrivateHostedZoneName")
-    (str "rds-" (System/getenv "DatabaseName") "." (System/getenv "PrivateHostedZoneName"))
-    "127.0.0.1"))
-
-(defn db_pwd
-  [ctx]
-  (get-in ctx [:db :password]))
-
-(defn ds
-  [ctx]
-  (assoc ctx
-         :ds {:dbtype                "postgres"
-              :dbname                "postgres"
-              :reWriteBatchedInserts true
-              :password              (db_pwd ctx)
-              :user                  "postgres"
-              :host                  (db_host)
-              :schema                "glms"
-              :post                  "5432"}))
 
 (defn init
   [ctx]
-  (-> ctx
-      (merge (util/load-config "secret.json"))
-      (ds)))
+  (assoc ctx :ds {:dbtype                "postgres"
+                  :dbname                "postgres"
+                  :reWriteBatchedInserts true
+                  :password              (get-in ctx [:db :password])
+                  :user                  "postgres"
+                  :host                  (util/get-env "DatabaseEndpoint" "127.0.0.1")
+                  :schema                "postgres"
+                  :post                  "5432"}))
 

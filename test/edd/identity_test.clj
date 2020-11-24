@@ -6,7 +6,6 @@
     [edd.memory.view-store :as view-store]
     [edd.test.fixture.dal :as mock]
     [edd.core :as edd]
-    [edd.local :as local]
     [lambda.uuid :as uuid]))
 (use 'clojure.test)
 
@@ -95,9 +94,3 @@
               :success    true}
              resp)))))
 
-(defn test-db
-  []
-  (local/local-cmd register
-                   {:cmd-id :create-1
-                    :id     (uuid/gen)
-                    :name   "e1"}))

@@ -113,15 +113,19 @@
          (let [request (aws/get-next-request api)]
            (log/debug "Loop" i)
            (handle-request
-             (assoc (assoc ctx :from-api (is-from-api request))
-               :api api
-               :service-name (util/get-env
-                               "ServiceName"
-                               "local-test")
-               :hosted-zone-name "example.com"
-               :invocation-id (get-in
-                                request
-                                [:headers :lambda-runtime-aws-request-id]))
+             (-> ctx
+                 (assoc :from-api (is-from-api request))
+                 (assoc :api api
+                        :service-name (util/get-env
+                                        "ServiceName"
+                                        "local-test")
+                        :hosted-zone-name "example.com"
+                        :environment-name-lower (util/get-env
+                                                  "EnvironmentNameLower"
+                                                  "local")
+                        :invocation-id (get-in
+                                         request
+                                         [:headers :lambda-runtime-aws-request-id])))
              request))))))
 
 

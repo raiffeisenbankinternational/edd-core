@@ -4,7 +4,8 @@
             [next.jdbc.result-set :as rs]
             [lambda.uuid :as uuid]
             [clojure.string :as str]
-            [edd.dal :refer [get-events
+            [edd.dal :refer [with-init
+                             get-events
                              get-max-event-seq
                              get-sequence-number-for-id
                              get-id-for-sequence-number
@@ -37,7 +38,7 @@
   (log/debug "Storing event" event)
   (when event
     (jdbc/execute! (:con ctx)
-                   ["INSERT INTO glms.event_store(id, service, request_id, interaction_id, event_seq, aggregate_id, data)
+                   ["INSERT INTO main.event_store(id, service, request_id, interaction_id, event_seq, aggregate_id, data)
                             VALUES (?,?,?,?,?,?,?)"
                     (uuid/gen)
                     (:service-name ctx)
@@ -52,7 +53,7 @@
   (log/debug "Storing command" cmd)
   (when cmd
     (jdbc/execute! (:con ctx)
-                   ["INSERT INTO glms.command_store(id, service, data)
+                   ["INSERT INTO main.command_store(id, service, data)
                             VALUES (?,?,?)"
                     (uuid/gen)
                     (name (:service cmd))
@@ -64,7 +65,7 @@
   (log/debug "Storing request" (:commands body))
   (when (:commands body)
     (let [ps (jdbc/prepare (:con ctx)
-                           ["INSERT INTO glms.command_request_log(request_id,
+                           ["INSERT INTO main.command_request_log(request_id,
                                                           interaction_id,
                                                           service_name,
                                                           cmd_index,
@@ -85,7 +86,7 @@
   (log/debug "Storing deps" dps-resolved)
   (when dps-resolved
     (let [ps (jdbc/prepare (:con ctx)
-                           ["INSERT INTO glms.command_deps_log(request_id,
+                           ["INSERT INTO main.command_deps_log(request_id,
                                                           interaction_id,
                                                           service_name,
                                                           cmd_index,
@@ -107,7 +108,7 @@
   (log/debug "Storing response" resp)
   (when resp
     (jdbc/execute! (:con ctx)
-                   ["INSERT INTO glms.command_response_log(request_id,
+                   ["INSERT INTO main.command_response_log(request_id,
                                                            interaction_id,
                                                            service_name,
                                                            data)
@@ -121,7 +122,7 @@
   [ctx identity]
   (log/debug "Storing identity" identity)
   (jdbc/execute! (:con ctx)
-                 ["INSERT INTO glms.identity_store(id, service, aggregate_id)
+                 ["INSERT INTO main.identity_store(id, service, aggregate_id)
                             VALUES (?,?,?)"
                   (:identity identity)
                   (name (:service-name ctx))
@@ -135,10 +136,10 @@
         aggregate-id (:id sequence)]
     (jdbc/execute! (:con ctx)
                    ["BEGIN WORK;
-                        LOCK TABLE glms.sequence_store IN EXCLUSIVE MODE;
-                       INSERT INTO glms.sequence_store (aggregate_id, service_name, value)
+                        LOCK TABLE main.sequence_store IN EXCLUSIVE MODE;
+                       INSERT INTO main.sequence_store (aggregate_id, service_name, value)
                             VALUES (?, ?, (SELECT COALESCE(MAX(value), 0) +1
-                                             FROM glms.sequence_store
+                                             FROM main.sequence_store
                                             WHERE service_name = ?));
                     COMMIT WORK;"
                     aggregate-id
@@ -153,7 +154,7 @@
         result (jdbc/execute-one!
                  (:con ctx)
                  ["SELECT value
-                     FROM glms.sequence_store
+                     FROM main.sequence_store
                     WHERE aggregate_id = ?
                       AND service_name = ?"
                   (:id query)
@@ -169,7 +170,7 @@
         result (jdbc/execute-one!
                  (:con ctx)
                  ["SELECT aggregate_id
-                     FROM glms.sequence_store
+                     FROM main.sequence_store
                     WHERE value = ?
                       AND service_name = ?"
                   sequence
@@ -178,11 +179,11 @@
     (:aggregate_id result)))
 
 (defmethod get-aggregate-id-by-identity
-  :potgres
-  [ctx identity]
+  :postgres
+  [{:keys [identity] :as ctx}]
   (let [result
         (jdbc/execute-one! (:con ctx)
-                           ["SELECT aggregate_id FROM glms.identity_store
+                           ["SELECT aggregate_id FROM main.identity_store
                                            WHERE id = ?
                                            AND service = ?"
                             identity
@@ -194,13 +195,13 @@
 (defmethod get-events
   :postgres
   [{:keys [id] :as ctx}]
-  (log/debug "Fetching events for aggregate" id)
+  (log/info "Fetching events for aggregate" id)
   (let [data (try-to-data
                #(jdbc/execute! (:con ctx)
                                ["SELECT data
-                         FROM glms.event_store
-                        WHERE aggregate_id=?
-                     ORDER BY event_seq ASC" id]
+                                   FROM main.event_store
+                                  WHERE aggregate_id=?
+                               ORDER BY event_seq ASC" id]
                                {:builder-fn rs/as-arrays}))]
     (if (:error data)
       data
@@ -210,60 +211,70 @@
 
 (defmethod get-max-event-seq
   :postgres
-  [ctx id]
+  [{:keys [id] :as ctx}]
   (log/debug "Fetching max event-seq for aggregate" id)
   (:max
     (jdbc/execute-one! (:con ctx)
                        ["SELECT COALESCE(MAX(event_seq), 0) AS max
-                         FROM glms.event_store WHERE aggregate_id=?" id]
+                         FROM main.event_store WHERE aggregate_id=?" id]
                        {:builder-fn rs/as-unqualified-lower-maps})))
 
 (defn store-events
-  [{:keys [events] :as ctx}]
-  (log/debug "Storing events")
+  [ctx events]
+  (log/info "Storing events")
   (doall
     (for [event (flatten events)]
-      (store-event ctx event)))
-  events)
+      (store-event ctx event))))
 
-(defn store-identities
-  [ctx identities]
-  (log/debug "Storing identities" identities)
-  (doall
-    (for [ident identities]
-      (store-identity ctx ident)))
-  identities)
 
 (defn store-sequences
   [ctx sequences]
   (log/debug "Storing sequences" sequences)
   (doall
     (for [sequence sequences]
-      (store-sequence ctx sequence)))
-  sequences)
+      (store-sequence ctx sequence))))
 
 
 
-(defn store-commands
-  [ctx commands]
-  (log/debug "Storing effects" commands)
-  (doall
-    (for [cmd commands]
-      (store-cmd ctx (assoc
-                       cmd
-                       :request-id (:request-id ctx)
-                       :interaction-id (:interaction-id ctx)))))
-  commands)
+(defn store-command
+  [ctx cmd]
+  (log/debug "Storing effect" cmd)
+  (store-cmd ctx (assoc
+                   cmd
+                   :request-id (:request-id ctx)
+                   :interaction-id (:interaction-id ctx))))
+
+
+(defn store-results-impl
+  [{:keys [resp] :as ctx}]
+  (log/info "Storing results impl")
+  (store-events ctx (:events resp))
+  (doseq [i (:identities resp)]
+    (store-identity ctx i))
+  (doseq [i (:sequences resp)]
+    (store-sequence ctx i))
+  (doseq [i (:commands resp)]
+    (store-command ctx i))
+  ctx)
+
 
 (defmethod store-results
   :postgres
-  [ctx func]
+  [{:keys [resp] :as ctx}]
   (jdbc/with-transaction
     [tx (:con ctx)]
     (try-to-data
-      #(func
+      #(store-results-impl
          (assoc ctx :con tx)))))
 
+
+(defmethod with-init
+  :postgres
+  [ctx body-fn]
+  (log/debug "Initializing")
+  (let [db-ctx (db/init ctx)]
+    (with-open [con (jdbc/get-connection (:ds db-ctx))]
+      (body-fn (assoc db-ctx :con con)))))
 
 (defn register
   [ctx]

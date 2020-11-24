@@ -3,7 +3,9 @@
             [clojure.tools.logging :as log]
             [lambda.test.fixture.state :refer [*dal-state*]]
             [edd.memory.search :refer [advanced-search-impl]]
-            [edd.search :refer [simple-search
+            [lambda.test.fixture.state :refer [*dal-state*]]
+            [edd.search :refer [with-init
+                                simple-search
                                 advanced-search
                                 update-aggregate]]))
 
@@ -47,6 +49,15 @@
   :memory
   [ctx]
   (advanced-search-impl ctx))
+
+(defmethod with-init
+  :memory
+  [ctx body-fn]
+  (log/debug "Initializing memory view store")
+  (if (bound? #'*dal-state*)
+    (body-fn ctx)
+    (binding [*dal-state* (atom {})]
+      (body-fn ctx))))
 
 (defn register
   [ctx]

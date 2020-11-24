@@ -2,7 +2,8 @@
   (:gen-class)
   (:require [clojure.test :refer :all]
             [lambda.elastic :as el]
-            [edd.search :refer [simple-search
+            [edd.search :refer [with-init
+                                simple-search
                                 default-size
                                 advanced-search
                                 update-aggregate]]
@@ -186,6 +187,12 @@
                      :method "POST"
                      :path (str "/" index "/_doc/" (:id aggregate))
                      :body (util/to-json aggregate)))))
+
+(defmethod with-init
+  :elastic
+  [ctx body-fn]
+  (log/debug "Initializing")
+  (body-fn ctx))
 
 (defn register
   [ctx]
