@@ -107,9 +107,9 @@
 
 (def schema
   [:and
-   #_[:map
-      [:request-id uuid?]
-      [:interaction-id uuid?]]
+   [:map
+    [:request-id uuid?]
+    [:interaction-id uuid?]]
    [:or
     [:map
      [:commands sequential?]]

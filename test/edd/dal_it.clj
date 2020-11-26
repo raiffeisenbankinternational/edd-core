@@ -12,10 +12,13 @@
 
 (def ctx
   {:service-name           "alpha-dynamodb-svc"
+   :request-id             (uuid/gen)
+   :interaction-id         (uuid/gen)
    :environment-name-lower "pipeline"
    :elastic-search         {:url (util/get-env "IndexDomainEndpoint")}
    :db                     {:endpoint (util/get-env "DatabaseEndpoint")
                             :port     "5432"
+                            :name     "alpha-dynamodb-svc"
                             :password (util/get-env "DatabasePassword")}
    :aws                    {:region                (util/get-env "AWS_DEFAULT_REGION")
                             :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID")

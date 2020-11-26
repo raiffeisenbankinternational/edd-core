@@ -300,7 +300,8 @@
      :meta       (:meta resp)
      :identities (count (:identities resp))
      :sequences  (count (:sequences resp))}
-    resp))
+    {:error (:error resp)}))
+
 (defn check-for-errors
   [{:keys [resp] :as ctx}]
   (let [events (:events resp)
@@ -334,15 +335,18 @@
 
 (defn handle-commands
   [ctx body]
-  (e-> (assoc ctx :commands (:commands body))
-       (validate-commands)
-       (resolve-dependencies-to-context)
-       (resolve-commands-id-fn)
-       (fetch-event-sequences-for-commands)
-       (get-command-response)
-       (check-for-errors)
-       (assign-events-seq)
-       (clean-effects)
-       (dal/store-results)
-       (add-metadata)
-       (set-response-summary)))
+  (let [resp (e-> (assoc ctx :commands (:commands body))
+                  (validate-commands)
+                  (resolve-dependencies-to-context)
+                  (resolve-commands-id-fn)
+                  (fetch-event-sequences-for-commands)
+                  (get-command-response)
+                  (check-for-errors)
+                  (assign-events-seq)
+                  (clean-effects)
+                  (dal/store-results)
+                  (add-metadata)
+                  (set-response-summary))]
+    (if (:error resp)
+      (select-keys resp [:error])
+      resp)))

@@ -10,7 +10,8 @@
   (:import (java.util UUID)
            (java.time.format DateTimeFormatter)
            (java.time OffsetDateTime ZoneOffset)
-           (java.net URLEncoder)))
+           (java.net URLEncoder)
+           (java.nio.charset Charset)))
 
 (defn retry [f n & [resp]]
   (if (zero? n)
@@ -30,6 +31,7 @@
 (defn authorize
   [req]
   (awssign/authorize req))
+
 
 (defn get-object
   [object]
@@ -96,28 +98,30 @@
         (:body response)))))
 
 (defn sqs-publish
-  [queue message]
+  [{:keys [queue ^String message aws] :as ctx}]
   (let [req {:method     "POST"
              :uri        (str "/"
-                              (System/getenv "AccountId")
+                              (:account-id aws)
                               "/"
-                              (System/getenv "EnvironmentNameLower")
+                              (:environment-name-lower ctx)
                               "-"
                               queue)
              :query      ""
              :payload    (str "Action=SendMessage"
-                              "&MessageBody=" (URLEncoder/encode message)
+                              "&MessageBody=" (util/url-encode message)
                               "&Expires=2020-10-15T12%3A00%3A00Z"
                               "&Version=2012-11-05&")
-             :headers    {"Host"         "sqs.eu-central-1.amazonaws.com"
+             :headers    {"Host"         (str "sqs."
+                                              (get aws :region)
+                                              ".amazonaws.com")
                           "Content-Type" "application/x-www-form-urlencoded"
                           "Accept"       "application/json"
                           "X-Amz-Date"   (create-date)}
              :service    "sqs"
              :region     "eu-central-1"
-             :access-key (System/getenv "AWS_ACCESS_KEY_ID")
-             :secret-key (System/getenv "AWS_SECRET_ACCESS_KEY")}
-        auth (awssign/authorize req)]
+             :access-key (:aws-access-key-id aws)
+             :secret-key (:aws-secret-access-key aws)}
+        auth (authorize req)]
     (let [response (retry
                      #(util/http-post
                         (str "https://"
@@ -129,7 +133,8 @@
                          :version :http1.1
                          :headers (-> (:headers req)
                                       (dissoc "Host")
-                                      (assoc "X-Amz-Security-Token" (System/getenv "AWS_SESSION_TOKEN")))
+                                      (assoc "X-Amz-Security-Token"
+                                             (:aws-session-token aws)))
                          :timeout 5000}) 3)]
       (when (contains? response :error)
         (log/error "Failed to sqs:SendMessage" response))

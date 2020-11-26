@@ -47,7 +47,9 @@
   (log/error e "Error processing request")
   (send-response
     (assoc ctx
-      :resp {:error (.getMessage e)})))
+      :resp {:error (try (.getMessage e)
+                         (catch IllegalArgumentException e
+                           "Unknown"))})))
 
 (defn handle-request
   [ctx req]
@@ -108,6 +110,20 @@
                    (assoc :filters filters
                           :handler handler
                           :post-filter post-filter)
+                   (assoc :service-name (keyword (util/get-env
+                                                   "ServiceName"
+                                                   "local-test"))
+                          :aws {:region                (util/get-env "Region" "local")
+                                :account-id            (util/get-env "AccountId" "local")
+                                :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID" "")
+                                :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY" "")
+                                :aws-session-token     (util/get-env "AWS_SESSION_TOKEN" "")}
+                          :hosted-zone-name (util/get-env
+                                              "PublicHostedZoneName"
+                                              "example.com")
+                          :environment-name-lower (util/get-env
+                                                    "EnvironmentNameLower"
+                                                    "local"))
                    (init-filters))]
        (doseq [i (get-loop)]
          (let [request (aws/get-next-request api)]
@@ -116,13 +132,7 @@
              (-> ctx
                  (assoc :from-api (is-from-api request))
                  (assoc :api api
-                        :service-name (util/get-env
-                                        "ServiceName"
-                                        "local-test")
-                        :hosted-zone-name "example.com"
-                        :environment-name-lower (util/get-env
-                                                  "EnvironmentNameLower"
-                                                  "local")
+
                         :invocation-id (get-in
                                          request
                                          [:headers :lambda-runtime-aws-request-id])))

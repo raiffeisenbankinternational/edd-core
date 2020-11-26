@@ -13,7 +13,9 @@
            (javax.crypto.spec SecretKeySpec)
            (com.fasterxml.jackson.core JsonGenerator)
            (clojure.lang Keyword)
-           (com.fasterxml.jackson.databind ObjectMapper)))
+           (com.fasterxml.jackson.databind ObjectMapper)
+           (java.nio.charset Charset)
+           (java.net URLEncoder)))
 
 (def offset-date-time-format "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
 
@@ -128,9 +130,7 @@
   [name]
   (log/info "Loading config name:" name)
   (let [file (io/as-file name)
-        classpath (io/as-file
-                    (io/resource
-                      name))]
+        classpath (io/resource name)]
     (to-edn
       (if (.exists ^File file)
         (do
@@ -164,3 +164,8 @@
     (->> message-bytes
          (.doFinal mac)
          (.encodeToString (Base64/getEncoder)))))
+
+(defn url-encode
+  [^String message]
+  (let [^Charset charset (Charset/forName "UTF-8")]
+    (URLEncoder/encode message charset)))
