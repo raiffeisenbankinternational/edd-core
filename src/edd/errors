@@ -1,0 +1,1 @@
+org.postgresql.util.PSQLException: ERROR: relation "main.event_store" does not exist
