@@ -201,7 +201,7 @@
                                ["SELECT data
                                    FROM main.event_store
                                   WHERE aggregate_id=?
-                                  AND service=?0
+                                  AND service=?
                                ORDER BY event_seq ASC" id (:service-name ctx)]
                                {:builder-fn rs/as-arrays}))]
     (if (:error data)
