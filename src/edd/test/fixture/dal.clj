@@ -158,7 +158,8 @@
 
 (defn apply-cmd [ctx cmd]
   (log/info "apply-cmd" cmd)
-  (let [resp (handle-cmd ctx cmd)]
+  (let [resp (handle-cmd (assoc ctx
+                           :no-summary true) cmd)]
     (log/info "apply-cmd returned" resp)
     (doseq [id (distinct (map :id (:events resp)))]
       (event/handle-event (assoc ctx
