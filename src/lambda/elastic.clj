@@ -45,7 +45,7 @@
                                      (assoc
                                        "X-Amz-Security-Token" (:aws-session-token aws)
                                        "Authorization" auth))
-                      :timeout   10000
+                      :timeout   20000
                       :keepalive 300000}
                      body (assoc :body body))]
 

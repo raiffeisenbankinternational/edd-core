@@ -319,25 +319,27 @@
             (some #(not= % :valid) result) (assoc-in [:error :spec] result))))
 
 (defn set-response-summary
-  [{:keys [resp]}]
-  (if-not (:error resp)
-    {:success    true
-     :effects    (reduce
-                   (fn [p v]
-                     (concat
-                       p
-                       (map
-                         (fn [%] {:id           (:id %)
-                                  :cmd-id       (:cmd-id %)
-                                  :service-name (:service v)})
-                         (:commands v))))
-                   []
-                   (:commands resp))
-     :events     (count (:events resp))
-     :meta       (:meta resp)
-     :identities (count (:identities resp))
-     :sequences  (count (:sequences resp))}
-    {:error (:error resp)}))
+  [{:keys [resp no-summary]}]
+  (cond
+    (:error resp) {:error (:error resp)}
+    no-summary resp
+    :else {:success    true
+           :effects    (reduce
+                         (fn [p v]
+                           (concat
+                             p
+                             (map
+                               (fn [%] {:id           (:id %)
+                                        :cmd-id       (:cmd-id %)
+                                        :service-name (:service v)})
+                               (:commands v))))
+                         []
+                         (:commands resp))
+           :events     (count (:events resp))
+           :meta       (:meta resp)
+           :identities (count (:identities resp))
+           :sequences  (count (:sequences resp))}
+    ))
 
 (defn check-for-errors
   [{:keys [resp] :as ctx}]
