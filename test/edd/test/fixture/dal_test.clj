@@ -15,7 +15,9 @@
             [clojure.test :refer :all]
             [org.httpkit.client :as http]
             [edd.elastic.view-store :as elastic]
-            [lambda.util :as util]))
+            [lambda.util :as util]
+            [edd.test.fixture.dal :as mock]
+            [lambda.uuid :as uuid]))
 
 (deftest when-store-and-load-events-then-ok
   (with-mock-dal
@@ -387,3 +389,21 @@
                                   #(dissoc % :a)
                                   [{:b "b"}
                                    {:d "d"}])))
+
+
+(deftest apply-cmd-test
+  (with-mock-dal
+    (let [id (uuid/gen)
+          ctx (-> mock/ctx
+                  (edd/reg-cmd :test-cmd (fn [ctx cmd]
+                                           {:event-id :1})))]
+      (mock/apply-cmd ctx {:cmd-id :test-cmd
+                           :id     id})
+      (is (= {:effects    []
+              :events     1
+              :identities 0
+              :meta       [{:test-cmd {:id id}}]
+              :sequences  0
+              :success    true}
+             (mock/handle-cmd ctx {:cmd-id :test-cmd
+                                   :id     id}))))))
