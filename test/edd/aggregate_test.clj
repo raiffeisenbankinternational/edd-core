@@ -100,10 +100,11 @@
                 util/http-post (fn [url request & {:keys [raw]}]
                                  {:status 303})]
     (is (= {:error {:status 303}}
-           (event/handle-event (-> apply-ctx
-                                   elastic-view-store/register
-                                   (assoc
-                                     :apply {:aggregate-id cmd-id})))))))
+           (select-keys (event/handle-event (-> apply-ctx
+                                    elastic-view-store/register
+                                    (assoc
+                                      :apply {:aggregate-id cmd-id})))
+                        [:error])))))
 
 
 
