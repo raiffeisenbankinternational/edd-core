@@ -108,7 +108,7 @@
                (assoc ctx
                  :method "POST"
                  :path (str "/" (str/replace (get ctx :index-name
-                                                  (:service-name ctx)) "-" "_") "/_search")
+                                                  (name (:service-name ctx))) "-" "_") "/_search")
                  :body (util/to-json (assoc req
                                        :from (get query :from 0)
                                        :size (get query :size default-size)))))
@@ -165,7 +165,7 @@
   [{:keys [query] :as ctx}]
   (log/debug "Executing simple search" query)
   (let [index (str/replace (get ctx :index-name
-                                (:service-name ctx)) "-" "_")
+                                (name (:service-name ctx))) "-" "_")
         param (dissoc query :query-id)
         body (elastic/query
                (assoc ctx
@@ -184,11 +184,17 @@
   :elastic
   [{:keys [aggregate] :as ctx}]
   (log/debug "Updating aggregate" aggregate)
-  (let [index (str/replace (:service-name ctx) "-" "_")]
-    (elastic/query (assoc ctx
-                     :method "POST"
-                     :path (str "/" index "/_doc/" (:id aggregate))
-                     :body (util/to-json aggregate)))))
+  (let [index (-> ctx
+                  (:service-name)
+                  (name)
+                  (str/replace "-" "_"))
+        {:keys [error]} (elastic/query (assoc ctx
+                                         :method "POST"
+                                         :path (str "/" index "/_doc/" (:id aggregate))
+                                         :body (util/to-json aggregate)))]
+    (if error
+      (assoc ctx :error error)
+      ctx)))
 
 (defmethod with-init
   :elastic
@@ -198,4 +204,5 @@
 
 (defn register
   [ctx]
-  (assoc ctx :view-store :elastic))
+  (assoc ctx :view-store :elastic
+             :elastic-search {:url (util/get-env "IndexDomainEndpoint")}))
