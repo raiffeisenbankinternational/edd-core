@@ -35,8 +35,6 @@ Currently, implementations supports following event store implementation:
 Currently, only one aggregate store is supported:
 * ElasticSearch
 
-
->![Diagram](diagrams/1.svg)
 ## Commands
 To register commands user `reg-cmd`
 
