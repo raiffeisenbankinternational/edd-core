@@ -417,3 +417,20 @@
        {:method  :get
         :timeout 90000000
         :url     "http://mock/2018-06-01/runtime/invocation/next"}])))
+
+
+(deftest test-custom-config
+  (mock-core
+    :env {"CustomConfig" (util/to-json
+                           {:a :b
+                            :c :d})}
+    :invocations [(util/to-json {})]
+    (core/start
+      {}
+      (fn [ctx body]
+        (is (= {:a :b
+                :c :d}
+               (select-keys ctx [:a :c])))
+        {:source body
+         :user   (:user ctx)}))
+    (do)))
