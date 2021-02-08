@@ -110,6 +110,8 @@
                    (assoc :filters filters
                           :handler handler
                           :post-filter post-filter)
+                   (merge (util/to-edn
+                            (util/get-env "CustomConfig" "{}")))
                    (assoc :service-name (keyword (util/get-env
                                                    "ServiceName"
                                                    "local-test"))
