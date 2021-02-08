@@ -20,6 +20,7 @@
             [clojure.data :refer [diff]]
             [clojure.test :refer :all]
             [edd.el.cmd :as cmd]
+            [edd.core :as edd]
             [lambda.util :as util]
             [edd.common :as common]
             [lambda.uuid :as uuid]
@@ -113,18 +114,21 @@
       (event-store/register)))
 
 (defmacro with-mock-dal [& body]
-  `(binding [*dal-state* (atom ~(if (map? (first body))
-                                  (merge
-                                    default-db
-                                    (first body))
-                                  default-db))
-             util/*cache* (atom {})]
-     (client/mock-http
-       (prepare-dps-calls)
-       (with-redefs
-         [aws/get-token aws-get-token
-          common/create-identity create-identity]
-         (do ~@body)))))
+  `(edd/with-stores
+     ctx
+     #(binding [*dal-state* (atom ~(if (map? (first body))
+                                     (merge
+                                       default-db
+                                       (first body))
+                                     default-db))
+                util/*cache* (atom {})]
+        %
+        (client/mock-http
+          (prepare-dps-calls)
+          (with-redefs
+            [aws/get-token aws-get-token
+             common/create-identity create-identity]
+            (do ~@body))))))
 
 (defmacro verify-state [x & [y]]
   `(if (keyword? ~y)
