@@ -13,10 +13,7 @@
   (let [final-ctx (if query
                     (assoc ctx :id (:id query))
                     ctx)
-        resp (->> final-ctx
-                  (dal/get-events)
-                  (assoc final-ctx :events)
-                  (event/get-current-state))]
+        resp (event/get-by-id final-ctx)]
     (if query
       (:aggregate resp)
       resp)))

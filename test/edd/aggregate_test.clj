@@ -1,6 +1,7 @@
 (ns edd.aggregate-test
   (:require [edd.core :as edd]
             [edd.dal :as dal]
+            [edd.search :as search]
             [edd.el.event :as event]
             [clojure.test :refer :all]
             [lambda.util :as util]
@@ -39,17 +40,17 @@
 
 (deftest test-apply
   (let [agg (event/get-current-state
-              (assoc apply-ctx
-                :events
-                [{:event-id  :event-1
-                  :id        cmd-id
-                  :event-seq 1
-                  :k1        "a"}
-                 {:event-id  :event-2
-                  :id        cmd-id
-                  :event-seq 2
-                  :k2        "b"}]
-                :id "ag1"))
+             (assoc apply-ctx
+                    :events
+                    [{:event-id  :event-1
+                      :id        cmd-id
+                      :event-seq 1
+                      :k1        "a"}
+                     {:event-id  :event-2
+                      :id        cmd-id
+                      :event-seq 2
+                      :k2        "b"}]
+                    :id "ag1"))
         agg (:aggregate agg)]
     (is (= {:id            cmd-id
             :filter-result "ab"
@@ -63,14 +64,15 @@
                             :event-seq 2
                             :id       cmd-id}}
            agg))))
-
 (deftest test-apply-cmd
-  (is (= {:error "No implementation of method: :-execute-all of protocol: #'next.jdbc.protocols/Executable found for class: nil"}
-         (:error
-           (event/handle-event (-> apply-ctx
-                                   (postgres-event-store/register)
-                                   (assoc :apply
-                                          {:aggregate-id 1})))))))
+  (with-redefs [search/simple-search identity]
+
+    (is (= {:error "No implementation of method: :-execute-all of protocol: #'next.jdbc.protocols/Executable found for class: nil"}
+           (:error
+            (event/handle-event (-> apply-ctx
+                                    (postgres-event-store/register)
+                                    (assoc :apply
+                                           {:aggregate-id 1}))))))))
 
 (deftest test-apply-cmd-storing-error
   (with-redefs [dal/get-events (fn [_]
@@ -101,11 +103,7 @@
                                  {:status 303})]
     (is (= {:error {:status 303}}
            (select-keys (event/handle-event (-> apply-ctx
-                                    elastic-view-store/register
-                                    (assoc
-                                      :apply {:aggregate-id cmd-id})))
+                                                elastic-view-store/register
+                                                (assoc
+                                                  :apply {:aggregate-id cmd-id})))
                         [:error])))))
-
-
-
-

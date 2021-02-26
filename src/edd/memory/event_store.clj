@@ -94,13 +94,14 @@
 
 (defmethod get-events
   :memory
-  [{:keys [id]}]
+  [{:keys [id version]}]
   {:pre [id]}
   "Reads event from vector under :event-store key"
   (log/info "Emulated 'get-events' dal function")
   (->> @*dal-state*
        (:event-store)
-       (filter #(= (:id %) id))
+       (filter #(and (= (:id %) id)
+                     (if version (> (:event-seq %) version) true)))
        (into [])
        (sort-by #(:event-seq %))))
 
