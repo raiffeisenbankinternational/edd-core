@@ -2,6 +2,7 @@
   (:require [clojure.tools.logging :as log]
             [edd.core :as edd]
             [edd.dal :as dal]
+            [edd.search :as search]
             [edd.el.event :as event]
             [edd.el.cmd :as cmd]
             [clojure.test :refer :all]
@@ -265,12 +266,13 @@
 
   (with-redefs [dal/get-events (fn [_]
                                  [{:event-id :e7
-                                   :event-seq 1}])]
+                                   :event-seq 1}])
+                search/simple-search (fn [ctx] ctx)]
     (let [agg (query/handle-query
-                (prepare {})
-                {:query
-                 {:query-id :get-by-id
-                  :id       "bla"}})]
+               (prepare {})
+               {:query
+                {:query-id :get-by-id
+                 :id       "bla"}})]
       (is (= {:name :e7
               :version 1
               :id nil}
