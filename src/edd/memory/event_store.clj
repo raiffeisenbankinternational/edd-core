@@ -1,18 +1,17 @@
 (ns edd.memory.event-store
   (:require
-    [clojure.tools.logging :as log]
-    [lambda.test.fixture.state :refer [*dal-state*]]
-    [lambda.test.fixture.state :refer [*dal-state*]]
-    [edd.dal :refer [with-init
-                     get-events
-                     get-max-event-seq
-                     get-sequence-number-for-id
-                     get-id-for-sequence-number
-                     get-aggregate-id-by-identity
-                     log-dps
-                     log-request
-                     log-response
-                     store-results]]))
+   [clojure.tools.logging :as log]
+   [lambda.test.fixture.state :refer [*dal-state* *queues*]]
+   [edd.dal :refer [with-init
+                    get-events
+                    get-max-event-seq
+                    get-sequence-number-for-id
+                    get-id-for-sequence-number
+                    get-aggregate-id-by-identity
+                    log-dps
+                    log-request
+                    log-response
+                    store-results]]))
 
 
 (defn store-sequence
@@ -48,15 +47,32 @@
            #(update % :identity-store (fn [v] (conj v identity))))))
 
 
+(defn enqueue [q item]
+  (vec (shuffle (conj (or q []) item))))
+
+
+(defn peek-cmd!
+  []
+  (let [popq (fn [q] (if (seq q) (pop q) []))
+        [old new] (swap-vals! *queues* update :command-queue popq)]
+    (peek (:command-queue old))))
+
+
+(defn enqueue-cmd! [cmd]
+  (swap! *queues*
+         update :command-queue enqueue cmd))
+
 (defn store-command
   "Stores command in memory structure"
   [cmd]
   (log/info "Emulated 'store-cmd' dal function")
   (swap! *dal-state*
          #(update % :command-store (fn [v] (conj v (dissoc
-                                                     cmd
-                                                     :request-id
-                                                     :interaction-id))))))
+                                                    cmd
+                                                    :request-id
+                                                    :interaction-id)))))
+  (enqueue-cmd! cmd))
+
 (defn store-event
   "Stores event in memory structure"
   [event]
@@ -64,11 +80,11 @@
   (let [aggregate-id (:id event)]
     (swap! *dal-state*
            #(update % :event-store (fn [v] (sort-by
-                                             (fn [c] (:event-seq c))
-                                             (conj v (dissoc
-                                                       event
-                                                       :interaction-id
-                                                       :request-id))))))))
+                                            (fn [c] (:event-seq c))
+                                            (conj v (dissoc
+                                                     event
+                                                     :interaction-id
+                                                     :request-id))))))))
 (defn store-events
   [events]
   )
