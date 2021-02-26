@@ -21,11 +21,11 @@
   {:pre [query]}
   (into []
         (filter
-          #(filter-aggregate
-             (dissoc query :query-id)
-             %)
-          (->> @*dal-state*
-               (:aggregate-store)))))
+         #(filter-aggregate
+           (dissoc query :query-id)
+           %)
+         (->> @*dal-state*
+              (:aggregate-store)))))
 
 (defn update-aggregate-impl
   [{:keys [aggregate] :as ctx}]
