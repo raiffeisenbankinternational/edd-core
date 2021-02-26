@@ -4,6 +4,7 @@
 
 (def ^:dynamic *mock*)
 
+(def ^:dynamic *queues*)
 
 (defmacro with-state
   [& body]
