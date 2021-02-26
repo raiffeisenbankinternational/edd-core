@@ -194,21 +194,25 @@
 
 (defmethod get-events
   :postgres
-  [{:keys [id] :as ctx}]
+  [{:keys [id service-name version]
+    :as ctx
+    :or {version 0}}]
+  {:pre [id service-name]}
   (log/info "Fetching events for aggregate" id)
   (let [data (try-to-data
-               #(jdbc/execute! (:con ctx)
-                               ["SELECT data
-                                   FROM main.event_store
-                                  WHERE aggregate_id=?
+              #(jdbc/execute! (:con ctx)
+                              ["SELECT data
+                                FROM main.event_store
+                                WHERE aggregate_id=?
                                   AND service=?
-                               ORDER BY event_seq ASC" id (:service-name ctx)]
-                               {:builder-fn rs/as-arrays}))]
+                                  AND event_seq>?
+                                ORDER BY event_seq ASC" id service-name version]
+                              {:builder-fn rs/as-arrays}))]
     (if (:error data)
       data
       (flatten
-        (rest
-          data)))))
+       (rest
+        data)))))
 
 (defmethod get-max-event-seq
   :postgres
