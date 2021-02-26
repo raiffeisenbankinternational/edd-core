@@ -27,7 +27,7 @@
             [edd.memory.event-store :as event-store]
             [edd.memory.view-store :as view-store]
             [lambda.test.fixture.client :as client]
-            [lambda.test.fixture.state :refer [*dal-state*]]))
+            [lambda.test.fixture.state :refer [*dal-state* *queues*]]))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Data Access Layer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -118,17 +118,18 @@
      ctx
      #(binding [*dal-state* (atom ~(if (map? (first body))
                                      (merge
-                                       default-db
-                                       (first body))
+                                      default-db
+                                      (first body))
                                      default-db))
+                *queues*     (atom {:command-queue []})
                 util/*cache* (atom {})]
         %
         (client/mock-http
-          (prepare-dps-calls)
-          (with-redefs
-            [aws/get-token aws-get-token
-             common/create-identity create-identity]
-            (do ~@body))))))
+         (prepare-dps-calls)
+         (with-redefs
+           [aws/get-token aws-get-token
+            common/create-identity create-identity]
+           (do ~@body))))))
 
 (defmacro verify-state [x & [y]]
   `(if (keyword? ~y)
@@ -195,4 +196,3 @@
   [ctx cmd]
   (apply-cmd ctx cmd)
   (execute-fx-apply-all ctx))
-
