@@ -133,8 +133,8 @@
   (let [cmd-id (:cmd-id cmd)
         command-handler (get command-handlers cmd-id (fn [_ _]
                                                        {:error :handler-no-found}))
-        resp (->> ctx
-                  (merge (get-in ctx [:dps-resolved idx]))
+        ctx-with-dps (merge ctx (get-in ctx [:dps-resolved idx]))
+        resp (->> ctx-with-dps
                   (#(command-handler % cmd))
                   (to-clean-vector)
                   (map #(assoc
@@ -142,16 +142,16 @@
                           :id (:id cmd)))
                   (remove nil?)
                   (reduce
-                    (fn [p event]
-                      (cond-> p
-                              (contains? event :error) (update :events conj event)
-                              (contains? event :identity) (update :identities conj event)
-                              (contains? event :sequence) (update :sequences conj event)
-                              (contains? event :event-id) (update :events conj event)))
-                    {:events     []
-                     :identities []
-                     :sequences  []}))]
-    (-> ctx
+                   (fn [p event]
+                     (cond-> p
+                       (contains? event :error) (update :events conj event)
+                       (contains? event :identity) (update :identities conj event)
+                       (contains? event :sequence) (update :sequences conj event)
+                       (contains? event :event-id) (update :events conj event)))
+                   {:events     []
+                    :identities []
+                    :sequences  []}))]
+    (-> ctx-with-dps
         (assoc :resp resp)
         (add-user-to-events)
         (handle-effects)
