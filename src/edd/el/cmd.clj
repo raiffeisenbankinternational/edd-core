@@ -199,9 +199,9 @@
                  (let [current-version (get-in ctx [:last-event-seq id])]
                    (cond
                      (nil? version) p
-                     (> version (inc current-version)) (throw (ex-info "Wrong version"
-                                                                       {:current current-version
-                                                                        :version version}))
+                     (not= version current-version) (throw (ex-info "Wrong version"
+                                                                    {:current current-version
+                                                                     :version version}))
                      :else (assoc p [:last-event-seq id] version))))
                ctx
                commands)))
@@ -372,21 +372,30 @@
                     (remove nil?)
                     (wrap-commands ctx)))))
 
+(defn retry [f n]
+  (let [response (f)]
+    (if (and (= (get-in response [:error :key])
+                :concurrent-modification)
+             (not (zero? n)))
+      (retry f (dec n))
+      response)))
+
 (defn handle-commands
   [ctx body]
-  (let [resp (e-> (assoc ctx :commands (:commands body))
-                  (validate-commands)
-                  (resolve-dependencies-to-context)
-                  (resolve-commands-id-fn)
-                  (fetch-event-sequences-for-commands)
-                  (get-command-response)
-                  (check-for-errors)
-                  (assign-events-seq)
-                  (verify-command-version)
-                  (clean-effects)
-                  (dal/store-results)
-                  (add-metadata)
-                  (set-response-summary))]
+  (let [resp (retry #(e-> (assoc ctx :commands (:commands body))
+                          (validate-commands)
+                          (resolve-dependencies-to-context)
+                          (resolve-commands-id-fn)
+                          (fetch-event-sequences-for-commands)
+                          (get-command-response)
+                          (check-for-errors)
+                          (assign-events-seq)
+                          (verify-command-version)
+                          (clean-effects)
+                          (dal/store-results)
+                          (add-metadata)
+                          (set-response-summary))
+                    2)]
     (if (:error resp)
       (select-keys resp [:error])
       resp)))

@@ -61,17 +61,22 @@
   (log/debug "Dispatching" body)
   (assoc
     ctx
-    :resp (cond
-            (contains? body :apply) (event/handle-event (-> ctx
-                                                            (assoc :apply (:apply body))))
-            (contains? body :query) (query/handle-query
-                                      ctx
-                                      body)
-            (contains? body :commands) (cmd/handle-commands
-                                         ctx
-                                         body)
-            (contains? body :error) body
-            :else {:error :invalid-request})))
+    :resp (try
+            (cond
+              (contains? body :apply) (event/handle-event (-> ctx
+                                                              (assoc :apply (:apply body))))
+              (contains? body :query) (query/handle-query
+                                       ctx
+                                       body)
+              (contains? body :commands) (cmd/handle-commands
+                                          ctx
+                                          body)
+              (contains? body :error) body
+              :else {:error :invalid-request})
+            (catch Throwable e
+              (do
+                (log/error e)
+                (throw e))))))
 
 (defn filter-queue-request
   "If request is coming from queue we need to get out all request bodies"

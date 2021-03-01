@@ -20,7 +20,26 @@
             [lambda.elastic :as elastic]))
 
 (def errors
-  {:unique "duplicate key value violates unique constraint"})
+  {:concurrent-modification ["event_store_pkey"
+                             "duplicate key value violates unique constraint"]})
+(defn error-matches?
+  [msg words]
+  (every?
+    #(str/includes? msg %)
+    words))
+
+(defn parse-error
+  [m]
+
+  (let [match (first
+                (filter
+                  (fn [[k v]]
+                    (error-matches? m v))
+                  errors))]
+    (if match
+      {:key              (first match)
+       :original-message m}
+      m)))
 
 (defn try-to-data
   [func]
@@ -29,7 +48,8 @@
     (catch Exception e
       (log/error e "Postgres error")
       {:error (-> (.getMessage e)
-                  (str/replace "\n" ""))})))
+                  (str/replace "\n" "")
+                  (parse-error))})))
 
 
 
@@ -38,7 +58,7 @@
   (log/debug "Storing event" event)
   (when event
     (jdbc/execute! (:con ctx)
-                   ["INSERT INTO main.event_store(id, service, request_id, interaction_id, event_seq, aggregate_id, data)
+                   ["INSERT INTO glms.event_store(id, service, request_id, interaction_id, event_seq, aggregate_id, data)
                             VALUES (?,?,?,?,?,?,?)"
                     (uuid/gen)
                     (:service-name ctx)
@@ -53,7 +73,7 @@
   (log/debug "Storing command" cmd)
   (when cmd
     (jdbc/execute! (:con ctx)
-                   ["INSERT INTO main.command_store(id, service, data)
+                   ["INSERT INTO glms.command_store(id, service, data)
                             VALUES (?,?,?)"
                     (uuid/gen)
                     (name (:service cmd))
@@ -65,7 +85,7 @@
   (log/debug "Storing request" (:commands body))
   (when (:commands body)
     (let [ps (jdbc/prepare (:con ctx)
-                           ["INSERT INTO main.command_request_log(request_id,
+                           ["INSERT INTO glms.command_request_log(request_id,
                                                           interaction_id,
                                                           service_name,
                                                           cmd_index,
@@ -84,23 +104,24 @@
   :postgres
   [{:keys [dps-resolved request-id interaction-id service-name] :as ctx}]
   (log/debug "Storing deps" dps-resolved)
-  (when dps-resolved
-    (let [ps (jdbc/prepare (:con ctx)
-                           ["INSERT INTO main.command_deps_log(request_id,
+  #_(when dps-resolved
+      (let [ps (jdbc/prepare (:con ctx)
+                             ["INSERT INTO glms.command_deps_log(request_id,
                                                           interaction_id,
                                                           service_name,
                                                           cmd_index,
                                                           data)
                             VALUES (?,?,?,?,?)"])
-          params (map-indexed
-                   (fn [idx itm] [request-id
-                                  interaction-id
-                                  service-name
-                                  idx
-                                  itm])
-                   dps-resolved)]
-      (p/execute-batch! ps params))
-    ctx))
+            params (map-indexed
+                     (fn [idx itm] [request-id
+                                    interaction-id
+                                    service-name
+                                    idx
+                                    itm])
+                     dps-resolved)]
+        (p/execute-batch! ps params))
+      ctx)
+  ctx)
 
 (defmethod log-response
   :postgres
@@ -108,7 +129,7 @@
   (log/debug "Storing response" resp)
   (when resp
     (jdbc/execute! (:con ctx)
-                   ["INSERT INTO main.command_response_log(request_id,
+                   ["INSERT INTO glms.command_response_log(request_id,
                                                            interaction_id,
                                                            service_name,
                                                            data)
@@ -122,7 +143,7 @@
   [ctx identity]
   (log/debug "Storing identity" identity)
   (jdbc/execute! (:con ctx)
-                 ["INSERT INTO main.identity_store(id, service, aggregate_id)
+                 ["INSERT INTO glms.identity_store(id, service, aggregate_id)
                             VALUES (?,?,?)"
                   (:identity identity)
                   (name (:service-name ctx))
@@ -136,10 +157,10 @@
         aggregate-id (:id sequence)]
     (jdbc/execute! (:con ctx)
                    ["BEGIN WORK;
-                        LOCK TABLE main.sequence_store IN EXCLUSIVE MODE;
-                       INSERT INTO main.sequence_store (aggregate_id, service_name, value)
+                        LOCK TABLE glms.sequence_store IN EXCLUSIVE MODE;
+                       INSERT INTO glms.sequence_store (aggregate_id, service_name, value)
                             VALUES (?, ?, (SELECT COALESCE(MAX(value), 0) +1
-                                             FROM main.sequence_store
+                                             FROM glms.sequence_store
                                             WHERE service_name = ?));
                     COMMIT WORK;"
                     aggregate-id
@@ -154,7 +175,7 @@
         result (jdbc/execute-one!
                  (:con ctx)
                  ["SELECT value
-                     FROM main.sequence_store
+                     FROM glms.sequence_store
                     WHERE aggregate_id = ?
                       AND service_name = ?"
                   (:id query)
@@ -170,7 +191,7 @@
         result (jdbc/execute-one!
                  (:con ctx)
                  ["SELECT aggregate_id
-                     FROM main.sequence_store
+                     FROM glms.sequence_store
                     WHERE value = ?
                       AND service_name = ?"
                   sequence
@@ -183,7 +204,7 @@
   [{:keys [identity] :as ctx}]
   (let [result
         (jdbc/execute-one! (:con ctx)
-                           ["SELECT aggregate_id FROM main.identity_store
+                           ["SELECT aggregate_id FROM glms.identity_store
                                            WHERE id = ?
                                            AND service = ?"
                             identity
@@ -195,24 +216,24 @@
 (defmethod get-events
   :postgres
   [{:keys [id service-name version]
-    :as ctx
-    :or {version 0}}]
+    :as   ctx
+    :or   {version 0}}]
   {:pre [id service-name]}
   (log/info "Fetching events for aggregate" id)
   (let [data (try-to-data
-              #(jdbc/execute! (:con ctx)
-                              ["SELECT data
-                                FROM main.event_store
+               #(jdbc/execute! (:con ctx)
+                               ["SELECT data
+                                FROM glms.event_store
                                 WHERE aggregate_id=?
                                   AND service=?
                                   AND event_seq>?
                                 ORDER BY event_seq ASC" id service-name version]
-                              {:builder-fn rs/as-arrays}))]
+                               {:builder-fn rs/as-arrays}))]
     (if (:error data)
       data
       (flatten
-       (rest
-        data)))))
+        (rest
+          data)))))
 
 (defmethod get-max-event-seq
   :postgres
@@ -221,7 +242,7 @@
   (:max
     (jdbc/execute-one! (:con ctx)
                        ["SELECT COALESCE(MAX(event_seq), 0) AS max
-                         FROM main.event_store
+                         FROM glms.event_store
                          WHERE aggregate_id=?
                          AND service=?" id (:service-name ctx)]
                        {:builder-fn rs/as-unqualified-lower-maps})))
