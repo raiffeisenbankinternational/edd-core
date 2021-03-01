@@ -79,16 +79,13 @@
 
 (defn to-api
   [{:keys [resp] :as ctx}]
+  (log/info "to-api" resp)
   (assoc ctx
-    :resp {:statusCode      200
-           :isBase64Encoded false
-           :headers         {"Access-Control-Allow-Headers"  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-                             "Access-Control-Allow-Methods"  "OPTIONS,POST,PUT,GET"
-                             "Access-Control-Expose-Headers" "*"
-                             "Content-Type"                  "application/json"
-                             "Access-Control-Allow-Origin"   "*"}
-           :body            (util/to-json resp)}))
-
-
-
-
+         :resp {:statusCode      200
+                :isBase64Encoded false
+                :headers         {"Access-Control-Allow-Headers"  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                                  "Access-Control-Allow-Methods"  "OPTIONS,POST,PUT,GET"
+                                  "Access-Control-Expose-Headers" "*"
+                                  "Content-Type"                  "application/json"
+                                  "Access-Control-Allow-Origin"   "*"}
+                :body            (util/to-json resp)}))
