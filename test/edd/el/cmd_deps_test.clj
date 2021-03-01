@@ -177,7 +177,7 @@
                                      {:cmd-id  :cmd-1
                                       :value   :2
                                       :id      cmd-id-2
-                                      :version 5}]})
+                                      :version 4}]})
         (mock/verify-state :event-store [{:event-id  :event-1
                                           :event-seq 1
                                           :value     :1

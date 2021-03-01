@@ -6,7 +6,7 @@
     [clojure.tools.logging :as log]
     [aws :as aws])
   (:import
-    (clojure.lang IPersistentMap IPersistentVector)
+    (clojure.lang IPersistentMap IPersistentVector Keyword)
     (java.sql Date Timestamp PreparedStatement)
     (org.postgresql.util PGobject)
     (java.time LocalDate LocalDateTime OffsetDateTime ZoneOffset)
@@ -54,6 +54,10 @@
     (.setObject s i
                 (Timestamp/from v)))
 
+  Keyword
+  (set-parameter [v ^PgPreparedStatement s i]
+    (.setObject s i
+                (name v)))
   LocalDate
   (set-parameter [v ^PgPreparedStatement s i]
     (.setObject s i
