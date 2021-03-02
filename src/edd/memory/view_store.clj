@@ -29,14 +29,15 @@
 
 (defn update-aggregate-impl
   [{:keys [aggregate] :as ctx}]
+  {:pre [aggregate]}
   (log/info "Emulated 'update-aggregate' dal function")
   (swap! *dal-state*
          #(update % :aggregate-store
                   (fn [v]
                     (->> v
                          (filter
-                           (fn [el]
-                             (not= (:id el) (:id aggregate))))
+                          (fn [el]
+                            (not= (:id el) (:id aggregate))))
                          (cons aggregate)
                          (sort-by (fn [{:keys [id]}] (str id)))))))
 

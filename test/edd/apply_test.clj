@@ -2,6 +2,7 @@
   (:require [clojure.test :refer :all]
             [lambda.util :as util]
             [lambda.uuid :as uuid]
+            [edd.el.event :as event]
 
             [edd.core :as edd]
             [edd.test.fixture.dal :as mock]
@@ -59,22 +60,62 @@
                        (merge agg
                               {:value "2"})))))
 
-(deftest apply-when-no-events
+(deftest apply-when-two-events
   (mock/with-mock-dal
-    {:event-store [{:event-id :event-1
+    {:event-store [{:event-id  :event-1
                     :event-seq 1
-                    :id       agg-id}
-                   {:event-id :event-1
+                    :id        agg-id}
+                   {:event-id  :event-1
                     :event-seq 2
-                    :id       agg-id}]}
+                    :id        agg-id}]}
     (let [resp (edd/handler ctx req)]
       (mock/verify-state :aggregate-store
-                         [{:id    agg-id
+                         [{:id      agg-id
                            :version 2
-                           :value "1"}])
+                           :value   "1"}])
       (is (= {:result         {:apply true}
               :interaction-id int-id
               :request-id     req-id}
              resp)))))
 
 
+
+
+(deftest apply-when-no-events
+  (mock/with-mock-dal
+    (let [resp (event/handle-event
+                (merge ctx
+                       {:apply          {:aggregate-id
+                                         #uuid "cb245f3b-a791-4637-919f-c0682d4277ae",
+                                         :service "glms-plc2-svc"},
+                        :request-id     #uuid "01ce9e4b-3922-4d93-a95d-a326b4c49b5c",
+                        :interaction-id #uuid "01ce9e4b-3922-4d93-a95d-a326b4c49b5c"}))]
+      (is (= {:error :no-events-found}
+             resp)))))
+
+(deftest apply-when-events-but-no-handler
+  (let [ctx
+        (-> {}
+            (assoc :service-name "local-test")
+            (event-store/register)
+            (view-store/register)
+            (edd/reg-cmd :cmd-1 (fn [ctx cmd]
+                                  {:id       (:id cmd)
+                                   :event-id :event-1
+                                   :name     (:name cmd)})))]
+
+    (mock/with-mock-dal
+      {:event-store [{:event-id  :event-1
+                      :event-seq 1
+                      :id        agg-id}
+                     {:event-id  :event-1
+                      :event-seq 2
+                      :id        agg-id}]}
+      (let [resp (edd/handler ctx req)]
+        (mock/verify-state :aggregate-store
+                           [])
+        (is (= {:error          :aggregate-not-found
+                :interaction-id int-id
+                :request-id     req-id}
+               resp))))
+    ))
