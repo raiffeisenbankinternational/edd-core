@@ -13,7 +13,10 @@
   (let [final-ctx (if query
                     (assoc ctx :id (:id query))
                     ctx)
-        resp (event/get-by-id final-ctx)]
+        resp (try
+               (event/get-by-id final-ctx)
+               (catch Exception e
+                 (ex-data e)))]
     (if query
       (:aggregate resp)
       resp)))

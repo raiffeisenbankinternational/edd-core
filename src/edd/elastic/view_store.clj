@@ -189,11 +189,11 @@
                   (name)
                   (str/replace "-" "_"))
         {:keys [error]} (elastic/query (assoc ctx
-                                         :method "POST"
-                                         :path (str "/" index "/_doc/" (:id aggregate))
-                                         :body (util/to-json aggregate)))]
+                                              :method "POST"
+                                              :path (str "/" index "/_doc/" (:id aggregate))
+                                              :body (util/to-json aggregate)))]
     (if error
-      (assoc ctx :error error)
+      (throw (ex-info "could not store aggregate" {:error error}))
       ctx)))
 
 (defmethod with-init
@@ -204,5 +204,6 @@
 
 (defn register
   [ctx]
-  (assoc ctx :view-store :elastic
-             :elastic-search {:url (util/get-env "IndexDomainEndpoint")}))
+  (assoc ctx
+         :view-store :elastic
+         :elastic-search {:url (util/get-env "IndexDomainEndpoint")}))
