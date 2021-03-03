@@ -114,7 +114,7 @@
       (let [resp (edd/handler ctx req)]
         (mock/verify-state :aggregate-store
                            [])
-        (is (= {:error          :aggregate-not-found
+        (is (= {:result {:apply true}
                 :interaction-id int-id
                 :request-id     req-id}
                resp))))
