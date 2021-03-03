@@ -2,6 +2,7 @@
   (:require [clojure.tools.logging :as log]
             [next.jdbc :as jdbc]
             [edd.db :as db]
+            [lambda.request :as request]
             [edd.el.cmd :as cmd]
             [edd.schema :as s]
             [edd.el.event :as event]
@@ -16,7 +17,7 @@
 
 (defn reg-cmd
   [ctx cmd-id reg-fn & {:keys [dps id-fn spec]}]
-  (log/info "Registering cmd" cmd-id)
+  (log/debug "Registering cmd" cmd-id)
   (let [new-ctx
         (-> ctx
             (update :command-handlers #(assoc % cmd-id reg-fn))
@@ -30,13 +31,13 @@
 
 (defn reg-event
   [ctx event-id reg-fn]
-  (log/info "Registering apply" event-id)
+  (log/debug "Registering apply" event-id)
   (update ctx :def-apply
           #(assoc % event-id reg-fn)))
 
 (defn reg-agg-filter
   [ctx reg-fn]
-  (log/info "Registering aggregate filter")
+  (log/debug "Registering aggregate filter")
   (assoc ctx :agg-filter
              (conj
                (get ctx :agg-filter [])
@@ -44,7 +45,7 @@
 
 (defn reg-query
   [ctx query-id reg-fn & {:keys [spec]}]
-  (log/info "Registering query" query-id)
+  (log/debug "Registering query" query-id)
   (-> ctx
       (update :query #(assoc % query-id reg-fn))
       (update :spec #(assoc % query-id (s/merge-query-schema spec)))))
@@ -59,6 +60,12 @@
 (defn dispatch-request
   [{:keys [body] :as ctx}]
   (log/debug "Dispatching" body)
+  (swap! request/*request* #(update % :mdc
+                                    (fn [mdc]
+                                      (assoc mdc
+                                        :invocation-id (:invocation-id ctx)
+                                        :request-id (:request-id body)
+                                        :interaction-id (:interaction-id body)))))
   (assoc
     ctx
     :resp (try
@@ -66,11 +73,11 @@
               (contains? body :apply) (event/handle-event (-> ctx
                                                               (assoc :apply (:apply body))))
               (contains? body :query) (query/handle-query
-                                       ctx
-                                       body)
+                                        ctx
+                                        body)
               (contains? body :commands) (cmd/handle-commands
-                                          ctx
-                                          body)
+                                           ctx
+                                           body)
               (contains? body :error) body
               :else {:error :invalid-request})
             (catch Throwable e

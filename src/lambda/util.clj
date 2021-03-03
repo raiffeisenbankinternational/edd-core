@@ -129,7 +129,7 @@
 
 (defn decrypt
   [body name]
-  (log/info "Decrypting")
+  (log/debug "Decrypting")
   (let [context (get-env "ConfigurationContext")]
     (if (and context
              (.contains name "secret"))
@@ -143,7 +143,7 @@
 
 (defn load-config
   [name]
-  (log/info "Loading config name:" name)
+  (log/debug "Loading config name:" name)
   (let [file (io/as-file name)
         classpath (io/as-file
                     (io/resource
@@ -151,12 +151,12 @@
     (to-edn
       (if (.exists ^File file)
         (do
-          (log/info "Loading from file config:" name)
+          (log/debug "Loading from file config:" name)
           (-> file
               (slurp)
               (decrypt name)))
         (do
-          (log/info "Loading config from classpath:" name)
+          (log/debug "Loading config from classpath:" name)
           (-> classpath
               (slurp)
               (decrypt name)))))))
