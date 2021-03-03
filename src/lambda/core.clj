@@ -2,6 +2,7 @@
   (:gen-class)
   (:require [lambda.util :as util]
             [aws :as aws]
+            [lambda.request :as request]
             [clojure.tools.logging :as log]
             [clojure.java.io :as io]
             [clojure.string :as str]))
@@ -130,14 +131,15 @@
        (doseq [i (get-loop)]
          (let [request (aws/get-next-request api)]
            (log/debug "Loop" i)
-           (handle-request
-             (-> ctx
-                 (assoc :from-api (is-from-api request))
-                 (assoc :api api
+           (binding [request/*request* (atom {})]
+             (handle-request
+               (-> ctx
+                   (assoc :from-api (is-from-api request))
+                   (assoc :api api
 
-                        :invocation-id (get-in
-                                         request
-                                         [:headers :lambda-runtime-aws-request-id])))
-             request))))))
+                          :invocation-id (get-in
+                                           request
+                                           [:headers :lambda-runtime-aws-request-id])))
+               request)))))))
 
 

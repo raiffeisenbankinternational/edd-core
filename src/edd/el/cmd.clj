@@ -4,6 +4,7 @@
     [clojure.tools.logging :as log]
     [lambda.util :as util]
     [edd.dal :as dal]
+    [lambda.request :as request]
     [edd.schema :as s]
     [edd.el.query :as query]
     [malli.core :as m]
@@ -48,9 +49,9 @@
                     :headers {"Content-Type"    "application/json"
                               "X-Authorization" token}})]
     (when (:error response)
-      (log/info "Deps request error for " service (:error response)))
+      (log/error "Deps request error for " service (:error response)))
     (when (:error (get response :body))
-      (log/info "Deps result error for " service (get response :body)))
+      (log/error "Deps result error for " service (get response :body)))
     (get-in response [:body :result])))
 
 (defn resolve-local-dependency
@@ -142,15 +143,15 @@
                           :id (:id cmd)))
                   (remove nil?)
                   (reduce
-                   (fn [p event]
-                     (cond-> p
-                       (contains? event :error) (update :events conj event)
-                       (contains? event :identity) (update :identities conj event)
-                       (contains? event :sequence) (update :sequences conj event)
-                       (contains? event :event-id) (update :events conj event)))
-                   {:events     []
-                    :identities []
-                    :sequences  []}))]
+                    (fn [p event]
+                      (cond-> p
+                              (contains? event :error) (update :events conj event)
+                              (contains? event :identity) (update :identities conj event)
+                              (contains? event :sequence) (update :sequences conj event)
+                              (contains? event :event-id) (update :events conj event)))
+                    {:events     []
+                     :identities []
+                     :sequences  []}))]
     (-> ctx-with-dps
         (assoc :resp resp)
         (add-user-to-events)
@@ -258,16 +259,24 @@
 
 (defn fetch-event-sequences-for-commands
   [{:keys [commands] :as ctx}]
-  (reduce
-    (fn [v cmd]
-      (let [cmd-id (:cmd-id cmd)
-            id (:id cmd)]
-        (log/debug "Fetching sequences for" cmd-id id)
-        (assoc-in v [:last-event-seq id]
-                  (dal/get-max-event-seq
-                    (assoc v :id id)))))
-    ctx
-    commands))
+  (let [request (if (bound? #'request/*request*)
+                  @request/*request*
+                  {})]
+    (reduce
+      (fn [v cmd]
+        (let [cmd-id (:cmd-id cmd)
+              id (:id cmd)
+              last-seq (get-in request [:last-event-seq id])]
+          (log/debug "Fetching sequences for" cmd-id id)
+          (assoc-in v [:last-event-seq id]
+                    (if last-seq
+                      (do (log/debug "using last-event-seq for cmd" cmd last-seq)
+                          last-seq)
+                      (do (log/debug "fetch version from store for cmd" cmd)
+                          (dal/get-max-event-seq
+                            (assoc v :id id)))))))
+      ctx
+      commands)))
 
 (defn resolve-dependencies-to-context
   [{:keys [commands] :as ctx}]

@@ -65,13 +65,13 @@
                                            url
                                            body
                                            :raw true))]
-      (log/info "Auth response" (:error response) (:status response))
-      (log/info response)
       (cond
         (contains? response :error) (do
                                       (log/error "Failed update" response)
                                       {:error {:error response}})
-        (> (:status response) 299) {:error {:status (:status response)}}
+        (> (:status response) 299) (do
+                                     (log/error "Elastic response" (:status response))
+                                     {:error {:status (:status response)}})
         :else (util/to-edn (:body response))))))
 
 
