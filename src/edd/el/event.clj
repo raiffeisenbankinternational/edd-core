@@ -52,12 +52,9 @@
     (:error events)      (throw (ex-info "Error fetching events" {:error events}))
     (> (count events) 0) (let [aggregate  (create-aggregate snapshot events (:def-apply ctx))
                                result-agg (apply-agg-filter ctx aggregate )]
-                           (if result-agg
-                             (assoc
-                               ctx
-                               :aggregate result-agg)
-                             (throw
-                              (ex-info "Aggregate is empty" {:error :aggregate-not-found}))))
+                           (assoc
+                             ctx
+                             :aggregate result-agg))
     snapshot             (assoc ctx :aggregate snapshot)
     :else                (throw (ex-info "Aggregate not found" {:error :no-events-found}))))
 
@@ -85,21 +82,20 @@
       (get-events)
       (get-current-state)))
 
-
-(defn summarize-result
-  [{:keys [aggregate]}]
-  )
+(defn update-aggregate
+  [ctx]
+  (if (:aggregate ctx)
+    (search/update-aggregate ctx)
+    ctx))
 
 (defn handle-event
   [{:keys [apply] :as ctx}]
   (try
-    (let [{:keys [aggregate]} (e-> ctx
-                                   (assoc :id (:aggregate-id apply))
-                                   (get-by-id)
-                                   (search/update-aggregate))]
-      (if aggregate
-        {:apply true}
-        {:error :no-aggregate-found}))
+    (-> ctx
+        (assoc :id (:aggregate-id apply))
+        (get-by-id)
+        (update-aggregate))
+    {:apply true}
     (catch Exception e
       (log/error e)
       (ex-data e))))
