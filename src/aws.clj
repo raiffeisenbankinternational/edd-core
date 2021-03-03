@@ -210,10 +210,10 @@
         target (if from-api
                  "response"
                  "error")]
-    (log/info (util/to-json
-                (util/http-post
-                  (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/" target)
-                  {:body resp})))))
+    (log/error (util/to-json
+                 (util/http-post
+                   (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/" target)
+                   {:body resp})))))
 
 (defn admin-auth
   [{{username :username password :password} :svc

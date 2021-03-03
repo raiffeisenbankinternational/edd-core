@@ -35,14 +35,14 @@
   [ctx]
   (let [region (util/get-env "Region")
         jwks-json (util/load-config "jwks.json")]
-    (log/info "Initializing JWKS" (get jwks-json :keys))
+    (log/debug "Initializing JWKS" (get jwks-json :keys))
     (-> ctx
         (assoc :jwks-all (get jwks-json :keys))
         (assoc-in [:env :region] region))))
 
 (defn parse-token
   [{:keys [jwks-all] :as ctx} token]
-  (log/info "Parsing JWT token")
+  (log/debug "Parsing JWT token")
   (try
     (let [jwt (JWT/decode token)
           token-kid (.getKeyId jwt)

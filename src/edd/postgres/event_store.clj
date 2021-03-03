@@ -257,6 +257,7 @@
 
 (defn store-sequences
   [ctx sequences]
+  (log/info "Storing sequences")
   (log/debug "Storing sequences" sequences)
   (doall
     (for [sequence sequences]
@@ -266,6 +267,7 @@
 
 (defn store-command
   [ctx cmd]
+  (log/info "Storing effect")
   (log/debug "Storing effect" cmd)
   (store-cmd ctx (assoc
                    cmd
@@ -275,7 +277,7 @@
 
 (defn store-results-impl
   [{:keys [resp] :as ctx}]
-  (log/info "Storing results impl")
+  (log/debug "Storing results impl")
   (store-events ctx (:events resp))
   (doseq [i (:identities resp)]
     (store-identity ctx i))

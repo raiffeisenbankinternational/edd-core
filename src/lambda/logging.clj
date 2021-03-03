@@ -2,7 +2,7 @@
   (:require [clojure.tools.logging.impl :refer [LoggerFactory Logger]]
             [jsonista.core :as json]
             [clojure.string :as str]
-            [lambda.mdc :as mdc]
+            [lambda.request :as mdc]
             [clojure.stacktrace :as cst])
   (:import (java.time LocalDateTime)))
 
@@ -17,7 +17,10 @@
   {:level     (str/upper-case (.getName level))
    :message   msg
    :timestamp (LocalDateTime/now)
-   :mdc mdc/*MDC*})
+   :mdc       (if (bound? #'mdc/*request*)
+                (get @mdc/*request*
+                     :mdc {})
+                {})})
 
 (defn- log-structure
   ([level msg]
@@ -57,7 +60,9 @@
            (.isLoggable logger# (get levels# level# level#)))
          :write!
          (fn [^java.util.logging.Logger logger# level# ^Throwable e# msg#]
-           (let [^clojure.lang.Keyword actual-level# (to-lower (get mdc/*MDC* :level level#))
+           (let [^clojure.lang.Keyword actual-level# (to-lower (if (bound? #'mdc/*request*)
+                                                                 (get-in @mdc/*request* [:mdc :level] level#)
+                                                                 level#))
                  ^java.util.logging.Level jul-level# (get levels# actual-level# level#)
                  ^String msg# (str msg#)]
              (if e#

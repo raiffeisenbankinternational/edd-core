@@ -115,9 +115,9 @@
         total (get-in
                 body
                 [:hits :total :value])]
-    (log/info "Elastic query")
-    (log/info (util/to-json query))
-    (log/info body)
+    (log/debug "Elastic query")
+    (log/debug (util/to-json query))
+    (log/debug body)
     {:total total
      :from  (get query :from 0)
      :size  (get query :size default-size)
