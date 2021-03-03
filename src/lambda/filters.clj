@@ -79,7 +79,7 @@
 
 (defn to-api
   [{:keys [resp] :as ctx}]
-  (log/info "to-api" resp)
+  (log/debug "to-api" resp)
   (assoc ctx
          :resp {:statusCode      200
                 :isBase64Encoded false

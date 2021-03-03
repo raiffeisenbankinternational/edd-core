@@ -27,7 +27,8 @@
             [edd.memory.event-store :as event-store]
             [edd.memory.view-store :as view-store]
             [lambda.test.fixture.client :as client]
-            [lambda.test.fixture.state :refer [*dal-state* *queues*]]))
+            [lambda.test.fixture.state :refer [*dal-state* *queues*]]
+            [lambda.request :as request]))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Data Access Layer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -122,7 +123,8 @@
                                       (first body))
                                      default-db))
                 *queues*     (atom {:command-queue []})
-                util/*cache* (atom {})]
+                util/*cache* (atom {})
+                request/*request* (atom {})]
         %
         (client/mock-http
          (prepare-dps-calls)
