@@ -24,13 +24,13 @@
   {:and      (fn [ctx & rest]
                {:bool
                 {:filter (mapv
-                           (fn [%] (parse ctx %))
-                           rest)}})
+                          (fn [%] (parse ctx %))
+                          rest)}})
    :or       (fn [ctx & rest]
                {:bool
                 {:should               (mapv
-                                         (fn [%] (parse ctx %))
-                                         rest)
+                                        (fn [%] (parse ctx %))
+                                        rest)
                  :minimum_should_match 1}})
    :eq       (fn [_ & [a b]]
                {:term
@@ -46,7 +46,21 @@
                 {(str (name a) ".keyword") b}})
    :exists   (fn [_ & [a _]]
                {:exists
-                {:field (name a)}})})
+                {:field (name a)}})
+   :lte      (fn [_ & [a b]]
+               {:range
+                {(name a) {:lte b}}})
+   :gte      (fn [_ & [a b]]
+               {:range
+                {(name a) {:gte b}}})
+   :nested   (fn [ctx path & rest]
+               {:bool
+                {:must [{:nested {:path  (name path)
+                                  :query (mapv
+                                          (fn [%] (parse ctx %))
+                                          rest)}}]}})
+
+   })
 
 (defn search-filter
   [_ filter q]
