@@ -1,7 +1,7 @@
 ARG DOCKER_URL
 ARG DOCKER_ORG
 
-FROM ${DOCKER_URL}/${DOCKER_ORG}/common-img:b150
+FROM ${DOCKER_URL}/${DOCKER_ORG}/common-img:b767
 
 ARG DOCKER_URL
 ARG DOCKER_ORG
@@ -40,6 +40,10 @@ RUN set -e &&\
     domain_url=$(aws es describe-elasticsearch-domain --domain-name ${domain_name} | jq -r '.DomainStatus.Endpoints.vpc') &&\
     export IndexDomainEndpoint=$domain_url &&\
     export DatabaseEndpoint="$(aws rds describe-db-instances --query 'DBInstances[].Endpoint.Address' --filter "Name=engine,Values=postgres" --output text)" &&\
+    flyway -password="${DatabasePassword}" \
+           -schemas=glms \
+           -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
+           -locations="filesystem:${PWD}/sql/files" migrate &&\
     clj -A:test:it
 
 ARG BUILD_ID

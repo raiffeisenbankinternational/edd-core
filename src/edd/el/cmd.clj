@@ -70,15 +70,17 @@
                     (fn [p [key req]]
                       (log/debug "Query for dependency" key req)
                       (let [dep-value
-                            (if (:service req)
-                              (resolve-remote-dependency
-                                (assoc ctx :dps-resolved p)
-                                cmd
-                                req)
-                              (resolve-local-dependency
-                                (assoc ctx :dps-resolved p)
-                                cmd
-                                req))]
+                            (try (if (:service req)
+                                   (resolve-remote-dependency
+                                     (assoc ctx :dps-resolved p)
+                                     cmd
+                                     req)
+                                   (resolve-local-dependency
+                                     (assoc ctx :dps-resolved p)
+                                     cmd
+                                     req))
+                                 (catch AssertionError e
+                                   nil))]
                         (if dep-value
                           (assoc p key dep-value)
                           p)))

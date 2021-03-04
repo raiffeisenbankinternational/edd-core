@@ -1,0 +1,7 @@
+---
+dependencies: [ ]
+
+galaxy_info:
+  role_name: "edd-core"
+  description: "Lib containing sql scripts"
+
