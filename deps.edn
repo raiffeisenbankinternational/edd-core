@@ -1,14 +1,14 @@
-{:deps    {org.clojure/clojure       {:mvn/version "1.10.2-alpha2"}
+{:deps    {org.clojure/clojure       {:mvn/version "1.10.3"}
            alpha-prosoft/jsonista    {:mvn/version "0.2.8"}
            org.clojure/tools.logging {:mvn/version "1.1.0"}
            seancorfield/next.jdbc    {:mvn/version "1.1.613"}
-           metosin/malli             {:mvn/version "0.2.1"}
-           org.postgresql/postgresql {:mvn/version "42.2.18"}
+           metosin/malli             {:mvn/version "0.3.0"}
+           org.postgresql/postgresql {:mvn/version "42.2.19"}
            org.clojure/data.csv      {:mvn/version "1.0.0"}
-           http-kit/http-kit         {:mvn/version "2.5.0"}
+           http-kit/http-kit         {:mvn/version "2.5.3"}
            clj-aws-sign/clj-aws-sign {:mvn/version "0.1.1"}
-           com.auth0/java-jwt        {:mvn/version "3.12.0"}
-           com.auth0/jwks-rsa        {:mvn/version "0.15.0"}}
+           com.auth0/java-jwt        {:mvn/version "3.14.0"}
+           com.auth0/jwks-rsa        {:mvn/version "0.17.0"}}
 
  :paths   ["src" "resources"],
  :aliases {:jar      {:extra-paths ["resources"]
