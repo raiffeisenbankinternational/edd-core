@@ -38,6 +38,10 @@ RUN set -e &&\
     export IndexDomainEndpoint=$domain_url &&\
     export DatabaseEndpoint="$(aws rds describe-db-instances --query 'DBInstances[].Endpoint.Address' --filter "Name=engine,Values=postgres" --output text)" &&\
     flyway -password="${DatabasePassword}" \
+               -schemas=glms \
+               -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
+               clean &&\
+    flyway -password="${DatabasePassword}" \
            -schemas=glms \
            -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
            -locations="filesystem:${PWD}/sql/files" migrate &&\
