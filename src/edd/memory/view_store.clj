@@ -3,7 +3,6 @@
             [clojure.tools.logging :as log]
             [lambda.test.fixture.state :refer [*dal-state*]]
             [edd.memory.search :refer [advanced-search-impl]]
-            [lambda.test.fixture.state :refer [*dal-state*]]
             [edd.search :refer [with-init
                                 simple-search
                                 advanced-search

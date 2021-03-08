@@ -69,7 +69,8 @@
   (assoc ctx :ds {:dbtype                "postgres"
                   :dbname                "postgres"
                   :reWriteBatchedInserts true
-                  :password              (get-in ctx [:db :password])
+                  :password              (get-in ctx [:db :password]
+                                                 (util/get-env "DatabasePassword" ""))
                   :user                  "postgres"
                   :host                  (util/get-env "DatabaseEndpoint" "127.0.0.1")
                   :schema                "postgres"

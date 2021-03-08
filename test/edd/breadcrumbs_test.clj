@@ -1,23 +1,13 @@
 (ns edd.breadcrumbs-test
   (:require
-   [clojure.test :refer [deftest testing is are use-fixtures run-tests join-fixtures]]
-   [edd.core :as edd]
-   [edd.memory.event-store :as event-store]
-   [edd.common :as common]
-   [lambda.uuid :as uuid]
-   [edd.test.fixture.dal :as mock]
-   [edd.dal :as dal]))
-
-(require '[edd.test.fixture.execution :as exec])
-(require '[lambda.test.fixture.state
-           :as state])
-(require '[lambda.request :as r])
-
-(def pp clojure.pprint/pprint)
-
-(defn clear! []
-  (reset! state/*dal-state* state/default-db)
-  (reset! r/*request* {}))
+    [clojure.test :refer [deftest testing is are use-fixtures run-tests join-fixtures]]
+    [edd.core :as edd]
+    [edd.memory.event-store :as event-store]
+    [edd.test.fixture.execution :as exec]
+    [edd.common :as common]
+    [lambda.test.fixture.state :as state]
+    [lambda.uuid :as uuid]
+    [edd.test.fixture.dal :as mock]))
 
 (def ctx
   (-> mock/ctx
@@ -53,96 +43,108 @@
                               {:level (:level event)}))))
 
 (def id1 (uuid/parse "111111-1111-1111-1111-111111111111"))
-(def id2 (uuid/parse "222222-2222-2222-2222-222222222222"))
-(pp ctx)
+
+(def command-store-with-bc
+  #{{:commands
+                  [{:cmd-id :inc,
+                    :level 2,
+                    :id id1}
+                   {:cmd-id :inc,
+                    :level 2,
+                    :id id1}],
+     :breadcrumbs [0 0 2]}
+    {:commands
+                  [{:cmd-id :inc,
+                    :level 2,
+                    :id id1}
+                   {:cmd-id :inc,
+                    :level 2,
+                    :id id1}],
+     :breadcrumbs [0 0 1]}
+    {:commands
+                  [{:cmd-id :inc,
+                    :level 2,
+                    :id id1}
+                   {:cmd-id :inc,
+                    :level 2,
+                    :id id1}],
+     :breadcrumbs [0 0 3]}
+    {:commands
+                  [{:cmd-id :inc,
+                    :level 2,
+                    :id id1}
+                   {:cmd-id :inc,
+                    :level 2,
+                    :id id1}],
+     :breadcrumbs [0 1 0]}
+    {:commands
+                  [{:cmd-id :inc,
+                    :level 2,
+                    :id id1}
+                   {:cmd-id :inc,
+                    :level 2,
+                    :id id1}],
+     :breadcrumbs [0 1 2]}
+    {:commands
+                  [{:cmd-id :inc,
+                    :level 2,
+                    :id id1}
+                   {:cmd-id :inc,
+                    :level 2,
+                    :id id1}],
+     :breadcrumbs [0 0 0]}
+    {:commands
+                  [{:cmd-id :inc,
+                    :level 2,
+                    :id id1}
+                   {:cmd-id :inc,
+                    :level 2,
+                    :id id1}],
+     :breadcrumbs [0 1 1]}
+    {:commands
+                  [{:cmd-id :inc,
+                    :level 1,
+                    :id id1}
+                   {:cmd-id :inc,
+                    :level 1,
+                    :id id1}],
+     :breadcrumbs [0 0]}
+    {:commands
+                  [{:cmd-id :inc,
+                    :level 1,
+                    :id id1}
+                   {:cmd-id :inc,
+                    :level 1,
+                    :id id1}],
+     :breadcrumbs [0 1]}
+    {:commands
+                  [{:cmd-id :inc,
+                    :level 2,
+                    :id id1}
+                   {:cmd-id :inc,
+                    :level 2,
+                    :id id1}],
+     :breadcrumbs [0 1 3]}})
 
 (deftest test-breadcrumbs-for-emtpy-command
   (mock/with-mock-dal
     (with-redefs
-     [event-store/clean-commands (fn [cmd] cmd)]
+      [event-store/clean-commands (fn [cmd] cmd)]
+
+      (exec/run-cmd! ctx {:commands [{:cmd-id :inc
+                                      :id id1}]})
+      (let [cmds (set (:command-store @state/*dal-state*))]
+        (is (= command-store-with-bc
+               cmds))))))
+
+(deftest test-breadcrumbs-for-command-with-breadcrumb
+  (mock/with-mock-dal
+    (with-redefs
+      [event-store/clean-commands (fn [cmd] cmd)]
 
       (exec/run-cmd! ctx {:commands [{:cmd-id :inc
                                       :id id1}]
                           :breadcrumbs [0]})
       (let [cmds (set (:command-store @state/*dal-state*))]
-        (is (= #{{:commands
-                  [{:cmd-id :inc,
-                    :level 2,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 2,
-                    :id id1}],
-                  :breadcrumbs [0 0 2]}
-                 {:commands
-                  [{:cmd-id :inc,
-                    :level 2,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 2,
-                    :id id1}],
-                  :breadcrumbs [0 0 1]}
-                 {:commands
-                  [{:cmd-id :inc,
-                    :level 2,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 2,
-                    :id id1}],
-                  :breadcrumbs [0 0 3]}
-                 {:commands
-                  [{:cmd-id :inc,
-                    :level 2,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 2,
-                    :id id1}],
-                  :breadcrumbs [0 1 0]}
-                 {:commands
-                  [{:cmd-id :inc,
-                    :level 2,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 2,
-                    :id id1}],
-                  :breadcrumbs [0 1 2]}
-                 {:commands
-                  [{:cmd-id :inc,
-                    :level 2,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 2,
-                    :id id1}],
-                  :breadcrumbs [0 0 0]}
-                 {:commands
-                  [{:cmd-id :inc,
-                    :level 2,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 2,
-                    :id id1}],
-                  :breadcrumbs [0 1 1]}
-                 {:commands
-                  [{:cmd-id :inc,
-                    :level 1,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 1,
-                    :id id1}],
-                  :breadcrumbs [0 0]}
-                 {:commands
-                  [{:cmd-id :inc,
-                    :level 1,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 1,
-                    :id id1}],
-                  :breadcrumbs [0 1]}
-                 {:commands
-                  [{:cmd-id :inc,
-                    :level 2,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 2,
-                    :id id1}],
-                  :breadcrumbs [0 1 3]}}
+        (is (= command-store-with-bc
                cmds))))))

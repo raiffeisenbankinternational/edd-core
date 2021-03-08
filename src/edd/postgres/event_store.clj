@@ -56,12 +56,22 @@
   (log/debug "Storing event" event)
   (when event
     (jdbc/execute! (:con ctx)
-                   ["INSERT INTO glms.event_store(id, service, request_id, interaction_id, event_seq, aggregate_id, data)
-                            VALUES (?,?,?,?,?,?,?)"
+                   ["INSERT INTO glms.event_store(id,
+                                                  service_name,
+                                                  invocation_id,
+                                                  request_id,
+                                                  interaction_id,
+                                                  breadcrumbs,
+                                                  event_seq,
+                                                  aggregate_id,
+                                                  data)
+                            VALUES (?,?,?,?,?,?,?,?,?)"
                     (uuid/gen)
                     (:service-name ctx)
+                    (:invocation-id ctx)
                     (:request-id ctx)
                     (:interaction-id ctx)
+                    (str/join ":" (:breadcrumbs event))
                     (:event-seq event)
                     (:id event)
                     event])))
@@ -69,33 +79,59 @@
 (defn store-cmd
   [ctx cmd]
   (log/debug "Storing command" cmd)
-  (when cmd
+  (when (and cmd
+             (> (-> cmd
+                    (:commands)
+                    (count))
+                0))
     (jdbc/execute! (:con ctx)
-                   ["INSERT INTO glms.command_store(id, service, data)
-                            VALUES (?,?,?)"
+                   ["INSERT INTO glms.command_store(id,
+                                                    invocation_id,
+                                                    request_id,
+                                                    interaction_id,
+                                                    breadcrumbs,
+                                                    source_service,
+                                                    target_service,
+                                                    aggregate_id,
+                                                    data)
+                            VALUES (?,?,?,?,?,?,?,?,?)"
                     (uuid/gen)
-                    (name (:service cmd))
+                    (:invocation-id ctx)
+                    (:request-id ctx)
+                    (:interaction-id ctx)
+                    (str/join ":" (:breadcrumbs cmd))
+                    (:service-name ctx)
+                    (:service cmd)
+                    (-> cmd
+                        (:commands)
+                        (first)
+                        (:id))
                     cmd])))
 
 (defmethod log-request
   :postgres
-  [{:keys [body request-id interaction-id service-name] :as ctx}]
+  [{:keys [body invocation-id request-id interaction-id service-name] :as ctx}]
   (log/debug "Storing request" (:commands body))
   (when (:commands body)
     (let [ps (jdbc/prepare (:con ctx)
-                           ["INSERT INTO glms.command_request_log(request_id,
-                                                          interaction_id,
-                                                          service_name,
-                                                          cmd_index,
-                                                          data)
-                            VALUES (?,?,?,?,?)"])
+                           ["INSERT INTO glms.command_request_log(
+                                                         invocation_id,
+                                                         request_id,
+                                                         interaction_id,
+                                                         breadcrumbs,
+                                                         service_name,
+                                                         cmd_index,
+                                                         data)
+                            VALUES (?,?,?,?,?,?,?)"])
           params (map-indexed
-                  (fn [idx itm] [request-id
-                                 interaction-id
-                                 service-name
-                                 idx
-                                 itm])
-                  (:commands body))]
+                   (fn [idx itm] [invocation-id
+                                  request-id
+                                  interaction-id
+                                  (str/join ":" (get body :breadcrumbs []))
+                                  service-name
+                                  0
+                                  itm])
+                   body)]
       (p/execute-batch! ps params))))
 
 (defmethod log-dps
@@ -123,32 +159,48 @@
 
 (defmethod log-response
   :postgres
-  [{:keys [resp request-id interaction-id service-name] :as ctx}]
+  [{:keys [resp invocation-id request-id interaction-id service-name] :as ctx}]
   (log/debug "Storing response" resp)
   (when resp
     (jdbc/execute! (:con ctx)
-                   ["INSERT INTO glms.command_response_log(request_id,
+                   ["INSERT INTO glms.command_response_log(invocation_id,
+                                                           request_id,
                                                            interaction_id,
+                                                           breadcrumbs,
                                                            service_name,
+                                                           cmd_index,
                                                            data)
-                            VALUES (?,?,?,?)"
+                            VALUES (?,?,?,?,?,?,?)"
+                    invocation-id
                     request-id
                     interaction-id
+                    (str/join ":" (:breadcrumbs ctx))
                     service-name
+                    0,
                     resp])))
 
 (defn store-identity
-  [ctx identity]
+  [{:keys [cmd] :as ctx} identity]
   (log/debug "Storing identity" identity)
   (jdbc/execute! (:con ctx)
-                 ["INSERT INTO glms.identity_store(id, service, aggregate_id)
-                            VALUES (?,?,?)"
+                 ["INSERT INTO glms.identity_store(id,
+                                                   invocation_id,
+                                                   request_id,
+                                                   interaction_id,
+                                                   breadcrumbs,
+                                                   service_name,
+                                                   aggregate_id)
+                            VALUES (?,?,?,?,?,?,?)"
                   (:identity identity)
-                  (name (:service-name ctx))
+                  (:invocation-id ctx)
+                  (:request-id ctx)
+                  (:interaction-id ctx)
+                  (str/join ":" (:breadcrumbs cmd))
+                  (:service-name ctx)
                   (:id identity)]))
 
 (defn store-sequence
-  [ctx sequence]
+  [{:keys [cmd] :as ctx} sequence]
   {:pre [(:id sequence)]}
   (log/debug "Storing sequence" sequence)
   (let [service-name (:service-name ctx)
@@ -156,11 +208,21 @@
     (jdbc/execute! (:con ctx)
                    ["BEGIN WORK;
                         LOCK TABLE glms.sequence_store IN EXCLUSIVE MODE;
-                       INSERT INTO glms.sequence_store (aggregate_id, service_name, value)
-                            VALUES (?, ?, (SELECT COALESCE(MAX(value), 0) +1
-                                             FROM glms.sequence_store
-                                            WHERE service_name = ?));
-                    COMMIT WORK;"
+                       INSERT INTO glms.sequence_store (invocation_id,
+                                                        request_id,
+                                                        interaction_id,
+                                                        breadcrumbs,
+                                                        aggregate_id,
+                                                        service_name,
+                                                        value)
+                            VALUES (?, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(value), 0) +1
+                                                         FROM glms.sequence_store
+                                                        WHERE service_name = ?));
+                     COMMIT WORK;"
+                    (:invocation-id ctx)
+                    (:request-id ctx)
+                    (:interaction-id ctx)
+                    (str/join ":" (:breadcrumbs cmd))
                     aggregate-id
                     service-name
                     service-name])))
@@ -204,7 +266,7 @@
         (jdbc/execute-one! (:con ctx)
                            ["SELECT aggregate_id FROM glms.identity_store
                                            WHERE id = ?
-                                           AND service = ?"
+                                           AND service_name = ?"
                             identity
                             (:service-name ctx)]
                            {:builder-fn rs/as-unqualified-lower-maps})]
@@ -223,7 +285,7 @@
                               ["SELECT data
                                 FROM glms.event_store
                                 WHERE aggregate_id=?
-                                  AND service=?
+                                  AND service_name=?
                                   AND event_seq>?
                                 ORDER BY event_seq ASC" id service-name version]
                               {:builder-fn rs/as-arrays}))]
@@ -242,8 +304,8 @@
                       ["SELECT COALESCE(MAX(event_seq), 0) AS max
                          FROM glms.event_store
                          WHERE aggregate_id=?
-                         AND service=?" id (:service-name ctx)]
-                      {:builder-fn rs/as-unqualified-lower-maps})))
+                         AND service_name=?" id (:service-name ctx)]
+                       {:builder-fn rs/as-unqualified-lower-maps})))
 
 (defn store-events
   [ctx events]
@@ -272,6 +334,7 @@
 (defn store-results-impl
   [{:keys [resp] :as ctx}]
   (log/debug "Storing results impl")
+  (log-response ctx)
   (store-events ctx (:events resp))
   (doseq [i (:identities resp)]
     (store-identity ctx i))
