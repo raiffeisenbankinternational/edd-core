@@ -1,15 +1,11 @@
 (ns edd.core
   (:require [clojure.tools.logging :as log]
-            [next.jdbc :as jdbc]
-            [edd.db :as db]
             [lambda.request :as request]
             [edd.el.cmd :as cmd]
             [edd.schema :as s]
             [edd.el.event :as event]
             [edd.el.query :as query]
             [lambda.util :as util]
-            [lambda.uuid :as uuid]
-            [malli.util :as mu]
             [malli.error :as me]
             [malli.core :as m]
             [edd.dal :as dal]
@@ -55,17 +51,22 @@
   (update ctx :fx
           #(conj % reg-fn)))
 
-
+(defn- add-log-level
+  [attrs body]
+  (if-let [level (:log-level body)]
+    (assoc attrs :level level)
+    attrs))
 
 (defn dispatch-request
   [{:keys [body] :as ctx}]
   (log/debug "Dispatching" body)
   (swap! request/*request* #(update % :mdc
                                     (fn [mdc]
-                                      (assoc mdc
-                                        :invocation-id (:invocation-id ctx)
-                                        :request-id (:request-id body)
-                                        :interaction-id (:interaction-id body)))))
+                                      (-> (assoc mdc
+                                            :invocation-id (:invocation-id ctx)
+                                            :request-id (:request-id body)
+                                            :interaction-id (:interaction-id body))
+                                          (add-log-level body)))))
   (assoc
     ctx
     :resp (try
