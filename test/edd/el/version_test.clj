@@ -25,6 +25,14 @@
 
 (def cmd-id (uuid/parse "111111-1111-1111-1111-111111111111"))
 
+(require '[edd.test.fixture.execution :as exec])
+(require '[lambda.test.fixture.state
+           :as state])
+
+(exec/run-cmd! ctx {:cmd-id :cmd-1
+                    :id cmd-id})
+
+@state/*dal-state*
 
 (deftest test-version-with-no-aggregate
   (mock/with-mock-dal

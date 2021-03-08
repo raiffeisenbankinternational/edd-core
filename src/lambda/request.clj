@@ -1,3 +1,3 @@
 (ns lambda.request)
 
-(def ^:dynamic *request*)
+(def ^:dynamic *request* (atom {}))
