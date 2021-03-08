@@ -25,7 +25,7 @@
           (fn [ctx] (:event-store ctx)))
 
 (defmulti log-request
-          (fn [ctx]
+          (fn [{:keys [commands] :as ctx}]
             (:event-store ctx)))
 
 (defmulti log-response
