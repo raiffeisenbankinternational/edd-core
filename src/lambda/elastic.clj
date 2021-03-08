@@ -1,13 +1,6 @@
 (ns lambda.elastic
-  (:import (java.net.http HttpClient
-                          HttpClient$Version
-                          HttpRequest
-                          HttpRequest$Builder
-                          HttpRequest$BodyPublisher HttpRequest$BodyPublishers HttpResponse$BodyHandlers)
-           (java.net URI)
-           (java.time.format DateTimeFormatter)
-           (java.time OffsetDateTime ZoneOffset)
-           (javax.script ScriptEngineManager))
+  (:import (java.time.format DateTimeFormatter)
+           (java.time OffsetDateTime ZoneOffset))
   (:require
     [clj-aws-sign.core :as awssign]
     [lambda.util :as util]
@@ -70,6 +63,7 @@
                                       (log/error "Failed update" response)
                                       {:error {:error response}})
         (> (:status response) 299) (do
+                                     (log/error "Elastic query" body)
                                      (log/error "Elastic response" (:status response))
                                      {:error {:status (:status response)}})
         :else (util/to-edn (:body response))))))
