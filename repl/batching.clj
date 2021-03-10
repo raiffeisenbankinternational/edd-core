@@ -46,5 +46,6 @@
 
 (pp (:event-store @state/*dal-state*))
 (pp (:aggregate-store @state/*dal-state*))
+(pp @state/*dal-state*)
 
-(pp @r/*request*)
+;(pp @r/*request*)
