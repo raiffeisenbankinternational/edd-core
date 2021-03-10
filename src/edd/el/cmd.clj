@@ -350,10 +350,15 @@
 (defn versioned-events! [ctx]
   (assoc-in ctx [:resp :events] (get @request/*request* :events [])))
 
+(defn- log-request [ctx]
+  (dal/log-request ctx)
+  ctx)
+
 (defn handle-commands
   [ctx body]
   (cache/clear!)
   (let [resp (retry #(e-> (assoc ctx :commands (:commands body))
+                          (log-request)
                           (validate-commands)
                           (get-command-response)
                           (check-for-errors)

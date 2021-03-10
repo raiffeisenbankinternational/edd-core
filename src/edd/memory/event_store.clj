@@ -13,7 +13,6 @@
                     log-response
                     store-results]]))
 
-
 (defn store-sequence
   "Stores sequence in memory structure.
   Raises RuntimeException if sequence is already taken"
@@ -22,8 +21,8 @@
   (log/info "Emulated 'store-sequence' dal function")
   (let [store (:sequence-store @*dal-state*)
         sequence-already-exists (some
-                                  #(= (:id %) id)
-                                  store)
+                                 #(= (:id %) id)
+                                 store)
         max-number (count store)]
     (if sequence-already-exists
       (throw (RuntimeException. "Sequence already exists")))
@@ -46,17 +45,14 @@
     (swap! *dal-state*
            #(update % :identity-store (fn [v] (conj v identity))))))
 
-
 (defn enqueue [q item]
   (vec (shuffle (conj (or q []) item))))
-
 
 (defn peek-cmd!
   []
   (let [popq (fn [q] (if (seq q) (pop q) []))
         [old new] (swap-vals! *queues* update :command-queue popq)]
     (peek (:command-queue old))))
-
 
 (defn enqueue-cmd! [cmd]
   (swap! *queues*
@@ -86,8 +82,7 @@
                                                      :interaction-id
                                                      :request-id))))))))
 (defn store-events
-  [events]
-  )
+  [events])
 
 (defn store-results-impl
   [{:keys [resp] :as ctx}]
@@ -121,7 +116,6 @@
        (into [])
        (sort-by #(:event-seq %))))
 
-
 (defmethod get-sequence-number-for-id
   :memory
   [{:keys [id]}]
@@ -144,21 +138,20 @@
   [{:keys [id]}]
   (log/info "Emulated 'get-max-event-seq' dal function with fixed return value 0")
   (let [resp (map
-               #(:event-seq %)
-               (filter
-                 #(= (:id %) id)
-                 (:event-store @*dal-state*)))]
+              #(:event-seq %)
+              (filter
+               #(= (:id %) id)
+               (:event-store @*dal-state*)))]
     (if (> (count resp) 0)
       (apply
-        max
-        resp)
+       max
+       resp)
       0)))
 
 (defmethod get-max-event-seq
   :memory
   [ctx]
   (get-max-event-seq-impl ctx))
-
 
 (defmethod get-aggregate-id-by-identity
   :memory
@@ -167,8 +160,8 @@
   (log/info "Emulating get-aggregate-id-by-identity" identity)
   (let [store (:identity-store @*dal-state*)]
     (:id
-      (first
-        (filter #(= (:identity %) identity) store)))))
+     (first
+      (filter #(= (:identity %) identity) store)))))
 
 (defmethod log-request
   :memory
