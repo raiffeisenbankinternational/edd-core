@@ -22,32 +22,32 @@
 
 (def ^ObjectMapper json-mapper
   (json/object-mapper
-    {:decode-key-fn true
-     :decode-fn
-                    (fn [v]
-                      (condp instance? v
-                        String (case (first v)
-                                 \: (if (str/starts-with? v "::")
-                                      (subs v 1)
-                                      (keyword (subs v 1)))
-                                 \# (if (str/starts-with? v "##")
-                                      (subs v 1)
-                                      (UUID/fromString (subs v 1)))
-                                 v)
-                        v))
-     :encoders      {String         (fn [^String v ^JsonGenerator jg]
-                                      (cond
-                                        (str/starts-with? v ":")
-                                        (.writeString jg (str ":" v))
-                                        (str/starts-with? v "#")
-                                        (.writeString jg (str "#" v))
-                                        :else (.writeString jg v)))
-                     BufferedReader (fn [^BufferedReader v ^JsonGenerator jg]
-                                      (.writeString jg "BufferedReader"))
-                     UUID           (fn [^UUID v ^JsonGenerator jg]
-                                      (.writeString jg (str "#" v)))
-                     Keyword        (fn [^Keyword v ^JsonGenerator jg]
-                                      (.writeString jg (str ":" (name v))))}}))
+   {:decode-key-fn true
+    :decode-fn
+    (fn [v]
+      (condp instance? v
+        String (case (first v)
+                 \: (if (str/starts-with? v "::")
+                      (subs v 1)
+                      (keyword (subs v 1)))
+                 \# (if (str/starts-with? v "##")
+                      (subs v 1)
+                      (UUID/fromString (subs v 1)))
+                 v)
+        v))
+    :encoders      {String         (fn [^String v ^JsonGenerator jg]
+                                     (cond
+                                       (str/starts-with? v ":")
+                                       (.writeString jg (str ":" v))
+                                       (str/starts-with? v "#")
+                                       (.writeString jg (str "#" v))
+                                       :else (.writeString jg v)))
+                    BufferedReader (fn [^BufferedReader v ^JsonGenerator jg]
+                                     (.writeString jg "BufferedReader"))
+                    UUID           (fn [^UUID v ^JsonGenerator jg]
+                                     (.writeString jg (str "#" v)))
+                    Keyword        (fn [^Keyword v ^JsonGenerator jg]
+                                     (.writeString jg (str ":" (name v))))}}))
 
 (defn date-time
   ([] (OffsetDateTime/now))
@@ -86,7 +86,7 @@
     (if raw
       resp
       (assoc resp
-        :body (to-edn (:body resp))))))
+             :body (to-edn (:body resp))))))
 
 (defn http-delete
   [url request & {:keys [raw]}]
@@ -95,7 +95,7 @@
     (if raw
       resp
       (assoc resp
-        :body (to-edn (:body resp))))))
+             :body (to-edn (:body resp))))))
 
 (defn http-put
   [url request & {:keys [raw]}]
@@ -106,7 +106,7 @@
     (if raw
       resp
       (assoc resp
-        :body (to-edn (:body resp))))))
+             :body (to-edn (:body resp))))))
 
 (defn http-post
   [url request & {:keys [raw]}]
@@ -117,7 +117,7 @@
     (if raw
       resp
       (assoc resp
-        :body (to-edn (:body resp))))))
+             :body (to-edn (:body resp))))))
 
 (defn get-env
   [name & [default]]
@@ -146,20 +146,20 @@
   (log/debug "Loading config name:" name)
   (let [file (io/as-file name)
         classpath (io/as-file
-                    (io/resource
-                      name))]
+                   (io/resource
+                    name))]
     (to-edn
-      (if (.exists ^File file)
-        (do
-          (log/debug "Loading from file config:" name)
-          (-> file
-              (slurp)
-              (decrypt name)))
-        (do
-          (log/debug "Loading config from classpath:" name)
-          (-> classpath
-              (slurp)
-              (decrypt name)))))))
+     (if (.exists ^File file)
+       (do
+         (log/debug "Loading from file config:" name)
+         (-> file
+             (slurp)
+             (decrypt name)))
+       (do
+         (log/debug "Loading config from classpath:" name)
+         (-> classpath
+             (slurp)
+             (decrypt name)))))))
 
 (defn base64encode
   [^String to-encode]
@@ -169,8 +169,8 @@
 (defn base64decode
   [^String to-decode]
   (String. (.decode
-             (Base64/getDecoder)
-             to-decode) "UTF-8"))
+            (Base64/getDecoder)
+            to-decode) "UTF-8"))
 
 (def ^:dynamic *cache*)
 

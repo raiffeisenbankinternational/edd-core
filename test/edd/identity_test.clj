@@ -1,14 +1,13 @@
 (ns edd.identity-test
   (:require
-    [lambda.core :refer [handle-request]]
-    [edd.el.cmd :as cmd]
-    [edd.memory.event-store :as event-store]
-    [edd.memory.view-store :as view-store]
-    [edd.test.fixture.dal :as mock]
-    [edd.core :as edd]
-    [lambda.uuid :as uuid]))
+   [lambda.core :refer [handle-request]]
+   [edd.el.cmd :as cmd]
+   [edd.memory.event-store :as event-store]
+   [edd.memory.view-store :as view-store]
+   [edd.test.fixture.dal :as mock]
+   [edd.core :as edd]
+   [lambda.uuid :as uuid]))
 (use 'clojure.test)
-
 
 (def ctx
   (-> {}
@@ -25,20 +24,19 @@
                                  :name     "e2"}]))
       (edd/reg-cmd :create-3 (fn [ctx cmd]
                                '(nil
-                                  {:event-id :e3
-                                   :name     "e3"})))))
+                                 {:event-id :e3
+                                  :name     "e3"})))))
 
 (defn register
-  [ctx]
-  )
+  [ctx])
 
 (deftest test-identity
   (mock/with-mock-dal
     (let [id (uuid/gen)
           resp (mock/handle-cmd ctx
-                                 {:cmd-id :create-1
-                                  :id     id
-                                  :name   "e1"})]
+                                {:cmd-id :create-1
+                                 :id     id
+                                 :name   "e1"})]
       (mock/verify-state :event-store [{:event-id  :e1
                                         :name      "e1"
                                         :event-seq 1
@@ -58,9 +56,9 @@
   (mock/with-mock-dal
     (let [id (uuid/gen)
           resp (mock/handle-cmd ctx
-                                 {:cmd-id :create-2
-                                  :id     id
-                                  :name   "e2"})]
+                                {:cmd-id :create-2
+                                 :id     id
+                                 :name   "e2"})]
       (mock/verify-state :event-store [{:event-id  :e2
                                         :name      "e2"
                                         :event-seq 1
@@ -73,15 +71,14 @@
               :success    true}
              resp)))))
 
-
 (deftest test-handler-returns-list
   "Command response can contain nil, can return list or vector or map. We should handle it"
   (mock/with-mock-dal
     (let [id (uuid/gen)
           resp (mock/handle-cmd ctx
-                                 {:cmd-id :create-3
-                                  :id     id
-                                  :name   "e3"})]
+                                {:cmd-id :create-3
+                                 :id     id
+                                 :name   "e3"})]
       (mock/verify-state :event-store [{:event-id  :e3
                                         :name      "e3"
                                         :event-seq 1

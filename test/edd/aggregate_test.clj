@@ -25,18 +25,18 @@
       (view-store/register)
       (event-store/register)
       (edd/reg-event
-        :event-1 (fn [p v]
-                   (assoc p :e1 v)))
+       :event-1 (fn [p v]
+                  (assoc p :e1 v)))
       (edd/reg-event
-        :event-2 (fn [p v]
-                   (assoc p :e2 v)))
+       :event-2 (fn [p v]
+                  (assoc p :e2 v)))
       (edd/reg-agg-filter
-        (fn [{:keys [agg] :as ctx}]
-          (assoc
-            agg
-            :filter-result
-            (str (get-in agg [:e1 :k1])
-                 (get-in agg [:e2 :k2])))))))
+       (fn [{:keys [agg] :as ctx}]
+         (assoc
+          agg
+          :filter-result
+          (str (get-in agg [:e1 :k1])
+               (get-in agg [:e2 :k2])))))))
 
 (deftest test-apply
   (let [agg (event/get-current-state
@@ -88,8 +88,8 @@
                                          (assoc :apply {:aggregate-id cmd-id
                                                         :apply        :cmd-1})))]
       (is (contains?
-            result
-            :error)))))
+           result
+           :error)))))
 
 (deftest test-apply-cmd-storing-response-error
   (with-redefs [dal/get-events (fn [_]
@@ -105,5 +105,5 @@
            (select-keys (event/handle-event (-> apply-ctx
                                                 elastic-view-store/register
                                                 (assoc
-                                                  :apply {:aggregate-id cmd-id})))
+                                                 :apply {:aggregate-id cmd-id})))
                         [:error])))))

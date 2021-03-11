@@ -5,7 +5,6 @@
            (javax.crypto.spec SecretKeySpec PBEKeySpec IvParameterSpec)
            (java.util Base64 Arrays)))
 
-
 (defn- ^Key secret-spec
   [^bytes msg-bytes, ^String password]
   (let [key-factory (SecretKeyFactory/getInstance "PBKDF2WithHmacSHA256")
@@ -20,11 +19,11 @@
 (defn ^String decrypt
   [^String msg ^String password ^String iv]
   (let [msg-bytes (.decode
-                    (Base64/getDecoder)
-                    msg)
+                   (Base64/getDecoder)
+                   msg)
         iv (IvParameterSpec. (.decode
-                               (Base64/getDecoder)
-                               iv))
+                              (Base64/getDecoder)
+                              iv))
         cipher (doto (Cipher/getInstance "AES/CBC/PKCS5Padding")
                  (.init Cipher/DECRYPT_MODE
                         (secret-spec msg-bytes password)

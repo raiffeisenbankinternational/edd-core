@@ -20,8 +20,7 @@
 
       (edd/reg-event :event-1
                      (fn [agg event]
-                       (update agg :value (fnil inc 0) )))))
-
+                       (update agg :value (fnil inc 0))))))
 
 (deftest apply-events-no-snapshot
   (testing "snapshot - but no snapshot available"

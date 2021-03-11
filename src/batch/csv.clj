@@ -30,16 +30,15 @@
   (map zipmap
        (->> (first csv-data)                                ;; First row is the header
             (map
-              #(convert-column-names % keep-original))      ;; Drop if you want string keys instead
+             #(convert-column-names % keep-original))      ;; Drop if you want string keys instead
             repeat)
        (rest csv-data)))
-
 
 (defn parse-csv
   [stream & [sep keep-original]]
   (csv-data->maps
-    (csv/read-csv stream
-                  :separator (if sep sep \;))
-    (if keep-original
-      keep-original
-      false)))
+   (csv/read-csv stream
+                 :separator (if sep sep \;))
+   (if keep-original
+     keep-original
+     false)))

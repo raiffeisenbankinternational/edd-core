@@ -6,7 +6,6 @@
             [edd.test.fixture.dal :as mock]
             [edd.dal :as dal]))
 
-
 (def ctx
   (-> mock/ctx
       (assoc :service-name :local-test)
@@ -71,7 +70,6 @@
     (mock/verify-state :aggregate-store [{:id      cmd-id
                                           :version 2
                                           :name    "Test name"}])))
-
 
 (deftest test-version-when-aggregate-missing
   (mock/with-mock-dal

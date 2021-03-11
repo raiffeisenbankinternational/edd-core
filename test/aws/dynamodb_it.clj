@@ -2,6 +2,7 @@
   (:require [clojure.test :refer :all]
             [lambda.util :as util]
             [aws.dynamodb :as ddb]
+            [clojure.string :as str]
             [edd.dal :as dal]
             [edd.dynamodb.event-store :as event-store]
             [lambda.uuid :as uuid]))
@@ -11,7 +12,7 @@
 
 (def ctx
   (-> {:elastic-search         {:url (util/get-env "IndexDomainEndpoint")}
-       :db                     {:name "alpha-dynamodb-svc"}
+       :db                     {:name "dynamodb-svc"}
        :request-id             request-id
        :interaction-id         interaction-id
        :service-name           "test-source"
@@ -23,11 +24,13 @@
       (event-store/register)))
 
 (deftest test-list-tables
-  (is (= {:TableNames ["pipeline-alpha-dynamodb-svc-effect-store-ddb"
-                       "pipeline-alpha-dynamodb-svc-event-store-ddb"
-                       "pipeline-alpha-dynamodb-svc-identity-store-ddb"]}
-         (ddb/list-tables ctx))))
-
+  (is (= ["effect-store-ddb"
+          "event-store-ddb"
+          "identity-store-ddb"]
+         (->> (ddb/list-tables ctx)
+              (:TableNames)
+              (filter #(str/includes? % "dynamodb-svc"))
+              (map #(str/replace % #".*-svc-" ""))))))
 
 (def agg-id (uuid/gen))
 (def effect-id (uuid/gen))
@@ -43,10 +46,10 @@
                              :id     agg-id}]}]
     (with-redefs [uuid/gen (fn [] effect-id)]
       (dal/store-results (assoc ctx
-                           :resp {:events     [event]
-                                  :commands   [command]
-                                  :sequences  []
-                                  :identities [identity]})))
+                                :resp {:events     [event]
+                                       :commands   [command]
+                                       :sequences  []
+                                       :identities [identity]})))
 
     (is (= {:Item {:Data          {:S (util/to-json event)}
                    :EventSeq      {:N "1"}
@@ -56,13 +59,13 @@
                    :RequestId     {:S request-id}
                    :Service       {:S :test-source}}}
            (ddb/make-request
-             (assoc ctx :action "GetItem"
-                        :body {:Key       {:Id       {:S agg-id}
-                                           :EventSeq {:N "1"}}
-                               :TableName (event-store/table-name ctx :event-store)}))))
+            (assoc ctx :action "GetItem"
+                   :body {:Key       {:Id       {:S agg-id}
+                                      :EventSeq {:N "1"}}
+                          :TableName (event-store/table-name ctx :event-store)}))))
     (is (= {:Item {:Data          {:S (util/to-json (assoc command
-                                                      :request-id request-id
-                                                      :interaction-id interaction-id))}
+                                                           :request-id request-id
+                                                           :interaction-id interaction-id))}
                    :Id            {:S effect-id}
                    :InteractionId {:S interaction-id}
                    :ItemType      {:S :effect}
@@ -70,9 +73,9 @@
                    :TargetService {:S :test-svc}
                    :Service       {:S :test-source}}}
            (ddb/make-request
-             (assoc ctx :action "GetItem"
-                        :body {:Key       {:Id {:S effect-id}}
-                               :TableName (event-store/table-name ctx :effect-store)}))))
+            (assoc ctx :action "GetItem"
+                   :body {:Key       {:Id {:S effect-id}}
+                          :TableName (event-store/table-name ctx :effect-store)}))))
     (is (= {:Item {:Data          {:S (util/to-json identity)}
                    :AggregateId   {:S agg-id}
                    :Id            {:S "test-source/id-1"}
@@ -81,6 +84,6 @@
                    :RequestId     {:S request-id}
                    :Service       {:S :test-source}}}
            (ddb/make-request
-             (assoc ctx :action "GetItem"
-                        :body {:Key       {:Id {:S "test-source/id-1"}}
-                               :TableName (event-store/table-name ctx :identity-store)}))))))
+            (assoc ctx :action "GetItem"
+                   :body {:Key       {:Id {:S "test-source/id-1"}}
+                          :TableName (event-store/table-name ctx :identity-store)}))))))
