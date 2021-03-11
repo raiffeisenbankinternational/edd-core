@@ -25,17 +25,17 @@
 (defn error-matches?
   [msg words]
   (every?
-    #(str/includes? msg %)
-    words))
+   #(str/includes? msg %)
+   words))
 
 (defn parse-error
   [m]
 
   (let [match (first
-                (filter
-                  (fn [[k v]]
-                    (error-matches? m v))
-                  errors))]
+               (filter
+                (fn [[k v]]
+                  (error-matches? m v))
+                errors))]
     (if match
       {:key              (first match)
        :original-message m}
@@ -50,8 +50,6 @@
       {:error (-> (.getMessage e)
                   (str/replace "\n" "")
                   (parse-error))})))
-
-
 
 (defn store-event
   [ctx event]
@@ -92,12 +90,12 @@
                                                           data)
                             VALUES (?,?,?,?,?)"])
           params (map-indexed
-                   (fn [idx itm] [request-id
-                                  interaction-id
-                                  service-name
-                                  idx
-                                  itm])
-                   (:commands body))]
+                  (fn [idx itm] [request-id
+                                 interaction-id
+                                 service-name
+                                 idx
+                                 itm])
+                  (:commands body))]
       (p/execute-batch! ps params))))
 
 (defmethod log-dps
@@ -113,12 +111,12 @@
                                                           data)
                             VALUES (?,?,?,?,?)"])
             params (map-indexed
-                     (fn [idx itm] [request-id
-                                    interaction-id
-                                    service-name
-                                    idx
-                                    itm])
-                     dps-resolved)]
+                    (fn [idx itm] [request-id
+                                   interaction-id
+                                   service-name
+                                   idx
+                                   itm])
+                    dps-resolved)]
         (p/execute-batch! ps params))
       ctx)
   ctx)
@@ -173,14 +171,14 @@
   {:pre [(:id query)]}
   (let [service-name (:service-name ctx)
         result (jdbc/execute-one!
-                 (:con ctx)
-                 ["SELECT value
+                (:con ctx)
+                ["SELECT value
                      FROM glms.sequence_store
                     WHERE aggregate_id = ?
                       AND service_name = ?"
-                  (:id query)
-                  service-name]
-                 {:builder-fn rs/as-unqualified-lower-maps})]
+                 (:id query)
+                 service-name]
+                {:builder-fn rs/as-unqualified-lower-maps})]
     (:value result)))
 
 (defmethod get-id-for-sequence-number
@@ -189,14 +187,14 @@
   {:pre [sequence]}
   (let [service-name (:service-name ctx)
         result (jdbc/execute-one!
-                 (:con ctx)
-                 ["SELECT aggregate_id
+                (:con ctx)
+                ["SELECT aggregate_id
                      FROM glms.sequence_store
                     WHERE value = ?
                       AND service_name = ?"
-                  sequence
-                  service-name]
-                 {:builder-fn rs/as-unqualified-lower-maps})]
+                 sequence
+                 service-name]
+                {:builder-fn rs/as-unqualified-lower-maps})]
     (:aggregate_id result)))
 
 (defmethod get-aggregate-id-by-identity
@@ -221,59 +219,55 @@
   {:pre [id service-name]}
   (log/info "Fetching events for aggregate" id)
   (let [data (try-to-data
-               #(jdbc/execute! (:con ctx)
-                               ["SELECT data
+              #(jdbc/execute! (:con ctx)
+                              ["SELECT data
                                 FROM glms.event_store
                                 WHERE aggregate_id=?
                                   AND service=?
                                   AND event_seq>?
                                 ORDER BY event_seq ASC" id service-name version]
-                               {:builder-fn rs/as-arrays}))]
+                              {:builder-fn rs/as-arrays}))]
     (if (:error data)
       data
       (flatten
-        (rest
-          data)))))
+       (rest
+        data)))))
 
 (defmethod get-max-event-seq
   :postgres
   [{:keys [id] :as ctx}]
   (log/debug "Fetching max event-seq for aggregate" id)
   (:max
-    (jdbc/execute-one! (:con ctx)
-                       ["SELECT COALESCE(MAX(event_seq), 0) AS max
+   (jdbc/execute-one! (:con ctx)
+                      ["SELECT COALESCE(MAX(event_seq), 0) AS max
                          FROM glms.event_store
                          WHERE aggregate_id=?
                          AND service=?" id (:service-name ctx)]
-                       {:builder-fn rs/as-unqualified-lower-maps})))
+                      {:builder-fn rs/as-unqualified-lower-maps})))
 
 (defn store-events
   [ctx events]
   (log/info "Storing events")
   (doall
-    (for [event (flatten events)]
-      (store-event ctx event))))
-
+   (for [event (flatten events)]
+     (store-event ctx event))))
 
 (defn store-sequences
   [ctx sequences]
   (log/info "Storing sequences")
   (log/debug "Storing sequences" sequences)
   (doall
-    (for [sequence sequences]
-      (store-sequence ctx sequence))))
-
-
+   (for [sequence sequences]
+     (store-sequence ctx sequence))))
 
 (defn store-command
   [ctx cmd]
   (log/info "Storing effect")
   (log/debug "Storing effect" cmd)
   (store-cmd ctx (assoc
-                   cmd
-                   :request-id (:request-id ctx)
-                   :interaction-id (:interaction-id ctx))))
-
+                  cmd
+                  :request-id (:request-id ctx)
+                  :interaction-id (:interaction-id ctx))))
 
 (defn store-results-impl
   [{:keys [resp] :as ctx}]
@@ -287,16 +281,14 @@
     (store-command ctx i))
   ctx)
 
-
 (defmethod store-results
   :postgres
   [{:keys [resp] :as ctx}]
   (jdbc/with-transaction
     [tx (:con ctx)]
     (try-to-data
-      #(store-results-impl
-         (assoc ctx :con tx)))))
-
+     #(store-results-impl
+       (assoc ctx :con tx)))))
 
 (defmethod with-init
   :postgres

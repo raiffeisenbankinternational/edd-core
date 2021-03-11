@@ -58,15 +58,19 @@
   (swap! *queues*
          update :command-queue enqueue cmd))
 
+(defn clean-commands
+  [cmd]
+  (dissoc cmd
+          :request-id
+          :interaction-id
+          :breadcrumbs))
+
 (defn store-command
   "Stores command in memory structure"
   [cmd]
   (log/info "Emulated 'store-cmd' dal function")
   (swap! *dal-state*
-         #(update % :command-store (fn [v] (conj v (dissoc
-                                                    cmd
-                                                    :request-id
-                                                    :interaction-id)))))
+         #(update % :command-store (fnil conj [])  (clean-commands cmd)))
   (enqueue-cmd! cmd))
 
 (defn store-event
