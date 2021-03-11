@@ -19,7 +19,9 @@
       (event-store/register)
       (view-store/register)
       (edd/reg-cmd :cmd-1 (fn [ctx cmd]
-                            [{:id       (:id cmd)
+                            [{:identity (:id cmd)}
+                             {:sequence (:id cmd)}
+                             {:id       (:id cmd)
                               :event-id :event-1
                               :name     (:name cmd)}
                              {:id       (:id cmd)
@@ -69,9 +71,9 @@
                                              :id           fx-id
                                              :service-name :s2}]
                                :events     2
-                               :identities 0
+                               :identities 1
                                :meta       [{:cmd-1 {:id agg-id}}]
-                               :sequences  0
+                               :sequences  1
                                :success    true}
               :interaction-id interaction-id
               :request-id     request-id}

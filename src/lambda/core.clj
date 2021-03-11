@@ -5,7 +5,8 @@
             [lambda.request :as request]
             [clojure.tools.logging :as log]
             [clojure.java.io :as io]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [lambda.uuid :as uuid]))
 
 (defn apply-filters
   [{:keys [filters req] :as ctx}]
@@ -128,17 +129,19 @@
                                                    "local"))
                    (init-filters))]
        (doseq [i (get-loop)]
-         (let [request (aws/get-next-request api)]
+         (let [request (aws/get-next-request api)
+               invocation-id (get-in
+                              request
+                              [:headers :lambda-runtime-aws-request-id])]
            (log/debug "Loop" i)
            (binding [request/*request* (atom {})]
              (handle-request
               (-> ctx
                   (assoc :from-api (is-from-api request))
                   (assoc :api api
-
-                         :invocation-id (get-in
-                                         request
-                                         [:headers :lambda-runtime-aws-request-id])))
+                         :invocation-id (if-not (int? invocation-id)
+                                          (uuid/parse invocation-id)
+                                          invocation-id)))
               request)))))))
 
 

@@ -363,10 +363,10 @@
 (defn handle-commands
   [ctx body]
   (cache/clear!)
-  (dal/log-request ctx)
   (let [resp (retry #(e-> (assoc ctx :commands (:commands body)
                                  :breadcrumbs (or (get body :breadcrumbs)
                                                   [0]))
+                          (log-request)
                           (validate-commands)
                           (get-command-response)
                           (check-for-errors)

@@ -180,7 +180,7 @@
                     resp])))
 
 (defn store-identity
-  [{:keys [cmd] :as ctx} identity]
+  [ctx identity]
   (log/debug "Storing identity" identity)
   (jdbc/execute! (:con ctx)
                  ["INSERT INTO glms.identity_store(id,
@@ -195,12 +195,12 @@
                   (:invocation-id ctx)
                   (:request-id ctx)
                   (:interaction-id ctx)
-                  (str/join ":" (:breadcrumbs cmd))
+                  (str/join ":" (:breadcrumbs ctx))
                   (:service-name ctx)
                   (:id identity)]))
 
 (defn store-sequence
-  [{:keys [cmd] :as ctx} sequence]
+  [ctx sequence]
   {:pre [(:id sequence)]}
   (log/debug "Storing sequence" sequence)
   (let [service-name (:service-name ctx)
@@ -222,7 +222,7 @@
                     (:invocation-id ctx)
                     (:request-id ctx)
                     (:interaction-id ctx)
-                    (str/join ":" (:breadcrumbs cmd))
+                    (str/join ":" (:breadcrumbs ctx))
                     aggregate-id
                     service-name
                     service-name])))
