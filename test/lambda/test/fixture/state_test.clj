@@ -14,10 +14,10 @@
                               :uuid/gen
                               [uuid3 uuid2 uuid1]))]
       (is (= uuid1
-              (uuid/gen)))
+             (uuid/gen)))
       (is (= uuid2
-              (uuid/gen)))
+             (uuid/gen)))
       (is (= uuid3
-              (uuid/gen)))
+             (uuid/gen)))
       (is (= nil
-              (uuid/gen))))))
+             (uuid/gen))))))

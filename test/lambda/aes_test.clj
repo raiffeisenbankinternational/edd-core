@@ -9,7 +9,6 @@
                       "BFJN4gx80sZunDT9hDLLLA=="
                       "xEgLZisyV2bTh/QrzuVHMA=="))))
 
-
 (deftest load-config
   (let [key "xTKVqrYHvOjR1NeoAZ4z0Q==:2WJe1eIGVT3/SItftl0MuA=="]
     (with-redefs [util/get-env (fn [%]

@@ -12,7 +12,6 @@
             [lambda.api-test :refer [api-request]]
             [lambda.uuid :as uuid]))
 
-
 (deftest test-empty-commands-list
   (let [ctx {:req {}}]
     (is (= (assoc ctx :error {:commands :empty})
@@ -33,7 +32,6 @@
                                 :test}]})
            (el-cmd/validate-commands ctx)))))
 
-
 (deftest test-missing-command
   (let [ctx {:commands [{:cmd-id :random-command}]}]
     (is (= (assoc ctx :error {:spec
@@ -46,7 +44,6 @@
                                 :test}]})
            (el-cmd/validate-commands ctx)))))
 
-
 (deftest test-custom-schema
   (let [ctx {:spec {:test [:map [:name string?]]}}
         cmd-missing (assoc ctx :commands [{:cmd-id :test}])
@@ -55,8 +52,8 @@
         cmd-valid (-> ctx
                       (assoc-in [:command-handlers :test] (fn []))
                       (assoc
-                        :commands [{:cmd-id :test
-                                    :name   "name"}]))]
+                       :commands [{:cmd-id :test
+                                   :name   "name"}]))]
 
     (is (= (assoc cmd-missing :error {:spec [{:name ["missing required key"]}]})
            (el-cmd/validate-commands cmd-missing)))
@@ -82,31 +79,30 @@
              :interaction-id interaction-id,
              :commands       [{:cmd-id :ping}]}]
     (mock-core
-      :invocations [(api-request cmd)]
-      (core/start
-        (register)
-        edd/handler
-        :filters [fl/from-api]
-        :post-filter fl/to-api)
-      (do
-        (verify-traffic-json
-          [{:body   {:body            (util/to-json
-                                        {:error          {:spec [{:id ["missing required key"]}]}
-                                         :request-id     request-id
-                                         :interaction-id interaction-id})
-                     :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-                                       :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
-                                       :Access-Control-Allow-Origin   "*"
-                                       :Access-Control-Expose-Headers "*"
-                                       :Content-Type                  "application/json"}
-                     :isBase64Encoded false
-                     :statusCode      200}
-            :method :post
-            :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-           {:method  :get
-            :timeout 90000000
-            :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
-
+     :invocations [(api-request cmd)]
+     (core/start
+      (register)
+      edd/handler
+      :filters [fl/from-api]
+      :post-filter fl/to-api)
+     (do
+       (verify-traffic-json
+        [{:body   {:body            (util/to-json
+                                     {:error          {:spec [{:id ["missing required key"]}]}
+                                      :request-id     request-id
+                                      :interaction-id interaction-id})
+                   :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                                     :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
+                                     :Access-Control-Allow-Origin   "*"
+                                     :Access-Control-Expose-Headers "*"
+                                     :Content-Type                  "application/json"}
+                   :isBase64Encoded false
+                   :statusCode      200}
+          :method :post
+          :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
+         {:method  :get
+          :timeout 90000000
+          :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
 
 (deftest api-handler-response-test
   (let [request-id (uuid/gen)
@@ -117,34 +113,34 @@
              :commands       [{:cmd-id :ping
                                :id     id}]}]
     (mock-core
-      :invocations [(api-request cmd)]
-      (core/start
-        (register)
-        edd/handler
-        :filters [fl/from-api]
-        :post-filter fl/to-api)
-      (do
-        (verify-traffic-json
-          [{:body   {:body            (util/to-json
-                                        {:result         {:success    true
-                                                          :effects    []
-                                                          :events     1
-                                                          :meta       [{:ping {:id id}}]
-                                                          :identities 0
-                                                          :sequences  0}
-                                         :request-id     request-id
-                                         :interaction-id interaction-id})
-                     :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-                                       :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
-                                       :Access-Control-Allow-Origin   "*"
-                                       :Access-Control-Expose-Headers "*"
-                                       :Content-Type                  "application/json"}
-                     :isBase64Encoded false
-                     :statusCode      200}
-            :method :post
-            :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-           {:method  :get
-            :timeout 90000000
-            :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
+     :invocations [(api-request cmd)]
+     (core/start
+      (register)
+      edd/handler
+      :filters [fl/from-api]
+      :post-filter fl/to-api)
+     (do
+       (verify-traffic-json
+        [{:body   {:body            (util/to-json
+                                     {:result         {:success    true
+                                                       :effects    []
+                                                       :events     1
+                                                       :meta       [{:ping {:id id}}]
+                                                       :identities 0
+                                                       :sequences  0}
+                                      :request-id     request-id
+                                      :interaction-id interaction-id})
+                   :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                                     :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
+                                     :Access-Control-Allow-Origin   "*"
+                                     :Access-Control-Expose-Headers "*"
+                                     :Content-Type                  "application/json"}
+                   :isBase64Encoded false
+                   :statusCode      200}
+          :method :post
+          :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
+         {:method  :get
+          :timeout 90000000
+          :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
 
 

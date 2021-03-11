@@ -33,6 +33,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Data Access Layer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
 (defn- like-cond
   "Returns function which checks if map contains key value pair
   described in condition, where value is not exact match"
@@ -73,8 +74,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;   Test Fixtures   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-
-
 (def default-db
   {:event-store     []
    :identity-store  []
@@ -89,21 +88,20 @@
 (defn prepare-dps-calls
   []
   (mapv
-    (fn [%]
-      (let [req {:query
-                 (:query %)}
-            req-1 (if (:request-id %)
-                    (assoc req :request-id (:request-id %))
-                    req)
-            req-2 (if (:interaction-id %)
-                    (assoc req-1 :interaction-id (:interaction-id %))
-                    req-1)]
-        (-> {:post (cmd/calc-service-url (:service %))
-             :body (util/to-json {:result (:resp %)})
-             :req  req-2})))
+   (fn [%]
+     (let [req {:query
+                (:query %)}
+           req-1 (if (:request-id %)
+                   (assoc req :request-id (:request-id %))
+                   req)
+           req-2 (if (:interaction-id %)
+                   (assoc req-1 :interaction-id (:interaction-id %))
+                   req-1)]
+       (-> {:post (cmd/calc-service-url (:service %))
+            :body (util/to-json {:result (:resp %)})
+            :req  req-2})))
 
-    (get @*dal-state* :dps [])))
-
+   (get @*dal-state* :dps [])))
 
 (defn aws-get-token
   [ctx]
@@ -129,8 +127,8 @@
         (client/mock-http
          (prepare-dps-calls)
          (with-redefs
-           [aws/get-token aws-get-token
-            common/create-identity create-identity]
+          [aws/get-token aws-get-token
+           common/create-identity create-identity]
            (do ~@body))))))
 
 (defmacro verify-state [x & [y]]
@@ -140,8 +138,8 @@
 
 (defmacro verify-state-fn [x fn y]
   `(is (= ~y (mapv
-               ~fn
-               (~x @*dal-state*)))))
+              ~fn
+              (~x @*dal-state*)))))
 
 (defn pop-state
   "Retrieves commands and removes them from the store"
@@ -166,24 +164,23 @@
 (defn apply-cmd [ctx cmd]
   (log/info "apply-cmd" cmd)
   (let [resp (handle-cmd (assoc ctx
-                           :no-summary true) cmd)]
+                                :no-summary true) cmd)]
     (log/info "apply-cmd returned" resp)
     (doseq [id (distinct (map :id (:events resp)))]
       (event/handle-event (assoc ctx
-                            :apply {:aggregate-id id})))))
-
+                                 :apply {:aggregate-id id})))))
 
 (defn execute-fx [ctx]
   (doall
-    (for [cmd (pop-state :command-store)]
-      (cmd/handle-commands ctx cmd))))
+   (for [cmd (pop-state :command-store)]
+     (cmd/handle-commands ctx cmd))))
 
 (defn execute-fx-apply [ctx]
   (doall
-    (for [{:keys [commands]} (pop-state :command-store)]
-      (doall
-        (for [cmd commands]
-          (apply-cmd ctx cmd))))))
+   (for [{:keys [commands]} (pop-state :command-store)]
+     (doall
+      (for [cmd commands]
+        (apply-cmd ctx cmd))))))
 
 (defn execute-fx-apply-all
   "Executes all the side effects until the command store is empty"

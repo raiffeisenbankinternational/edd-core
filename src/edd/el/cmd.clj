@@ -1,23 +1,23 @@
 (ns edd.el.cmd
   (:require
-    [edd.flow :refer :all]
-    [clojure.tools.logging :as log]
-    [lambda.util :as util]
-    [edd.dal :as dal]
-    [lambda.request :as request]
-    [edd.cache :as cache]
-    [edd.schema :as s]
-    [edd.el.query :as query]
-    [malli.core :as m]
-    [aws :as aws]
-    [malli.error :as me]
-    [malli.util :as mu]))
+   [edd.flow :refer :all]
+   [clojure.tools.logging :as log]
+   [lambda.util :as util]
+   [edd.dal :as dal]
+   [lambda.request :as request]
+   [edd.cache :as cache]
+   [edd.schema :as s]
+   [edd.el.query :as query]
+   [malli.core :as m]
+   [aws :as aws]
+   [malli.error :as me]
+   [malli.util :as mu]))
 
 (defn calc-service-url
   [service]
   (str "https://"
        (name
-         service)
+        service)
        "."
        (util/get-env "PrivateHostedZoneName")
        "/query"))
@@ -33,17 +33,17 @@
 
   (let [query-fn query
         url (calc-service-url
-              service)
+             service)
         token (aws/get-token ctx)
         response (util/http-post
-                   url
-                   {:timeout 10000
-                    :body    (util/to-json
-                               {:query          (call-query-fn ctx cmd query-fn)
-                                :request-id     (:request-id ctx)
-                                :interaction-id (:interaction-id ctx)})
-                    :headers {"Content-Type"    "application/json"
-                              "X-Authorization" token}})]
+                  url
+                  {:timeout 10000
+                   :body    (util/to-json
+                             {:query          (call-query-fn ctx cmd query-fn)
+                              :request-id     (:request-id ctx)
+                              :interaction-id (:interaction-id ctx)})
+                   :headers {"Content-Type"    "application/json"
+                             "X-Authorization" token}})]
     (when (:error response)
       (log/error "Deps request error for " service (:error response)))
     (when (:error (get response :body))
@@ -63,25 +63,25 @@
                 (partition 2 ctx-dps)
                 ctx-dps))
         dps-value (reduce
-                    (fn [p [key req]]
-                      (log/debug "Query for dependency" key req)
-                      (let [dep-value
-                            (try (if (:service req)
-                                   (resolve-remote-dependency
-                                     (assoc ctx :dps-resolved p)
-                                     cmd
-                                     req)
-                                   (resolve-local-dependency
-                                     (assoc ctx :dps-resolved p)
-                                     cmd
-                                     req))
-                                 (catch AssertionError e
-                                   nil))]
-                        (if dep-value
-                          (assoc p key dep-value)
-                          p)))
-                    {}
-                    dps)]
+                   (fn [p [key req]]
+                     (log/debug "Query for dependency" key req)
+                     (let [dep-value
+                           (try (if (:service req)
+                                  (resolve-remote-dependency
+                                   (assoc ctx :dps-resolved p)
+                                   cmd
+                                   req)
+                                  (resolve-local-dependency
+                                   (assoc ctx :dps-resolved p)
+                                   cmd
+                                   req))
+                                (catch AssertionError e
+                                  nil))]
+                       (if dep-value
+                         (assoc p key dep-value)
+                         p)))
+                   {}
+                   dps)]
     (log/debug "Fetching context for" cmd-id dps)
     (assoc ctx :dps-resolved dps-value)))
 
@@ -89,16 +89,16 @@
   [{:keys [resp] :as ctx}]
   (let [events (:events resp)
         effects (reduce
-                  (fn [cmd fx]
-                    (let [resp (fx ctx events)]
-                      (into cmd
-                            (if (map? resp)
-                              [resp]
-                              resp))))
-                  []
-                  (:fx ctx))
+                 (fn [cmd fx]
+                   (let [resp (fx ctx events)]
+                     (into cmd
+                           (if (map? resp)
+                             [resp]
+                             resp))))
+                 []
+                 (:fx ctx))
         effects (->>
-                  (flatten effects))]
+                 (flatten effects))]
     (assoc-in ctx [:resp :commands] effects)))
 
 (defn to-clean-vector
@@ -116,14 +116,14 @@
   (if-not user
     ctx
     (update-in
-      ctx
-      [:resp :events]
-      (fn
-        [events]
-        (map #(assoc %
-                :user (:id user)
-                :role (:role user))
-             events)))))
+     ctx
+     [:resp :events]
+     (fn
+       [events]
+       (map #(assoc %
+                    :user (:id user)
+                    :role (:role user))
+            events)))))
 
 (defn resolve-command-id
   "Resolving command id. Taking into account override function of id.
@@ -137,12 +137,12 @@
     (if id-fn
       (let [new-id
             (id-fn
-              (merge ctx
-                     (get-in ctx [:dps-resolved]))
-              cmd)]
+             (merge ctx
+                    (get-in ctx [:dps-resolved]))
+             cmd)]
         (if new-id
           (assoc cmd :id new-id
-                     :original-id (:id cmd))
+                 :original-id (:id cmd))
           cmd))
       cmd)))
 
@@ -161,7 +161,7 @@
                     last-seq)
                 (do (log/debug "fetch version from store for cmd" cmd)
                     (dal/get-max-event-seq
-                      (assoc ctx :id id)))))))
+                     (assoc ctx :id id)))))))
 
 (defn verify-command-version
   [ctx {:keys [version id]}]
@@ -189,19 +189,19 @@
                   (#(command-handler % cmd))
                   (to-clean-vector)
                   (map #(assoc
-                          %
-                          :id (:id cmd)))
+                         %
+                         :id (:id cmd)))
                   (remove nil?)
                   (reduce
-                    (fn [p event]
-                      (cond-> p
-                              (contains? event :error) (update :events conj event)
-                              (contains? event :identity) (update :identities conj event)
-                              (contains? event :sequence) (update :sequences conj event)
-                              (contains? event :event-id) (update :events conj event)))
-                    {:events     []
-                     :identities []
-                     :sequences  []}))
+                   (fn [p event]
+                     (cond-> p
+                       (contains? event :error) (update :events conj event)
+                       (contains? event :identity) (update :identities conj event)
+                       (contains? event :sequence) (update :sequences conj event)
+                       (contains? event :event-id) (update :events conj event)))
+                   {:events     []
+                    :identities []
+                    :sequences  []}))
         resp (assoc resp :meta {cmd-id (:id cmd)})]
 
     (-> ctx-with-dps
@@ -227,32 +227,32 @@
 (defn get-command-response
   [{:keys [commands] :as ctx}]
   (assoc ctx
-    :resp
-    (reduce-kv
-      (fn [p idx cmd]
-        (merge-with
-          concat
-          p
-          (handle-command (-> ctx
-                              (assoc :cmd cmd
-                                     :idx idx)))))
-      {:meta       []
-       :events     []
-       :commands   []
-       :sequences  []
-       :identities []}
-      (vec commands))))
+         :resp
+         (reduce-kv
+          (fn [p idx cmd]
+            (merge-with
+             concat
+             p
+             (handle-command (-> ctx
+                                 (assoc :cmd cmd
+                                        :idx idx)))))
+          {:meta       []
+           :events     []
+           :commands   []
+           :sequences  []
+           :identities []}
+          (vec commands))))
 
 (defn resolve-dependencies-to-context
   [{:keys [commands] :as ctx}]
   (log/debug "Context preparation started" commands)
   (-> (reduce
-        (fn [v cmd]
-          (log/debug "Preparing context" cmd)
-          (fetch-dependencies-for-command v cmd))
-        (assoc ctx
-          :dps-resolved [])
-        commands)
+       (fn [v cmd]
+         (log/debug "Preparing context" cmd)
+         (fetch-dependencies-for-command v cmd))
+       (assoc ctx
+              :dps-resolved [])
+       commands)
       (dal/log-dps)))
 
 (defn add-metadata
@@ -268,24 +268,24 @@
   "Validate if commands match spec and if they are valid commands"
   [{:keys [commands] :as ctx}]
   (let [result (mapv
-                 (fn [{:keys [cmd-id] :as cmd}]
-                   (let [schema (get-in ctx [:spec cmd-id]
-                                        default-command-schema)
-                         schema (mu/merge default-command-schema
-                                          schema)
-                         schema-valid (m/validate schema cmd)
-                         cmd-exits (get-in ctx [:command-handlers cmd-id])]
-                     (cond
-                       (not schema-valid) (->> cmd
-                                               (m/explain schema)
-                                               (me/humanize))
-                       (not cmd-exits) {:unknown-command-handler
-                                        cmd-id}
-                       :else :valid)))
-                 commands)]
+                (fn [{:keys [cmd-id] :as cmd}]
+                  (let [schema (get-in ctx [:spec cmd-id]
+                                       default-command-schema)
+                        schema (mu/merge default-command-schema
+                                         schema)
+                        schema-valid (m/validate schema cmd)
+                        cmd-exits (get-in ctx [:command-handlers cmd-id])]
+                    (cond
+                      (not schema-valid) (->> cmd
+                                              (m/explain schema)
+                                              (me/humanize))
+                      (not cmd-exits) {:unknown-command-handler
+                                       cmd-id}
+                      :else :valid)))
+                commands)]
     (cond-> ctx
-            (empty? commands) (assoc-in [:error :commands] :empty)
-            (some #(not= % :valid) result) (assoc-in [:error :spec] result))))
+      (empty? commands) (assoc-in [:error :commands] :empty)
+      (some #(not= % :valid) result) (assoc-in [:error :spec] result))))
 
 (defn set-response-summary
   [{:keys [resp no-summary]}]
@@ -294,16 +294,16 @@
     no-summary resp
     :else {:success    true
            :effects    (reduce
-                         (fn [p v]
-                           (concat
-                             p
-                             (map
-                               (fn [%] {:id           (:id %)
-                                        :cmd-id       (:cmd-id %)
-                                        :service-name (:service v)})
-                               (:commands v))))
-                         []
-                         (:commands resp))
+                        (fn [p v]
+                          (concat
+                           p
+                           (map
+                            (fn [%] {:id           (:id %)
+                                     :cmd-id       (:cmd-id %)
+                                     :service-name (:service v)})
+                            (:commands v))))
+                        []
+                        (:commands resp))
            :events     (count (:events resp))
            :meta       (:meta resp)
            :identities (count (:identities resp))
@@ -326,14 +326,14 @@
   (if-not (contains? (into [] commands) :commands)
     (into []
           (map
-            (fn [cmd]
-              (if-not (contains? cmd :commands)
-                {:service  (:service-name ctx)
-                 :commands [cmd]}
-                cmd))
-            (if (map? commands)
-              [commands]
-              commands)))
+           (fn [cmd]
+             (if-not (contains? cmd :commands)
+               {:service  (:service-name ctx)
+                :commands [cmd]}
+               cmd))
+           (if (map? commands)
+             [commands]
+             commands)))
     [commands]))
 
 (defn clean-effects
@@ -365,8 +365,8 @@
   (cache/clear!)
   (dal/log-request ctx)
   (let [resp (retry #(e-> (assoc ctx :commands (:commands body)
-                                     :breadcrumbs (or (get body :breadcrumbs)
-                                                      [0]))
+                                 :breadcrumbs (or (get body :breadcrumbs)
+                                                  [0]))
                           (validate-commands)
                           (get-command-response)
                           (check-for-errors)

@@ -124,14 +124,14 @@
                                                          data)
                             VALUES (?,?,?,?,?,?,?)"])
           params (map-indexed
-                   (fn [idx itm] [invocation-id
-                                  request-id
-                                  interaction-id
-                                  (str/join ":" (get body :breadcrumbs []))
-                                  service-name
-                                  0
-                                  itm])
-                   body)]
+                  (fn [idx itm] [invocation-id
+                                 request-id
+                                 interaction-id
+                                 (str/join ":" (get body :breadcrumbs []))
+                                 service-name
+                                 0
+                                 itm])
+                  body)]
       (p/execute-batch! ps params))))
 
 (defmethod log-dps
@@ -305,7 +305,7 @@
                          FROM glms.event_store
                          WHERE aggregate_id=?
                          AND service_name=?" id (:service-name ctx)]
-                       {:builder-fn rs/as-unqualified-lower-maps})))
+                      {:builder-fn rs/as-unqualified-lower-maps})))
 
 (defn store-events
   [ctx events]

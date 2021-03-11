@@ -9,16 +9,16 @@
   [traffic]
   (if (:body traffic)
     (assoc traffic
-      :body
-      (util/to-edn (:body traffic)))
+           :body
+           (util/to-edn (:body traffic)))
     traffic))
 
 (defmacro verify-traffic-json
   [y]
   `(is (= ~y
           (mapv
-            map-body-to-json
-            (:traffic @*world*)))))
+           map-body-to-json
+           (:traffic @*world*)))))
 
 (defmacro verify-traffic
   [y]
@@ -44,25 +44,25 @@
 (defn find-first
   [coll func]
   (first
-    (keep-indexed (fn [idx v]
-                    (if (func v) idx))
-                  coll)))
+   (keep-indexed (fn [idx v]
+                   (if (func v) idx))
+                 coll)))
 
 (defn is-match
   [{:keys [url method body]} v]
   (and
-    (= (get v method) url)
-    (or (= (:req v) nil)
-        (= (get v :req) body)
-        (= (get v :req) (util/to-edn body)))))
+   (= (get v method) url)
+   (or (= (:req v) nil)
+       (= (get v :req) body)
+       (= (get v :req) (util/to-edn body)))))
 
 (defn handle-request
   [{:keys [url method] :as req} & rest]
   (record-traffic req)
   (let [all (:responses @*world*)
         idx (find-first
-              all
-              (partial is-match req))
+             all
+             (partial is-match req))
         resp (get all idx)]
     (if idx
       (do
@@ -71,12 +71,12 @@
                #(remove-at % idx))
 
         (ref
-          (dissoc resp method :req :keep)))
+         (dissoc resp method :req :keep)))
       (ref
-        {:error {:message "Mock not Found"
-                 :url     url
-                 :method  method
-                 :req     req}}))))
+       {:error {:message "Mock not Found"
+                :url     url
+                :method  method
+                :req     req}}))))
 
 (defmacro mock-http
   [responses & body]

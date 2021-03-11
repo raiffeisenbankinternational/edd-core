@@ -32,30 +32,29 @@
   (mock/with-mock-dal
     (cmd/handle-commands ctx valid-command-request)
     (mock/verify-state :event-store [{:event-id  :dummy-event
-                                 :handled   true
-                                 :event-seq 1
-                                 :id        cmd-id}])
+                                      :handled   true
+                                      :event-seq 1
+                                      :id        cmd-id}])
     (mock/verify-state :identities [])
     (mock/verify-state :sequences [])
     (mock/verify-state :commands [])))
 
-
 (deftest test-missing-id-command
   (mock/with-mock-dal
     (let [resp (mock/handle-cmd
-                 ctx
-                 {:cmd-id :dummy-cmd})]
+                ctx
+                {:cmd-id :dummy-cmd})]
       (is (= {:error {:spec '({:id ["missing required key"]})}}
              (select-keys resp [:error]))))))
 
 (deftest test-missing-failed-custom-validation-command
   (mock/with-mock-dal
     (let [resp (mock/handle-cmd
-                 (-> ctx
-                     (edd/reg-cmd :dummy-cmd dummy-command-handler
-                                  :spec [:map
-                                         [:name string?]]))
-                 {:cmd-id :dummy-cmd
-                  :id     cmd-id})]
+                (-> ctx
+                    (edd/reg-cmd :dummy-cmd dummy-command-handler
+                                 :spec [:map
+                                        [:name string?]]))
+                {:cmd-id :dummy-cmd
+                 :id     cmd-id})]
       (is (= {:error {:spec '({:name ["missing required key"]})}}
              (select-keys resp [:error]))))))

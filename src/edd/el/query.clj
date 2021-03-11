@@ -9,7 +9,7 @@
         query-id (keyword (:query-id query))
         query-handler (query-id (:query ctx))
         schema (get-in ctx [:spec query-id]
-                       [:map [:query-id keyword?]] )]
+                       [:map [:query-id keyword?]])]
 
     (log/debug "Handling query" query)
     (log/debug "Query handler" query-handler)

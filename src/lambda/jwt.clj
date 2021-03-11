@@ -47,53 +47,53 @@
     (let [jwt (JWT/decode token)
           token-kid (.getKeyId jwt)
           jwks (first
-                 (filter
-                   #(= (:kid %)
-                       token-kid)
-                   jwks-all))]
+                (filter
+                 #(= (:kid %)
+                     token-kid)
+                 jwks-all))]
       (if jwks
         (let [jwk (Jwk/fromValues (walk/stringify-keys jwks))]
 
           (try
             (.verify (Algorithm/RSA256
-                       (.getPublicKey jwk)
-                       nil) jwt)
+                      (.getPublicKey jwk)
+                      nil) jwt)
             (let [resp (validate-token-attributes
-                         ctx
-                         {:iss (.getIssuer jwt)
-                          :aud (.get (.getAudience jwt) 0)
-                          :exp (.getTime
-                                 (.getExpiresAt jwt))})
+                        ctx
+                        {:iss (.getIssuer jwt)
+                         :aud (.get (.getAudience jwt) 0)
+                         :exp (.getTime
+                               (.getExpiresAt jwt))})
                   invalid (first
-                            (filter
-                              (fn [[k v]]
-                                (= v :invalid))
-                              resp))]
+                           (filter
+                            (fn [[k v]]
+                              (= v :invalid))
+                            resp))]
               (if-not invalid
                 (assoc ctx
-                  :user {:id    (.asString (.getClaim jwt "email"))
-                         :email (.asString (.getClaim jwt "email"))
-                         :roles (cons
-                                  :anonymous
-                                  (map
-                                    keyword
-                                    (vec
-                                      (.asArray (.getClaim jwt "cognito:groups")
-                                                String))))})
+                       :user {:id    (.asString (.getClaim jwt "email"))
+                              :email (.asString (.getClaim jwt "email"))
+                              :roles (cons
+                                      :anonymous
+                                      (map
+                                       keyword
+                                       (vec
+                                        (.asArray (.getClaim jwt "cognito:groups")
+                                                  String))))})
                 (assoc ctx
-                  :body {:error resp})))
+                       :body {:error resp})))
 
             (catch SignatureVerificationException e
               (log/error "Unable to verify signature" e)
               (assoc ctx
-                :body {:error {:jwk       :valid
-                               :signature :invalid}}))))
+                     :body {:error {:jwk       :valid
+                                    :signature :invalid}}))))
         (assoc ctx
-          :body {:error {:jwk :invalid}})))
+               :body {:error {:jwk :invalid}})))
     (catch Exception e
       (log/error "Unable to parse token" e)
       (assoc ctx
-        :body {:error {:jwt :invalid}}))))
+             :body {:error {:jwt :invalid}}))))
 
 
 

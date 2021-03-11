@@ -1,12 +1,12 @@
 (ns edd.sequence-test
   (:require
-    [clojure.test :refer :all]
-    [lambda.core :refer [handle-request]]
-    [edd.test.fixture.dal :as mock]
-    [edd.core :as edd]
-    [edd.memory.view-store :as view-store]
-    [edd.memory.event-store :as event-store]
-    [lambda.uuid :as uuid]))
+   [clojure.test :refer :all]
+   [lambda.core :refer [handle-request]]
+   [edd.test.fixture.dal :as mock]
+   [edd.core :as edd]
+   [edd.memory.view-store :as view-store]
+   [edd.memory.event-store :as event-store]
+   [lambda.uuid :as uuid]))
 
 (def ctx
   (-> {}
@@ -22,10 +22,10 @@
   (mock/with-mock-dal
     (let [id (uuid/gen)
           resp (mock/handle-cmd
-                 ctx
-                 {:cmd-id :create-1
-                  :id     id
-                  :name   "e1"})]
+                ctx
+                {:cmd-id :create-1
+                 :id     id
+                 :name   "e1"})]
 
       (mock/verify-state :sequence-store [{:value 1
                                            :id    id}])

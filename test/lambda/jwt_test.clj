@@ -17,18 +17,18 @@
                [{:alg "RS256",
                  :e   "AQAB",
                  :kid
-                      "9YzoeUKvyXsG1hEGmB2OHx/ngDAMwv8CyGEMvZLxzss=",
+                 "9YzoeUKvyXsG1hEGmB2OHx/ngDAMwv8CyGEMvZLxzss=",
                  :kty "RSA",
                  :n
-                      "g4_75iTURga3GEPpsr5xV9w4npHrTyjrjFlRA_m3ZmM1u1mCJOZs2orQXrsEk55Bq6_rRNdTJ7VI_vjfDJiRoDRTXZh8YlyYYOlrztMHiK87MDqyjv3GfHMKefvT27yBFvWEM8u3OYOJzlXfHa55iSiS-YydWEeynJeBL41Vww_zQSl1XEqddHf3XC9c2lbJKbq7QWijmp3BjfUB_mXnneLVsmWoXwh7ChqMZYFP6MTxBJ9MwrOMciLIl-EeDZrvXeTFKuOwLk8a3qkpKW1xiThNx43NokTbBp2hCxSZ5W6Q7mST3Wm7lttL_ZSENOLtm7IXc6cDNR29gSSQRIg7Ww",
+                 "g4_75iTURga3GEPpsr5xV9w4npHrTyjrjFlRA_m3ZmM1u1mCJOZs2orQXrsEk55Bq6_rRNdTJ7VI_vjfDJiRoDRTXZh8YlyYYOlrztMHiK87MDqyjv3GfHMKefvT27yBFvWEM8u3OYOJzlXfHa55iSiS-YydWEeynJeBL41Vww_zQSl1XEqddHf3XC9c2lbJKbq7QWijmp3BjfUB_mXnneLVsmWoXwh7ChqMZYFP6MTxBJ9MwrOMciLIl-EeDZrvXeTFKuOwLk8a3qkpKW1xiThNx43NokTbBp2hCxSZ5W6Q7mST3Wm7lttL_ZSENOLtm7IXc6cDNR29gSSQRIg7Ww",
                  :use "sig"}
                 {:alg "RS256",
                  :e   "AQAB",
                  :kid
-                      "obk1friTTiaav3nd5pWwFRTeYqAEKIFayV6n5SocNeE=",
+                 "obk1friTTiaav3nd5pWwFRTeYqAEKIFayV6n5SocNeE=",
                  :kty "RSA",
                  :n
-                      "jIFXCbFTH3N7oSAqBOoxHxVQ95nJrRMAttJ-hWEHK2vfwdo3BsDSnHJ3OHinsqkgOnd9saX5DdZG7nbx4UAMF56IIv5A3BTf7iK-Bxj3KUkhKpq6h9uXXufkwq1wx1o3uOGT-TKrzeuO0SBrxevl-g-rmuraLC0YWniCctLU8WXNm7kLJXGKSn86JCBeZgoM59qKYCRBmBGSpgHNA9pQLwPSvs0yEpG1Rw3xVJgHQV7ORwOLwCB6nPPGVlb6OE9BgsVKMTWvS7jijDiaGi82RHpJQrtYnGJ6YLdtQBW6bpV86MAfjiYzT1ftwmWXtEQst9u_D1g6rf_Mg2C56ygOmw",
+                 "jIFXCbFTH3N7oSAqBOoxHxVQ95nJrRMAttJ-hWEHK2vfwdo3BsDSnHJ3OHinsqkgOnd9saX5DdZG7nbx4UAMF56IIv5A3BTf7iK-Bxj3KUkhKpq6h9uXXufkwq1wx1o3uOGT-TKrzeuO0SBrxevl-g-rmuraLC0YWniCctLU8WXNm7kLJXGKSn86JCBeZgoM59qKYCRBmBGSpgHNA9pQLwPSvs0yEpG1Rw3xVJgHQV7ORwOLwCB6nPPGVlb6OE9BgsVKMTWvS7jijDiaGi82RHpJQrtYnGJ6YLdtQBW6bpV86MAfjiYzT1ftwmWXtEQst9u_D1g6rf_Mg2C56ygOmw",
                  :use "sig"}]})
 
 (def jwks-key-2 {:keys
@@ -37,15 +37,15 @@
                    :kid "qLoHee9SmUeDXdL/keGGWzhvB+RcfVvCk2hGbF7NPlg=",
                    :kty "RSA",
                    :n
-                        "u0DTOuwyC3_52E6zHgP6DFgQtxl3ZoU5guTROMnSxu7nDodvdF8T3uwYJdDZ-q5DUCaw54MF4Ektqsx9QnZjsa_6JdmgY57Ll723FJTsP65CUQ_bKB-M7yd_1tC1FkysCxZwTFkiERpkKdv9WqkvzWGEBYcvcsPg4sV5N2PsFXTqdZs9INIWldnG_KSANyk-U9aRHd8zVtAw3Zwbu4LklaGfqG-7jpqjcCOM4_W5_WjGCHwaKlgLqvOtowuYmz2-jArPAHdVZMhJ_dFwiSCjiy_yR4ZrlnUHcZXpfxy3svEvRC3-lmjVA9InTc6h23bagfq65skZ7ERIGpCDxLffyQ",
+                   "u0DTOuwyC3_52E6zHgP6DFgQtxl3ZoU5guTROMnSxu7nDodvdF8T3uwYJdDZ-q5DUCaw54MF4Ektqsx9QnZjsa_6JdmgY57Ll723FJTsP65CUQ_bKB-M7yd_1tC1FkysCxZwTFkiERpkKdv9WqkvzWGEBYcvcsPg4sV5N2PsFXTqdZs9INIWldnG_KSANyk-U9aRHd8zVtAw3Zwbu4LklaGfqG-7jpqjcCOM4_W5_WjGCHwaKlgLqvOtowuYmz2-jArPAHdVZMhJ_dFwiSCjiy_yR4ZrlnUHcZXpfxy3svEvRC3-lmjVA9InTc6h23bagfq65skZ7ERIGpCDxLffyQ",
                    :use "sig"}
                   {:alg "RS256",
                    :e   "AQAB",
                    :kid "8pgjFbBeR/7ARnYv8lryCiiKfYRPGAawTFocWdoZxQs=",
                    :kty "RSA",
                    :n
-                        "hNjQ2vgkbV66d96FbzAVjkgswoQCzLEs5k1MqR93_WzBxzBNoQYQRbmm3Ypsr0Jx4Rjhi_JWj3_GH-APDxqsjZu-R50zkfCLoWe4R-KOdb-h09Y81mKqu3j9mqmdpe0nGCzuPgOGAbARt0y782spiRuclOM4yndXuqsFJzWw-T8UJ-Dn_85KfWCgjoiI85Y5s4vSVbgn64VPK5PWIGbQAYCCDbX7kVax4RQF7w8Ba-6DTm-VLK8gUgEOHgSQlZYsmlvjiNmcDbgxK0HGrdROO9lIUTrJm3JljZz8r1ObAHmdjJ4hhyCnMsqmF30XzTNjP3XG6aM5WI34X5cmFnni7Q",
-                   :use "sig"}]}  )
+                   "hNjQ2vgkbV66d96FbzAVjkgswoQCzLEs5k1MqR93_WzBxzBNoQYQRbmm3Ypsr0Jx4Rjhi_JWj3_GH-APDxqsjZu-R50zkfCLoWe4R-KOdb-h09Y81mKqu3j9mqmdpe0nGCzuPgOGAbARt0y782spiRuclOM4yndXuqsFJzWw-T8UJ-Dn_85KfWCgjoiI85Y5s4vSVbgn64VPK5PWIGbQAYCCDbX7kVax4RQF7w8Ba-6DTm-VLK8gUgEOHgSQlZYsmlvjiNmcDbgxK0HGrdROO9lIUTrJm3JljZz8r1ObAHmdjJ4hhyCnMsqmF30XzTNjP3XG6aM5WI34X5cmFnni7Q",
+                   :use "sig"}]})
 
 (def region "eu-west-1")
 
@@ -68,11 +68,11 @@
   (let [ctx (ctx jwks-key)]
     (with-redefs [util/get-current-time-ms (fn [] 1682668081782)]
       (is (= (assoc ctx
-               :body {:error {:aud       :valid
-                              :exp       :invalid
-                              :iss       :valid
-                              :jwk       :valid
-                              :signature :valid}})
+                    :body {:error {:aud       :valid
+                                   :exp       :invalid
+                                   :iss       :valid
+                                   :jwk       :valid
+                                   :signature :valid}})
              (jwt/parse-token ctx token))))))
 
 (deftest parse-token-test
@@ -90,37 +90,37 @@
 (deftest toke-expired-test
   (let [ctx (ctx jwks-key)]
     (is (= (assoc ctx
-             :body {:error {:jwk :invalid}})
+                  :body {:error {:jwk :invalid}})
            (jwt/parse-token ctx token-user-pool-2)))))
 
 (deftest parse-invalid-signature-token-test
   (let [ctx (ctx jwks-key)]
     (is (= (assoc ctx
-             :body {:error {:jwk       :valid
-                            :signature :invalid}})
+                  :body {:error {:jwk       :valid
+                                 :signature :invalid}})
            (jwt/parse-token ctx token-invalid-signature)))))
 
 (deftest parse-valid-jwt-but-from-different-userpool-test
   (let [ctx (ctx jwks-key-2)]
     (with-redefs [util/get-current-time-ms (fn [] 1682668081782)]
       (is (= (assoc ctx
-              :body {:error {:aud       :invalid
-                             :exp       :invalid
-                             :iss       :invalid
-                             :jwk       :valid
-                             :signature :valid}})
-            (jwt/parse-token ctx token-user-pool-2))))))
+                    :body {:error {:aud       :invalid
+                                   :exp       :invalid
+                                   :iss       :invalid
+                                   :jwk       :valid
+                                   :signature :valid}})
+             (jwt/parse-token ctx token-user-pool-2))))))
 
 (deftest token-missing-test
   (let [ctx (ctx jwks-key)]
     (is (= (assoc ctx
-             :body {:error {:jwt :invalid}})
+                  :body {:error {:jwt :invalid}})
            (jwt/parse-token ctx nil)))))
 
 (deftest token-not-valid-string-test
   (let [ctx (ctx jwks-key)]
     (is (= (assoc ctx
-             :body {:error {:jwt :invalid}})
+                  :body {:error {:jwt :invalid}})
            (jwt/parse-token ctx "invalit-token-here")))))
 
 (def env {"Region" region})

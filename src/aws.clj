@@ -1,11 +1,11 @@
 (ns aws
   (:require
-    [clj-aws-sign.core :as awssign]
-    [lambda.util :as util]
-    [clojure.java.io :as io]
-    [clojure.tools.logging :as log]
-    [lambda.jwt :as jwt]
-    [lambda.util :as utils])
+   [clj-aws-sign.core :as awssign]
+   [lambda.util :as util]
+   [clojure.java.io :as io]
+   [clojure.tools.logging :as log]
+   [lambda.jwt :as jwt]
+   [lambda.util :as utils])
 
   (:import (java.time.format DateTimeFormatter)
            (java.time OffsetDateTime ZoneOffset)))
@@ -22,13 +22,12 @@
 (defn create-date
   []
   (.format
-    (. DateTimeFormatter ofPattern "yyyyMMdd'T'HHmmss'Z'")
-    (. OffsetDateTime now (. ZoneOffset UTC))))
+   (. DateTimeFormatter ofPattern "yyyyMMdd'T'HHmmss'Z'")
+   (. OffsetDateTime now (. ZoneOffset UTC))))
 
 (defn authorize
   [req]
   (awssign/authorize req))
-
 
 (defn get-object
   [object]
@@ -48,15 +47,15 @@
         auth (awssign/authorize req)]
 
     (let [response (retry #(util/http-get
-                             (str "https://"
-                                  (get (:headers req) "Host")
-                                  (:uri req))
-                             {:as      :stream
-                              :headers (-> (:headers req)
-                                           (dissoc "host")
-                                           (assoc "Authorization" auth))
-                              :timeout 8000}
-                             :raw true)
+                            (str "https://"
+                                 (get (:headers req) "Host")
+                                 (:uri req))
+                            {:as      :stream
+                             :headers (-> (:headers req)
+                                          (dissoc "host")
+                                          (assoc "Authorization" auth))
+                             :timeout 8000}
+                            :raw true)
                           3)]
       (when (contains? response :error)
         (log/error "Failed to fetch object" response))
@@ -79,20 +78,20 @@
         auth (awssign/authorize req)]
 
     (let [response (retry
-                     #(util/http-post
-                        (str "https://" (get (:headers req) "Host"))
-                        {:body    (:payload req)
-                         :headers (-> (:headers req)
-                                      (dissoc "Host")
-                                      (assoc
-                                        "X-Amz-Security-Token" (System/getenv "AWS_SESSION_TOKEN")
-                                        "Authorization" auth))
-                         :timeout 5000})
-                     3)]
+                    #(util/http-post
+                      (str "https://" (get (:headers req) "Host"))
+                      {:body    (:payload req)
+                       :headers (-> (:headers req)
+                                    (dissoc "Host")
+                                    (assoc
+                                     "X-Amz-Security-Token" (System/getenv "AWS_SESSION_TOKEN")
+                                     "Authorization" auth))
+                       :timeout 5000})
+                    3)]
       (when (contains? response :error)
         (log/error "Failed to fetch secret" response))
       (:SecretString
-        (:body response)))))
+       (:body response)))))
 
 (defn sqs-publish
   [{:keys [queue ^String message aws] :as ctx}]
@@ -120,19 +119,19 @@
              :secret-key (:aws-secret-access-key aws)}
         auth (authorize req)]
     (let [response (retry
-                     #(util/http-post
-                        (str "https://"
-                             (get (:headers req) "Host")
-                             (:uri req))
-                        {:body    (str (:payload req)
-                                       "Authorization="
-                                       auth)
-                         :version :http1.1
-                         :headers (-> (:headers req)
-                                      (dissoc "Host")
-                                      (assoc "X-Amz-Security-Token"
-                                             (:aws-session-token aws)))
-                         :timeout 5000}) 3)]
+                    #(util/http-post
+                      (str "https://"
+                           (get (:headers req) "Host")
+                           (:uri req))
+                      {:body    (str (:payload req)
+                                     "Authorization="
+                                     auth)
+                       :version :http1.1
+                       :headers (-> (:headers req)
+                                    (dissoc "Host")
+                                    (assoc "X-Amz-Security-Token"
+                                           (:aws-session-token aws)))
+                       :timeout 5000}) 3)]
       (when (contains? response :error)
         (log/error "Failed to sqs:SendMessage" response))
       (:body response))))
@@ -162,16 +161,16 @@
         auth (awssign/authorize req)]
 
     (let [response (retry #(util/http-post
-                             (str "https://"
-                                  (get (:headers req) "Host")
-                                  (:uri req))
-                             {:body    (:payload req)
-                              :headers (-> (:headers req)
-                                           (dissoc "Host")
-                                           (assoc
-                                             "Authorization" auth
-                                             "X-Amz-Security-Token" (System/getenv "AWS_SESSION_TOKEN")))
-                              :timeout 5000}) 3)]
+                            (str "https://"
+                                 (get (:headers req) "Host")
+                                 (:uri req))
+                            {:body    (:payload req)
+                             :headers (-> (:headers req)
+                                          (dissoc "Host")
+                                          (assoc
+                                           "Authorization" auth
+                                           "X-Amz-Security-Token" (System/getenv "AWS_SESSION_TOKEN")))
+                             :timeout 5000}) 3)]
 
       (when (contains? response :error)
         (log/error "Failed to sns:SendMessage" response))
@@ -179,8 +178,8 @@
 
 (defn get-next-request [runtime-api]
   (let [req (util/http-get
-              (str "http://" runtime-api "/2018-06-01/runtime/invocation/next")
-              {:timeout 90000000})
+             (str "http://" runtime-api "/2018-06-01/runtime/invocation/next")
+             {:timeout 90000000})
         body (:body req)]
     (log/debug "Lambda request" req)
     (if (:isBase64Encoded body)
@@ -198,9 +197,9 @@
            invocation-id]} body]
 
   (util/to-json
-    (util/http-post
-      (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/response")
-      {:body (util/to-json body)})))
+   (util/http-post
+    (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/response")
+    {:body (util/to-json body)})))
 
 (defn send-error
   [{:keys [api
@@ -211,9 +210,9 @@
                  "response"
                  "error")]
     (log/error (util/to-json
-                 (util/http-post
-                   (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/" target)
-                   {:body resp})))))
+                (util/http-post
+                 (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/" target)
+                 {:body resp})))))
 
 (defn admin-auth
   [{{username :username password :password} :svc
@@ -224,14 +223,14 @@
              :uri        "/"
              :query      ""
              :payload    (util/to-json
-                           {:AuthFlow       "ADMIN_NO_SRP_AUTH"
-                            :AuthParameters {:USERNAME    username
-                                             :PASSWORD    password
-                                             :SECRET_HASH (util/hmac-sha256
-                                                            client-secret
-                                                            (str username client-id))}
-                            :ClientId       client-id
-                            :UserPoolId     user-pool-id})
+                          {:AuthFlow       "ADMIN_NO_SRP_AUTH"
+                           :AuthParameters {:USERNAME    username
+                                            :PASSWORD    password
+                                            :SECRET_HASH (util/hmac-sha256
+                                                          client-secret
+                                                          (str username client-id))}
+                           :ClientId       client-id
+                           :UserPoolId     user-pool-id})
              :headers    {"X-Amz-Target" "AWSCognitoIdentityProviderService.AdminInitiateAuth"
                           "Host"         "cognito-idp.eu-central-1.amazonaws.com"
                           "Content-Type" "application/x-amz-json-1.1"
@@ -243,16 +242,16 @@
         auth (awssign/authorize req)]
 
     (let [response (retry
-                     #(util/http-post
-                        (str "https://" (get (:headers req) "Host"))
-                        {:body    (:payload req)
-                         :headers (-> (:headers req)
-                                      (dissoc "Host")
-                                      (assoc
-                                        "X-Amz-Security-Token" (util/get-env "AWS_SESSION_TOKEN")
-                                        "Authorization" auth))
-                         :timeout 5000})
-                     3)]
+                    #(util/http-post
+                      (str "https://" (get (:headers req) "Host"))
+                      {:body    (:payload req)
+                       :headers (-> (:headers req)
+                                    (dissoc "Host")
+                                    (assoc
+                                     "X-Amz-Security-Token" (util/get-env "AWS_SESSION_TOKEN")
+                                     "Authorization" auth))
+                       :timeout 5000})
+                    3)]
       (log/debug "Auth response" response)
       (when (contains? response :error)
         (log/error "Failed to fetch secret" response))
@@ -275,14 +274,14 @@
                                     (get-or-set cache
                                                 :id-token
                                                 #(aws/admin-auth
-                                                   ctx))))
+                                                  ctx))))
         {:keys [error]} (jwt/parse-token ctx id-token)]
     (if error
       (swap! util/*cache*
              (fn [v]
                (assoc v
-                 :id-token (aws/admin-auth
-                             ctx))))
+                      :id-token (aws/admin-auth
+                                 ctx))))
       id-token)))
 
 (defn get-token

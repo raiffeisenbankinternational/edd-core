@@ -1,19 +1,18 @@
 (ns edd.el.event
   (:require
-    [edd.flow :refer :all]
-    [clojure.tools.logging :as log]
-    [edd.dal :as dal]
-    [edd.search :as search]))
+   [edd.flow :refer :all]
+   [clojure.tools.logging :as log]
+   [edd.dal :as dal]
+   [edd.search :as search]))
 
 (defn apply-event
   [agr event func]
   (if func
     (assoc
-      (apply func [agr event])
-      :version (:event-seq event)
-      :id (:id event))
+     (apply func [agr event])
+     :version (:event-seq event)
+     :id (:id event))
     agr))
-
 
 (defn create-aggregate
   [snapshot events apply-functions]
@@ -36,8 +35,8 @@
   (reduce
    (fn [v f]
      (f (assoc
-          ctx
-          :agg v)))
+         ctx
+         :agg v)))
    aggregate
    (get ctx :agg-filter [])))
 
@@ -51,10 +50,10 @@
   (cond
     (:error events)      (throw (ex-info "Error fetching events" {:error events}))
     (> (count events) 0) (let [aggregate  (create-aggregate snapshot events (:def-apply ctx))
-                               result-agg (apply-agg-filter ctx aggregate )]
+                               result-agg (apply-agg-filter ctx aggregate)]
                            (assoc
-                             ctx
-                             :aggregate result-agg))
+                            ctx
+                            :aggregate result-agg))
     snapshot             (assoc ctx :aggregate snapshot)
     :else                (throw (ex-info "Aggregate not found" {:error :no-events-found}))))
 
@@ -62,13 +61,13 @@
   [ctx]
   (if-let [snapshot
            (first
-             (search/simple-search
-               (assoc ctx
-                 :query {:id (:id ctx)})))]
+            (search/simple-search
+             (assoc ctx
+                    :query {:id (:id ctx)})))]
 
     (assoc ctx
-      :snapshot snapshot
-      :version (:version snapshot))
+           :snapshot snapshot
+           :version (:version snapshot))
     ctx))
 
 (defn get-events [ctx]

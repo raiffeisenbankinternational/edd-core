@@ -10,14 +10,14 @@
 (defn apply-filters
   [{:keys [filters req] :as ctx}]
   (reduce
-    (fn [c {:keys [cond fn]}]
-      (if (cond c)
-        (fn c)
-        c))
-    (assoc ctx
-      :body
-      req)
-    filters))
+   (fn [c {:keys [cond fn]}]
+     (if (cond c)
+       (fn c)
+       c))
+   (assoc ctx
+          :body
+          req)
+   filters))
 
 (defn apply-post-filter
   [{:keys [post-filter] :as ctx}]
@@ -38,19 +38,18 @@
     (:health-check ctx) (assoc ctx :resp {:healthy  true
                                           :build-id (util/get-env "BuildId" "b0")})
     :else (assoc ctx
-            :resp
-            (handler ctx
-                     body))))
-
+                 :resp
+                 (handler ctx
+                          body))))
 
 (defn handle-error
   [ctx e]
   (log/error e "Error processing request")
   (send-response
-    (assoc ctx
-      :resp {:error (try (.getMessage e)
-                         (catch IllegalArgumentException e
-                           "Unknown"))})))
+   (assoc ctx
+          :resp {:error (try (.getMessage e)
+                             (catch IllegalArgumentException e
+                               "Unknown"))})))
 
 (defn handle-request
   [ctx req]
@@ -60,8 +59,8 @@
       (do
         (log/error "Request failed" (util/to-json req))
         (send-response
-          (assoc ctx
-            :resp {:error error})))
+         (assoc ctx
+                :resp {:error error})))
       (try
         (-> ctx
             (assoc :req body
@@ -83,12 +82,12 @@
 (defn init-filters
   [{:keys [filters] :as ctx}]
   (reduce
-    (fn [c {:keys [init] :as f}]
-      (if init
-        (init c)
-        c))
-    ctx
-    filters))
+   (fn [c {:keys [init] :as f}]
+     (if init
+       (init c)
+       c))
+   ctx
+   filters))
 
 (defn with-cache
   [fn]
@@ -112,34 +111,34 @@
                           :handler handler
                           :post-filter post-filter)
                    (merge (util/to-edn
-                            (util/get-env "CustomConfig" "{}")))
+                           (util/get-env "CustomConfig" "{}")))
                    (assoc :service-name (keyword (util/get-env
-                                                   "ServiceName"
-                                                   "local-test"))
+                                                  "ServiceName"
+                                                  "local-test"))
                           :aws {:region                (util/get-env "Region" "local")
                                 :account-id            (util/get-env "AccountId" "local")
                                 :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID" "")
                                 :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY" "")
                                 :aws-session-token     (util/get-env "AWS_SESSION_TOKEN" "")}
                           :hosted-zone-name (util/get-env
-                                              "PublicHostedZoneName"
-                                              "example.com")
+                                             "PublicHostedZoneName"
+                                             "example.com")
                           :environment-name-lower (util/get-env
-                                                    "EnvironmentNameLower"
-                                                    "local"))
+                                                   "EnvironmentNameLower"
+                                                   "local"))
                    (init-filters))]
        (doseq [i (get-loop)]
          (let [request (aws/get-next-request api)]
            (log/debug "Loop" i)
            (binding [request/*request* (atom {})]
              (handle-request
-               (-> ctx
-                   (assoc :from-api (is-from-api request))
-                   (assoc :api api
+              (-> ctx
+                  (assoc :from-api (is-from-api request))
+                  (assoc :api api
 
-                          :invocation-id (get-in
-                                           request
-                                           [:headers :lambda-runtime-aws-request-id])))
-               request)))))))
+                         :invocation-id (get-in
+                                         request
+                                         [:headers :lambda-runtime-aws-request-id])))
+              request)))))))
 
 

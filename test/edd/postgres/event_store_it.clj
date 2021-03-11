@@ -9,9 +9,6 @@
             [edd.test.fixture.dal :as mock])
   (:import (org.postgresql.util PSQLException)))
 
-
-
-
 (def fx-id (uuid/gen))
 
 (defn get-ctx
@@ -43,7 +40,6 @@
                      (fn [agg event]
                        (merge agg
                               {:value "2"})))))
-
 
 (deftest apply-when-two-events
   (binding [*dal-state* (atom {})]

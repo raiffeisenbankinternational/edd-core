@@ -1,13 +1,13 @@
 (ns edd.breadcrumbs-test
   (:require
-    [clojure.test :refer [deftest testing is are use-fixtures run-tests join-fixtures]]
-    [edd.core :as edd]
-    [edd.memory.event-store :as event-store]
-    [edd.test.fixture.execution :as exec]
-    [edd.common :as common]
-    [lambda.test.fixture.state :as state]
-    [lambda.uuid :as uuid]
-    [edd.test.fixture.dal :as mock]))
+   [clojure.test :refer [deftest testing is are use-fixtures run-tests join-fixtures]]
+   [edd.core :as edd]
+   [edd.memory.event-store :as event-store]
+   [edd.test.fixture.execution :as exec]
+   [edd.common :as common]
+   [lambda.test.fixture.state :as state]
+   [lambda.uuid :as uuid]
+   [edd.test.fixture.dal :as mock]))
 
 (def ctx
   (-> mock/ctx
@@ -46,90 +46,90 @@
 
 (def command-store-with-bc
   #{{:commands
-                  [{:cmd-id :inc,
-                    :level 2,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 2,
-                    :id id1}],
+     [{:cmd-id :inc,
+       :level 2,
+       :id id1}
+      {:cmd-id :inc,
+       :level 2,
+       :id id1}],
      :breadcrumbs [0 0 2]}
     {:commands
-                  [{:cmd-id :inc,
-                    :level 2,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 2,
-                    :id id1}],
+     [{:cmd-id :inc,
+       :level 2,
+       :id id1}
+      {:cmd-id :inc,
+       :level 2,
+       :id id1}],
      :breadcrumbs [0 0 1]}
     {:commands
-                  [{:cmd-id :inc,
-                    :level 2,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 2,
-                    :id id1}],
+     [{:cmd-id :inc,
+       :level 2,
+       :id id1}
+      {:cmd-id :inc,
+       :level 2,
+       :id id1}],
      :breadcrumbs [0 0 3]}
     {:commands
-                  [{:cmd-id :inc,
-                    :level 2,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 2,
-                    :id id1}],
+     [{:cmd-id :inc,
+       :level 2,
+       :id id1}
+      {:cmd-id :inc,
+       :level 2,
+       :id id1}],
      :breadcrumbs [0 1 0]}
     {:commands
-                  [{:cmd-id :inc,
-                    :level 2,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 2,
-                    :id id1}],
+     [{:cmd-id :inc,
+       :level 2,
+       :id id1}
+      {:cmd-id :inc,
+       :level 2,
+       :id id1}],
      :breadcrumbs [0 1 2]}
     {:commands
-                  [{:cmd-id :inc,
-                    :level 2,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 2,
-                    :id id1}],
+     [{:cmd-id :inc,
+       :level 2,
+       :id id1}
+      {:cmd-id :inc,
+       :level 2,
+       :id id1}],
      :breadcrumbs [0 0 0]}
     {:commands
-                  [{:cmd-id :inc,
-                    :level 2,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 2,
-                    :id id1}],
+     [{:cmd-id :inc,
+       :level 2,
+       :id id1}
+      {:cmd-id :inc,
+       :level 2,
+       :id id1}],
      :breadcrumbs [0 1 1]}
     {:commands
-                  [{:cmd-id :inc,
-                    :level 1,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 1,
-                    :id id1}],
+     [{:cmd-id :inc,
+       :level 1,
+       :id id1}
+      {:cmd-id :inc,
+       :level 1,
+       :id id1}],
      :breadcrumbs [0 0]}
     {:commands
-                  [{:cmd-id :inc,
-                    :level 1,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 1,
-                    :id id1}],
+     [{:cmd-id :inc,
+       :level 1,
+       :id id1}
+      {:cmd-id :inc,
+       :level 1,
+       :id id1}],
      :breadcrumbs [0 1]}
     {:commands
-                  [{:cmd-id :inc,
-                    :level 2,
-                    :id id1}
-                   {:cmd-id :inc,
-                    :level 2,
-                    :id id1}],
+     [{:cmd-id :inc,
+       :level 2,
+       :id id1}
+      {:cmd-id :inc,
+       :level 2,
+       :id id1}],
      :breadcrumbs [0 1 3]}})
 
 (deftest test-breadcrumbs-for-emtpy-command
   (mock/with-mock-dal
     (with-redefs
-      [event-store/clean-commands (fn [cmd] cmd)]
+     [event-store/clean-commands (fn [cmd] cmd)]
 
       (exec/run-cmd! ctx {:commands [{:cmd-id :inc
                                       :id id1}]})
@@ -140,7 +140,7 @@
 (deftest test-breadcrumbs-for-command-with-breadcrumb
   (mock/with-mock-dal
     (with-redefs
-      [event-store/clean-commands (fn [cmd] cmd)]
+     [event-store/clean-commands (fn [cmd] cmd)]
 
       (exec/run-cmd! ctx {:commands [{:cmd-id :inc
                                       :id id1}]

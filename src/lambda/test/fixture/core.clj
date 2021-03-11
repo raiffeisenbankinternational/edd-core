@@ -18,17 +18,17 @@
   [& {:keys [invocations requests env] :or {env {}} :as body}]
   `(let [req-calls#
          (map-indexed
-           (fn [idx# itm#]
-             {:get     next-url
-              :body    itm#
-              :headers {:lambda-runtime-aws-request-id idx#}})
-           ~invocations)
+          (fn [idx# itm#]
+            {:get     next-url
+             :body    itm#
+             :headers {:lambda-runtime-aws-request-id idx#}})
+          ~invocations)
          responses# (vec (concat req-calls# ~requests))]
      (with-redefs [core/get-loop (fn [] (range 0 (count ~invocations)))
                    utils/get-env (partial get-env-mock ~env)
                    utils/get-current-time-ms (fn [] 1587403965)]
        (client/mock-http
-         responses#
-         ~@body))))
+        responses#
+        ~@body))))
 
 
