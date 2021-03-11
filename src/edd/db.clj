@@ -1,19 +1,19 @@
 (ns edd.db
   (:require
-    [lambda.util :as util]
-    [next.jdbc.result-set :as result-set]
-    [next.jdbc.prepare :as prepare]
-    [clojure.tools.logging :as log]
-    [aws :as aws])
+   [lambda.util :as util]
+   [next.jdbc.result-set :as result-set]
+   [next.jdbc.prepare :as prepare]
+   [clojure.tools.logging :as log]
+   [aws :as aws])
   (:import
-    (clojure.lang IPersistentMap IPersistentVector Keyword)
-    (java.sql Date Timestamp PreparedStatement)
-    (org.postgresql.util PGobject)
-    (java.time LocalDate LocalDateTime OffsetDateTime ZoneOffset)
+   (clojure.lang IPersistentMap IPersistentVector Keyword)
+   (java.sql Date Timestamp PreparedStatement)
+   (org.postgresql.util PGobject)
+   (java.time LocalDate LocalDateTime OffsetDateTime ZoneOffset)
 
-    (java.time.format DateTimeFormatter)
-    (org.postgresql.jdbc PgPreparedStatement)
-    (java.util UUID)))
+   (java.time.format DateTimeFormatter)
+   (org.postgresql.jdbc PgPreparedStatement)
+   (java.util UUID)))
 
 (def date-format "dd/MM/yyyy")
 
@@ -62,7 +62,6 @@
   (set-parameter [v ^PgPreparedStatement s i]
     (.setObject s i
                 (Timestamp/from v))))
-
 
 (defn init
   [ctx]

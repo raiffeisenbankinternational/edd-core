@@ -82,7 +82,7 @@ CREATE TABLE glms.command_request_log (
     request_id uuid NOT NULL,
     interaction_id uuid NOT NULL,
     breadcrumbs varchar(255) NOT NULL,
-	cmd_index INT NOT NULL,
+    cmd_index INT NOT NULL,
     created_on TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     service_name VARCHAR(256),
     data jsonb NOT NULL
@@ -94,7 +94,7 @@ CREATE TABLE glms.command_response_log (
     request_id uuid NOT NULL,
     interaction_id uuid NOT NULL,
     breadcrumbs varchar(255) NOT NULL,
-	cmd_index INT NOT NULL,
+    cmd_index INT NOT NULL,
     created_on TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     service_name VARCHAR(256),
     data jsonb NOT NULL,

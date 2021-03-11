@@ -35,9 +35,9 @@
   [ctx reg-fn]
   (log/debug "Registering aggregate filter")
   (assoc ctx :agg-filter
-             (conj
-               (get ctx :agg-filter [])
-               reg-fn)))
+         (conj
+          (get ctx :agg-filter [])
+          reg-fn)))
 
 (defn reg-query
   [ctx query-id reg-fn & {:keys [spec]}]
@@ -63,28 +63,28 @@
   (swap! request/*request* #(update % :mdc
                                     (fn [mdc]
                                       (-> (assoc mdc
-                                            :invocation-id (:invocation-id ctx)
-                                            :request-id (:request-id body)
-                                            :interaction-id (:interaction-id body))
+                                                 :invocation-id (:invocation-id ctx)
+                                                 :request-id (:request-id body)
+                                                 :interaction-id (:interaction-id body))
                                           (add-log-level body)))))
   (assoc
-    ctx
-    :resp (try
-            (cond
-              (contains? body :apply) (event/handle-event (-> ctx
-                                                              (assoc :apply (:apply body))))
-              (contains? body :query) (query/handle-query
-                                        ctx
-                                        body)
-              (contains? body :commands) (cmd/handle-commands
-                                           ctx
-                                           body)
-              (contains? body :error) body
-              :else {:error :invalid-request})
-            (catch Throwable e
-              (do
-                (log/error e)
-                (throw e))))))
+   ctx
+   :resp (try
+           (cond
+             (contains? body :apply) (event/handle-event (-> ctx
+                                                             (assoc :apply (:apply body))))
+             (contains? body :query) (query/handle-query
+                                      ctx
+                                      body)
+             (contains? body :commands) (cmd/handle-commands
+                                         ctx
+                                         body)
+             (contains? body :error) body
+             :else {:error :invalid-request})
+           (catch Throwable e
+             (do
+               (log/error e)
+               (throw e))))))
 
 (defn filter-queue-request
   "If request is coming from queue we need to get out all request bodies"
@@ -107,10 +107,10 @@
                        {:result resp}
                        resp)]
     (assoc ctx
-      :resp (-> wrapped-resp
-                (assoc
-                  :request-id (:request-id ctx)
-                  :interaction-id (:interaction-id ctx))))))
+           :resp (-> wrapped-resp
+                     (assoc
+                      :request-id (:request-id ctx)
+                      :interaction-id (:interaction-id ctx))))))
 
 (defn prepare-request
   [{:keys [body] :as ctx}]
@@ -136,10 +136,10 @@
   (if (m/validate schema body)
     ctx
     (assoc ctx
-      :body {:error   (->> body
-                           (m/explain schema)
-                           (me/humanize))
-             :request body})))
+           :body {:error   (->> body
+                                (m/explain schema)
+                                (me/humanize))
+                  :request body})))
 
 (defn with-stores
   [ctx body-fn]

@@ -21,11 +21,11 @@
   [ctx]
   (doseq [i (:aggregate-store @state/*dal-state*)]
     (log/info (el/query
-                (assoc ctx
-                  :method "POST"
-                  :path (str "/" (:service-name ctx) "/_doc")
-                  :body (util/to-json
-                          i))))))
+               (assoc ctx
+                      :method "POST"
+                      :path (str "/" (:service-name ctx) "/_doc")
+                      :body (util/to-json
+                             i))))))
 
 (defn test-query
   [data q]
@@ -41,19 +41,19 @@
                  [{:integers
                    {:match_mapping_type "long",
                     :mapping
-                                        {:type "integer",
-                                         :fields
-                                               {:number {:type "long"},
-                                                :keyword
-                                                        {:type         "keyword",
-                                                         :ignore_above 256}}}}}]}}]
+                    {:type "integer",
+                     :fields
+                     {:number {:type "long"},
+                      :keyword
+                      {:type         "keyword",
+                       :ignore_above 256}}}}}]}}]
 
       (log/info "Index name" service-name)
       (el/query
-        (assoc local-ctx
-          :method "PUT"
-          :path (str "/" service-name)
-          :body (util/to-json body)))
+       (assoc local-ctx
+              :method "PUT"
+              :path (str "/" service-name)
+              :body (util/to-json body)))
       (load-data local-ctx)
       (Thread/sleep 2000)
       (let [el-result (search/advanced-search (-> local-ctx
@@ -65,9 +65,9 @@
         (log/info el-result)
         (log/info mock-result)
         (el/query
-          (assoc local-ctx
-            :method "DELETE"
-            :path (str "/" service-name)))
+         (assoc local-ctx
+                :method "DELETE"
+                :path (str "/" service-name)))
         [el-result mock-result]))))
 
 (deftest test-elastic-mock-parity-1

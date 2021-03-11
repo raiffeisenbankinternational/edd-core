@@ -5,7 +5,6 @@
             [edd.memory.event-store :as event-store]
             [clojure.tools.logging :as log]))
 
-
 (defn process-cmd-response! [ctx cmd]
   (log/info "apply-cmd" cmd)
   (let [resp (f/handle-cmd (assoc ctx
@@ -22,13 +21,11 @@
   (if-let [cmd (event-store/peek-cmd!)]
     (process-cmd-response! ctx cmd)))
 
-
 (defn process-all!
   [ctx]
   (loop []
     (when (process-next! ctx)
       (recur))))
-
 
 (defn place-cmd!
   [& cmds]
@@ -36,7 +33,6 @@
     (if (:commands cmd)
       (event-store/enqueue-cmd! cmd)
       (event-store/enqueue-cmd! {:commands [cmd]}))))
-
 
 (defn run-cmd!
   [ctx & cmd]

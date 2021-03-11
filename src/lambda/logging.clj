@@ -61,8 +61,8 @@
          :write!
          (fn [^java.util.logging.Logger logger# level# ^Throwable e# msg#]
            (let [^clojure.lang.Keyword actual-level# (keyword (to-lower (if (bound? #'mdc/*request*)
-                                                                 (get-in @mdc/*request* [:mdc :level] level#)
-                                                                 level#)))
+                                                                          (get-in @mdc/*request* [:mdc :level] level#)
+                                                                          level#)))
                  ^java.util.logging.Level jul-level# (get levels# actual-level# level#)
                  ^String msg# (str msg#)]
              (if e#

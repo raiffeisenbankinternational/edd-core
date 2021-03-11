@@ -14,7 +14,6 @@
             [clojure.string :as str]
             [edd.search :refer [parse]]))
 
-
 (defn ->trim [v]
   (if (string? v)
     (str/trim v)
@@ -58,36 +57,33 @@
                 {:must [{:nested {:path  (name path)
                                   :query (mapv
                                           (fn [%] (parse ctx %))
-                                          rest)}}]}})
-
-   })
+                                          rest)}}]}})})
 
 (defn search-filter
   [_ filter q]
   (let [[fields-key fields value-key value] (:search q)
         search (mapv
-                 (fn [p]
-                   {:wildcard
-                    {(str (name p) ".keyword") {:value (str "*" (->trim value) "*")}}})
-                 fields)]
+                (fn [p]
+                  {:wildcard
+                   {(str (name p) ".keyword") {:value (str "*" (->trim value) "*")}}})
+                fields)]
 
     (-> filter
         (assoc-in [:query :bool :should] search)
         (assoc-in [:query :bool :minimum_should_match] 1))))
 
-
 (defn form-sorting
   [sort]
   (map
-    (fn [[a b]]
-      (case (keyword b)
-        :asc {(str (name a) ".keyword") {:order "asc"}}
-        :desc {(str (name a) ".keyword") {:order "desc"}}
-        :asc-number {(str (name a) ".number") {:order "asc"}}
-        :desc-number {(str (name a) ".number") {:order "desc"}}
-        :asc-date {(name a) {:order "asc"}}
-        :desc-date {(name a) {:order "desc"}}))
-    (partition 2 sort)))
+   (fn [[a b]]
+     (case (keyword b)
+       :asc {(str (name a) ".keyword") {:order "asc"}}
+       :desc {(str (name a) ".keyword") {:order "desc"}}
+       :asc-number {(str (name a) ".number") {:order "asc"}}
+       :desc-number {(str (name a) ".number") {:order "desc"}}
+       :asc-date {(name a) {:order "asc"}}
+       :desc-date {(name a) {:order "desc"}}))
+   (partition 2 sort)))
 
 (defn create-query
   [ctx q]
@@ -101,15 +97,15 @@
 
         select-query (if (:select q)
                        (assoc query
-                         :_source
-                         (mapv
-                           name
-                           (:select q)))
+                              :_source
+                              (mapv
+                               name
+                               (:select q)))
                        query)
         sort-query (if (:sort q)
                      (assoc select-query
-                       :sort
-                       (form-sorting (:sort q)))
+                            :sort
+                            (form-sorting (:sort q)))
 
                      select-query)]
     sort-query))
@@ -119,16 +115,16 @@
   [{:keys [query] :as ctx}]
   (let [req (create-query ctx query)
         body (el/query
-               (assoc ctx
-                 :method "POST"
-                 :path (str "/" (str/replace (get ctx :index-name
-                                                  (name (:service-name ctx))) "-" "_") "/_search")
-                 :body (util/to-json (assoc req
-                                       :from (get query :from 0)
-                                       :size (get query :size default-size)))))
+              (assoc ctx
+                     :method "POST"
+                     :path (str "/" (str/replace (get ctx :index-name
+                                                      (name (:service-name ctx))) "-" "_") "/_search")
+                     :body (util/to-json (assoc req
+                                                :from (get query :from 0)
+                                                :size (get query :size default-size)))))
         total (get-in
-                body
-                [:hits :total :value])]
+               body
+               [:hits :total :value])]
     (log/debug "Elastic query")
     (log/debug (util/to-json query))
     (log/debug body)
@@ -136,12 +132,12 @@
      :from  (get query :from 0)
      :size  (get query :size default-size)
      :hits  (mapv
-              (fn [%]
-                (get % :_source))
-              (get-in
-                body
-                [:hits :hits]
-                []))}))
+             (fn [%]
+               (get % :_source))
+             (get-in
+              body
+              [:hits :hits]
+              []))}))
 
 (defn flatten-paths
   ([m separator]
@@ -166,13 +162,13 @@
   {:pre [query]}
   (println (flatten-paths query "."))
   (util/to-json
-    {:size  600
-     :query {:bool
-             {:must (mapv
-                      (fn [%]
-                        {:term {(add-to-keyword (first %) ".keyword")
-                                (second %)}})
-                      (seq (flatten-paths query ".")))}}}))
+   {:size  600
+    :query {:bool
+            {:must (mapv
+                    (fn [%]
+                      {:term {(add-to-keyword (first %) ".keyword")
+                              (second %)}})
+                    (seq (flatten-paths query ".")))}}}))
 
 (defmethod simple-search
   :elastic
@@ -182,17 +178,17 @@
                                 (name (:service-name ctx))) "-" "_")
         param (dissoc query :query-id)
         body (elastic/query
-               (assoc ctx
-                 :method "POST"
-                 :path (str "/" index "/_search")
-                 :body (create-simple-query param)))]
+              (assoc ctx
+                     :method "POST"
+                     :path (str "/" index "/_search")
+                     :body (create-simple-query param)))]
     (mapv
-      (fn [%]
-        (get % :_source))
-      (get-in
-        body
-        [:hits :hits]
-        []))))
+     (fn [%]
+       (get % :_source))
+     (get-in
+      body
+      [:hits :hits]
+      []))))
 
 (defmethod update-aggregate
   :elastic

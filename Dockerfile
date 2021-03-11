@@ -11,6 +11,9 @@ COPY src src
 COPY test test
 COPY deps.edn deps.edn
 COPY tests.edn tests.edn
+COPY format.sh format.sh
+
+RUN ./format.sh check
 
 RUN set -e && clj -A:test:unit
 
