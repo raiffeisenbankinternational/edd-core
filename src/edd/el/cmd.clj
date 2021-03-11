@@ -97,7 +97,8 @@
                              resp))))
                  []
                  (:fx ctx))
-        effects (flatten effects)]
+        effects (->>
+                 (flatten effects))]
     (assoc-in ctx [:resp :commands] effects)))
 
 (defn to-clean-vector
@@ -316,6 +317,10 @@
       (assoc ctx :error errors)
       ctx)))
 
+(defn with-breadcrumbs [ctx cmds]
+  (let [parent-breadcrumb (or (get-in ctx [:breadcrumbs]) [])]
+    (map-indexed (fn [i cmd] (assoc cmd :breadcrumbs (conj parent-breadcrumb i))) cmds)))
+
 (defn wrap-commands
   [ctx commands]
   (if-not (contains? (into [] commands) :commands)
@@ -337,7 +342,8 @@
              (fn [effects]
                (->> effects
                     (remove nil?)
-                    (wrap-commands ctx)))))
+                    (wrap-commands ctx)
+                    (with-breadcrumbs ctx)))))
 
 (defn retry [f n]
   (let [response (f)]
@@ -357,7 +363,9 @@
 (defn handle-commands
   [ctx body]
   (cache/clear!)
-  (let [resp (retry #(e-> (assoc ctx :commands (:commands body))
+  (let [resp (retry #(e-> (assoc ctx
+                                 :commands (:commands body)
+                                 :breadcrumbs (:breadcrumbs body))
                           (log-request)
                           (validate-commands)
                           (get-command-response)
