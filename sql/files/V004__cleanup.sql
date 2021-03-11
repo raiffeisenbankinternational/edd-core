@@ -1,5 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+CREATE SCHEMA IF NOT EXISTS glms;
+
 DROP TABLE IF EXISTS glms.event_store;
 CREATE TABLE glms.event_store (
     id uuid,
@@ -13,7 +15,7 @@ CREATE TABLE glms.event_store (
     aggregate_id uuid  NOT NULL,
     data jsonb NOT NULL,
     PRIMARY KEY (service_name, aggregate_id, event_seq)
-) PARTITION BY hash (aggregate_id);
+) PARTITION BY hash (service_name, aggregate_id, event_seq);
 
 CREATE INDEX glms_event_store_aggregate_id ON glms.event_store(service_name, aggregate_id);
 
@@ -44,7 +46,7 @@ CREATE TABLE glms.sequence_store (
     value BIGINT,
     PRIMARY KEY (service_name, aggregate_id, value),
     UNIQUE (aggregate_id, service_name)
-) PARTITION BY hash (aggregate_id);
+) PARTITION BY hash (aggregate_id, service_name);
 
 DROP TABLE IF EXISTS glms.command_store;
 CREATE TABLE glms.command_store (
@@ -59,7 +61,7 @@ CREATE TABLE glms.command_store (
     breadcrumbs varchar(255) NOT NULL,
     data jsonb NOT NULL,
     PRIMARY KEY (request_id, breadcrumbs)
-) PARTITION BY hash (request_id);
+) PARTITION BY hash (request_id, breadcrumbs);
 
 
 
@@ -86,7 +88,7 @@ CREATE TABLE glms.command_request_log (
     created_on TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     service_name VARCHAR(256),
     data jsonb NOT NULL
-) PARTITION BY hash (request_id);
+) PARTITION BY hash (invocation_id);
 
 DROP TABLE IF EXISTS glms.command_response_log;
 CREATE TABLE glms.command_response_log (
@@ -99,7 +101,7 @@ CREATE TABLE glms.command_response_log (
     service_name VARCHAR(256),
     data jsonb NOT NULL,
     UNIQUE (request_id, breadcrumbs)
-) PARTITION BY hash (request_id);
+) PARTITION BY hash (request_id, breadcrumbs);
 
 DO
 $do$
