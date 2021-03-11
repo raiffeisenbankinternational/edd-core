@@ -3,9 +3,6 @@
             [aws :as aws]
             [lambda.util :as util]))
 
-
-
-
 (defn make-request
   [{:keys [aws action body] :as ctx}]
   (let [req {:method     "POST"
@@ -24,14 +21,14 @@
         auth (aws/authorize req)]
 
     (let [response (aws/retry
-                     #(util/http-post
-                        (str "https://" (get (:headers req) "Host") "/")
-                        {:body    (:payload req)
-                         :headers (-> (:headers req)
-                                      (dissoc "Host")
-                                      (assoc "Authorization" auth))
-                         :timeout 5000})
-                     3)]
+                    #(util/http-post
+                      (str "https://" (get (:headers req) "Host") "/")
+                      {:body    (:payload req)
+                       :headers (-> (:headers req)
+                                    (dissoc "Host")
+                                    (assoc "Authorization" auth))
+                       :timeout 5000})
+                    3)]
       (println response)
       (when (contains? response :error)
         (log/error "Failed to fetch secret" response))
@@ -40,5 +37,5 @@
 (defn list-tables
   [ctx]
   (make-request
-    (assoc ctx :action "ListTables"
-               :body {})))
+   (assoc ctx :action "ListTables"
+          :body {})))

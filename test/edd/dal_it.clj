@@ -54,19 +54,19 @@
                    :event-seq 1
                    :id        agg-id-2}]]
     (run-test
-      #(do
-         (dal/store-results (assoc %
-                              :resp {:events     (concat events
-                                                         events-2)
-                                     :commands   []
-                                     :sequences  []
-                                     :identities []}))
-         (is (= events
-                (dal/get-events (assoc % :id agg-id))))
-         (is (= 2
-                (dal/get-max-event-seq (assoc % :id agg-id))))
-         (is (= 1
-                (dal/get-max-event-seq (assoc % :id agg-id-2))))))))
+     #(do
+        (dal/store-results (assoc %
+                                  :resp {:events     (concat events
+                                                             events-2)
+                                         :commands   []
+                                         :sequences  []
+                                         :identities []}))
+        (is (= events
+               (dal/get-events (assoc % :id agg-id))))
+        (is (= 2
+               (dal/get-max-event-seq (assoc % :id agg-id))))
+        (is (= 1
+               (dal/get-max-event-seq (assoc % :id agg-id-2))))))))
 
 (deftest test-identities
   (let [id-1 (str "id-" (uuid/gen))
@@ -76,15 +76,15 @@
         identity-2 {:identity id-2
                     :id       agg-id-2}]
     (run-test
-      #(do
-         (dal/store-results (assoc %
-                              :resp {:events     []
-                                     :commands   []
-                                     :sequences  []
-                                     :identities [identity identity-2]}))
-         (is (= agg-id
-                (dal/get-aggregate-id-by-identity (assoc % :identity id-1))))
-         (is (= agg-id-2
-                (dal/get-aggregate-id-by-identity (assoc % :identity id-2))))
-         (is (= nil
-                (dal/get-aggregate-id-by-identity (assoc % :identity "agg-id-3"))))))))
+     #(do
+        (dal/store-results (assoc %
+                                  :resp {:events     []
+                                         :commands   []
+                                         :sequences  []
+                                         :identities [identity identity-2]}))
+        (is (= agg-id
+               (dal/get-aggregate-id-by-identity (assoc % :identity id-1))))
+        (is (= agg-id-2
+               (dal/get-aggregate-id-by-identity (assoc % :identity id-2))))
+        (is (= nil
+               (dal/get-aggregate-id-by-identity (assoc % :identity "agg-id-3"))))))))

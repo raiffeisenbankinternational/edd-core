@@ -10,22 +10,22 @@
 (def from-queue
   {:cond (fn [{:keys [body]}]
            (if (and
-                 (contains? body :Records)
-                 (= (:eventSource (first (:Records body))) "aws:sqs"))
+                (contains? body :Records)
+                (= (:eventSource (first (:Records body))) "aws:sqs"))
              true
              false))
    :fn   (fn [{:keys [body] :as ctx}]
            (assoc ctx
-             :body (util/to-edn (-> body
-                                    (:Records)
-                                    (first)
-                                    (:body)))))})
+                  :body (util/to-edn (-> body
+                                         (:Records)
+                                         (first)
+                                         (:body)))))})
 
 (def from-bucket
   {:cond (fn [{:keys [body]}]
            (if (and
-                 (contains? body :Records)
-                 (= (:eventSource (first (:Records body))) "aws:s3")) true))
+                (contains? body :Records)
+                (= (:eventSource (first (:Records body))) "aws:s3")) true))
    :fn   (fn [{:keys [body] :as ctx}]
            (-> ctx
                (assoc-in [:user :id] (name (:service-name ctx)))
@@ -33,7 +33,7 @@
                (assoc :body {:request-id     (get ctx :request-id (uuid/gen))
                              :interaction-id (get ctx :interaction-id (uuid/gen))
                              :user           (name
-                                               (:service-name ctx))
+                                              (:service-name ctx))
                              :role           :non-interactive
                              :commands       (into []
                                                    (for [record (:Records body)]
@@ -50,9 +50,9 @@
 (defn check-user-role
   [{:keys [body req] :as ctx}]
   (let [{:keys [user body]} (jwt/parse-token
-                              ctx
-                              (or (get-in req [:headers :x-authorization])
-                                  (get-in req [:headers :X-Authorization])))
+                             ctx
+                             (or (get-in req [:headers :x-authorization])
+                                 (get-in req [:headers :X-Authorization])))
         role (get-in body [:user :selected-role])]
     (cond
       (:error body) (assoc ctx :body body)

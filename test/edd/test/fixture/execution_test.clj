@@ -55,7 +55,7 @@
 
 (deftest test-process-next-on-empty-queue
   (f/with-mock-dal
-    (let [ctx (register )
+    (let [ctx (register)
           id (uuid/gen)]
 
       (is (not (sut/process-next! ctx)))
@@ -64,7 +64,7 @@
 
 (deftest test-place-and-process-next
   (f/with-mock-dal
-    (let [ctx (register )
+    (let [ctx (register)
           id1 (uuid/gen)
           id2 (uuid/gen)]
       (sut/place-cmd! {:cmd-id :cmd-1
@@ -75,10 +75,9 @@
       (is (sut/process-next! ctx))
       (is (= 1 (count (:event-store @state/*dal-state*)))))))
 
-
 (deftest test-place-and-process-all
   (f/with-mock-dal
-    (let [ctx (register )
+    (let [ctx (register)
           id1 (uuid/gen)
           id2 (uuid/gen)]
 
@@ -91,10 +90,9 @@
 
       (is (= 4 (count (:event-store @state/*dal-state*)))))))
 
-
 (deftest test-run-multiple-cmds
   (f/with-mock-dal
-    (let [ctx (register )
+    (let [ctx (register)
           id1 (uuid/gen)
           id2 (uuid/gen)]
       (sut/run-cmd! ctx
@@ -107,11 +105,10 @@
 
 (deftest test-run-a-single-cmd
   (f/with-mock-dal
-    (let [ctx (register )
+    (let [ctx (register)
           id1 (uuid/gen)
           id2 (uuid/gen)]
       (sut/run-cmd! ctx {:cmd-id :cmd-1
                          :id id1})
-
 
       (is (= 2 (count (:event-store @state/*dal-state*)))))))

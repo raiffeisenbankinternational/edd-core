@@ -11,10 +11,10 @@
 (def ctx
   (-> {}
       (edd.core/reg-fx
-        (fn [ctx events]
-          {:service  "test-svc"
-           :commands {:id     "1"
-                      :cmd-id "2"}}))))
+       (fn [ctx events]
+         {:service  "test-svc"
+          :commands {:id     "1"
+                     :cmd-id "2"}}))))
 
 (deftest test-apply-fx-when-fx-returns-map
   (let [resp (cmd/handle-effects ctx)
@@ -24,16 +24,15 @@
 (def ctx2
   (-> {}
       (edd.core/reg-fx
-        (fn [ctx events]
-          [{:service  "test-svc"
-            :commands {:id     "1"
-                       :cmd-id "2"}}]))))
+       (fn [ctx events]
+         [{:service  "test-svc"
+           :commands {:id     "1"
+                      :cmd-id "2"}}]))))
 
 (deftest test-apply-fx-when-fx-returns-list
   (let [resp (cmd/handle-effects ctx2)
         resp (get-in resp [:resp :commands])]
     (is (contains? (first resp) :service))))
-
 
 (def cmd-id #uuid "22222111-1111-1111-1111-111111111111")
 (def fx-id #uuid "22222111-1111-1111-1111-111111111111")
@@ -43,17 +42,16 @@
       (view-store/register)
       (event-store/register)
       (edd.core/reg-cmd
-        :cmd-1
-        (fn [ctx cmd]
-          {:event-id :e1}))
+       :cmd-1
+       (fn [ctx cmd]
+         {:event-id :e1}))
       (edd.core/reg-fx
-        (fn [ctx events]
-          [{:id     "2"
-            :cmd-id "2"}
-           {:service  "target-svc"
-            :commands [{:id     "1"
-                        :cmd-id "1"}]}]))))
-
+       (fn [ctx events]
+         [{:id     "2"
+           :cmd-id "2"}
+          {:service  "target-svc"
+           :commands [{:id     "1"
+                       :cmd-id "1"}]}]))))
 
 (deftest test-command-storage
   (mock/with-mock-dal
