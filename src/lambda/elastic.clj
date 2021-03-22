@@ -4,16 +4,13 @@
   (:require
    [clj-aws-sign.core :as awssign]
    [lambda.util :as util]
-   [clojure.pprint :refer [pprint]]
    [clojure.tools.logging :as log]
-   [clojure.pprint :refer [pprint]]
-   [clojure.string :refer [join]]))
+   [clojure.string :refer [join]]
+   [aws :as aws]))
 
 (defn create-date
   []
-  (.format
-   (. DateTimeFormatter ofPattern "yyyyMMdd'T'HHmmss'Z'")
-   (. OffsetDateTime now (. ZoneOffset UTC))))
+  (aws/create-date))
 
 (defn get-env
   [name & [default]]

@@ -57,66 +57,72 @@
     (assoc attrs :level level)
     attrs))
 
-(defn dispatch-request
-  [{:keys [body] :as ctx}]
-  (log/debug "Dispatching" body)
+(defn dispatch-item
+  [{:keys [item] :as ctx}]
+  (log/debug "Dispatching" item)
   (swap! request/*request* #(update % :mdc
                                     (fn [mdc]
                                       (-> (assoc mdc
                                                  :invocation-id (:invocation-id ctx)
-                                                 :request-id (:request-id body)
-                                                 :interaction-id (:interaction-id body))
-                                          (add-log-level body)))))
+                                                 :request-id (:request-id item)
+                                                 :interaction-id (:interaction-id item))
+                                          (add-log-level item)))))
+  (try
+    (let [ctx (assoc ctx :request-id (:request-id item)
+                     :interaction-id (:interaction-id item))
+          resp (cond
+                 (contains? item :apply) (event/handle-event (-> ctx
+                                                                 (assoc :apply (:apply item))))
+                 (contains? item :query) (query/handle-query
+                                          ctx
+                                          item)
+                 (contains? item :commands) (cmd/handle-commands
+                                             ctx
+                                             item)
+                 (contains? item :error) item
+                 :else {:error :invalid-request})]
+      (assoc resp :request-id (:request-id item)
+             :interaction-id (:interaction-id item)))
+    (catch Throwable e
+      (do
+        (log/error e)
+        (throw e)))))
+
+(defn dispatch-request
+  [{:keys [body] :as ctx}]
+  (log/debug "Dispatching" body)
   (assoc
    ctx
-   :resp (try
-           (cond
-             (contains? body :apply) (event/handle-event (-> ctx
-                                                             (assoc :apply (:apply body))))
-             (contains? body :query) (query/handle-query
-                                      ctx
-                                      body)
-             (contains? body :commands) (cmd/handle-commands
-                                         ctx
-                                         body)
-             (contains? body :error) body
-             :else {:error :invalid-request})
-           (catch Throwable e
-             (do
-               (log/error e)
-               (throw e))))))
+   :resp (mapv
+          #(dispatch-item (assoc ctx :item %))
+          body)))
 
 (defn filter-queue-request
   "If request is coming from queue we need to get out all request bodies"
   [{:keys [body] :as ctx}]
   (if (contains? body :Records)
-    (let [queue-body (-> body
-                         (:Records)
-                         (first)
-                         (:body)
-                         (util/to-edn))]
+    (let [queue-body (mapv
+                      (fn [it]
+                        (-> it
+                            (:body)
+                            (util/to-edn)))
+                      (-> body
+                          (:Records)))]
       (-> ctx
-          (assoc :body queue-body)))
+          (assoc :body queue-body
+                 :queue-request true)))
 
-    ctx))
+    (assoc ctx :body [body]
+           :queue-request false)))
 
 (defn prepare-response
   "Wrap non error result into :result keyword"
   [{:keys [resp] :as ctx}]
-  (let [wrapped-resp (if-not (:error resp)
-                       {:result resp}
-                       resp)]
-    (assoc ctx
-           :resp (-> wrapped-resp
-                     (assoc
-                      :request-id (:request-id ctx)
-                      :interaction-id (:interaction-id ctx))))))
-
-(defn prepare-request
-  [{:keys [body] :as ctx}]
-  (-> ctx
-      (assoc :request-id (:request-id body)
-             :interaction-id (:interaction-id body))))
+  (if (:queue-request ctx)
+    resp
+    (if-not (:error (first resp))
+      {:result (first resp)}
+      (first resp))))
 
 (def schema
   [:and
@@ -133,13 +139,16 @@
 
 (defn validate-request
   [{:keys [body] :as ctx}]
-  (if (m/validate schema body)
-    ctx
-    (assoc ctx
-           :body {:error   (->> body
-                                (m/explain schema)
-                                (me/humanize))
-                  :request body})))
+  (assoc
+   ctx
+   body
+   (mapv
+    #(if (m/validate schema %)
+       %
+       {:error (->> body
+                    (m/explain schema)
+                    (me/humanize))})
+    body)))
 
 (defn with-stores
   [ctx body-fn]
@@ -157,7 +166,5 @@
     #(-> (assoc % :body body)
          (filter-queue-request)
          (validate-request)
-         (prepare-request)
          (dispatch-request)
-         (prepare-response)
-         (:resp))))
+         (prepare-response))))

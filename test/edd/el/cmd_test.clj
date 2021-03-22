@@ -122,14 +122,14 @@
      (do
        (verify-traffic-json
         [{:body   {:body            (util/to-json
-                                     {:result         {:success    true
-                                                       :effects    []
-                                                       :events     1
-                                                       :meta       [{:ping {:id id}}]
-                                                       :identities 0
-                                                       :sequences  0}
-                                      :request-id     request-id
-                                      :interaction-id interaction-id})
+                                     {:result {:success        true
+                                               :effects        []
+                                               :events         1
+                                               :meta           [{:ping {:id id}}]
+                                               :identities     0
+                                               :sequences      0
+                                               :request-id     request-id
+                                               :interaction-id interaction-id}})
                    :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
                                      :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
                                      :Access-Control-Allow-Origin   "*"
