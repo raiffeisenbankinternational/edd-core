@@ -1,9 +1,9 @@
 (ns edd.memory.search
   (:require
-   [clojure.pprint :refer [pprint]]
    [clojure.string :as str]
    [edd.search :refer [advanced-search parse default-size]]
-   [lambda.test.fixture.state :as state]))
+   [lambda.test.fixture.state :as state]
+   [clojure.tools.logging :as log]))
 
 (defn to-keywords
   [a]
@@ -86,12 +86,8 @@
 (defn search-fn
   [q p]
   (let [[fields-key fields value-key value] (:search q)]
-    (println "SFN")
-    (pprint fields)
-    (pprint value)
     (if (some
          #(let [v (get-in p (to-keywords %) "")]
-            (println v (str (.contains v value)))
             (.contains v value))
          fields)
       true
@@ -138,16 +134,16 @@
 
 (defn compare-item
   [attrs a b]
-  (println attrs)
+  (log/info attrs)
   (let [sort (first attrs)
         attribute (first sort)
         order (second sort)
         value_a (get-in a attribute)
         value_b (get-in b attribute)]
-    (println attribute)
-    (println order)
-    (println value_a)
-    (println value_b)
+    (log/info attribute)
+    (log/info order)
+    (log/info value_a)
+    (log/info value_b)
     (cond
       (empty? attrs) 0
       (= value_a value_b) (compare-item

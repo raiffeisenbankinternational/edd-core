@@ -1,1 +1,0 @@
-ALTER TABLE glms.command_store ADD COLUMN  aggregate_id uuid;

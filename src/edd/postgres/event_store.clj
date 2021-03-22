@@ -127,15 +127,13 @@
                                                          cmd_index,
                                                          data)
                             VALUES (?,?,?,?,?,?,?)"])
-          params (map-indexed
-                  (fn [idx itm] [invocation-id
-                                 request-id
-                                 interaction-id
-                                 (breadcrumb-str (:breadcrumbs body))
-                                 service-name
-                                 0
-                                 itm])
-                  body)]
+          params [invocation-id
+                  request-id
+                  interaction-id
+                  (breadcrumb-str (:breadcrumbs body))
+                  service-name
+                  0
+                  body]]
       (p/execute-batch! ps params))))
 
 (defmethod log-dps

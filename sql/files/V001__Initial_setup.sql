@@ -15,7 +15,7 @@ CREATE TABLE glms.event_store (
     aggregate_id uuid  NOT NULL,
     data jsonb NOT NULL,
     PRIMARY KEY (service_name, aggregate_id, event_seq)
-) PARTITION BY hash (service_name, aggregate_id, event_seq);
+) PARTITION BY hash (aggregate_id);
 
 CREATE INDEX glms_event_store_aggregate_id ON glms.event_store(service_name, aggregate_id);
 
@@ -126,4 +126,3 @@ BEGIN
    END LOOP;
 END
 $do$;
-

@@ -5,7 +5,8 @@
    [clojure.java.io :as io]
    [clojure.tools.logging :as log]
    [lambda.jwt :as jwt]
-   [lambda.util :as utils])
+   [lambda.util :as utils]
+   [clojure.string :as str])
 
   (:import (java.time.format DateTimeFormatter)
            (java.time OffsetDateTime ZoneOffset)))
@@ -201,14 +202,81 @@
     (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/response")
     {:body (util/to-json body)})))
 
+(defn delete-message-batch
+  [ctx records]
+  (log/info (first records))
+  (let [queue-arn (get-in (first records) [:eventSourceARN])
+        parts (str/split queue-arn #":")
+        queue-name (peek parts)
+        account-id (peek (pop parts))
+        req {:method     "POST"
+             :payload    (str "Action=DeleteMessageBatch"
+                              "&QueueUrl=https://sqs.eu-central-1.amazonaws.com"
+                              (str "/"
+                                   account-id
+                                   "/"
+                                   queue-name)
+                              (str/join (map-indexed
+                                         (fn [idx %]
+                                           (str "&DeleteMessageBatchRequestEntry." (inc idx) ".Id="
+                                                (:messageId %)
+                                                "&DeleteMessageBatchRequestEntry." (inc idx) ".ReceiptHandle="
+                                                (:receiptHandle %)))
+                                         records))
+                              "&Expires=2020-04-18T22%3A52%3A43PST"
+                              "&Version=2012-11-05")
+             :uri        (str "/"
+                              account-id
+                              "/"
+                              queue-name)
+             :headers    {"Host"         "sqs.eu-central-1.amazonaws.com"
+                          "Content-Type" "application/x-www-form-urlencoded"
+                          "Accept"       "application/json"
+                          "X-Amz-Date"   (aws/create-date)}
+             :service    "sqs"
+             :region     "eu-central-1"
+             :access-key (System/getenv "AWS_ACCESS_KEY_ID")
+             :secret-key (System/getenv "AWS_SECRET_ACCESS_KEY")}
+        auth (aws/authorize req)]
+    (log/info "Dispatching message delete")
+    (let [response (aws/retry
+                    #(util/http-post
+                      (str "https://"
+                           (get (:headers req) "Host")
+                           (:uri req))
+                      {:body    (:payload req)
+                       :version :http1.1
+                       :headers (-> (:headers req)
+                                    (dissoc "Host")
+                                    (assoc "Authorization" auth)
+                                    (assoc "X-Amz-Security-Token" (System/getenv "AWS_SESSION_TOKEN")))
+                       :timeout 5000
+                       :raw     true}) 3)]
+      (when (or (contains? response :error)
+                (> (get response :status 0) 299))
+        (log/error "Failed to sqs:ChangeMessageVisibility" response))
+      (:body response))))
+
 (defn send-error
   [{:keys [api
            invocation-id
-           from-api] :as ctx} body]
+           from-api
+           req] :as ctx} body]
   (let [resp (util/to-json body)
         target (if from-api
                  "response"
                  "error")]
+    (when-not from-api
+      (delete-message-batch ctx
+                            (let [items (interleave body
+                                                    (:Records req))]
+                              (->> (partition 2 items)
+                                   (filter (fn [[a _]]
+                                             (not (:error a))))
+                                   (map
+                                    (fn [[_ b]]
+                                      b))))))
+
     (log/error (util/to-json
                 (util/http-post
                  (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/" target)

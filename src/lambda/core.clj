@@ -26,7 +26,10 @@
 
 (defn send-response
   [{:keys [resp] :as ctx}]
-  (let [error (:error resp)
+  (let [error (if (vector? resp)
+                (-> (filter #(contains? % :error) resp)
+                    (first))
+                (:error resp))
         filtered (:resp (apply-post-filter ctx))]
     (if error
       (aws/send-error ctx filtered)
@@ -71,9 +74,11 @@
             (send-response)
             (doall))
         (catch Exception e
-          (handle-error ctx e))
+          (handle-error (assoc ctx
+                               :req body) e))
         (catch AssertionError e
-          (handle-error ctx e))))))
+          (handle-error (assoc ctx
+                               :req body) e))))))
 
 (defn get-loop
   "Extracting lambda looping as infinite loop to be able to mock it"
@@ -134,7 +139,7 @@
                               request
                               [:headers :lambda-runtime-aws-request-id])]
            (log/debug "Loop" i)
-           (binding [request/*request* (atom {})]
+           (binding [request/*request* (atom {:scoped true})]
              (handle-request
               (-> ctx
                   (assoc :from-api (is-from-api request))

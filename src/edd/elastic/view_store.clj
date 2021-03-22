@@ -7,7 +7,6 @@
                                 default-size
                                 advanced-search
                                 update-aggregate]]
-            [clojure.pprint :refer [pprint]]
             [lambda.util :as util]
             [lambda.elastic :as elastic]
             [clojure.tools.logging :as log]
@@ -160,7 +159,6 @@
 (defn create-simple-query
   [query]
   {:pre [query]}
-  (println (flatten-paths query "."))
   (util/to-json
    {:size  600
     :query {:bool
@@ -190,8 +188,7 @@
       [:hits :hits]
       []))))
 
-(defmethod update-aggregate
-  :elastic
+(defn store-to-elastic
   [{:keys [aggregate] :as ctx}]
   (log/debug "Updating aggregate" aggregate)
   (let [index (-> ctx
@@ -205,6 +202,10 @@
     (if error
       (throw (ex-info "could not store aggregate" {:error error}))
       ctx)))
+(defmethod update-aggregate
+  :elastic
+  [{:keys [aggregate] :as ctx}]
+  (store-to-elastic ctx))
 
 (defmethod with-init
   :elastic

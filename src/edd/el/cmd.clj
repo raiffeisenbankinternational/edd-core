@@ -288,7 +288,7 @@
       (some #(not= % :valid) result) (assoc-in [:error :spec] result))))
 
 (defn set-response-summary
-  [{:keys [resp no-summary]}]
+  [{:keys [resp no-summary] :as ctx}]
   (cond
     (:error resp) {:error (:error resp)}
     no-summary resp
@@ -371,7 +371,6 @@
            (validate-commands)
            (get-command-response)
            (check-for-errors)
-           #_(verify-command-version)
            (clean-effects)
            (versioned-events!)
            (add-metadata)
