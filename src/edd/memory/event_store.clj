@@ -8,6 +8,7 @@
                     get-sequence-number-for-id
                     get-id-for-sequence-number
                     get-aggregate-id-by-identity
+                    get-command-response
                     log-dps
                     log-request
                     log-response
@@ -90,6 +91,7 @@
 
 (defn store-results-impl
   [{:keys [resp] :as ctx}]
+  (log-response ctx)
   (doseq [i (:events resp)]
     (store-event i))
   (doseq [i (:identities resp)]
@@ -128,6 +130,18 @@
         entry (first (filter #(= (:id %) id)
                              store))]
     (:value entry)))
+
+(defmethod get-command-response
+  :memory
+  [{:keys [request-id breadcrumbs]}]
+
+  (log/info "Emulating get-command-response-log" request-id breadcrumbs)
+  (when (and request-id breadcrumbs)
+    (let [store (:response-log @*dal-state*)]
+      (first
+       (filter #(and (= (:request-id %) request-id)
+                     (= (:breadcrumbs %) breadcrumbs))
+               store)))))
 
 (defmethod get-id-for-sequence-number
   :memory
@@ -170,7 +184,7 @@
 (defmethod log-request
   :memory
   [{:keys [commands]}]
-  (log/debug "Storing mock request" commands)
+  (log/info "Storing mock request" commands)
   (swap! *dal-state*
          #(update % :command-log (fn [v] (conj v commands)))))
 
@@ -184,10 +198,12 @@
 
 (defmethod log-response
   :memory
-  [{:keys [resp]}]
-  (log/debug "Storing mock response" resp)
+  [{:keys [resp request-id breadcrumbs]}]
+  (log/info "Storing mock response" resp)
   (swap! *dal-state*
-         #(update % :response-log (fn [v] (conj v resp)))))
+         #(update % :response-log (fn [v] (conj v {:request-id request-id
+                                                   :breadcrumbs breadcrumbs
+                                                   :data resp})))))
 
 (defmethod with-init
   :memory

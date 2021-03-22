@@ -28,9 +28,6 @@
 (require '[lambda.test.fixture.state
            :as state])
 
-(exec/run-cmd! ctx {:cmd-id :cmd-1
-                    :id cmd-id})
-
 @state/*dal-state*
 
 (deftest test-version-with-no-aggregate
