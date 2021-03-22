@@ -3,6 +3,7 @@
    [edd.flow :refer :all]
    [clojure.tools.logging :as log]
    [edd.dal :as dal]
+   [lambda.request :as request]
    [edd.search :as search]))
 
 (defn apply-event
@@ -48,14 +49,14 @@
   (log/debug "Snapshot: " snapshot)
 
   (cond
-    (:error events)      (throw (ex-info "Error fetching events" {:error events}))
-    (> (count events) 0) (let [aggregate  (create-aggregate snapshot events (:def-apply ctx))
+    (:error events) (throw (ex-info "Error fetching events" {:error events}))
+    (> (count events) 0) (let [aggregate (create-aggregate snapshot events (:def-apply ctx))
                                result-agg (apply-agg-filter ctx aggregate)]
                            (assoc
                             ctx
                             :aggregate result-agg))
-    snapshot             (assoc ctx :aggregate snapshot)
-    :else                (throw (ex-info "Aggregate not found" {:error :no-events-found}))))
+    snapshot (assoc ctx :aggregate snapshot)
+    :else (throw (ex-info "Aggregate not found" {:error :no-events-found}))))
 
 (defn fetch-snapshot
   [ctx]
@@ -90,10 +91,21 @@
 (defn handle-event
   [{:keys [apply] :as ctx}]
   (try
-    (-> ctx
-        (assoc :id (:aggregate-id apply))
-        (get-by-id)
-        (update-aggregate))
+    (let [agg-id (:aggregate-id apply)]
+      (if (:scoped @request/*request*)
+        (let [applied (get-in @request/*request* [:applied agg-id])]
+          (if-not applied
+            (do (-> ctx
+                    (assoc :id agg-id)
+                    (get-by-id)
+                    (update-aggregate))
+
+                (swap! request/*request*
+                       #(assoc-in % [:applied agg-id] {:apply true})))))
+        (-> ctx
+            (assoc :id agg-id)
+            (get-by-id)
+            (update-aggregate))))
     {:apply true}
     (catch Exception e
       (log/error e)
