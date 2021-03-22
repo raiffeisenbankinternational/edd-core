@@ -72,9 +72,9 @@
                          [{:id      agg-id
                            :version 2
                            :value   "1"}])
-      (is (= {:result         {:apply true}
-              :interaction-id int-id
-              :request-id     req-id}
+      (is (= [{:apply          true
+               :interaction-id int-id
+               :request-id     req-id}]
              resp)))))
 
 (deftest apply-when-no-events
@@ -110,7 +110,7 @@
       (let [resp (edd/handler ctx req)]
         (mock/verify-state :aggregate-store
                            [])
-        (is (= {:result {:apply true}
-                :interaction-id int-id
-                :request-id     req-id}
+        (is (= [{:apply          true
+                 :interaction-id int-id
+                 :request-id     req-id}]
                resp))))))

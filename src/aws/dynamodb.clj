@@ -29,7 +29,6 @@
                                     (assoc "Authorization" auth))
                        :timeout 5000})
                     3)]
-      (println response)
       (when (contains? response :error)
         (log/error "Failed to fetch secret" response))
       (:body response))))

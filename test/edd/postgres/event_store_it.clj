@@ -45,38 +45,38 @@
 
 (deftest apply-when-two-events
   (binding [*dal-state* (atom {})]
-    (let [invocation-id  (uuid/gen)
-          ctx            (get-ctx invocation-id)
-          agg-id         (uuid/gen)
+    (let [invocation-id (uuid/gen)
+          ctx (get-ctx invocation-id)
+          agg-id (uuid/gen)
           interaction-id (uuid/gen)
-          request-id     (uuid/gen)
-          req            {:request-id     request-id
-                          :interaction-id interaction-id
-                          :commands       [{:cmd-id :cmd-1
-                                            :id     agg-id}]}
-          apply          {:request-id     interaction-id
-                          :interaction-id request-id
-                          :apply          {:aggregate-id agg-id}}
-          resp           (edd/handler ctx
-                                      (assoc req :log-level :debug))]
+          request-id (uuid/gen)
+          req {:request-id     request-id
+               :interaction-id interaction-id
+               :commands       [{:cmd-id :cmd-1
+                                 :id     agg-id}]}
+          apply {:request-id     interaction-id
+                 :interaction-id request-id
+                 :apply          {:aggregate-id agg-id}}
+          resp (edd/handler ctx
+                            (assoc req :log-level :debug))]
       (edd/handler ctx apply)
       (mock/verify-state :aggregate-store
                          [{:id      agg-id
                            :version 2
                            :value   "2"}])
-      (is (= {:result         {:effects    [{:cmd-id       :vmd-2
-                                             :id           fx-id
-                                             :service-name :s2}
-                                            {:cmd-id       :vmd-2
-                                             :id           fx-id
-                                             :service-name :s2}]
-                               :events     2
-                               :identities 1
-                               :meta       [{:cmd-1 {:id agg-id}}]
-                               :sequences  1
-                               :success    true}
-              :interaction-id interaction-id
-              :request-id     request-id}
+      (is (= {:result {:effects        [{:cmd-id       :vmd-2
+                                         :id           fx-id
+                                         :service-name :s2}
+                                        {:cmd-id       :vmd-2
+                                         :id           fx-id
+                                         :service-name :s2}]
+                       :events         2
+                       :identities     1
+                       :meta           [{:cmd-1 {:id agg-id}}]
+                       :sequences      1
+                       :success        true
+                       :interaction-id interaction-id
+                       :request-id     request-id}}
              resp))
       #_(is (= (edd/handler ctx
 
