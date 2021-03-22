@@ -8,6 +8,7 @@
                     get-max-event-seq
                     get-sequence-number-for-id
                     get-id-for-sequence-number
+                    get-command-response
                     get-aggregate-id-by-identity
                     log-dps
                     log-request
@@ -51,6 +52,12 @@
   :dynamodb
   [{:keys [sequence] :as ctx}]
   {:pre [sequence]}
+  ctx)
+
+(defmethod get-command-response
+  :dynamodb
+  [{:keys [request-id breadcrumbs] :as ctx}]
+  {:pre [(and request-id breadcrumbs)]}
   ctx)
 
 (defmethod get-aggregate-id-by-identity

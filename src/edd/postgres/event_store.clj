@@ -10,6 +10,7 @@
                              get-sequence-number-for-id
                              get-id-for-sequence-number
                              get-aggregate-id-by-identity
+                             get-command-response
                              log-dps
                              log-request
                              log-response
@@ -51,6 +52,9 @@
                   (str/replace "\n" "")
                   (parse-error))})))
 
+(defn breadcrumb-str [breadcrumbs]
+  (str/join ":" (or breadcrumbs [])))
+
 (defn store-event
   [ctx event]
   (log/debug "Storing event" event)
@@ -71,7 +75,7 @@
                     (:invocation-id ctx)
                     (:request-id ctx)
                     (:interaction-id ctx)
-                    (str/join ":" (:breadcrumbs event))
+                    (breadcrumb-str (:breadcrumbs event))
                     (:event-seq event)
                     (:id event)
                     event])))
@@ -99,7 +103,7 @@
                     (:invocation-id ctx)
                     (:request-id ctx)
                     (:interaction-id ctx)
-                    (str/join ":" (:breadcrumbs cmd))
+                    (breadcrumb-str (:breadcrumbs cmd))
                     (:service-name ctx)
                     (:service cmd)
                     (-> cmd
@@ -127,7 +131,7 @@
                   (fn [idx itm] [invocation-id
                                  request-id
                                  interaction-id
-                                 (str/join ":" (get body :breadcrumbs []))
+                                 (breadcrumb-str (:breadcrumbs body))
                                  service-name
                                  0
                                  itm])
@@ -174,7 +178,7 @@
                     invocation-id
                     request-id
                     interaction-id
-                    (str/join ":" (:breadcrumbs ctx))
+                    (breadcrumb-str (:breadcrumbs ctx))
                     service-name
                     0,
                     resp])))
@@ -195,7 +199,7 @@
                   (:invocation-id ctx)
                   (:request-id ctx)
                   (:interaction-id ctx)
-                  (str/join ":" (:breadcrumbs ctx))
+                  (breadcrumb-str (:breadcrumbs ctx))
                   (:service-name ctx)
                   (:id identity)]))
 
@@ -222,10 +226,30 @@
                     (:invocation-id ctx)
                     (:request-id ctx)
                     (:interaction-id ctx)
-                    (str/join ":" (:breadcrumbs ctx))
+                    (breadcrumb-str (:breadcrumbs ctx))
                     aggregate-id
                     service-name
                     service-name])))
+
+(defmethod get-command-response
+  :postgres
+  [{:keys [request-id breadcrumbs] :as ctx}]
+  {:pre [(and request-id breadcrumbs)]}
+  (let [result (jdbc/execute-one!
+                (:con ctx)
+                ["SELECT invocation_id,
+                         interaction_id,
+                         cmd_index,
+                         created_on,
+                         data,
+                         service_name
+                  FROM glms.command_response_log
+                  WHERE request_id = ?
+                  AND breadcrumbs = ?"
+                 request-id
+                 (breadcrumb-str breadcrumbs)]
+                {:builder-fn rs/as-unqualified-lower-maps})]
+    result))
 
 (defmethod get-sequence-number-for-id
   :postgres

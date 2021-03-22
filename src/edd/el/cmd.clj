@@ -360,22 +360,28 @@
   (dal/log-request ctx)
   ctx)
 
+(defn process-commands [ctx body]
+  (let [ctx (assoc ctx :commands (:commands body)
+                   :breadcrumbs (or (get body :breadcrumbs)
+                                    [0]))]
+    (if-let [resp (:data (dal/get-command-response ctx))]
+      resp
+      (e-> ctx
+           (log-request)
+           (validate-commands)
+           (get-command-response)
+           (check-for-errors)
+           #_(verify-command-version)
+           (clean-effects)
+           (versioned-events!)
+           (add-metadata)
+           (dal/store-results)
+           (set-response-summary)))))
+
 (defn handle-commands
   [ctx body]
   (cache/clear!)
-  (let [resp (retry #(e-> (assoc ctx :commands (:commands body)
-                                 :breadcrumbs (or (get body :breadcrumbs)
-                                                  [0]))
-                          (log-request)
-                          (validate-commands)
-                          (get-command-response)
-                          (check-for-errors)
-                          #_(verify-command-version)
-                          (clean-effects)
-                          (versioned-events!)
-                          (add-metadata)
-                          (dal/store-results)
-                          (set-response-summary))
+  (let [resp (retry #(process-commands ctx body)
                     2)]
     (if (:error resp)
       (select-keys resp [:error])

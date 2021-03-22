@@ -35,6 +35,10 @@
   (fn [{:keys [id] :as ctx}]
     (:event-store ctx)))
 
+(defmulti get-command-response
+  (fn [{:keys [request-id breadcrumbs] :as ctx}]
+    (:event-store ctx)))
+
 (defmulti store-results
   (fn [ctx] (:event-store ctx)))
 
