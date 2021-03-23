@@ -160,9 +160,9 @@
 
 (defmethod log-response
   :postgres
-  [{:keys [resp invocation-id request-id interaction-id service-name] :as ctx}]
-  (log/debug "Storing response" resp)
-  (when resp
+  [{:keys [response-summary invocation-id request-id interaction-id service-name] :as ctx}]
+  (log/debug "Storing response" response-summary)
+  (when response-summary
     (jdbc/execute! (:con ctx)
                    ["INSERT INTO glms.command_response_log(invocation_id,
                                                            request_id,
@@ -178,7 +178,7 @@
                     (breadcrumb-str (:breadcrumbs ctx))
                     service-name
                     0,
-                    resp])))
+                    response-summary])))
 
 (defn store-identity
   [ctx identity]
