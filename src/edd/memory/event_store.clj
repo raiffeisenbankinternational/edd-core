@@ -198,12 +198,12 @@
 
 (defmethod log-response
   :memory
-  [{:keys [resp request-id breadcrumbs]}]
-  (log/info "Storing mock response" resp)
+  [{:keys [response-summary request-id breadcrumbs]}]
+  (log/info "Storing mock response" response-summary)
   (swap! *dal-state*
          #(update % :response-log (fn [v] (conj v {:request-id  request-id
                                                    :breadcrumbs breadcrumbs
-                                                   :data        resp})))))
+                                                   :data response-summary})))))
 
 (defmethod with-init
   :memory
