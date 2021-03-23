@@ -114,11 +114,10 @@
 
 (defmethod log-request
   :postgres
-  [{:keys [body invocation-id request-id interaction-id service-name] :as ctx}]
+  [{:keys [invocation-id request-id interaction-id service-name] :as ctx} body]
   (log/debug "Storing request" (:commands body))
-  (when (:commands body)
-    (let [ps (jdbc/prepare (:con ctx)
-                           ["INSERT INTO glms.command_request_log(
+  (let [ps (jdbc/prepare (:con ctx)
+                         ["INSERT INTO glms.command_request_log(
                                                          invocation_id,
                                                          request_id,
                                                          interaction_id,
@@ -127,14 +126,14 @@
                                                          cmd_index,
                                                          data)
                             VALUES (?,?,?,?,?,?,?)"])
-          params [invocation-id
-                  request-id
-                  interaction-id
-                  (breadcrumb-str (:breadcrumbs body))
-                  service-name
-                  0
-                  body]]
-      (p/execute-batch! ps params))))
+        params [[invocation-id
+                 request-id
+                 interaction-id
+                 (breadcrumb-str (:breadcrumbs body))
+                 service-name
+                 0
+                 body]]]
+    (p/execute-batch! ps params)))
 
 (defmethod log-dps
   :postgres

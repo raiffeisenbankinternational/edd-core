@@ -183,10 +183,10 @@
 
 (defmethod log-request
   :memory
-  [{:keys [commands]}]
-  (log/info "Storing mock request" commands)
+  [ct body]
+  (log/info "Storing mock request" body)
   (swap! *dal-state*
-         #(update % :command-log (fn [v] (conj v commands)))))
+         #(update % :command-log (fn [v] (conj v body)))))
 
 (defmethod log-dps
   :memory
