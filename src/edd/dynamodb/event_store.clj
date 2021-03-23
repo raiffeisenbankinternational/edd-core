@@ -29,7 +29,7 @@
 
 (defmethod log-request
   :dynamodb
-  [{:keys [body request-id interaction-id service-name] :as ctx}]
+  [{:keys [body request-id interaction-id service-name] :as ctx} body]
   ctx)
 
 (defmethod log-dps

@@ -173,6 +173,14 @@
                                                       :version version}))
       :else ctx)))
 
+(defn invoke-handler
+  [handler cmd ctx]
+  (try
+    (handler ctx cmd)
+    (catch Exception e
+      (do (log/error e)
+          {:error "Command handler failed"}))))
+
 (defn handle-command
   [{:keys [cmd command-handlers] :as ctx}]
 
@@ -186,7 +194,7 @@
         ctx-with-dps (merge ctx dps-resolved)
         resp (->> ctx-with-dps
                   (#(verify-command-version % cmd))
-                  (#(command-handler % cmd))
+                  (invoke-handler command-handler cmd)
                   (to-clean-vector)
                   (map #(assoc
                          %
@@ -356,18 +364,20 @@
 (defn versioned-events! [ctx]
   (assoc-in ctx [:resp :events] (get @request/*request* :events [])))
 
-(defn- log-request [ctx]
-  (dal/log-request ctx)
+(defn- log-request [ctx body]
+  (dal/log-request ctx body)
   ctx)
 
 (defn process-commands [ctx body]
+
   (let [ctx (assoc ctx :commands (:commands body)
                    :breadcrumbs (or (get body :breadcrumbs)
                                     [0]))]
+
+    (log-request ctx body)
     (if-let [resp (:data (dal/get-command-response ctx))]
       resp
       (e-> ctx
-           (log-request)
            (validate-commands)
            (get-command-response)
            (check-for-errors)
