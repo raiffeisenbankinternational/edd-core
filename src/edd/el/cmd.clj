@@ -368,6 +368,9 @@
   (dal/log-request ctx body)
   ctx)
 
+(defn add-response-summary [ctx]
+  (assoc ctx :response-summary (set-response-summary ctx)))
+
 (defn process-commands [ctx body]
 
   (let [ctx (assoc ctx :commands (:commands body)
@@ -384,8 +387,9 @@
            (clean-effects)
            (versioned-events!)
            (add-metadata)
+           (add-response-summary)
            (dal/store-results)
-           (set-response-summary)))))
+           :response-summary))))
 
 (defn handle-commands
   [ctx body]
