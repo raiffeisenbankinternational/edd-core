@@ -120,17 +120,15 @@
 (deftest apply-when-error-all-failed
   (with-redefs [aws/create-date (fn [] "20210322T232540Z")
                 event/get-by-id (fn [ctx]
-                                  (println (= (:request-id ctx)
-                                              req-id2))
                                   (if (= (:request-id ctx)
                                          req-id2)
-                                    (throw (ex-info "Something" {:badly :wrong})))
+                                    (throw (ex-info "Something" {:badly :1wrong})))
                                   (assoc ctx
                                          :aggregate {:id agg-id}))
                 event/update-aggregate (fn [ctx]
                                          (if = ((:request-id ctx)
                                                 req-id1)
-                                             (throw (ex-info "Something" {:badly :wrong}))))]
+                                             (throw (ex-info "Something" {:badly :unfrndly}))))]
     (mock-core
      :invocations [(util/to-json (req
                                   [{:apply          {:service      "glms-booking-company-svc",
@@ -160,7 +158,7 @@
                                 [{:error "Unknown error in event handler"
                                   :request-id     req-id1,
                                   :interaction-id int-id}
-                                 {:error {:badly :wrong}
+                                 {:error {:badly :1wrong}
                                   :request-id     req-id2,
                                   :interaction-id int-id}
                                  {:error "Unknown error in event handler"
@@ -171,6 +169,8 @@
                       {:method  :get
                        :timeout 90000000
                        :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
+
+
 
 
 

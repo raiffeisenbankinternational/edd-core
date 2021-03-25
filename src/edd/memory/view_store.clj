@@ -56,7 +56,7 @@
   :memory
   [ctx body-fn]
   (log/debug "Initializing memory view store")
-  (if (bound? #'*dal-state*)
+  (if-not (:global @*dal-state*)
     (body-fn ctx)
     (binding [*dal-state* (atom {})]
       (body-fn ctx))))

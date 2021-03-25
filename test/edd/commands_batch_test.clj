@@ -56,6 +56,14 @@
       (edd/reg-cmd :cmd-3 (fn [ctx cmd]
                             (throw (ex-info "OMG"
                                             {:failed "have I!"}))))
+      (edd/reg-cmd :cmd-4 (fn [ctx cmd]
+                            {:id       (:id cmd)
+                             :event-id :event-4
+                             :name     (:name cmd)})
+                   :dps {:test (fn [cmd]
+                                 {:query-id :query-4})})
+      (edd/reg-query :query-4 (fn [ctx quers]
+                                (throw (ex-info "DEPS" {:failed "yes"}))))
       (edd/reg-event :event-1
                      (fn [agg event]
                        (merge agg
@@ -65,7 +73,7 @@
                        (merge agg
                               {:value "2"})))))
 
-(deftest apply-when-two-events-1
+(deftest test-command-handler-returns-error
   (with-redefs [aws/create-date (fn [] "20210322T232540Z")]
     (mock-core
      :invocations [(util/to-json (req
@@ -90,24 +98,24 @@
       ctx
       edd/handler)
      (verify-traffic [{:body   (util/to-json
-                                [{:success        true,
-                                  :effects        [],
-                                  :events         1,
-                                  :meta           [{:cmd-1 {:id agg-id}}],
-                                  :identities     0,
-                                  :sequences      0,
+                                [{:result         {:success    true,
+                                                   :effects    [],
+                                                   :events     1,
+                                                   :meta       [{:cmd-1 {:id agg-id}}],
+                                                   :identities 0,
+                                                   :sequences  0}
                                   :request-id     req-id1
                                   :interaction-id int-id}
                                  {:error          [{:error "failed",
                                                     :id    agg-id}],
                                   :request-id     req-id2
                                   :interaction-id int-id}
-                                 {:success        true,
-                                  :effects        [],
-                                  :events         1,
-                                  :meta           [{:cmd-1 {:id agg-id}}],
-                                  :identities     0,
-                                  :sequences      0,
+                                 {:result         {:success    true,
+                                                   :effects    [],
+                                                   :events     1,
+                                                   :meta       [{:cmd-1 {:id agg-id}}],
+                                                   :identities 0,
+                                                   :sequences  0}
                                   :request-id     req-id3
                                   :interaction-id int-id}])
                        :method :post
@@ -132,7 +140,7 @@
                        :timeout 90000000
                        :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
 
-(deftest apply-when-two-events-2
+(deftest test-all-ok
   (with-redefs [aws/create-date (fn [] "20210322T232540Z")]
     (mock-core
      :invocations [(util/to-json (req [{:request-id     req-id4
@@ -172,7 +180,7 @@
                        :timeout 90000000
                        :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
 
-(deftest apply-when-two-events-1
+(deftest test-command-handler-exception
   (with-redefs [aws/create-date (fn [] "20210322T232540Z")]
     (mock-core
      :invocations [(util/to-json (req
@@ -209,6 +217,70 @@
                                                     :id    agg-id}],
                                   :request-id     req-id2
                                   :interaction-id int-id}
+                                 {:result         {:success    true,
+                                                   :effects    [],
+                                                   :events     1,
+                                                   :meta       [{:cmd-1 {:id agg-id}}],
+                                                   :identities 0,
+                                                   :sequences  0}
+                                  :request-id     req-id3
+                                  :interaction-id int-id}])
+                       :method :post
+                       :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
+                      {:body    (str "Action=DeleteMessageBatch&QueueUrl=https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue&"
+                                     "DeleteMessageBatchRequestEntry.1.Id=id-1&"
+                                     "DeleteMessageBatchRequestEntry.1.ReceiptHandle=handle-1&"
+                                     "DeleteMessageBatchRequestEntry.2.Id=id-3&"
+                                     "DeleteMessageBatchRequestEntry.2.ReceiptHandle=handle-3&"
+                                     "Expires=2020-04-18T22%3A52%3A43PST&Version=2012-11-05")
+                       :headers {"Accept"               "application/json"
+                                 "Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/sqs/aws4_request, SignedHeaders=accept;content-type;host;x-amz-date, Signature=15c52699656249eb14aadde7232a50e8e6ac9dfa3cca36e54a7ec071495b4dd8"
+                                 "Content-Type"         "application/x-www-form-urlencoded"
+                                 "X-Amz-Date"           "20210322T232540Z"
+                                 "X-Amz-Security-Token" nil}
+                       :method  :post
+                       :raw     true
+                       :timeout 5000
+                       :url     "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"
+                       :version :http1.1}
+                      {:method  :get
+                       :timeout 90000000
+                       :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
+
+(deftest test-failure-of-deps-resolver
+  (with-redefs [aws/create-date (fn [] "20210322T232540Z")]
+    (mock-core
+     :invocations [(util/to-json (req
+                                  [{:request-id     req-id1
+                                    :interaction-id int-id
+                                    :commands       [{:id     agg-id
+                                                      :cmd-id :cmd-1
+                                                      :name   "CMD1"}]}
+                                   {:request-id     req-id2
+                                    :interaction-id int-id
+                                    :commands       [{:id     agg-id
+                                                      :cmd-id :cmd-4
+                                                      :name   "CMD4"}]}
+                                   {:request-id     req-id3
+                                    :interaction-id int-id
+                                    :commands       [{:id     agg-id
+                                                      :cmd-id :cmd-1
+                                                      :name   "CMD3"}]}]))]
+
+     :requests [{:post "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"}]
+     (core/start
+      ctx
+      edd/handler)
+     (verify-traffic [{:body   (util/to-json
+                                [{:result         {:success    true,
+                                                   :effects    [],
+                                                   :events     1,
+                                                   :meta       [{:cmd-1 {:id agg-id}}],
+                                                   :identities 0,
+                                                   :sequences  0}
+                                  :request-id     req-id1
+                                  :interaction-id int-id}
+                                 {:error {:failed "yes"}}
                                  {:result         {:success    true,
                                                    :effects    [],
                                                    :events     1,

@@ -120,12 +120,13 @@
                                       default-db
                                       (first body))
                                      default-db))
-                *queues*     (atom {:command-queue []})
+                *queues* (atom {:command-queue []})
                 util/*cache* (atom {})
                 request/*request* (atom {})]
         %
         (client/mock-http
-         (prepare-dps-calls)
+         (vec (concat (prepare-dps-calls)
+                      (get @*dal-state* :responses [])))
          (with-redefs
           [aws/get-token aws-get-token
            common/create-identity create-identity]

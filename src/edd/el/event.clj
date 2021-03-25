@@ -108,7 +108,6 @@
             (update-aggregate))))
     {:apply true}
     (catch Exception e
-      (println "Handling error")
       (log/error e)
       (let [data (ex-data e)]
         (if data

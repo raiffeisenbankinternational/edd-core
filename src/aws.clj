@@ -275,7 +275,9 @@
                                  (map
                                   (fn [[_ b]]
                                     b)))]
-        (when (> (count items-to-delete) 0)
+        (when (and (> (count items-to-delete) 0)
+                   (= (count body)
+                      (count (:Records req))))
           (delete-message-batch ctx items-to-delete))))
 
     (log/error (util/to-json
