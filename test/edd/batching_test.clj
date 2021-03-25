@@ -5,6 +5,8 @@
    [edd.common :as common]
    [lambda.uuid :as uuid]
    [edd.test.fixture.dal :as mock]
+   [edd.elastic.view-store :as view-store]
+   [lambda.test.fixture.client :as client]
    [clojure.test :refer [deftest testing is are use-fixtures run-tests join-fixtures]]))
 
 (defn counter-ctx []
@@ -77,3 +79,5 @@
                           {:id      id2
                            :value   2
                            :version 2}]))))
+
+

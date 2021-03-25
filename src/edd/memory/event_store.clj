@@ -71,7 +71,7 @@
   [cmd]
   (log/info "Emulated 'store-cmd' dal function")
   (swap! *dal-state*
-         #(update % :command-store (fnil conj [])  (clean-commands cmd)))
+         #(update % :command-store (fnil conj []) (clean-commands cmd)))
   (enqueue-cmd! cmd))
 
 (defn store-event
@@ -201,15 +201,15 @@
   [{:keys [resp request-id breadcrumbs]}]
   (log/info "Storing mock response" resp)
   (swap! *dal-state*
-         #(update % :response-log (fn [v] (conj v {:request-id request-id
+         #(update % :response-log (fn [v] (conj v {:request-id  request-id
                                                    :breadcrumbs breadcrumbs
-                                                   :data resp})))))
+                                                   :data        resp})))))
 
 (defmethod with-init
   :memory
   [ctx body-fn]
   (log/debug "Initializing memory event store")
-  (if (bound? #'*dal-state*)
+  (if-not (:global @*dal-state*)
     (body-fn ctx)
     (binding [*dal-state* (atom {})]
       (body-fn ctx))))
