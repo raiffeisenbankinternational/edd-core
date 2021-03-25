@@ -91,10 +91,8 @@
 
 (deftest apply-when-events-but-no-handler
   (let [ctx
-        (-> {}
+        (-> mock/ctx
             (assoc :service-name "local-test")
-            (event-store/register)
-            (view-store/register)
             (edd/reg-cmd :cmd-1 (fn [ctx cmd]
                                   {:id       (:id cmd)
                                    :event-id :event-1
