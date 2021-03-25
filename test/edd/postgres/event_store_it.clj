@@ -64,19 +64,19 @@
                          [{:id      agg-id
                            :version 2
                            :value   "2"}])
-      (is (= {:result {:effects        [{:cmd-id       :vmd-2
-                                         :id           fx-id
-                                         :service-name :s2}
-                                        {:cmd-id       :vmd-2
-                                         :id           fx-id
-                                         :service-name :s2}]
-                       :events         2
-                       :identities     1
-                       :meta           [{:cmd-1 {:id agg-id}}]
-                       :sequences      1
-                       :success        true
-                       :interaction-id interaction-id
-                       :request-id     request-id}}
+      (is (= {:result         {:effects    [{:cmd-id       :vmd-2
+                                             :id           fx-id
+                                             :service-name :s2}
+                                            {:cmd-id       :vmd-2
+                                             :id           fx-id
+                                             :service-name :s2}]
+                               :events     2
+                               :identities 1
+                               :meta       [{:cmd-1 {:id agg-id}}]
+                               :sequences  1
+                               :success    true}
+              :interaction-id interaction-id
+              :request-id     request-id}
              resp))
       #_(is (= (edd/handler ctx
 
