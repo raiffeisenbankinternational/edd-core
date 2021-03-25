@@ -175,16 +175,16 @@
         edd/handler
         :filters [fl/from-bucket])
        (verify-traffic-json (cons
-                             {:body   {:result {:effects        [{:cmd-id       :fx-command
-                                                                  :id           #uuid "22222111-1111-1111-1111-111111111111"
-                                                                  :service-name :local-test}]
-                                                :events         1
-                                                :identities     0
-                                                :meta           [{:object-uploaded {:id #uuid "1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"}}]
-                                                :sequences      0
-                                                :success        true
-                                                :interaction-id request-id
-                                                :request-id     request-id}}
+                             {:body   {:result         {:effects    [{:cmd-id       :fx-command
+                                                                      :id           #uuid "22222111-1111-1111-1111-111111111111"
+                                                                      :service-name :local-test}]
+                                                        :events     1
+                                                        :identities 0
+                                                        :meta       [{:object-uploaded {:id #uuid "1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"}}]
+                                                        :sequences  0
+                                                        :success    true}
+                                       :interaction-id request-id
+                                       :request-id     request-id}
                               :method :post
                               :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
                              s3/base-requests))))))
@@ -209,16 +209,16 @@
       :filters [fl/from-api]
       :post-filter fl/to-api)
      (verify-traffic-json [{:body   {:body            (util/to-json
-                                                       {:result {:success        true
-                                                                 :effects        [{:id           fx-id
-                                                                                   :cmd-id       :fx-command
-                                                                                   :service-name :local-test}]
-                                                                 :events         1
-                                                                 :meta           [{:dummy-cmd {:id cmd-id}}]
-                                                                 :identities     0
-                                                                 :sequences      0
-                                                                 :request-id     request-id
-                                                                 :interaction-id interaction-id}})
+                                                       {:result         {:success    true
+                                                                         :effects    [{:id           fx-id
+                                                                                       :cmd-id       :fx-command
+                                                                                       :service-name :local-test}]
+                                                                         :events     1
+                                                                         :meta       [{:dummy-cmd {:id cmd-id}}]
+                                                                         :identities 0
+                                                                         :sequences  0}
+                                                        :request-id     request-id
+                                                        :interaction-id interaction-id})
                                      :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
                                                        :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
                                                        :Access-Control-Allow-Origin   "*"
@@ -329,13 +329,13 @@
 
 (deftest test-metadata-when-result-vector
   (is (= {:result :a}
-         (edd/prepare-response {:resp           [:a]}))))
+         (edd/prepare-response {:resp [{:result :a}]}))))
 
 (deftest test-metadata-when-result-error
   (is (= {:error "Some error"}
-         (edd/prepare-response {:resp           [{:error "Some error"}]}))))
+         (edd/prepare-response {:resp [{:error "Some error"}]}))))
 
 (deftest test-metadata-when-result-map
   (is (= [{:value :a}]
-         (edd/prepare-response {:resp [{:value :a}]
+         (edd/prepare-response {:resp          [{:value :a}]
                                 :queue-request true}))))

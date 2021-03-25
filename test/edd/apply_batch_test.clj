@@ -93,13 +93,13 @@
       ctx
       edd/handler)
      (verify-traffic [{:body   (util/to-json
-                                [{:apply          true,
+                                [{:result         {:apply true}
                                   :request-id     req-id1,
                                   :interaction-id int-id}
-                                 {:apply          true,
+                                 {:result         {:apply true}
                                   :request-id     req-id2,
                                   :interaction-id int-id}
-                                 {:apply          true,
+                                 {:result         {:apply true}
                                   :request-id     req-id3,
                                   :interaction-id int-id}])
                        :method :post
@@ -113,6 +113,61 @@
                        :method    :post
                        :timeout   20000
                        :url       "https:///local_test/_doc/05120289-90f3-423c-ad9f-c46f9927a53e"}
+                      {:method  :get
+                       :timeout 90000000
+                       :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
+
+(deftest apply-when-error-all-failed
+  (with-redefs [aws/create-date (fn [] "20210322T232540Z")
+                event/get-by-id (fn [ctx]
+                                  (println (= (:request-id ctx)
+                                              req-id2))
+                                  (if (= (:request-id ctx)
+                                         req-id2)
+                                    (throw (ex-info "Something" {:badly :wrong})))
+                                  (assoc ctx
+                                         :aggregate {:id agg-id}))
+                event/update-aggregate (fn [ctx]
+                                         (if = ((:request-id ctx)
+                                                req-id1)
+                                             (throw (ex-info "Something" {:badly :wrong}))))]
+    (mock-core
+     :invocations [(util/to-json (req
+                                  [{:apply          {:service      "glms-booking-company-svc",
+                                                     :aggregate-id agg-id}
+                                    :request-id     req-id1
+                                    :interaction-id int-id}
+                                   {:apply          {:service      "glms-booking-company-svc",
+                                                     :aggregate-id agg-id}
+                                    :request-id     req-id2
+                                    :interaction-id int-id}
+                                   {:apply          {:service      "glms-booking-company-svc",
+                                                     :aggregate-id agg-id}
+                                    :request-id     req-id3
+                                    :interaction-id int-id}]))]
+
+     :requests [{:post "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"}
+                {:post   (str "https:///local_test/_doc/" agg-id)
+                 :status 200}
+                {:post   (str "https:///local_test/_doc/" agg-id)
+                 :status 200}
+                {:post   (str "https:///local_test/_doc/" agg-id)
+                 :status 200}]
+     (core/start
+      ctx
+      edd/handler)
+     (verify-traffic [{:body   (util/to-json
+                                [{:error "Unknown error in event handler"
+                                  :request-id     req-id1,
+                                  :interaction-id int-id}
+                                 {:error {:badly :wrong}
+                                  :request-id     req-id2,
+                                  :interaction-id int-id}
+                                 {:error "Unknown error in event handler"
+                                  :request-id     req-id3,
+                                  :interaction-id int-id}])
+                       :method :post
+                       :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
                       {:method  :get
                        :timeout 90000000
                        :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
