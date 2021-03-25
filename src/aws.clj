@@ -267,15 +267,16 @@
                  "response"
                  "error")]
     (when-not from-api
-      (delete-message-batch ctx
-                            (let [items (interleave body
-                                                    (:Records req))]
-                              (->> (partition 2 items)
-                                   (filter (fn [[a _]]
-                                             (not (:error a))))
-                                   (map
-                                    (fn [[_ b]]
-                                      b))))))
+      (let [items (interleave body
+                              (:Records req))
+            items-to-delete (->> (partition 2 items)
+                                 (filter (fn [[a _]]
+                                           (not (:error a))))
+                                 (map
+                                  (fn [[_ b]]
+                                    b)))]
+        (when (> (count items-to-delete) 0)
+          (delete-message-batch ctx items-to-delete))))
 
     (log/error (util/to-json
                 (util/http-post

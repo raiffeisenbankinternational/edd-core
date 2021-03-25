@@ -150,20 +150,20 @@
       ctx
       edd/handler)
      (verify-traffic [{:body   (util/to-json
-                                [{:success        true,
-                                  :effects        [],
-                                  :events         1,
-                                  :meta           [{:cmd-1 {:id agg-id}}],
-                                  :identities     0,
-                                  :sequences      0,
+                                [{:result         {:success    true,
+                                                   :effects    [],
+                                                   :events     1,
+                                                   :meta       [{:cmd-1 {:id agg-id}}],
+                                                   :identities 0,
+                                                   :sequences  0}
                                   :request-id     req-id4,
                                   :interaction-id int-id}
-                                 {:success        true,
-                                  :effects        [],
-                                  :events         1,
-                                  :meta           [{:cmd-1 {:id agg-id}}],
-                                  :identities     0,
-                                  :sequences      0,
+                                 {:result         {:success    true,
+                                                   :effects    [],
+                                                   :events     1,
+                                                   :meta       [{:cmd-1 {:id agg-id}}],
+                                                   :identities 0,
+                                                   :sequences  0}
                                   :request-id     req-id5,
                                   :interaction-id int-id}])
                        :method :post
@@ -197,24 +197,24 @@
       ctx
       edd/handler)
      (verify-traffic [{:body   (util/to-json
-                                [{:success        true,
-                                  :effects        [],
-                                  :events         1,
-                                  :meta           [{:cmd-1 {:id agg-id}}],
-                                  :identities     0,
-                                  :sequences      0,
+                                [{:result         {:success    true,
+                                                   :effects    [],
+                                                   :events     1,
+                                                   :meta       [{:cmd-1 {:id agg-id}}],
+                                                   :identities 0,
+                                                   :sequences  0}
                                   :request-id     req-id1
                                   :interaction-id int-id}
                                  {:error          [{:error "Command handler failed",
                                                     :id    agg-id}],
                                   :request-id     req-id2
                                   :interaction-id int-id}
-                                 {:success        true,
-                                  :effects        [],
-                                  :events         1,
-                                  :meta           [{:cmd-1 {:id agg-id}}],
-                                  :identities     0,
-                                  :sequences      0,
+                                 {:result         {:success    true,
+                                                   :effects    [],
+                                                   :events     1,
+                                                   :meta       [{:cmd-1 {:id agg-id}}],
+                                                   :identities 0,
+                                                   :sequences  0}
                                   :request-id     req-id3
                                   :interaction-id int-id}])
                        :method :post

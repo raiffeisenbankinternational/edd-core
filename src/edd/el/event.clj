@@ -108,5 +108,11 @@
             (update-aggregate))))
     {:apply true}
     (catch Exception e
+      (println "Handling error")
       (log/error e)
-      (ex-data e))))
+      (let [data (ex-data e)]
+        (if data
+          (if (:error data)
+            data
+            {:error data})
+          {:error "Unknown error in event handler"})))))

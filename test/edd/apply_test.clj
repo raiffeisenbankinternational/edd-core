@@ -72,7 +72,7 @@
                          [{:id      agg-id
                            :version 2
                            :value   "1"}])
-      (is (= [{:apply          true
+      (is (= [{:result         {:apply true}
                :interaction-id int-id
                :request-id     req-id}]
              resp)))))
@@ -110,7 +110,7 @@
       (let [resp (edd/handler ctx req)]
         (mock/verify-state :aggregate-store
                            [])
-        (is (= [{:apply          true
+        (is (= [{:result         {:apply true}
                  :interaction-id int-id
                  :request-id     req-id}]
                resp))))))
