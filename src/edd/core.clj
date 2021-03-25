@@ -73,16 +73,20 @@
           resp (cond
                  (contains? item :apply) (event/handle-event (-> ctx
                                                                  (assoc :apply (:apply item))))
-                 (contains? item :query) (query/handle-query
-                                          ctx
-                                          item)
-                 (contains? item :commands) (cmd/handle-commands
-                                             ctx
-                                             item)
+                 (contains? item :query) (-> ctx
+                                             (query/handle-query item))
+                 (contains? item :commands) (-> ctx
+                                                (cmd/handle-commands item))
                  (contains? item :error) item
                  :else {:error :invalid-request})]
-      (assoc resp :request-id (:request-id item)
-             :interaction-id (:interaction-id item)))
+      (if (:error resp)
+        {:error          (:error resp)
+         :request-id     (:request-id item)
+         :interaction-id (:interaction-id ctx)}
+        {:result         resp
+         :request-id     (:request-id item)
+         :interaction-id (:interaction-id ctx)}))
+
     (catch Throwable e
       (do
         (log/error e)
@@ -118,11 +122,10 @@
 (defn prepare-response
   "Wrap non error result into :result keyword"
   [{:keys [resp] :as ctx}]
+  (println resp)
   (if (:queue-request ctx)
     resp
-    (if-not (:error (first resp))
-      {:result (first resp)}
-      (first resp))))
+    (first resp)))
 
 (def schema
   [:and
