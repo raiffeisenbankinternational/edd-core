@@ -90,7 +90,11 @@
     (catch Throwable e
       (do
         (log/error e)
-        (throw e)))))
+        (let [data (ex-data e)]
+          (cond
+            (:error data) data
+            data {:error data}
+            :else {:error "Unknown error processing item"}))))))
 
 (defn dispatch-request
   [{:keys [body] :as ctx}]
