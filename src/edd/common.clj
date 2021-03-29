@@ -7,9 +7,11 @@
 
 (defn get-by-id
   [ctx & [query]]
-  {:pre [(or (:id ctx)
-             (:id query))]}
-  (cache/get-by-id ctx query))
+  (let [id (or (:id ctx)
+               (:id query))]
+    (if id
+      (cache/get-by-id ctx query)
+      nil)))
 
 (defn get-sequence-number-for-id
   [ctx & [id]]
