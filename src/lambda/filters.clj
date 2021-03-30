@@ -30,17 +30,25 @@
            (-> ctx
                (assoc-in [:user :id] (name (:service-name ctx)))
                (assoc-in [:user :role] :non-interactive)
-               (assoc :body {:request-id     (get ctx :request-id (uuid/gen))
-                             :interaction-id (get ctx :interaction-id (uuid/gen))
-                             :user           (name
-                                              (:service-name ctx))
-                             :role           :non-interactive
-                             :commands       (into []
-                                                   (for [record (:Records body)]
-                                                     {:cmd-id :object-uploaded
-                                                      :id     (get ctx :request-id (uuid/gen))
-                                                      :body   (aws/get-object record)
-                                                      :key    (get-in record [:s3 :object :key])}))})))})
+               (assoc :body
+                      (let [record (first (:Records body))
+                            key (get-in record [:s3 :object :key])
+                            parts (str/split key #"/")
+                            realm (nth parts 0)
+                            interaction-id (nth parts 1)
+                            request-id (-> parts
+                                           (nth 2)
+                                           (str/split #"\.")
+                                           (first))]
+                        {:request-id     (uuid/parse request-id)
+                         :interaction-id (uuid/parse interaction-id)
+                         :user           (name
+                                          (:service-name ctx))
+                         :role           :non-interactive
+                         :commands       [{:cmd-id :object-uploaded
+                                           :id     (uuid/parse request-id)
+                                           :body   (aws/get-object record)
+                                           :key    key}]}))))})
 
 (defn has-role?
   [user role]

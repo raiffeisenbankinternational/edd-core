@@ -80,6 +80,10 @@
          #(update % :command-store (fnil conj []) (clean-commands cmd)))
   (enqueue-cmd! cmd))
 
+(defn get-stored-commands
+  []
+  (get *dal-state* :command-store []))
+
 (defn store-event
   "Stores event in memory structure"
   [event]
@@ -209,7 +213,7 @@
   (swap! *dal-state*
          #(update % :response-log (fn [v] (conj v {:request-id  request-id
                                                    :breadcrumbs breadcrumbs
-                                                   :data response-summary})))))
+                                                   :data        response-summary})))))
 
 (defmethod with-init
   :memory

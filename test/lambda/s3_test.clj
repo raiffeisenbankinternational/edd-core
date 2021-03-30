@@ -10,8 +10,10 @@
    [lambda.util :as util]
    [lambda.test.fixture.core :refer [mock-core]]
    [lambda.test.fixture.client :refer [verify-traffic-json]]
-   [clojure.test :refer :all]))
+   [clojure.test :refer :all]
+   [clojure.tools.logging :as log]))
 
+(def interaction-id #uuid "0000b7b5-9f50-4dc4-86d1-2e4fe1f6d491")
 (def request-id #uuid "1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491")
 
 (defn records
@@ -42,51 +44,54 @@
         :eTag      "0123456789abcdef0123456789abcdef",
         :sequencer "0A1B2C3D4E5F678901"}}}]}))
 
-(def base-requests
-  [{:as      :stream
-    :headers {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=459105a47452ef09fa31cc0d1c74212390d00d0a7bcaf4ee34aac83da39124e9"
-              "Host"                 "s3.eu-central-1.amazonaws.com"
-              "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-              "x-amz-date"           "20200426T061823Z"
-              "x-amz-security-token" nil}
-    :method  :get
-    :timeout 8000
-    :url     "https://s3.eu-central-1.amazonaws.com/example-bucket/test/key"}
-   {:method  :get
-    :timeout 90000000
-    :url     "http://mock/2018-06-01/runtime/invocation/next"}])
-
 (deftest test-s3-bucket-request
-  (with-redefs [aws/create-date (fn [] "20200426T061823Z")
-                uuid/gen (fn [] request-id)]
-    (mock-core
-     :invocations [(records "test/key")]
-     :requests [{:get  "https://s3.eu-central-1.amazonaws.com/example-bucket/test/key"
-                 :body (char-array "Of something")}]
-     (core/start
-      {}
-      (fn [ctx body]
-        "Slurp content of S3 request into response"
-        (let [commands (:commands body)
-              cmd (first commands)
-              response (assoc cmd :body
-                              (slurp (:body cmd)))]
-          (assoc body :commands [response]
-                 :user (get-in ctx [:user :id])
-                 :role (get-in ctx [:user :role]))))
-      :filters [fl/from-bucket])
-     (verify-traffic-json (cons
-                           {:body   {:commands       [{:body   "Of something"
-                                                       :cmd-id :object-uploaded
-                                                       :id     request-id
-                                                       :key    "test/key"}]
-                                     :user "local-test"
-                                     :role :non-interactive
-                                     :interaction-id request-id
-                                     :request-id     request-id}
-                            :method :post
-                            :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-                           base-requests)))))
+  (with-redefs [aws/create-date (fn [] "20200426T061823Z")]
+    (let [key (str "test/"
+                   interaction-id
+                   "/"
+                   request-id
+                   ".csv")]
+      (mock-core
+       :invocations [(records key)]
+       :requests [{:get  (str "https://s3.eu-central-1.amazonaws.com/example-bucket/"
+                              key)
+                   :body (char-array "Of something")}]
+       (core/start
+        {}
+        (fn [ctx body]
+          "Slurp content of S3 request into response"
+          (log/info (:commands body))
+          (let [commands (:commands body)
+                cmd (first commands)
+                response (assoc cmd :body
+                                (slurp (:body cmd)))]
+            (assoc body :commands [response]
+                   :user (get-in ctx [:user :id])
+                   :role (get-in ctx [:user :role]))))
+        :filters [fl/from-bucket])
+       (verify-traffic-json
+        [{:body   {:commands       [{:body   "Of something"
+                                     :cmd-id :object-uploaded
+                                     :id     request-id
+                                     :key    key}]
+                   :user           "local-test"
+                   :role           :non-interactive
+                   :interaction-id interaction-id
+                   :request-id     request-id}
+          :method :post
+          :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
+         {:as      :stream
+          :headers {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=cfa02ff06ebb0010bcfbae58ee1ec2310379fea4f66f5a0013265ccd1fde16ce"
+                    "Host"                 "s3.eu-central-1.amazonaws.com"
+                    "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                    "x-amz-date"           "20200426T061823Z"
+                    "x-amz-security-token" nil}
+          :method  :get
+          :timeout 8000
+          :url     (str "https://s3.eu-central-1.amazonaws.com/example-bucket/" key)}
+         {:method  :get
+          :timeout 90000000
+          :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
 
 (deftest s3-cond
   (let [resp ((:cond fl/from-bucket) {:body (util/to-edn
