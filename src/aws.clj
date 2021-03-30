@@ -17,7 +17,8 @@
         (throw (RuntimeException. "Failed to execute request")))
     (let [response (f)]
       (if (:error response)
-        (retry f (dec n) response)
+        (do (Thread/sleep (+ 1000 (rand-int 1000)))
+            (retry f (dec n) response))
         response))))
 
 (defn create-date
@@ -324,9 +325,16 @@
                        :timeout 5000})
                     3)]
       (log/debug "Auth response" response)
-      (when (contains? response :error)
-        (log/error "Failed to fetch secret" response))
-      (get-in response [:body :AuthenticationResult :IdToken]))))
+      (cond
+        (contains? response :error) (do
+                                      (log/error "Failed update" response)
+                                      {:error (:error response)})
+        (> (:status response) 299) (do
+                                     (log/error "Auth failure response"
+                                                (:status response)
+                                                (:body response))
+                                     {:error {:status (:status response)}})
+        :else (get-in response [:body :AuthenticationResult :IdToken])))))
 
 (defn get-or-set
   [cache key get-fn]
@@ -335,7 +343,9 @@
     (if (> (- current-time (get meta :time 0)) 1800000)
       (-> cache
           (assoc-in [:meta key] {:time current-time})
-          (assoc key (get-fn)))
+          (assoc key (aws/retry
+                      get-fn
+                      2)))
       cache)))
 
 (defn get-token-from-cache
@@ -344,16 +354,10 @@
                                   (fn [cache]
                                     (get-or-set cache
                                                 :id-token
-                                                #(aws/admin-auth
-                                                  ctx))))
-        {:keys [error]} (jwt/parse-token ctx id-token)]
-    (if error
-      (swap! util/*cache*
-             (fn [v]
-               (assoc v
-                      :id-token (aws/admin-auth
-                                 ctx))))
-      id-token)))
+                                                (fn []
+                                                  (aws/admin-auth
+                                                   ctx)))))]
+    id-token))
 
 (defn get-token
   [ctx]

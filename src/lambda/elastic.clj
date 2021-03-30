@@ -61,7 +61,9 @@
                                       {:error {:error response}})
         (> (:status response) 299) (do
                                      (log/error "Elastic query" body)
-                                     (log/error "Elastic response" (:status response))
+                                     (log/error "Elastic response"
+                                                (:status response)
+                                                (:body response))
                                      {:error {:status (:status response)}})
         :else (util/to-edn (:body response))))))
 

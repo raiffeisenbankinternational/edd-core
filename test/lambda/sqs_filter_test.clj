@@ -13,9 +13,11 @@
    [lambda.test.fixture.client :refer [verify-traffic-json]]
    [clojure.test :refer :all]))
 
+(def interaction-id #uuid "0000b7b5-9f50-4dc4-86d1-2e4fe1f6d491")
 (def request-id #uuid "1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491")
 
-(def req
+(defn req
+  [key]
   {:Records
    [{:md5OfBody
      "fda65eb3c65bf08466667a54227de6ca",
@@ -47,7 +49,7 @@
                                            :ownerIdentity {:principalId "A2MAYJCLGKVHNV"},
                                            :arn           "arn:aws:s3:::361331260137-s3-bucket"},
                                           :object
-                                          {:key       "limedocu.txt",
+                                          {:key       key,
                                            :size      7374,
                                            :eTag      "11b66437638975195b741d99798f8296",
                                            :sequencer "005E4CD80C728F4485"}}}]})
@@ -60,7 +62,9 @@
       :ApproximateFirstReceiveTimestamp
       "1582094349946"}}]})
 
-(def records (util/to-json req))
+(defn records
+  [key]
+  (util/to-json (req key)))
 
 (defn get-sq-key
   [{:keys [body]}]
@@ -72,51 +76,57 @@
       (:key)))
 
 (deftest queue-cond
-  (let [resp ((:cond fl/from-queue) {:body req})]
+  (let [resp ((:cond fl/from-queue) {:body (req "key")})]
     (is (= resp true))))
 
 (deftest queue-fn
   (let [resp (get-sq-key
-              ((:fn fl/from-queue) {:body req}))]
+              ((:fn fl/from-queue) {:body (req "limedocu.txt")}))]
     (is (= "limedocu.txt" resp))))
 
 (deftest test-s3-bucket-sqs-request
-  (with-redefs [aws/create-date (fn [] "20200426T061823Z")
-                uuid/gen (fn [] request-id)]
-    (mock-core
-     :invocations [records]
-     :requests [{:get  "https://s3.eu-central-1.amazonaws.com/s3-bucket/limedocu.txt"
-                 :body (char-array "Of something")}]
-     (core/start
-      {}
-      (fn [ctx body]
-        "Slurp content of S3 request into response"
-        (let [commands (:commands body)
-              cmd (first commands)
-              response (assoc cmd :body
-                              (slurp (:body cmd)))]
-          (assoc body :commands [response])))
-      :filters [fl/from-queue fl/from-bucket])
-     (verify-traffic-json [{:body   {:commands       [{:body   "Of something"
-                                                       :cmd-id :object-uploaded
-                                                       :id     request-id
-                                                       :key    "limedocu.txt"}]
-                                     :user           "local-test"
-                                     :role           :non-interactive
-                                     :interaction-id request-id
-                                     :request-id     request-id}
-                            :method :post
-                            :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-                           {:as      :stream
-                            :headers {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=9e33debbcbc189f33a493ea7c5b83653a64289dbe074161b49daa0733ed19004"
-                                      "Host"                 "s3.eu-central-1.amazonaws.com"
-                                      "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                                      "x-amz-date"           "20200426T061823Z"
-                                      "x-amz-security-token" nil}
-                            :method  :get
-                            :timeout 8000
-                            :url     "https://s3.eu-central-1.amazonaws.com/s3-bucket/limedocu.txt"}
-                           {:method  :get
-                            :timeout 90000000
-                            :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
+  (with-redefs [aws/create-date (fn [] "20200426T061823Z")]
+    (let [key (str "test/"
+                   interaction-id
+                   "/"
+                   request-id
+                   ".limedocu.txt")]
+      (mock-core
+       :invocations [(records key)]
+       :requests [{:get  (str "https://s3.eu-central-1.amazonaws.com/s3-bucket/"
+                              key)
+                   :body (char-array "Of something")}]
+       (core/start
+        {}
+        (fn [ctx body]
+          "Slurp content of S3 request into response"
+          (let [commands (:commands body)
+                cmd (first commands)
+                response (assoc cmd :body
+                                (slurp (:body cmd)))]
+            (assoc body :commands [response])))
+        :filters [fl/from-queue fl/from-bucket])
+       (verify-traffic-json [{:body   {:commands       [{:body   "Of something"
+                                                         :cmd-id :object-uploaded
+                                                         :id     request-id
+                                                         :key    key}]
+                                       :user           "local-test"
+                                       :role           :non-interactive
+                                       :interaction-id interaction-id
+                                       :request-id     request-id}
+                              :method :post
+                              :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
+                             {:as      :stream
+                              :headers {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=14a5852e25815e3ef3307b9302d72841668fb66a6525328b95b4b77794271316"
+                                        "Host"                 "s3.eu-central-1.amazonaws.com"
+                                        "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                                        "x-amz-date"           "20200426T061823Z"
+                                        "x-amz-security-token" nil}
+                              :method  :get
+                              :timeout 8000
+                              :url     (str "https://s3.eu-central-1.amazonaws.com/s3-bucket/"
+                                            key)}
+                             {:method  :get
+                              :timeout 90000000
+                              :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
 
