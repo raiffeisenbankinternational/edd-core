@@ -165,17 +165,19 @@
 (deftest test-s3-bucket-request
   (mock/with-mock-dal
     (with-redefs [aws/create-date (fn [] "20200426T061823Z")
-                  uuid/gen (fn [] request-id)]
+                  uuid/gen (fn [] request-id)
+                  key (str "test/" interaction-id "/"
+                           request-id)]
       (mock-core
-       :invocations [(s3/records "test/key")]
-       :requests [{:get  "https://s3.eu-central-1.amazonaws.com/example-bucket/test/key"
+       :invocations [(s3/records key)]
+       :requests [{:get  (str "https://s3.eu-central-1.amazonaws.com/example-bucket/"
+                              key)
                    :body (char-array "Of something")}]
        (core/start
         (prepare {})
         edd/handler
         :filters [fl/from-bucket])
-       (verify-traffic-json (cons
-                             {:body   {:result         {:effects    [{:cmd-id       :fx-command
+       (verify-traffic-json [{:body   {:result         {:effects    [{:cmd-id       :fx-command
                                                                       :id           #uuid "22222111-1111-1111-1111-111111111111"
                                                                       :service-name :local-test}]
                                                         :events     1
@@ -183,11 +185,22 @@
                                                         :meta       [{:object-uploaded {:id #uuid "1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"}}]
                                                         :sequences  0
                                                         :success    true}
-                                       :interaction-id request-id
+                                       :interaction-id interaction-id
                                        :request-id     request-id}
                               :method :post
                               :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-                             s3/base-requests))))))
+                             {:as      :stream
+                              :headers {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=16e997a926d57b9cb47dbeb1aa6a0a18fe58fc5451a1abc129ef27af2a28e776"
+                                        "Host"                 "s3.eu-central-1.amazonaws.com"
+                                        "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                                        "x-amz-date"           "20200426T061823Z"
+                                        "x-amz-security-token" nil}
+                              :method  :get
+                              :timeout 8000
+                              :url     "https://s3.eu-central-1.amazonaws.com/example-bucket/test/2222b7b5-9f50-4dc4-86d1-2e4fe1f6d491/1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"}
+                             {:method  :get
+                              :timeout 90000000
+                              :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
 
 (deftest test-api-request-with-fx
   "Test that user is added to events and summary is properly returned"
