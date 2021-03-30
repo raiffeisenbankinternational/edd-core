@@ -159,8 +159,16 @@
 
 (defn handle-cmd [ctx cmd]
   (if (contains? cmd :commands)
-    (cmd/handle-commands ctx cmd)
-    (cmd/handle-commands ctx {:commands [cmd]})))
+    (cmd/handle-commands ctx
+                         cmd)
+    (cmd/handle-commands ctx
+                         {:commands [cmd]})))
+
+(defn get-commands-response
+  [ctx cmd]
+  (handle-cmd (assoc ctx
+                     :no-summary true)
+              cmd))
 
 (defn apply-cmd [ctx cmd]
   (log/info "apply-cmd" cmd)
@@ -196,3 +204,8 @@
   [ctx cmd]
   (apply-cmd ctx cmd)
   (execute-fx-apply-all ctx))
+
+(defn apply
+  [ctx id]
+  (event/handle-event (assoc ctx :apply {:aggregate-id id})))
+
