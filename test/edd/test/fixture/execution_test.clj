@@ -59,6 +59,7 @@
           id (uuid/gen)]
 
       (is (not (sut/process-next! ctx)))
+
       (f/verify-state :event-store
                       []))))
 

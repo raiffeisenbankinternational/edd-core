@@ -118,9 +118,12 @@
      #(binding [*dal-state* (atom ~(if (map? (first body))
                                      (merge
                                       default-db
-                                      (first body))
+                                      (dissoc (first body) :seed))
                                      default-db))
-                *queues* (atom {:command-queue []})
+                *queues* {:command-queue (atom [])
+                          :seed ~(if (and  (map? (first body)) (:seed (first body)))
+                                   (:seed (first body))
+                                   (rand-int 10000000))}
                 util/*cache* (atom {})
                 request/*request* (atom {})]
         %

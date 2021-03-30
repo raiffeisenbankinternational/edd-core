@@ -46,18 +46,24 @@
     (swap! *dal-state*
            #(update % :identity-store (fn [v] (conj v identity))))))
 
-(defn enqueue [q item]
-  (vec (shuffle (conj (or q []) item))))
+(defn deterministic-shuffle
+  [^java.util.Collection coll seed]
+  (let [al (java.util.ArrayList. coll)
+        rng (java.util.Random. seed)]
+    (java.util.Collections/shuffle al rng)
+    (clojure.lang.RT/vector (.toArray al))))
+
+(defn enqueue [q item seed]
+  (vec (deterministic-shuffle (conj (or q []) item) seed)))
 
 (defn peek-cmd!
   []
   (let [popq (fn [q] (if (seq q) (pop q) []))
-        [old new] (swap-vals! *queues* update :command-queue popq)]
-    (peek (:command-queue old))))
+        [old new] (swap-vals! (:command-queue *queues*) popq)]
+    (peek old)))
 
 (defn enqueue-cmd! [cmd]
-  (swap! *queues*
-         update :command-queue enqueue cmd))
+  (swap! (:command-queue *queues*) enqueue cmd (:seed *queues*)))
 
 (defn clean-commands
   [cmd]

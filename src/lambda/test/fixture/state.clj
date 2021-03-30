@@ -12,7 +12,8 @@
 
 (def ^:dynamic *mock*)
 
-(def ^:dynamic *queues* (atom {:command-queue []}))
+(def ^:dynamic *queues* {:command-queue (atom [])
+                         :seed 17})
 
 (defmacro with-state
   [& body]
