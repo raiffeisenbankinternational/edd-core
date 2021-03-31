@@ -123,7 +123,7 @@
                 *queues* {:command-queue (atom [])
                           :seed ~(if (and  (map? (first body)) (:seed (first body)))
                                    (:seed (first body))
-                                   (rand-int 10000000))}
+                                   '(rand-int 10000000))}
                 util/*cache* (atom {})
                 request/*request* (atom {})]
         %
@@ -133,7 +133,8 @@
          (with-redefs
           [aws/get-token aws-get-token
            common/create-identity create-identity]
-           (do ~@body))))))
+           (do (log/info "with-mock-dal using seed" (:seed *queues*))
+               ~@body))))))
 
 (defmacro verify-state [x & [y]]
   `(if (keyword? ~y)
@@ -211,4 +212,3 @@
 (defn apply
   [ctx id]
   (event/handle-event (assoc ctx :apply {:aggregate-id id})))
-
