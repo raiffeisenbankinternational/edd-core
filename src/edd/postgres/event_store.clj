@@ -21,8 +21,9 @@
             [lambda.elastic :as elastic]))
 
 (def errors
-  {:concurrent-modification ["event_store_pkey"
+  {:concurrent-modification ["event_store" "pkey"
                              "duplicate key value violates unique constraint"]})
+
 (defn error-matches?
   [msg words]
   (every?
