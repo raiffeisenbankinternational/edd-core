@@ -515,3 +515,34 @@
     (is (= expected
            mock-result))))
 
+(deftest test-elastic-mock-parity-test-order-of-exact-match
+  (let [data [{:k1 "120" :attrs {:type :booking-company}}
+              {:k1 "10" :k2 "1adc" :attrs {:type :breaking-company}}
+              {:k1 "100" :k2 "10" :attrs {:type :breaking-company}}
+              {:k1 "1011" :k2 "1011" :attrs {:type :breaking-company}}
+              {:k1 "lem" :k2 "4adcor" :attrs {:type :breaking-company}}
+              {:k1 "ipsum" :k2 "5abc" :attrs {:type :breaking-company}}
+              {:k1 "dol" :k2 "6abc" :attrs {:type :breaking-company}}
+              {:k1 "10" :k2 "zeko" :attrs {:type :breaking-company}}
+              {:k1 "amet" :k2 "7abc" :attrs {:type :booking-company}}]
+        query {:search [:fields [:k1 :k2]
+                        :value "10"]}
+        expected {:from  0
+                  :hits  [{:attrs {:type :breaking-company}
+                           :k1    "100"
+                           :k2    "10"}
+                          {:attrs {:type :breaking-company}
+                           :k1    "10"
+                           :k2    "1adc"}
+                          {:attrs {:type :breaking-company}
+                           :k1    "10"
+                           :k2    "zeko"}
+                          {:attrs {:type :breaking-company}
+                           :k1    "1011"
+                           :k2    "1011"}]
+                  :size  50
+                  :total 4}
+
+        [el-result mock-result] (test-query data query)]
+    (is (= expected
+           el-result))))
