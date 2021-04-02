@@ -63,8 +63,14 @@
   (let [[fields-key fields value-key value] (:search q)
         search (mapv
                 (fn [p]
-                  {:wildcard
-                   {(str (name p) ".keyword") {:value (str "*" (->trim value) "*")}}})
+                  {:bool
+                   {:should               [{:match
+                                            {(str (name p) ".keyword")
+                                             {:query value
+                                              :boost 2}}}
+                                           {:wildcard
+                                            {(str (name p) ".keyword") {:value (str "*" (->trim value) "*")}}}]
+                    :minimum_should_match 1}})
                 fields)]
 
     (-> filter
@@ -125,7 +131,7 @@
                body
                [:hits :total :value])]
     (log/debug "Elastic query")
-    (log/debug (util/to-json query))
+    (log/debug (util/to-json req))
     (log/debug body)
     {:total total
      :from  (get query :from 0)
