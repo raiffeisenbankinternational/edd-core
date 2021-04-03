@@ -10,7 +10,8 @@
             [edd.memory.event-store :as event-store]
             [edd.elastic.view-store :as view-store]
             [lambda.test.fixture.client :as client]
-            [edd.el.event :as event]))
+            [edd.el.event :as event]
+            [sdk.aws.common :as common]))
 
 (def agg-id #uuid "05120289-90f3-423c-ad9f-c46f9927a53e")
 
@@ -63,7 +64,7 @@
                        (throw (ex-info "Sory" {:something "happened"}))))))
 
 (deftest apply-when-two-events-1
-  (with-redefs [aws/create-date (fn [] "20210322T232540Z")
+  (with-redefs [common/create-date (fn [] "20210322T232540Z")
                 event/get-by-id (fn [ctx]
                                   (assoc ctx
                                          :aggregate {:id agg-id}))]
@@ -118,7 +119,7 @@
                        :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
 
 (deftest apply-when-error-all-failed
-  (with-redefs [aws/create-date (fn [] "20210322T232540Z")
+  (with-redefs [common/create-date (fn [] "20210322T232540Z")
                 event/get-by-id (fn [ctx]
                                   (if (= (:request-id ctx)
                                          req-id2)
