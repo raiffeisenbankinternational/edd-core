@@ -6,11 +6,8 @@
    [lambda.util :as util]
    [clojure.tools.logging :as log]
    [clojure.string :refer [join]]
-   [aws :as aws]))
-
-(defn create-date
-  []
-  (aws/create-date))
+   [aws :as aws]
+   [sdk.aws.common :as common]))
 
 (defn get-env
   [name & [default]]
@@ -23,13 +20,13 @@
                      :query      ""
                      :headers    {"Host"         (:url elastic-search)
                                   "Content-Type" "application/json"
-                                  "X-Amz-Date"   (create-date)}
+                                  "X-Amz-Date"   (common/create-date)}
                      :service    "es"
                      :region     (:region aws)
                      :access-key (:aws-access-key-id aws)
                      :secret-key (:aws-secret-access-key aws)}
               body (assoc :payload body))
-        auth (awssign/authorize req)
+        auth (common/authorize req)
         body (cond-> {:headers   (-> (:headers req)
                                      (dissoc "Host")
                                      (assoc

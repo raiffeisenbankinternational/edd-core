@@ -4,7 +4,8 @@
             [aws :as aws]
             [lambda.util-test :as util-test]
             [lambda.test.fixture.client :as client]
-            [lambda.util :as util]))
+            [lambda.util :as util]
+            [sdk.aws.common :as common]))
 
 (def env
   {"AWS_ACCESS_KEY_ID"     "test-key-id"
@@ -14,7 +15,10 @@
 (def auth "sws-signature")
 
 (def ctx
-  {:svc  {:username "test-svc@internal"
+  {:aws  {:aws-access-key-id     "test-key-id"
+          :aws-secret-access-key "secret-access-key-id"
+          :aws-session-token     "session-token"}
+   :svc  {:username "test-svc@internal"
           :password "AA33test-svc"}
    :auth {:user-pool-id  util-test/user-pool-id
           :client-id     util-test/user-pool-client-id
@@ -37,7 +41,7 @@
 
 (deftest test-cognito-admin-auth
   (with-redefs [utils/get-env (fn [e] (get env e))
-                aws/create-date (fn [] "20200504T080055Z")]
+                common/create-date (fn [] "20200504T080055Z")]
     (client/mock-http
      [{:post   "https://cognito-idp.eu-central-1.amazonaws.com"
        :status 200
@@ -56,26 +60,26 @@
 (deftest get-token-test
   (binding [util/*cache* (atom {})]
     (with-redefs [utils/get-env (fn [e] (get env e))
-                  aws/create-date (fn [] "20200504T080055Z")]
+                  common/create-date (fn [] "20200504T080055Z")]
       (client/mock-http
-       [{:post "https://cognito-idp.eu-central-1.amazonaws.com"
+       [{:post   "https://cognito-idp.eu-central-1.amazonaws.com"
          :status 200
-         :body (util/to-json {:AuthenticationResult
-                              {:RefreshToken "refres-token"
-                               :AccessToken  "access-token"
-                               :ExpiresIn    3600
-                               :TokenType    "Bearer"
-                               :IdToken      id-token}
-                              :ChallengeParameters {}})}
-        {:post "https://cognito-idp.eu-central-1.amazonaws.com"
+         :body   (util/to-json {:AuthenticationResult
+                                {:RefreshToken "refres-token"
+                                 :AccessToken  "access-token"
+                                 :ExpiresIn    3600
+                                 :TokenType    "Bearer"
+                                 :IdToken      id-token}
+                                :ChallengeParameters {}})}
+        {:post   "https://cognito-idp.eu-central-1.amazonaws.com"
          :status 200
-         :body (util/to-json {:AuthenticationResult
-                              {:RefreshToken "refresh-token"
-                               :AccessToken  "access-token"
-                               :ExpiresIn    3600
-                               :TokenType    "Bearer"
-                               :IdToken      id-token}
-                              :ChallengeParameters {}})}]
+         :body   (util/to-json {:AuthenticationResult
+                                {:RefreshToken "refresh-token"
+                                 :AccessToken  "access-token"
+                                 :ExpiresIn    3600
+                                 :TokenType    "Bearer"
+                                 :IdToken      id-token}
+                                :ChallengeParameters {}})}]
        (is (= id-token
               (aws/get-token ctx)))
         ;When this test fails on Wed Mar 13 2024 16:49:19 i expect Beer
@@ -88,20 +92,20 @@
 (deftest get-token-error-test
   (binding [util/*cache* (atom {})]
     (with-redefs [utils/get-env (fn [e] (get env e))
-                  aws/create-date (fn [] "20200504T080055Z")]
+                  common/create-date (fn [] "20200504T080055Z")]
       (client/mock-http
-       [{:post "https://cognito-idp.eu-central-1.amazonaws.com"
+       [{:post   "https://cognito-idp.eu-central-1.amazonaws.com"
          :status 400
-         :body (util/to-json {:message "Failed miserably"})}
-        {:post "https://cognito-idp.eu-central-1.amazonaws.com"
+         :body   (util/to-json {:message "Failed miserably"})}
+        {:post   "https://cognito-idp.eu-central-1.amazonaws.com"
          :status 200
-         :body (util/to-json {:AuthenticationResult
-                              {:RefreshToken "refresh-token"
-                               :AccessToken  "access-token"
-                               :ExpiresIn    3600
-                               :TokenType    "Bearer"
-                               :IdToken      id-token}
-                              :ChallengeParameters {}})}]
+         :body   (util/to-json {:AuthenticationResult
+                                {:RefreshToken "refresh-token"
+                                 :AccessToken  "access-token"
+                                 :ExpiresIn    3600
+                                 :TokenType    "Bearer"
+                                 :IdToken      id-token}
+                                :ChallengeParameters {}})}]
 
        (is (= id-token
               (aws/get-token ctx)))

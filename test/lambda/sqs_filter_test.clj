@@ -11,7 +11,8 @@
    [lambda.core :as core]
    [lambda.test.fixture.core :refer [mock-core]]
    [lambda.test.fixture.client :refer [verify-traffic-json]]
-   [clojure.test :refer :all]))
+   [clojure.test :refer :all]
+   [sdk.aws.common :as common]))
 
 (def interaction-id #uuid "0000b7b5-9f50-4dc4-86d1-2e4fe1f6d491")
 (def request-id #uuid "1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491")
@@ -85,7 +86,7 @@
     (is (= "limedocu.txt" resp))))
 
 (deftest test-s3-bucket-sqs-request
-  (with-redefs [aws/create-date (fn [] "20200426T061823Z")]
+  (with-redefs [common/create-date (fn [] "20200426T061823Z")]
     (let [key (str "test/"
                    interaction-id
                    "/"
