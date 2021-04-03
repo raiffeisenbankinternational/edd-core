@@ -21,7 +21,8 @@
             [edd.memory.event-store :as event-store]
             [edd.test.fixture.dal :as mock]
             [edd.postgres.event-store :as pg]
-            [lambda.uuid :as uuid]))
+            [lambda.uuid :as uuid]
+            [sdk.aws.common :as sdk-common]))
 
 (defn dummy-command-handler
   [ctx cmd]
@@ -164,7 +165,7 @@
 
 (deftest test-s3-bucket-request
   (mock/with-mock-dal
-    (with-redefs [aws/create-date (fn [] "20200426T061823Z")
+    (with-redefs [sdk-common/create-date (fn [] "20200426T061823Z")
                   uuid/gen (fn [] request-id)
                   key (str "test/" interaction-id "/"
                            request-id)]

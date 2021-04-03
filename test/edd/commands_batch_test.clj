@@ -9,7 +9,8 @@
             [edd.test.fixture.dal :as mock]
             [edd.memory.event-store :as event-store]
             [edd.memory.view-store :as view-store]
-            [lambda.test.fixture.client :as client]))
+            [lambda.test.fixture.client :as client]
+            [sdk.aws.common :as common]))
 
 (def agg-id (uuid/gen))
 
@@ -74,7 +75,7 @@
                               {:value "2"})))))
 
 (deftest test-command-handler-returns-error
-  (with-redefs [aws/create-date (fn [] "20210322T232540Z")]
+  (with-redefs [common/create-date (fn [] "20210322T232540Z")]
     (mock-core
      :invocations [(util/to-json (req
                                   [{:request-id     req-id1
@@ -141,7 +142,7 @@
                        :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
 
 (deftest test-all-ok
-  (with-redefs [aws/create-date (fn [] "20210322T232540Z")]
+  (with-redefs [common/create-date (fn [] "20210322T232540Z")]
     (mock-core
      :invocations [(util/to-json (req [{:request-id     req-id4
                                         :interaction-id int-id
@@ -181,7 +182,7 @@
                        :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
 
 (deftest test-command-handler-exception
-  (with-redefs [aws/create-date (fn [] "20210322T232540Z")]
+  (with-redefs [common/create-date (fn [] "20210322T232540Z")]
     (mock-core
      :invocations [(util/to-json (req
                                   [{:request-id     req-id1
@@ -248,7 +249,7 @@
                        :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
 
 (deftest test-failure-of-deps-resolver
-  (with-redefs [aws/create-date (fn [] "20210322T232540Z")]
+  (with-redefs [common/create-date (fn [] "20210322T232540Z")]
     (mock-core
      :invocations [(util/to-json (req
                                   [{:request-id     req-id1
