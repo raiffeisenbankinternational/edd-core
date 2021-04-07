@@ -12,7 +12,8 @@
    [lambda.test.fixture.client :refer [verify-traffic-json]]
    [clojure.test :refer :all]
    [clojure.tools.logging :as log]
-   [sdk.aws.common :as common]))
+   [sdk.aws.common :as common])
+  (:import (clojure.lang ExceptionInfo)))
 
 (def interaction-id #uuid "0000b7b5-9f50-4dc4-86d1-2e4fe1f6d491")
 (def request-id #uuid "1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491")
@@ -99,9 +100,12 @@
                                              (records "test/key"))})]
     (is (= resp true))))
 
-
-
-
-
-
+(deftest test-filter-key
+  (is (= {:interaction-id #uuid "af42568c-f8e9-40ff-9329-d13f1c82fce5"
+          :realm          "test"
+          :request-id     #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"}
+         (fl/parse-key "test/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fca3.matching1L.csv")))
+  (is (thrown?
+       ExceptionInfo
+       (fl/parse-key "test/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fcz3.matching1L.csv"))))
 

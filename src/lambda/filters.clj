@@ -21,6 +21,24 @@
                                          (first)
                                          (:body)))))})
 
+(defn parse-key
+  [key]
+  (try
+    (let [parts (str/split key #"/")
+          realm (nth parts 0)
+          interaction-id (nth parts 1)
+          request-id (-> parts
+                         (nth 2)
+                         (str/split #"\.")
+                         (first))]
+      {:request-id     (uuid/parse request-id)
+       :interaction-id (uuid/parse interaction-id)
+       :realm          realm})
+    (catch Exception e
+      (log/error "Unable to parse key. Shouls be in format /{{ realm }}/{{ uuid }}/{{ uuid }}.*")
+      (throw (ex-info "Unable to parse key"
+                      {:key key})))))
+
 (def from-bucket
   {:cond (fn [{:keys [body]}]
            (if (and
@@ -33,20 +51,16 @@
                (assoc :body
                       (let [record (first (:Records body))
                             key (get-in record [:s3 :object :key])
-                            parts (str/split key #"/")
-                            realm (nth parts 0)
-                            interaction-id (nth parts 1)
-                            request-id (-> parts
-                                           (nth 2)
-                                           (str/split #"\.")
-                                           (first))]
-                        {:request-id     (uuid/parse request-id)
-                         :interaction-id (uuid/parse interaction-id)
+                            {:keys [request-id
+                                    interaction-id
+                                    realm]} (parse-key key)]
+                        {:request-id     request-id
+                         :interaction-id interaction-id
                          :user           (name
                                           (:service-name ctx))
                          :role           :non-interactive
                          :commands       [{:cmd-id :object-uploaded
-                                           :id     (uuid/parse request-id)
+                                           :id     request-id
                                            :body   (aws/get-object record)
                                            :key    key}]}))))})
 

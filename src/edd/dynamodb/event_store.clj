@@ -44,9 +44,9 @@
 
 (defmethod get-sequence-number-for-id
   :dynamodb
-  [ctx query]
-  {:pre [(:id query)]}
-  ctx)
+  [{:keys [id] :as ctx}]
+  {:pre [id]}
+  1)
 
 (defmethod get-id-for-sequence-number
   :dynamodb
