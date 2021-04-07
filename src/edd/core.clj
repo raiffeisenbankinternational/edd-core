@@ -126,7 +126,6 @@
 (defn prepare-response
   "Wrap non error result into :result keyword"
   [{:keys [resp] :as ctx}]
-  (println resp)
   (if (:queue-request ctx)
     resp
     (first resp)))

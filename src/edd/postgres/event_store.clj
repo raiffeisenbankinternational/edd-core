@@ -204,7 +204,7 @@
 (defn store-sequence
   [ctx sequence]
   {:pre [(:id sequence)]}
-  (log/debug "Storing sequence" sequence)
+  (log/info "Storing sequence" (:service-name ctx) sequence)
   (let [service-name (:service-name ctx)
         aggregate-id (:id sequence)]
     (jdbc/execute! (:con ctx)
@@ -251,8 +251,9 @@
 
 (defmethod get-sequence-number-for-id
   :postgres
-  [ctx query]
-  {:pre [(:id query)]}
+  [{:keys [id] :as ctx}]
+  {:pre [id]}
+
   (let [service-name (:service-name ctx)
         result (jdbc/execute-one!
                 (:con ctx)
@@ -260,7 +261,7 @@
                      FROM glms.sequence_store
                     WHERE aggregate_id = ?
                       AND service_name = ?"
-                 (:id query)
+                 id
                  service-name]
                 {:builder-fn rs/as-unqualified-lower-maps})]
     (:value result)))
