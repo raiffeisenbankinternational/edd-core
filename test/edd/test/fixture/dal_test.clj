@@ -169,9 +169,8 @@
   (with-mock-dal
     (dal/store-event (first events))
     (verify-state [(first events)] :event-store)
-    (is (= :no-events-found
-           (:error
-            (common/get-by-id (assoc ctx :id 5)))))))
+    (is (= nil
+           (:aggregate (common/get-by-id (assoc ctx :id 5)))))))
 
 (deftest verify-predefined-state
   (with-mock-dal
@@ -180,9 +179,10 @@
     (verify-state [] :command-store)
     (dal/store-event (first events))
     (verify-state [{:event-id :e1} (first events)] :event-store)
-    (is (= :no-events-found
-           (:error
-            (common/get-by-id (assoc ctx :id 5)))))))
+    (is (= nil
+           (:aggregate (common/get-by-id (assoc ctx :id 5)))))
+    (is (= nil
+           (:aggregate (common/get-by-id {:id 5}))))))
 
 (def v1
   {:id  1

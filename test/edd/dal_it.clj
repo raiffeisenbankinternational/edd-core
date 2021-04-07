@@ -8,11 +8,12 @@
             [edd.postgres.event-store :as postgres]
             [edd.dynamodb.event-store :as dynamodb]
             [lambda.test.fixture.state :as state]
-            [edd.core :as edd]))
+            [edd.core :as edd]
+            [edd.common :as common]))
 
 (defn get-ctx
-  []
-  {:service-name           "dynamodb-svc"
+  [service-name]
+  {:service-name           service-name
    :request-id             (uuid/gen)
    :interaction-id         (uuid/gen)
    :invocation-id          (uuid/gen)
@@ -21,7 +22,7 @@
    :db                     {:endpoint (util/get-env "DatabaseEndpoint")
                             :port     "5432"
                             :name     "dynamodb-svc"
-                            :password (util/get-env "DatabasePassword")}
+                            :password (util/get-env "DatabasePassword" "no-secret")}
    :aws                    {:region                (util/get-env "AWS_DEFAULT_REGION")
                             :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID")
                             :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY")
@@ -32,7 +33,9 @@
 
 (defn run-test
   [test-fn]
-  (let [ctx (get-ctx)]
+  (let [svc (str (uuid/gen))
+        ctx (get-ctx svc)]
+    (log/info "Svc" svc)
     (edd/with-stores
       (postgres/register ctx)
       test-fn)
@@ -53,6 +56,7 @@
         events-2 [{:event-id  :e-2-1
                    :event-seq 1
                    :id        agg-id-2}]]
+
     (run-test
      #(do
         (dal/store-results (assoc %
@@ -88,3 +92,30 @@
                (dal/get-aggregate-id-by-identity (assoc % :identity id-2))))
         (is (= nil
                (dal/get-aggregate-id-by-identity (assoc % :identity "agg-id-3"))))))))
+
+(deftest test-sequence-number
+  (let [id-1 (str "id-" (uuid/gen))
+        identity {:identity id-1
+                  :id       agg-id}
+        id-2 (str "id-2-" (uuid/gen))
+        identity-2 {:identity id-2
+                    :id       agg-id-2}
+        sequence-1 {:sequence :seq
+                    :id       agg-id}
+        sequence-2 {:sequence :seq
+                    :id       agg-id-2}]
+    (run-test
+     #(do
+        (dal/store-results (assoc %
+                                  :resp {:events     []
+                                         :commands   []
+                                         :sequences  [sequence-1 sequence-2]
+                                         :identities [identity identity-2]}))
+        (is (= agg-id
+               (dal/get-aggregate-id-by-identity (assoc % :identity id-1))))
+        (is (= agg-id-2
+               (dal/get-aggregate-id-by-identity (assoc % :identity id-2))))
+        (is (= nil
+               (dal/get-aggregate-id-by-identity (assoc % :identity "agg-id-3"))))
+        (is (= 1
+               (common/get-sequence-number-for-id % agg-id)))))))

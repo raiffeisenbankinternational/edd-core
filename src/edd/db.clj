@@ -69,7 +69,8 @@
                   :dbname                "postgres"
                   :reWriteBatchedInserts true
                   :password              (get-in ctx [:db :password]
-                                                 (util/get-env "DatabasePassword" ""))
+                                                 (util/get-env "DatabasePassword"
+                                                               "no-secret"))
                   :user                  "postgres"
                   :host                  (util/get-env "DatabaseEndpoint" "127.0.0.1")
                   :schema                "postgres"
