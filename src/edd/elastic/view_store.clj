@@ -33,6 +33,9 @@
    :eq       (fn [_ & [a b]]
                {:term
                 {(str (name a) ".keyword") (->trim b)}})
+   :=        (fn [_ & [a b]]
+               {:term
+                {(name a) (->trim b)}})
    :wildcard (fn [_ & [a b]]
                {:wildcard
                 {(str (name a) ".keyword") {:value (str "*" (->trim b) "*")}}})
@@ -115,27 +118,24 @@
                      select-query)]
     sort-query))
 
-(defmethod advanced-search
-  :elastic
-  [{:keys [query] :as ctx}]
-  (let [req (create-query ctx query)
+(defn advanced-direct-search
+  [ctx es-qry]
+  (let [json-qry (util/to-json es-qry)
         body (el/query
               (assoc ctx
                      :method "POST"
                      :path (str "/" (str/replace (get ctx :index-name
                                                       (name (:service-name ctx))) "-" "_") "/_search")
-                     :body (util/to-json (assoc req
-                                                :from (get query :from 0)
-                                                :size (get query :size default-size)))))
+                     :body json-qry))
         total (get-in
                body
                [:hits :total :value])]
     (log/debug "Elastic query")
-    (log/debug (util/to-json req))
+    (log/debug json-qry)
     (log/debug body)
     {:total total
-     :from  (get query :from 0)
-     :size  (get query :size default-size)
+     :from  (get es-qry :from 0)
+     :size  (get es-qry :size default-size)
      :hits  (mapv
              (fn [%]
                (get % :_source))
@@ -143,6 +143,17 @@
               body
               [:hits :hits]
               []))}))
+
+(defmethod advanced-search
+  :elastic
+  [{:keys [query] :as ctx}]
+
+  (let [req (->
+             (create-query ctx query)
+             (assoc
+              :from (get query :from 0)
+              :size (get query :size default-size)))]
+    (advanced-direct-search ctx req)))
 
 (defn flatten-paths
   ([m separator]
@@ -208,6 +219,7 @@
     (if error
       (throw (ex-info "could not store aggregate" {:error error}))
       ctx)))
+
 (defmethod update-aggregate
   :elastic
   [{:keys [aggregate] :as ctx}]
