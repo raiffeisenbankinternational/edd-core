@@ -24,6 +24,7 @@
 
 (defn call-query-fn
   [ctx cmd query-fn]
+
   (apply query-fn [(merge cmd
                           (get-in ctx [:dps-resolved]))]))
 
@@ -53,7 +54,9 @@
 (defn resolve-local-dependency
   [ctx cmd query-fn]
   (log/debug "Resolving local dependency")
-  (query/handle-query ctx {:query (call-query-fn ctx cmd query-fn)}))
+  (let [query (call-query-fn ctx cmd query-fn)]
+    (when query
+      (query/handle-query ctx {:query query}))))
 
 (defn fetch-dependencies-for-command
   [ctx cmd]
@@ -64,7 +67,7 @@
                 ctx-dps))
         dps-value (reduce
                    (fn [p [key req]]
-                     (log/debug "Query for dependency" key req)
+                     (log/info "Query for dependency" key)
                      (let [dep-value
                            (try (if (:service req)
                                   (resolve-remote-dependency
