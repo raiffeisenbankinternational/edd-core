@@ -102,7 +102,8 @@
                                    {:event-id :event-1
                                     :value    (:value cmd)})
                           :dps {:c1 (fn [cmd] {:query-id :query-1
-                                               :id       (:id cmd)})}
+                                               :id       (:id cmd)})
+                                :c2 (fn [_] nil)}
                           :id-fn (fn [ctx cmd]
                                    (get-in ctx [:c1 :id])))))
 
@@ -234,9 +235,9 @@
                                :url     "https://remote-svc./query"}]))))
 
 (deftest dependant-deps
-  (let [current-aggregate {:id cmd-id-1
-                           :version  4
-                           :v0 :0}
+  (let [current-aggregate {:id      cmd-id-1
+                           :version 4
+                           :v0      :0}
         ctx (-> mock/ctx
                 (edd/reg-event :event-0 (fn [p e]
                                           (assoc
