@@ -361,7 +361,9 @@
     (if (and (= (get-in response [:error :key])
                 :concurrent-modification)
              (not (zero? n)))
-      (retry f (dec n))
+      (do
+        (Thread/sleep (+ 1000 (rand-int 1000)))
+        (retry f (dec n)))
       response)))
 
 (defn versioned-events! [ctx]
@@ -398,7 +400,7 @@
   [ctx body]
   (cache/clear!)
   (let [resp (retry #(process-commands ctx body)
-                    2)]
+                    3)]
     (if (:error resp)
       (select-keys resp [:error])
       resp)))
