@@ -78,11 +78,11 @@
   (let [agg (get-current-aggregate! ctx (or (:id query) (:id ctx)))]
 
     (if query
-      (or (:aggregate agg) {:error :no-events-found})
+      (or (:aggregate agg) nil)
       (merge ctx
              (if (:aggregate agg)
                agg
-               {:error :no-events-found})))))
+               {:aggregate nil})))))
 
 (defn fetch-event-sequence-for-command
   [ctx cmd]
