@@ -32,7 +32,6 @@
 
 (defn track-intermediate-events!
   [{:keys [resp] :as ctx}]
-  (clojure.pprint/pprint resp)
   (let [request (events-with-version
                  (get @request/*request* :last-event-seq {})
                  (:events resp))]
