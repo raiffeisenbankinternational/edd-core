@@ -16,14 +16,14 @@
 (defn events-with-version
   [last-event-seqs events]
 
-  (loop [evts             events
+  (loop [evts events
          versioned-events []
-         new-versions     last-event-seqs]
+         new-versions last-event-seqs]
     (if (empty? evts)
       {:events         versioned-events
        :last-event-seq new-versions}
-      (let [evt           (first evts)
-            nv            (update new-versions (:id evt) (fnil inc 0))
+      (let [evt (first evts)
+            nv (update new-versions (:id evt) (fnil inc 0))
             versioned-evt (assoc evt :event-seq (get nv (:id evt)))]
         (recur
          (rest evts)
@@ -32,18 +32,19 @@
 
 (defn track-intermediate-events!
   [{:keys [resp] :as ctx}]
+  (clojure.pprint/pprint resp)
   (let [request (events-with-version
                  (get @request/*request* :last-event-seq {})
                  (:events resp))]
 
     (swap! request/*request* update-in [:events] (fnil concat []) (:events request))
-    (swap! request/*request* assoc-in [:last-event-seq]  (:last-event-seq request)))
+    (swap! request/*request* assoc-in [:last-event-seq] (:last-event-seq request)))
   ctx)
 
 (defn apply-events [{:keys [def-apply]} id agg events]
   (let [events (filter #(= (:id %) id) events)
 
-        agg    (event/create-aggregate agg events def-apply)]
+        agg (event/create-aggregate agg events def-apply)]
     {:aggregate agg
      :version   (get agg :version 0)}))
 
@@ -64,10 +65,10 @@
       agg-db)))
 
 (defn get-current-aggregate! [ctx id]
-  (let [agg    (get-stored-aggregate! ctx id)
+  (let [agg (get-stored-aggregate! ctx id)
         events (get-in @request/*request* [:events])
 
-        curr-agg       (apply-events ctx id (:aggregate agg) events)]
+        curr-agg (apply-events ctx id (:aggregate agg) events)]
     (swap! request/*request* assoc-in [:last-event-seq id] (:version curr-agg))
     curr-agg))
 
@@ -86,10 +87,10 @@
 
 (defn fetch-event-sequence-for-command
   [ctx cmd]
-  (let [request  (if (bound? #'request/*request*)
-                   @request/*request*
-                   {})
-        id       (:id cmd)
+  (let [request (if (bound? #'request/*request*)
+                  @request/*request*
+                  {})
+        id (:id cmd)
         last-seq (get-in request [:last-event-seq id])
         last-seq (or last-seq
                      (dal/get-max-event-seq
@@ -99,6 +100,12 @@
            [:last-event-seq id]
            last-seq)
     (assoc-in ctx [:last-event-seq id] last-seq)))
+
+(defn flush
+  []
+  (swap! request/*request* dissoc :events)
+  (swap! request/*request* dissoc :aggregate-db)
+  (swap! request/*request* dissoc :last-event-seq))
 
 (defn create-identity
   [& _]
