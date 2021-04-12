@@ -101,7 +101,7 @@
            last-seq)
     (assoc-in ctx [:last-event-seq id] last-seq)))
 
-(defn flush
+(defn flush-cache
   []
   (swap! request/*request* dissoc :events)
   (swap! request/*request* dissoc :aggregate-db)

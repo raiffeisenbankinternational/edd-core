@@ -7,7 +7,8 @@
    [edd.test.fixture.dal :as mock]
    [edd.elastic.view-store :as view-store]
    [lambda.test.fixture.client :as client]
-   [clojure.test :refer [deftest testing is are use-fixtures run-tests join-fixtures]]))
+   [clojure.test :refer [deftest testing is are use-fixtures run-tests join-fixtures]]
+   [lambda.request :as request]))
 
 (defn counter-ctx []
   (-> mock/ctx
@@ -15,7 +16,20 @@
       (edd/reg-cmd :inc
                    (fn [ctx cmd]
                      {:event-id :inced
-                      :value     (inc (get-in ctx [:counter :value] 0))})
+                      :value    (inc (get-in ctx [:counter :value] 0))})
+                   :dps {:counter
+                         (fn [cmd]
+                           {:query-id :get-by-id
+                            :id       (:id cmd)})})
+      (edd/reg-cmd :inc-2
+                   (fn [ctx cmd]
+                     (println "AAAAAAAAAA" (:attempt @request/*request*))
+                     (if (> 0 (get @request/*request* :attempt 0))
+                       {:event-id :inced
+                        :value    (inc (get-in ctx [:counter :value] 0))}
+                       (do
+                         (swap! request/*request* #(assoc % :attempt 0))
+                         (throw (ex-info "Fail" {:on :purpose})))))
                    :dps {:counter
                          (fn [cmd]
                            {:query-id :get-by-id
@@ -79,5 +93,6 @@
                           {:id      id2
                            :value   2
                            :version 2}]))))
+
 
 
