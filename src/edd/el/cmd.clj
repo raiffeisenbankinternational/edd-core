@@ -218,9 +218,8 @@
     (-> ctx-with-dps
         (assoc :resp resp)
         (add-user-to-events)
-        (cache/track-intermediate-events!)
         (handle-effects)
-        ;        (assign-events-seq)
+        (cache/track-intermediate-events!)
         (:resp))))
 
 (defn handle-identities
@@ -363,6 +362,7 @@
              (not (zero? n)))
       (do
         (Thread/sleep (+ 1000 (rand-int 1000)))
+        (cache/flush)
         (retry f (dec n)))
       response)))
 
@@ -392,8 +392,8 @@
            (clean-effects)
            (versioned-events!)
            (add-metadata)
-           (add-response-summary)
            (dal/store-results)
+           (add-response-summary)
            :response-summary))))
 
 (defn handle-commands
