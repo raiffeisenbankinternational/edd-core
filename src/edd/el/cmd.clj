@@ -362,7 +362,7 @@
              (not (zero? n)))
       (do
         (Thread/sleep (+ 1000 (rand-int 1000)))
-        (cache/flush)
+        (cache/flush-cache)
         (retry f (dec n)))
       response)))
 
