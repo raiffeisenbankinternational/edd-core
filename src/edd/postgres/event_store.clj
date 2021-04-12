@@ -76,7 +76,7 @@
                     (:invocation-id ctx)
                     (:request-id ctx)
                     (:interaction-id ctx)
-                    (breadcrumb-str (:breadcrumbs event))
+                    (breadcrumb-str (:breadcrumbs ctx))
                     (:event-seq event)
                     (:id event)
                     event])))
