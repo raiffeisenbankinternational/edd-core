@@ -392,8 +392,8 @@
            (clean-effects)
            (versioned-events!)
            (add-metadata)
-           (dal/store-results)
            (add-response-summary)
+           (dal/store-results)
            :response-summary))))
 
 (defn handle-commands
