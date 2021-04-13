@@ -96,18 +96,29 @@
             (edd/reg-cmd :cmd-1 (fn [ctx cmd]
                                   {:id       (:id cmd)
                                    :event-id :event-1
-                                   :name     (:name cmd)})))]
+                                   :name     (:name cmd)}))
+            (edd/reg-cmd :cmd-2 (fn [ctx cmd]
+                                  {:id       (:id cmd)
+                                   :event-id :event-2
+                                   :name     (:name cmd)}))
+            (edd/reg-event :event-2 (fn [agg event]
+                                      (assoc agg :name (:name event)))))]
 
     (mock/with-mock-dal
       {:event-store [{:event-id  :event-1
                       :event-seq 1
                       :id        agg-id}
-                     {:event-id  :event-1
+                     {:event-id  :event-2
                       :event-seq 2
+                      :id        agg-id}
+                     {:event-id  :event-1
+                      :event-seq 3
                       :id        agg-id}]}
       (let [resp (edd/handler ctx req)]
         (mock/verify-state :aggregate-store
-                           [])
+                           [{:id      agg-id
+                             :name    nil
+                             :version 3}])
         (is (= [{:result         {:apply true}
                  :interaction-id int-id
                  :request-id     req-id}]

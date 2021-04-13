@@ -95,6 +95,30 @@
           :timeout 90000000
           :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
 
+(deftest test-s3-bucket-request-when-folder-craeted
+  (with-redefs [common/create-date (fn [] "20200426T061823Z")]
+    (let [key (str "test/"
+                   interaction-id
+                   "/")]
+      (mock-core
+       :invocations [(records key)]
+       :requests [{:get  (str "https://s3.eu-central-1.amazonaws.com/example-bucket/"
+                              key)
+                   :body (char-array "Of something")}]
+       (core/start
+        {}
+        (fn [ctx body]
+          "Slurp content of S3 request into response"
+          (log/info (:commands body)))
+        :filters [fl/from-bucket])
+       (verify-traffic-json
+        [{:body   nil
+          :method :post
+          :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
+         {:method  :get
+          :timeout 90000000
+          :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
+
 (deftest s3-cond
   (let [resp ((:cond fl/from-bucket) {:body (util/to-edn
                                              (records "test/key"))})]

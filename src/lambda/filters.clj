@@ -50,19 +50,21 @@
                (assoc-in [:user :role] :non-interactive)
                (assoc :body
                       (let [record (first (:Records body))
-                            key (get-in record [:s3 :object :key])
-                            {:keys [request-id
-                                    interaction-id
-                                    realm]} (parse-key key)]
-                        {:request-id     request-id
-                         :interaction-id interaction-id
-                         :user           (name
-                                          (:service-name ctx))
-                         :role           :non-interactive
-                         :commands       [{:cmd-id :object-uploaded
-                                           :id     request-id
-                                           :body   (aws/get-object record)
-                                           :key    key}]}))))})
+                            key (get-in record [:s3 :object :key])]
+                        (if-not (str/ends-with? key "/")
+                          (let [{:keys [request-id
+                                        interaction-id
+                                        realm]} (parse-key key)]
+                            {:request-id     request-id
+                             :interaction-id interaction-id
+                             :user           (name
+                                              (:service-name ctx))
+                             :role           :non-interactive
+                             :commands       [{:cmd-id :object-uploaded
+                                               :id     request-id
+                                               :body   (aws/get-object record)
+                                               :key    key}]})
+                          {})))))})
 
 (defn has-role?
   [user role]
