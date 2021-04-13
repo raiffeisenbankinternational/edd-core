@@ -27,7 +27,8 @@
           agr
           event
           (event-id apply-functions))
-         agr)))
+         (assoc agr
+                :version (:event-seq event)))))
    snapshot
    events))
 
