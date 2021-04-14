@@ -380,7 +380,8 @@
         (store-results-impl
          (assoc ctx :con tx)))
       (doseq [i (:sequences resp)]
-        (store-sequence ctx i)))))
+        (store-sequence ctx i))
+      ctx)))
 
 (defmethod with-init
   :postgres
