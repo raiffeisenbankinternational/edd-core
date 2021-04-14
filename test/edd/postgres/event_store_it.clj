@@ -77,18 +77,30 @@
                                :success    true}
               :interaction-id interaction-id
               :request-id     request-id}
-             resp))
-      #_(is (= (edd/handler ctx
+             resp)))))
 
-                            (assoc req :log-level :debug))
-               {:effects    [{:cmd-id       :vmd-2
-                              :id           fx-id
-                              :service-name :s2}
-                             {:cmd-id       :vmd-2
-                              :id           fx-id
-                              :service-name :s2}]
-                :events     2
-                :identities 1
-                :meta       [{:cmd-1 {:id agg-id}}]
-                :sequences  1
-                :success    true})))))
+(deftest apply-when-two-events
+  (with-redefs [event-store/store-cmd (fn [ctx cmd]
+                                        (throw (ex-info "CMD Store failure" {})))]
+    (binding [*dal-state* (atom {})]
+      (let [invocation-id (uuid/gen)
+            ctx (get-ctx invocation-id)
+            agg-id (uuid/gen)
+            interaction-id (uuid/gen)
+            request-id (uuid/gen)
+            req {:request-id     request-id
+                 :interaction-id interaction-id
+                 :commands       [{:cmd-id :cmd-1
+                                   :id     agg-id}]}
+            resp (edd/handler ctx
+                              (assoc req :log-level :debug))]
+
+        (edd/with-stores
+          ctx (fn [ctx]
+                (is (= []
+                       (event-store/get-response-log ctx invocation-id)))))
+
+        (is (= {:error          "CMD Store failure"
+                :interaction-id interaction-id
+                :request-id     request-id}
+               resp))))))

@@ -159,8 +159,7 @@
       ctx)
   ctx)
 
-(defmethod log-response
-  :postgres
+(defn log-response-impl
   [{:keys [response-summary invocation-id request-id interaction-id service-name] :as ctx}]
   (log/debug "Storing response" response-summary)
   (when response-summary
@@ -180,6 +179,11 @@
                     service-name
                     0,
                     response-summary])))
+
+(defmethod log-response
+  :postgres
+  [ctx]
+  (log-response-impl ctx))
 
 (defn store-identity
   [ctx identity]
@@ -357,12 +361,11 @@
 (defn store-results-impl
   [{:keys [resp] :as ctx}]
   (log/debug "Storing results impl")
-  (log-response ctx)
+  (log-response-impl ctx)
   (store-events ctx (:events resp))
   (doseq [i (:identities resp)]
     (store-identity ctx i))
-  (doseq [i (:sequences resp)]
-    (store-sequence ctx i))
+
   (doseq [i (:commands resp)]
     (store-command ctx i))
   ctx)
@@ -370,11 +373,14 @@
 (defmethod store-results
   :postgres
   [{:keys [resp] :as ctx}]
-  (jdbc/with-transaction
-    [tx (:con ctx)]
-    (try-to-data
-     #(store-results-impl
-       (assoc ctx :con tx)))))
+  (try-to-data
+   #(do
+      (jdbc/with-transaction
+        [tx (:con ctx)]
+        (store-results-impl
+         (assoc ctx :con tx)))
+      (doseq [i (:sequences resp)]
+        (store-sequence ctx i)))))
 
 (defmethod with-init
   :postgres
@@ -387,3 +393,15 @@
 (defn register
   [ctx]
   (assoc ctx :event-store :postgres))
+
+(defn get-response-log
+  [ctx invocation-id]
+  (log/info "Fetching response" invocation-id)
+  (mapv
+   first
+   (-> (jdbc/execute! (:con ctx)
+                      ["SELECT data
+                                FROM glms.command_response_log
+                                WHERE invocation_id=?" invocation-id]
+                      {:builder-fn rs/as-arrays})
+       (rest))))
