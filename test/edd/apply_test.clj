@@ -123,3 +123,21 @@
                  :interaction-id int-id
                  :request-id     req-id}]
                resp))))))
+
+(deftest apply-when-only-unhandeled-even
+  (let [ctx
+        (-> mock/ctx
+            (assoc :service-name "local-test"))]
+
+    (mock/with-mock-dal
+      {:event-store [{:event-id  :event-1
+                      :event-seq 1
+                      :id        agg-id}]}
+      (let [resp (edd/handler ctx req)]
+        (mock/verify-state :aggregate-store
+                           [{:id      agg-id
+                             :version 1}])
+        (is (= [{:result         {:apply true}
+                 :interaction-id int-id
+                 :request-id     req-id}]
+               resp))))))
