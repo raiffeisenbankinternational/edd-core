@@ -79,7 +79,7 @@
               :request-id     request-id}
              resp)))))
 
-(deftest apply-when-two-events
+(deftest test-transaction-when-saving
   (with-redefs [event-store/store-cmd (fn [ctx cmd]
                                         (throw (ex-info "CMD Store failure" {})))]
     (binding [*dal-state* (atom {})]
