@@ -1,9 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE SCHEMA IF NOT EXISTS glms;
-
-DROP TABLE IF EXISTS glms.event_store;
-CREATE TABLE glms.event_store (
+DROP TABLE IF EXISTS event_store;
+CREATE TABLE event_store (
     id uuid,
     created_on TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     invocation_id uuid NOT NULL,
@@ -17,10 +15,10 @@ CREATE TABLE glms.event_store (
     PRIMARY KEY (service_name, aggregate_id, event_seq)
 ) PARTITION BY hash (aggregate_id);
 
-CREATE INDEX glms_event_store_aggregate_id ON glms.event_store(service_name, aggregate_id);
+CREATE INDEX glms_event_store_aggregate_id ON event_store(service_name, aggregate_id);
 
-DROP TABLE IF EXISTS glms.identity_store;
-CREATE TABLE glms.identity_store (
+DROP TABLE IF EXISTS identity_store;
+CREATE TABLE identity_store (
     id VARCHAR(254) NOT NULL,
     created_on TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     service_name VARCHAR(254) NOT NULL,
@@ -48,8 +46,8 @@ CREATE TABLE sequence_store (
     UNIQUE (aggregate_id, service_name)
 ) PARTITION BY hash (aggregate_id, service_name);
 
-DROP TABLE IF EXISTS glms.command_store;
-CREATE TABLE glms.command_store (
+DROP TABLE IF EXISTS command_store;
+CREATE TABLE command_store (
     id uuid NOT NULL,
     created_on TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     target_service VARCHAR(256) NOT NULL,
@@ -65,8 +63,8 @@ CREATE TABLE glms.command_store (
 
 
 
-DROP TABLE IF EXISTS glms.command_deps_log;
-CREATE TABLE glms.command_deps_log (
+DROP TABLE IF EXISTS command_deps_log;
+CREATE TABLE command_deps_log (
     invocation_id uuid NOT NULL,
     request_id uuid NOT NULL,
     interaction_id uuid NOT NULL,
@@ -90,8 +88,8 @@ CREATE TABLE command_request_log (
     data jsonb NOT NULL
 ) PARTITION BY hash (invocation_id);
 
-DROP TABLE IF EXISTS glms.command_response_log;
-CREATE TABLE glms.command_response_log (
+DROP TABLE IF EXISTS command_response_log;
+CREATE TABLE command_response_log (
     invocation_id uuid NOT NULL,
     request_id uuid NOT NULL,
     interaction_id uuid NOT NULL,
@@ -120,7 +118,7 @@ BEGIN
      FOR i IN 0..31 LOOP
       raise info 'Creating % %', m, i;
       EXECUTE 'CREATE TABLE ' || 'part_' || m || '_' || i || ' ' ||
-         'PARTITION OF glms.' || m || ' '  ||
+              'PARTITION OF ' || m || ' '  ||
               'FOR VALUES WITH (MODULUS 32, REMAINDER ' || i || ')';
      END LOOP;
    END LOOP;

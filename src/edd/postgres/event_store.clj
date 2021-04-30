@@ -205,32 +205,45 @@
                   (:service-name ctx)
                   (:id identity)]))
 
-(defn store-sequence
+(defn update-sequence
   [ctx sequence]
   {:pre [(:id sequence)]}
-  (log/info "Storing sequence" (:service-name ctx) sequence)
+  (log/info "Update sequence" (:service-name ctx) sequence)
   (let [service-name (:service-name ctx)
         aggregate-id (:id sequence)]
     (jdbc/execute! (:con ctx)
                    ["BEGIN WORK;
                         LOCK TABLE glms.sequence_store IN EXCLUSIVE MODE;
-                       INSERT INTO glms.sequence_store (invocation_id,
-                                                        request_id,
-                                                        interaction_id,
-                                                        breadcrumbs,
-                                                        aggregate_id,
-                                                        service_name,
-                                                        value)
-                            VALUES (?, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(value), 0) +1
-                                                         FROM glms.sequence_store
-                                                        WHERE service_name = ?));
+                       UPDATE glms.sequence_store
+                          SET value =  (SELECT COALESCE(MAX(value), 0) +1
+                                                   FROM glms.sequence_store
+                                                  WHERE service_name = ?)
+                          WHERE aggregate_id = ? AND service_name = ?;
                      COMMIT WORK;"
+                    service-name
+                    aggregate-id
+                    service-name])))
+
+(defn prepare-store-sequence
+  [ctx sequence]
+  {:pre [(:id sequence)]}
+  (log/info "Prepare sequence" (:service-name ctx) sequence)
+  (let [service-name (:service-name ctx)
+        aggregate-id (:id sequence)]
+    (jdbc/execute! (:con ctx)
+                   ["INSERT INTO glms.sequence_store (invocation_id,
+                                                      request_id,
+                                                      interaction_id,
+                                                      breadcrumbs,
+                                                      aggregate_id,
+                                                      service_name,
+                                                      value)
+                            VALUES (?, ?, ?, ?, ?, ?, 0);"
                     (:invocation-id ctx)
                     (:request-id ctx)
                     (:interaction-id ctx)
                     (breadcrumb-str (:breadcrumbs ctx))
                     aggregate-id
-                    service-name
                     service-name])))
 
 (defmethod get-command-response
@@ -253,22 +266,31 @@
                 {:builder-fn rs/as-unqualified-lower-maps})]
     result))
 
+(defn get-sequence-number-for-id-imp
+  [{:keys [id] :as ctx}]
+  {:pre [id]}
+  (let [service-name (:service-name ctx)
+        value-fn #(-> (jdbc/execute-one!
+                       (:con ctx)
+                       ["SELECT value
+                     FROM glms.sequence_store
+                    WHERE aggregate_id = ?
+                      AND service_name = ?"
+                        id
+                        service-name]
+                       {:builder-fn rs/as-unqualified-lower-maps})
+                      (:value))
+        result (value-fn)]
+    (if (= result 0)
+      (do (update-sequence ctx {:id id})
+          (value-fn))
+      result)))
+
 (defmethod get-sequence-number-for-id
   :postgres
   [{:keys [id] :as ctx}]
   {:pre [id]}
-
-  (let [service-name (:service-name ctx)
-        result (jdbc/execute-one!
-                (:con ctx)
-                ["SELECT value
-                     FROM glms.sequence_store
-                    WHERE aggregate_id = ?
-                      AND service_name = ?"
-                 id
-                 service-name]
-                {:builder-fn rs/as-unqualified-lower-maps})]
-    (:value result)))
+  (get-sequence-number-for-id-imp ctx))
 
 (defmethod get-id-for-sequence-number
   :postgres
@@ -341,14 +363,6 @@
    (for [event (flatten events)]
      (store-event ctx event))))
 
-(defn store-sequences
-  [ctx sequences]
-  (log/info "Storing sequences")
-  (log/debug "Storing sequences" sequences)
-  (doall
-   (for [sequence sequences]
-     (store-sequence ctx sequence))))
-
 (defn store-command
   [ctx cmd]
   (log/info "Storing effect")
@@ -378,9 +392,11 @@
       (jdbc/with-transaction
         [tx (:con ctx)]
         (store-results-impl
-         (assoc ctx :con tx)))
+         (assoc ctx :con tx))
+        (doseq [i (:sequences resp)]
+          (prepare-store-sequence ctx i)))
       (doseq [i (:sequences resp)]
-        (store-sequence ctx i))
+        (update-sequence ctx i))
       ctx)))
 
 (defmethod with-init
@@ -406,3 +422,4 @@
                                 WHERE invocation_id=?" invocation-id]
                       {:builder-fn rs/as-arrays})
        (rest))))
+
