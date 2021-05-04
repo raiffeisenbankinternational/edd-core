@@ -34,8 +34,8 @@ CREATE TABLE glms.identity_store (
 ) PARTITION BY hash (id);
 
 
-DROP TABLE IF EXISTS sequence_store;
-CREATE TABLE sequence_store (
+DROP TABLE IF EXISTS glms.sequence_store;
+CREATE TABLE glms.sequence_store (
     aggregate_id UUID NOT NULL,
     service_name VARCHAR(254),
     created_on TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -78,8 +78,8 @@ CREATE TABLE glms.command_deps_log (
 ) PARTITION BY hash (invocation_id);
 
 
-DROP TABLE IF EXISTS command_request_log;
-CREATE TABLE command_request_log (
+DROP TABLE IF EXISTS glms.command_request_log;
+CREATE TABLE glms.command_request_log (
     invocation_id uuid NOT NULL,
     request_id uuid NOT NULL,
     interaction_id uuid NOT NULL,
