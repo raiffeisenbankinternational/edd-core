@@ -5,6 +5,15 @@
             [edd.memory.event-store :as event-store]
             [clojure.tools.logging :as log]))
 
+(defn fuuid [n]
+  (let [tpl   "00000000-0000-0000-0000-000000000000"
+        l-tpl (.length tpl)
+        str-n (str n)
+        l     (.length str-n)]
+    (java.util.UUID/fromString
+     (.concat (.substring tpl 0 (- l-tpl l))
+              str-n))))
+
 (defn process-cmd-response! [ctx cmd]
   (log/info "apply-cmd" cmd)
   (let [resp (f/handle-cmd (assoc ctx
