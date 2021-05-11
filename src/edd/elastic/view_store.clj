@@ -38,7 +38,7 @@
                 {(name a) (->trim b)}})
    :wildcard (fn [_ & [a b]]
                {:wildcard
-                {(str (name a) ".keyword") {:value (str "*" (->trim b) "*")}}})
+                {(str (name a)) {:value (str "*" (->trim b) "*")}}})
    :not      (fn [ctx & rest]
                {:bool
                 {:must_not (parse ctx rest)}})
@@ -68,11 +68,11 @@
                 (fn [p]
                   {:bool
                    {:should               [{:match
-                                            {(str (name p) ".keyword")
+                                            {(str (name p))
                                              {:query value
                                               :boost 2}}}
                                            {:wildcard
-                                            {(str (name p) ".keyword") {:value (str "*" (->trim value) "*")}}}]
+                                            {(str (name p)) {:value (str "*" (->trim value) "*")}}}]
                     :minimum_should_match 1}})
                 fields)]
 
@@ -147,7 +147,6 @@
 (defmethod advanced-search
   :elastic
   [{:keys [query] :as ctx}]
-
   (let [req (->
              (create-query ctx query)
              (assoc
