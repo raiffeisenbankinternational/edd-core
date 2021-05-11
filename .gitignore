@@ -8,3 +8,4 @@ pom.xml
 .nrepl-port
 lambda-apigw-lib.iml
 .dir-locals.el
+.m2/
