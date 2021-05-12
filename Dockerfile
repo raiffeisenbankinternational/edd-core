@@ -53,7 +53,7 @@ RUN set -e &&\
 ARG BUILD_ID
 RUN echo "Building b${BUILD_ID}" &&\
     set -e && clj -A:jar  \
-  --app-group-id ${DOCKER_ORG} \
+  --app-group-id app-group-id \
   --app-artifact-id ${PROJECT_NAME} \
   --app-version "1.${BUILD_ID}"
 
