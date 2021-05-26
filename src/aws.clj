@@ -10,6 +10,39 @@
   (:import (java.time.format DateTimeFormatter)
            (java.time OffsetDateTime ZoneOffset)))
 
+(defn put-object
+  "puts object.content (should be plain string) into object.s3.bucket.name under object.s3.bucket.key"
+  [object]
+  (let [req {:method "PUT"
+             :uri        (str "/"
+                              (get-in object [:s3 :bucket :name])
+                              "/"
+                              (get-in object [:s3 :object :key]))
+             :headers    {"Host"                 "s3.eu-central-1.amazonaws.com"
+                          "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                          "x-amz-date"           (common/create-date)
+                          "x-amz-security-token" (System/getenv "AWS_SESSION_TOKEN")}
+             :service    "s3"
+             :region     "eu-central-1"
+             :access-key (System/getenv "AWS_ACCESS_KEY_ID")
+             :secret-key (System/getenv "AWS_SECRET_ACCESS_KEY")}
+        auth (common/authorize req)
+        response (common/retry #(util/http-put
+                                 (str "https://"
+                                      (get (:headers req) "Host")
+                                      (:uri req))
+                                 {:as :stream
+                                  :headers (-> (:headers req)
+                                               (dissoc "host")
+                                               (assoc "Authorization" auth))
+                                  :body (get-in object [:s3 :object :content])
+                                  :timeout 8000}
+                                 :raw true)
+                               3)]
+    (when (contains? response :error)
+      (log/error "Failed to fetch object" response))
+    (io/reader (:body response) :encoding "UTF-8")))
+
 (defn get-object
   [object]
   (let [req {:method     "GET"
