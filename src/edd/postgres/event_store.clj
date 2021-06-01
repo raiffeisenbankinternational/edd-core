@@ -365,8 +365,7 @@
 
 (defn store-command
   [ctx cmd]
-  (log/info "Storing effect")
-  (log/debug "Storing effect" cmd)
+  (log/info "Storing effect" cmd)
   (store-cmd ctx (assoc
                   cmd
                   :request-id (:request-id ctx)
@@ -422,4 +421,3 @@
                                 WHERE invocation_id=?" invocation-id]
                       {:builder-fn rs/as-arrays})
        (rest))))
-
