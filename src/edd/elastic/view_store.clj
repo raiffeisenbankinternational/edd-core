@@ -234,4 +234,5 @@
   [ctx]
   (assoc ctx
          :view-store :elastic
-         :elastic-search {:url (util/get-env "IndexDomainEndpoint")}))
+         :elastic-search {:scheme (util/get-env "IndexDomainScheme" "https")
+                          :url (util/get-env "IndexDomainEndpoint")}))

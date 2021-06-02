@@ -36,7 +36,8 @@
                       :keepalive 300000}
                body (assoc :body body))]
 
-    (let [url (str "https://"
+    (let [url (str (or (:scheme elastic-search) "https")
+                   "://"
                    (get (:headers req) "Host")
                    (:uri req))
           response (cond
@@ -63,7 +64,3 @@
                                                 (:body response))
                                      {:error {:status (:status response)}})
         :else (util/to-edn (:body response))))))
-
-
-
-
