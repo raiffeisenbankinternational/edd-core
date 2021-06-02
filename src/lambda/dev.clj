@@ -1,13 +1,22 @@
 (ns lambda.dev
   (:require [aws :as aws]
-            [clojure.core.async :as async :refer [go-loop]]
+            [clojure.core.async :as async :refer [>!! go-loop]]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.tools.logging :as log]
+            [compojure.core :as compojure :refer [POST]]
+            [compojure.route :as route]
+            [ring.middleware.cors :refer [wrap-cors]]
             [edd.postgres.event-store :as postgres]
+            [jsonista.core :as json]
             [lambda.core :as lambda]
             [lambda.util :as util]
-            [lambda.uuid :as uuid]))
+            [lambda.uuid :as uuid]
+            [ring.adapter.jetty9 :as jetty]))
+
+(declare default-response-handler)
+
+;; --- queues
 
 (defonce queues
   (atom {}))
@@ -31,9 +40,20 @@
   (swap! queues update queue-name (fn [q]
                                     (pop q))))
 
+(defn purge-queues! []
+  (reset! queues {}))
+
+(comment
+  (register-queue! :limit-lifecycle-svc)
+  (queue-message! :limit-lifecycle-svc {:fu :bar})
+  (queue-message! :limit-lifecycle-svc {:a :b})
+  (peek-message :limit-lifecycle-svc)
+  (pop-message! :limit-lifecycle-svc)
+  (peek-message :limit-lifecycle-svc))
+
+;; --- lambda lifecycle
+
 (defn start* [{:keys [service-name config-load entrypoint response-handler]
-               :or   {response-handler (fn [response]
-                                         (log/info (str service-name " response") response))}
                :as   args}]
   (log/info (str "Starting " service-name) args)
   (go-loop []
@@ -44,7 +64,9 @@
                            (with-redefs [util/load-config     (fn [_] {})
                                          lambda/get-loop      (fn [] [0])
                                          lambda/send-response (fn [{:keys [resp] :as ctx}]
-                                                                (response-handler resp))
+                                                                (if response-handler
+                                                                  (response-handler resp message)
+                                                                  (default-response-handler resp message)))
                                          util/get-env         (fn [var-name & [default]]
                                                                 ;; NOTE: we load config on every request because some vars can expire (
                                                                 ;; does not matter from performance perspective, since it is for dev purposes only
@@ -84,15 +106,13 @@
           (recur))
 
         (= :shutdown next)
-        (do
-          (pop-message! service-name)
-          (log/info (str service-name " is shutting down ...") ::ns))
+        (do (pop-message! service-name)
+            (log/info (str service-name " is shutting down ...") ::ns))
 
         ;; handle the message and repeat
-        :else (do
-                (pop-message! service-name)
-                (handle-message next)
-                (recur))))))
+        :else (do (pop-message! service-name)
+                  (handle-message next)
+                  (recur))))))
 
 (defn stop* [service-name]
   (queue-message! service-name :shutdown))
@@ -149,10 +169,82 @@
        (defn ~(symbol 'stop) []
          (stop* ~(keyword service-name))))))
 
-(comment
-  (register-queue! :limit-lifecycle-svc)
-  (queue-message! :limit-lifecycle-svc {:fu :bar})
-  (queue-message! :limit-lifecycle-svc {:a :b})
-  (peek-message :limit-lifecycle-svc)
-  (pop-message! :limit-lifecycle-svc)
-  (peek-message :limit-lifecycle-svc))
+;; --- api-gateway
+
+(defonce gateway (atom nil))
+
+(def pub-chan (async/chan 1))
+(def publisher (async/pub pub-chan :topic))
+(def sub-chan (async/chan))
+
+(defn decode-body [body]
+  (let [body (-> body
+                 slurp
+                 (json/read-value json/keyword-keys-object-mapper))]
+    (cond-> body
+      (:query-id body) (update :query-id keyword)
+      (:cmd-id body)   (update :cmd-id keyword))))
+
+(defn default-response-handler [response request]
+  (let [topic (hash request)]
+    (log/info "publishing response" {:request request :topic topic :response response})
+    ;; NOTE : publishes response to the topic which corresponds to hashed request map
+    (>!! pub-chan {:topic topic :response response})
+    nil))
+
+(defn handle-request
+  "async handler, will block the client http call until a response arrives."
+  [request send-response raise-error]
+  (let [{:keys [params body]} request
+        service-name          (-> params :service keyword)
+        message               (decode-body body)
+        topic                 (hash message)]
+    (let [_            (log/info "handling request" {:service/name service-name
+                                                     :message      message
+                                                     :topic        topic})
+          _            (queue-message! service-name message)
+          ;; NOTE : subscription is based on the hashed request
+          subscription (async/sub publisher topic sub-chan)]
+      (let [timeout                   (async/timeout 5000)
+            [{:keys [response]} port] (async/alts!! [sub-chan timeout])]
+        (if (= port sub-chan)
+          (send-response
+           {:status 200
+            :body   (json/write-value-as-string response)})
+          (send-response
+           {:status 408
+            :body   "Response Timeout"}))))))
+
+(defn gateway-start* []
+  (let [routes (-> (-> (compojure/routes
+                        (POST "/:service/query" [] handle-request)
+                        (POST "/:service/command" [] handle-request)
+                        (route/not-found "Route not found")))
+                   (wrap-cors :access-control-allow-origin [#".*"]
+                              :access-control-allow-methods [:post]))]
+    (jetty/run-jetty routes {:host   "127.0.0.1"
+                             :port   3001
+                             :async? true
+                             :join?  false})))
+
+(defn start-gateway!
+  "Starts a local instance of api gateway.
+  Accepts requests at two endpoints `/command/:service` and `/query/:service`.
+  Example request (a query):
+
+  curl -X POST http://127.0.0.1:3001/query/glms-limit-lifecycle-svc --data '{\"query-id\": \"get-current-limit-status\", \"limit-id\": \"2d28bac1-757f-4205-a9d8-15b46e6d4ca4\"}'
+
+  Messages will be published to the respective queue for the given `:service`.
+  The request handler creates a subscription that blocks the client and waits for a response.
+  Request/response routing is based on a hash of the request."
+  []
+  (reset! gateway (gateway-start*)))
+
+(defn stop-gateway! []
+  (when @gateway
+    (.stop @gateway))
+  (reset! gateway nil))
+
+(defn restart-gateway! []
+  (stop-gateway!)
+  (start-gateway!))
