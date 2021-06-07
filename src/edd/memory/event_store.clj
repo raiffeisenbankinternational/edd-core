@@ -36,12 +36,11 @@
   Raises RuntimeException if identity is already taken"
   [identity]
   (log/info "Emulated 'store-identity' dal function")
-  (let [value (:identity identity)
-        id (:id identity)
+  (let [id-fn (juxt :id :identity)
+        id (id-fn identity)
         store (:identity-store @*dal-state*)
-        identity-already-exists (some #(or (= (:identity %) value)
-                                           (= (:id %) id)) store)]
-    (if identity-already-exists
+        id-already-exists (some #(= (id-fn %) id) store)]
+    (when id-already-exists
       (throw (RuntimeException. "Identity already exists")))
     (swap! *dal-state*
            #(update % :identity-store (fn [v] (conj v identity))))))
