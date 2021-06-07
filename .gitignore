@@ -9,3 +9,4 @@ pom.xml
 lambda-apigw-lib.iml
 .dir-locals.el
 .m2/
+.lsp

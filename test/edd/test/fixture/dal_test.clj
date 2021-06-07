@@ -371,9 +371,19 @@
     (is (thrown? RuntimeException
                  (dal/store-identity
                   {:id       "id1"
-                   :identity 2})))
+                   :identity 1})))
     (verify-state [{:id       "id1"
                     :identity 1}] :identity-store)))
+
+(deftest when-identity-exists-then-ok
+  (with-mock-dal
+    (dal/store-identity {:id "id1"
+                         :identity 1})
+    (dal/store-identity
+     {:id "id1"
+      :identity 2})
+    (verify-state [{:id "id1" :identity 1}
+                   {:id "id1" :identity 2}] :identity-store)))
 
 (deftest test-identity-generation
   (with-mock-dal {:identities {"id1" "some-id"}}
