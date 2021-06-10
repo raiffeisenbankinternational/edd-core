@@ -1,7 +1,7 @@
 ARG DOCKER_URL
 ARG DOCKER_ORG
 
-FROM ${DOCKER_URL}/${DOCKER_ORG}/common-img:b800
+FROM ${DOCKER_URL}/${DOCKER_ORG}/common-img:b844
 
 # Custom build from here on
 ENV PROJECT_NAME edd-core
