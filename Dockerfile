@@ -17,6 +17,7 @@ RUN ./format.sh check
 
 RUN set -e && clj -A:test:unit
 
+COPY sql sql
 RUN set -e &&\
     export AWS_DEFAULT_REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region) &&\
     TARGET_ACCOUNT_ID="$(aws sts get-caller-identity | jq -r '.Account')" &&\
@@ -44,7 +45,7 @@ RUN set -e &&\
                -schemas=glms,test,prod \
                -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
                clean &&\
-   flyway -password="${DatabasePassword}" \
+    flyway -password="${DatabasePassword}" \
            -schemas=glms \
            -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
            -locations="filesystem:${PWD}/sql/files" migrate &&\
