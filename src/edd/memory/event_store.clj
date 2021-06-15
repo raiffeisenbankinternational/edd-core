@@ -43,7 +43,10 @@
     (when id-already-exists
       (throw (RuntimeException. "Identity already exists")))
     (swap! *dal-state*
-           #(update % :identity-store (fn [v] (conj v identity))))))
+           #(update % :identity-store (fn [v] (conj v (dissoc identity
+                                                              :request-id
+                                                              :interaction-id
+                                                              :meta)))))))
 
 (defn deterministic-shuffle
   [^java.util.Collection coll seed]
@@ -69,7 +72,8 @@
   (dissoc cmd
           :request-id
           :interaction-id
-          :breadcrumbs))
+          :breadcrumbs
+          :meta))
 
 (defn store-command
   "Stores command in memory structure"
@@ -93,6 +97,7 @@
                                             (fn [c] (:event-seq c))
                                             (conj v (dissoc
                                                      event
+                                                     :meta
                                                      :interaction-id
                                                      :request-id))))))))
 (defn store-events

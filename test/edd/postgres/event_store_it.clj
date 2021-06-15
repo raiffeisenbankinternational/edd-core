@@ -6,7 +6,8 @@
             [edd.core :as edd]
             [edd.postgres.event-store :as dal]
             [lambda.uuid :as uuid]
-            [edd.test.fixture.dal :as mock])
+            [edd.test.fixture.dal :as mock]
+            [lambda.util :as util])
   (:import (org.postgresql.util PSQLException)))
 
 (def fx-id (uuid/gen))
@@ -16,6 +17,8 @@
   (-> {}
       (assoc :service-name "local-test")
       (assoc :invocation-id invocation-id)
+      (assoc :environment-name-lower "pipeline")
+      (assoc :aws {:account-id (util/get-env "AccountId")})
       (event-store/register)
       (view-store/register)
       (edd/reg-cmd :cmd-1 (fn [ctx cmd]

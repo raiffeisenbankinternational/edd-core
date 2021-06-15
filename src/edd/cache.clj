@@ -10,8 +10,6 @@
 ;; this code is NOT thread safe
 ;; this code is highly stateful
 
-(defn clear! []
-  (reset! request/*request* {}))
 
 (defn events-with-version
   [last-event-seqs events]
@@ -105,6 +103,9 @@
   (swap! request/*request* dissoc :events)
   (swap! request/*request* dissoc :aggregate-db)
   (swap! request/*request* dissoc :last-event-seq))
+
+(defn clear! []
+  (flush-cache))
 
 (defn create-identity
   [& _]

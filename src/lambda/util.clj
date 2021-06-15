@@ -190,3 +190,16 @@
   [^String message]
   (let [^Charset charset (Charset/forName "UTF-8")]
     (URLEncoder/encode message charset)))
+
+(defmacro d-time
+  "Evaluates expr and logs time it took.  Returns the value of
+ expr."
+  {:added "1.0"}
+  [message & expr]
+  `(let [start# (. System (nanoTime))
+         ret# ~@expr]
+     (log/info {:type    :time
+                :message ~message
+                :elapsed (/ (double (- (. System (nanoTime)) start#)) 1000000.0)
+                :unit    "msec"})
+     ret#))

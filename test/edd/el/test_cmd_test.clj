@@ -4,7 +4,10 @@
             [edd.el.query :as query]
             [lambda.util :as util]
             [lambda.uuid :as uuid]
-            [edd.dal :as dal]))
+            [edd.dal :as dal]
+            [edd.memory.event-store :as event-store]
+            [edd.response.s3 :as s3-cache])
+  (:import (clojure.lang ExceptionInfo)))
 
 (def cmd-id (uuid/gen))
 
