@@ -10,7 +10,8 @@
             [edd.memory.event-store :as event-store]
             [edd.memory.view-store :as view-store]
             [lambda.test.fixture.client :as client]
-            [sdk.aws.common :as common]))
+            [sdk.aws.common :as common]
+            [sdk.aws.sqs :as sqs]))
 
 (def agg-id (uuid/gen))
 
@@ -44,10 +45,8 @@
      items))})
 
 (def ctx
-  (-> {}
+  (-> mock/ctx
       (assoc :service-name "local-test")
-      (event-store/register)
-      (view-store/register)
       (edd/reg-cmd :cmd-1 (fn [ctx cmd]
                             {:id       (:id cmd)
                              :event-id :event-1
@@ -75,7 +74,15 @@
                               {:value "2"})))))
 
 (deftest test-command-handler-returns-error
-  (with-redefs [common/create-date (fn [] "20210322T232540Z")]
+  (with-redefs [common/create-date (fn [] "20210322T232540Z")
+                sqs/sqs-publish (fn [{:keys [message]}]
+                                  (is (= {:Records [{:key (str "response/"
+                                                               req-id3
+                                                               "/0/local-test.json")}
+                                                    {:key (str "response/"
+                                                               req-id1
+                                                               "/0/local-test.json")}]}
+                                         (util/to-edn message))))]
     (mock-core
      :invocations [(util/to-json (req
                                   [{:request-id     req-id1
@@ -142,7 +149,15 @@
                        :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
 
 (deftest test-all-ok
-  (with-redefs [common/create-date (fn [] "20210322T232540Z")]
+  (with-redefs [common/create-date (fn [] "20210322T232540Z")
+                sqs/sqs-publish (fn [{:keys [message] :as ctx}]
+                                  (is (= {:Records [{:key (str "response/"
+                                                               req-id5
+                                                               "/0/local-test.json")}
+                                                    {:key (str "response/"
+                                                               req-id4
+                                                               "/0/local-test.json")}]}
+                                         (util/to-edn message))))]
     (mock-core
      :invocations [(util/to-json (req [{:request-id     req-id4
                                         :interaction-id int-id
@@ -182,7 +197,15 @@
                        :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
 
 (deftest test-command-handler-exception
-  (with-redefs [common/create-date (fn [] "20210322T232540Z")]
+  (with-redefs [common/create-date (fn [] "20210322T232540Z")
+                sqs/sqs-publish (fn [{:keys [message]}]
+                                  (is (= {:Records [{:key (str "response/"
+                                                               req-id3
+                                                               "/0/local-test.json")}
+                                                    {:key (str "response/"
+                                                               req-id1
+                                                               "/0/local-test.json")}]}
+                                         (util/to-edn message))))]
     (mock-core
      :invocations [(util/to-json (req
                                   [{:request-id     req-id1
@@ -249,7 +272,15 @@
                        :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
 
 (deftest test-failure-of-deps-resolver
-  (with-redefs [common/create-date (fn [] "20210322T232540Z")]
+  (with-redefs [common/create-date (fn [] "20210322T232540Z")
+                sqs/sqs-publish (fn [{:keys [message]}]
+                                  (is (= {:Records [{:key (str "response/"
+                                                               req-id3
+                                                               "/0/local-test.json")}
+                                                    {:key (str "response/"
+                                                               req-id1
+                                                               "/0/local-test.json")}]}
+                                         (util/to-edn message))))]
     (mock-core
      :invocations [(util/to-json (req
                                   [{:request-id     req-id1

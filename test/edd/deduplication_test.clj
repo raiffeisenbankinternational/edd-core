@@ -42,7 +42,12 @@
             breadcrumbs (select-keys
                          (first (:response-log @state/*dal-state*))
                          [:request-id :breadcrumbs])]
-        (is (= {:success true, :effects [], :events 1, :meta [{:do-sth {:id id1}}], :identities 0, :sequences 0} resp))
+        (is (= {:success true
+                :effects []
+                :events 1
+                :meta [{:do-sth {:id id1}}]
+                :identities 0
+                :sequences 0} resp))
         (is (= {:request-id request-id
                 :breadcrumbs [0]}
                breadcrumbs))))))

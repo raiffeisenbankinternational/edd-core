@@ -19,9 +19,7 @@
 (def cmd-id (uuid/parse "111111-1111-1111-1111-111111111111"))
 
 (def ctx
-  (-> {}
-      (event-store/register)
-      (view-store/register)
+  (-> mock/ctx
       (edd/reg-cmd :dummy-cmd dummy-command-handler)))
 
 (def valid-command-request

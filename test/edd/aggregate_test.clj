@@ -21,9 +21,8 @@
 (def cmd-id (uuid/parse "111111-1111-1111-1111-111111111111"))
 
 (def apply-ctx
-  (-> {:service-name "local-test"}
-      (view-store/register)
-      (event-store/register)
+  (-> mock/ctx
+      (merge {:service-name "local-test"})
       (edd/reg-event
        :event-1 (fn [p v]
                   (assoc p :e1 v)))
@@ -55,14 +54,14 @@
     (is (= {:id            cmd-id
             :filter-result "ab"
             :version       2
-            :e1            {:event-id :event-1,
-                            :k1       "a"
+            :e1            {:event-id  :event-1,
+                            :k1        "a"
                             :event-seq 1
-                            :id       cmd-id},
-            :e2            {:event-id :event-2
-                            :k2       "b"
+                            :id        cmd-id},
+            :e2            {:event-id  :event-2
+                            :k2        "b"
                             :event-seq 2
-                            :id       cmd-id}}
+                            :id        cmd-id}}
            agg))))
 (deftest test-apply-cmd
   (with-redefs [search/simple-search identity]

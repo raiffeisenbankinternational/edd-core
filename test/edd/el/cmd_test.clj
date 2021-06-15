@@ -10,7 +10,9 @@
             [lambda.test.fixture.client :refer [verify-traffic-json]]
             [lambda.test.fixture.core :refer [mock-core]]
             [lambda.api-test :refer [api-request]]
-            [lambda.uuid :as uuid]))
+            [lambda.uuid :as uuid]
+            [edd.test.fixture.dal :as mock]
+            [sdk.aws.sqs :as sqs]))
 
 (deftest test-empty-commands-list
   (let [ctx {:req {}}]
@@ -65,9 +67,7 @@
 
 (defn register
   []
-  (-> {}
-      (event-store/register)
-      (view-store/register)
+  (-> mock/ctx
       (edd/reg-cmd :ping
                    (fn [ctx cmd]
                      {:event-id :ping}))))
@@ -105,6 +105,7 @@
           :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
 
 (deftest api-handler-response-test
+
   (let [request-id (uuid/gen)
         interaction-id (uuid/gen)
         id (uuid/gen)
@@ -112,35 +113,40 @@
              :interaction-id interaction-id,
              :commands       [{:cmd-id :ping
                                :id     id}]}]
-    (mock-core
-     :invocations [(api-request cmd)]
-     (core/start
-      (register)
-      edd/handler
-      :filters [fl/from-api]
-      :post-filter fl/to-api)
-     (do
-       (verify-traffic-json
-        [{:body   {:body            (util/to-json
-                                     {:result         {:success    true
-                                                       :effects    []
-                                                       :events     1
-                                                       :meta       [{:ping {:id id}}]
-                                                       :identities 0
-                                                       :sequences  0}
-                                      :request-id     request-id
-                                      :interaction-id interaction-id})
-                   :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-                                     :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
-                                     :Access-Control-Allow-Origin   "*"
-                                     :Access-Control-Expose-Headers "*"
-                                     :Content-Type                  "application/json"}
-                   :isBase64Encoded false
-                   :statusCode      200}
-          :method :post
-          :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-         {:method  :get
-          :timeout 90000000
-          :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
+    (with-redefs [sqs/sqs-publish (fn [{:keys [message] :as ctx}]
+                                    (is (= {:Records [{:key (str "response/"
+                                                                 request-id
+                                                                 "/0/local-test.json")}]}
+                                           (util/to-edn message))))]
+      (mock-core
+       :invocations [(api-request cmd)]
+       (core/start
+        (register)
+        edd/handler
+        :filters [fl/from-api]
+        :post-filter fl/to-api)
+       (do
+         (verify-traffic-json
+          [{:body   {:body            (util/to-json
+                                       {:result         {:success    true
+                                                         :effects    []
+                                                         :events     1
+                                                         :meta       [{:ping {:id id}}]
+                                                         :identities 0
+                                                         :sequences  0}
+                                        :request-id     request-id
+                                        :interaction-id interaction-id})
+                     :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                                       :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
+                                       :Access-Control-Allow-Origin   "*"
+                                       :Access-Control-Expose-Headers "*"
+                                       :Content-Type                  "application/json"}
+                     :isBase64Encoded false
+                     :statusCode      200}
+            :method :post
+            :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
+           {:method  :get
+            :timeout 90000000
+            :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))))
 
 
