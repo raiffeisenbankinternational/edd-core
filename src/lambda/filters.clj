@@ -82,7 +82,8 @@
       (:error body) (assoc ctx :body body)
       (has-role? user role) (assoc ctx :user {:id    (:id user)
                                               :email (:email user)
-                                              :role  role})
+                                              :role  role
+                                              :roles (:roles user [])})
       :else (assoc ctx :user {:id    "anonymous"
                               :email "anonymous"
                               :role  :anonymous}))))

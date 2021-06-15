@@ -7,21 +7,20 @@
    [edd.memory.view-store :as view-store]
    [edd.test.fixture.dal :as f]
    [lambda.test.fixture.state :as state]
-   [edd.core :as edd]))
+   [edd.core :as edd]
+   [edd.test.fixture.dal :as mock]))
 
 (defmulti handle (fn [ctx event] (:event-id event)))
 
 (defmethod handle :default [ctx event])
 
 (defn ctx []
-  (-> {}
-      (event-store/register)
-      (view-store/register)))
+  (-> mock/ctx))
 
 (defmethod handle :e1
   [ctx evt]
   {:cmd-id :cmd-2
-   :id (:id evt)})
+   :id     (:id evt)})
 
 (defn handle-events [ctx events]
   (->> events
@@ -45,12 +44,12 @@
           resp (sut/process-cmd-response!
                 ctx
                 {:commands [{:cmd-id :cmd-1
-                             :id id}]})]
+                             :id     id}]})]
 
       (f/verify-state :event-store
-                      [{:event-id :e1,
-                        :name :cmd-1,
-                        :id id
+                      [{:event-id  :e1,
+                        :name      :cmd-1,
+                        :id        id
                         :event-seq 1}]))))
 
 (deftest test-process-next-on-empty-queue
@@ -69,9 +68,9 @@
           id1 (uuid/gen)
           id2 (uuid/gen)]
       (sut/place-cmd! {:cmd-id :cmd-1
-                       :id id1}
+                       :id     id1}
                       {:cmd-id :cmd-1
-                       :id id2})
+                       :id     id2})
 
       (is (sut/process-next! ctx))
       (is (= 1 (count (:event-store @state/*dal-state*)))))))
@@ -83,9 +82,9 @@
           id2 (uuid/gen)]
 
       (sut/place-cmd! {:cmd-id :cmd-1
-                       :id id1}
+                       :id     id1}
                       {:cmd-id :cmd-1
-                       :id id2})
+                       :id     id2})
 
       (sut/process-all! ctx)
 
@@ -98,9 +97,9 @@
           id2 (uuid/gen)]
       (sut/run-cmd! ctx
                     {:cmd-id :cmd-1
-                     :id id1}
+                     :id     id1}
                     {:cmd-id :cmd-1
-                     :id id2})
+                     :id     id2})
 
       (is (= 4 (count (:event-store @state/*dal-state*)))))))
 
@@ -110,6 +109,6 @@
           id1 (uuid/gen)
           id2 (uuid/gen)]
       (sut/run-cmd! ctx {:cmd-id :cmd-1
-                         :id id1})
+                         :id     id1})
 
       (is (= 2 (count (:event-store @state/*dal-state*)))))))
