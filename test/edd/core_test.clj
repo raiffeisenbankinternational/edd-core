@@ -22,7 +22,8 @@
             [edd.test.fixture.dal :as mock]
             [edd.postgres.event-store :as pg]
             [lambda.uuid :as uuid]
-            [sdk.aws.common :as sdk-common]))
+            [sdk.aws.common :as sdk-common]
+            [sdk.aws.sqs :as sqs]))
 
 (defn dummy-command-handler
   [ctx cmd]
@@ -56,9 +57,8 @@
 
 (defn prepare
   [ctx]
-  (-> ctx
-      (event-store/register)
-      (view-store/register)
+  (-> mock/ctx
+      (merge ctx)
       (assoc :service-name :local-test)
       (edd/reg-cmd :dummy-cmd dummy-command-handler)
       (edd/reg-fx (fn [ctx events]
@@ -168,7 +168,12 @@
     (with-redefs [sdk-common/create-date (fn [] "20200426T061823Z")
                   uuid/gen (fn [] request-id)
                   key (str "test/" interaction-id "/"
-                           request-id)]
+                           request-id)
+                  sqs/sqs-publish (fn [{:keys [message] :as ctx}]
+                                    (is (= {:Records [{:key (str "response/"
+                                                                 request-id
+                                                                 "/0/local-test.json")}]}
+                                           (util/to-edn message))))]
       (mock-core
        :invocations [(s3/records key)]
        :requests [{:get  (str "https://s3.eu-central-1.amazonaws.com/example-bucket/"
@@ -192,7 +197,6 @@
                               :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
                              {:as      :stream
                               :headers {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=16e997a926d57b9cb47dbeb1aa6a0a18fe58fc5451a1abc129ef27af2a28e776"
-                                        "Host"                 "s3.eu-central-1.amazonaws.com"
                                         "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
                                         "x-amz-date"           "20200426T061823Z"
                                         "x-amz-security-token" nil}
@@ -206,45 +210,50 @@
 (deftest test-api-request-with-fx
   "Test that user is added to events and summary is properly returned"
   (mock/with-mock-dal
-    (mock-core
-     :invocations [(api/api-request
-                    {:commands       [{:cmd-id :dummy-cmd,
-                                       :bla    "ble",
-                                       :id     cmd-id}],
-                     :user           {:selected-role :group-2}
-                     :request-id     request-id,
-                     :interaction-id interaction-id})]
+    (with-redefs [sqs/sqs-publish (fn [{:keys [message] :as ctx}]
+                                    (is (= {:Records [{:key (str "response/"
+                                                                 request-id
+                                                                 "/0/local-test.json")}]}
+                                           (util/to-edn message))))]
+      (mock-core
+       :invocations [(api/api-request
+                      {:commands       [{:cmd-id :dummy-cmd,
+                                         :bla    "ble",
+                                         :id     cmd-id}],
+                       :user           {:selected-role :group-2}
+                       :request-id     request-id,
+                       :interaction-id interaction-id})]
 
-     :requests [{:get  "https://s3.eu-central-1.amazonaws.com/example-bucket/test/key"
-                 :body (char-array "Of something")}]
-     (core/start
-      (prepare {})
-      edd/handler
-      :filters [fl/from-api]
-      :post-filter fl/to-api)
-     (verify-traffic-json [{:body   {:body            (util/to-json
-                                                       {:result         {:success    true
-                                                                         :effects    [{:id           fx-id
-                                                                                       :cmd-id       :fx-command
-                                                                                       :service-name :local-test}]
-                                                                         :events     1
-                                                                         :meta       [{:dummy-cmd {:id cmd-id}}]
-                                                                         :identities 0
-                                                                         :sequences  0}
-                                                        :request-id     request-id
-                                                        :interaction-id interaction-id})
-                                     :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-                                                       :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
-                                                       :Access-Control-Allow-Origin   "*"
-                                                       :Access-Control-Expose-Headers "*"
-                                                       :Content-Type                  "application/json"}
-                                     :isBase64Encoded false
-                                     :statusCode      200}
-                            :method :post
-                            :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-                           {:method  :get
-                            :timeout 90000000
-                            :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
+       :requests [{:get  "https://s3.eu-central-1.amazonaws.com/example-bucket/test/key"
+                   :body (char-array "Of something")}]
+       (core/start
+        (prepare {})
+        edd/handler
+        :filters [fl/from-api]
+        :post-filter fl/to-api)
+       (verify-traffic-json [{:body   {:body            (util/to-json
+                                                         {:result         {:success    true
+                                                                           :effects    [{:id           fx-id
+                                                                                         :cmd-id       :fx-command
+                                                                                         :service-name :local-test}]
+                                                                           :events     1
+                                                                           :meta       [{:dummy-cmd {:id cmd-id}}]
+                                                                           :identities 0
+                                                                           :sequences  0}
+                                                          :request-id     request-id
+                                                          :interaction-id interaction-id})
+                                       :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                                                         :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
+                                                         :Access-Control-Allow-Origin   "*"
+                                                         :Access-Control-Expose-Headers "*"
+                                                         :Content-Type                  "application/json"}
+                                       :isBase64Encoded false
+                                       :statusCode      200}
+                              :method :post
+                              :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
+                             {:method  :get
+                              :timeout 90000000
+                              :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
 
 (def apply-ctx
   {:def-apply {:event-1 (fn [p v]

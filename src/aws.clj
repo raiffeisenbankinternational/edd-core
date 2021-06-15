@@ -1,79 +1,16 @@
 (ns aws
   (:require
    [lambda.util :as util]
-   [clojure.java.io :as io]
    [clojure.tools.logging :as log]
+   [lambda.request :as request]
    [sdk.aws.common :as common]
    [clojure.string :as str]
-   [sdk.aws.cognito-idp :as cognito-idp])
+   [sdk.aws.cognito-idp :as cognito-idp]
+   [sdk.aws.s3 :as s3]
+   [sdk.aws.sqs :as sqs]))
 
-  (:import (java.time.format DateTimeFormatter)
-           (java.time OffsetDateTime ZoneOffset)))
-
-(defn put-object
-  "puts object.content (should be plain string) into object.s3.bucket.name under object.s3.bucket.key"
-  [object]
-  (let [req {:method "PUT"
-             :uri        (str "/"
-                              (get-in object [:s3 :bucket :name])
-                              "/"
-                              (get-in object [:s3 :object :key]))
-             :headers    {"Host"                 "s3.eu-central-1.amazonaws.com"
-                          "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                          "x-amz-date"           (common/create-date)
-                          "x-amz-security-token" (System/getenv "AWS_SESSION_TOKEN")}
-             :service    "s3"
-             :region     "eu-central-1"
-             :access-key (System/getenv "AWS_ACCESS_KEY_ID")
-             :secret-key (System/getenv "AWS_SECRET_ACCESS_KEY")}
-        auth (common/authorize req)
-        response (common/retry #(util/http-put
-                                 (str "https://"
-                                      (get (:headers req) "Host")
-                                      (:uri req))
-                                 {:as :stream
-                                  :headers (-> (:headers req)
-                                               (dissoc "host")
-                                               (assoc "Authorization" auth))
-                                  :body (get-in object [:s3 :object :content])
-                                  :timeout 8000}
-                                 :raw true)
-                               3)]
-    (when (contains? response :error)
-      (log/error "Failed to fetch object" response))
-    (io/reader (:body response) :encoding "UTF-8")))
-
-(defn get-object
-  [object]
-  (let [req {:method     "GET"
-             :uri        (str "/"
-                              (get-in object [:s3 :bucket :name])
-                              "/"
-                              (get-in object [:s3 :object :key]))
-             :headers    {"Host"                 "s3.eu-central-1.amazonaws.com"
-                          "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                          "x-amz-date"           (common/create-date)
-                          "x-amz-security-token" (System/getenv "AWS_SESSION_TOKEN")}
-             :service    "s3"
-             :region     "eu-central-1"
-             :access-key (System/getenv "AWS_ACCESS_KEY_ID")
-             :secret-key (System/getenv "AWS_SECRET_ACCESS_KEY")}
-        auth (common/authorize req)]
-
-    (let [response (common/retry #(util/http-get
-                                   (str "https://"
-                                        (get (:headers req) "Host")
-                                        (:uri req))
-                                   {:as      :stream
-                                    :headers (-> (:headers req)
-                                                 (dissoc "host")
-                                                 (assoc "Authorization" auth))
-                                    :timeout 8000}
-                                   :raw true)
-                                 3)]
-      (when (contains? response :error)
-        (log/error "Failed to fetch object" response))
-      (io/reader (:body response) :encoding "UTF-8"))))
+(def put-object s3/put-object)
+(def get-object s3/get-object)
 
 (defn get-secret-value
   [secret]
@@ -107,48 +44,7 @@
       (:SecretString
        (:body response)))))
 
-(defn sqs-publish
-  [{:keys [queue ^String message aws] :as ctx}]
-  (let [req {:method     "POST"
-             :uri        (str "/"
-                              (:account-id aws)
-                              "/"
-                              (:environment-name-lower ctx)
-                              "-"
-                              queue)
-             :query      ""
-             :payload    (str "Action=SendMessage"
-                              "&MessageBody=" (util/url-encode message)
-                              "&Expires=2020-10-15T12%3A00%3A00Z"
-                              "&Version=2012-11-05&")
-             :headers    {"Host"         (str "sqs."
-                                              (get aws :region)
-                                              ".amazonaws.com")
-                          "Content-Type" "application/x-www-form-urlencoded"
-                          "Accept"       "application/json"
-                          "X-Amz-Date"   (common/create-date)}
-             :service    "sqs"
-             :region     "eu-central-1"
-             :access-key (:aws-access-key-id aws)
-             :secret-key (:aws-secret-access-key aws)}
-        auth (common/authorize req)]
-    (let [response (common/retry
-                    #(util/http-post
-                      (str "https://"
-                           (get (:headers req) "Host")
-                           (:uri req))
-                      {:body    (str (:payload req)
-                                     "Authorization="
-                                     auth)
-                       :version :http1.1
-                       :headers (-> (:headers req)
-                                    (dissoc "Host")
-                                    (assoc "X-Amz-Security-Token"
-                                           (:aws-session-token aws)))
-                       :timeout 5000}) 3)]
-      (when (contains? response :error)
-        (log/error "Failed to sqs:SendMessage" response))
-      (:body response))))
+(def sqs-publish sqs/sqs-publish)
 
 (defn sns-publish
   [topic message]
@@ -206,10 +102,26 @@
   {:statusCode 200
    :headers    {"Content-Type" "application/json"}})
 
+(defn enqueue-response
+  [ctx body]
+  (let [resp (get @request/*request* :cache-keys)]
+    (when resp
+      (log/info "Distributing response")
+      (let [{:keys [error]} (sqs/sqs-publish
+                             (assoc ctx :queue "glms-router-svc-response"
+                                    :message (util/to-json
+                                              {:Records resp})))]
+        (when error
+          (throw (ex-info "Distribution failed" error)))))))
+
 (defn send-success
   [{:keys [api
-           invocation-id]} body]
+           invocation-id
+           from-api] :as ctx} body]
 
+  (log/info "Response" from-api)
+  (util/d-time "Enqueue success"
+               (enqueue-response ctx body))
   (util/to-json
    (util/http-post
     (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/response")
@@ -292,6 +204,9 @@
                    (= (count body)
                       (count (:Records req))))
           (delete-message-batch ctx items-to-delete))))
+
+    (util/d-time "Enqueue error"
+                 (enqueue-response ctx body))
 
     (log/error (util/to-json
                 (util/http-post

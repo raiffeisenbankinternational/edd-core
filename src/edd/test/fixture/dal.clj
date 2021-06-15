@@ -20,6 +20,7 @@
             [clojure.data :refer [diff]]
             [clojure.test :refer :all]
             [edd.el.cmd :as cmd]
+            [edd.response.cache :as response-cache]
             [edd.core :as edd]
             [lambda.util :as util]
             [edd.common :as common]
@@ -109,6 +110,7 @@
 
 (def ctx
   (-> {}
+      (response-cache/register-default)
       (view-store/register)
       (event-store/register)))
 
@@ -121,9 +123,9 @@
                                       (dissoc (first body) :seed))
                                      default-db))
                 *queues* {:command-queue (atom [])
-                          :seed ~(if (and  (map? (first body)) (:seed (first body)))
-                                   (:seed (first body))
-                                   '(rand-int 10000000))}
+                          :seed          ~(if (and (map? (first body)) (:seed (first body)))
+                                            (:seed (first body))
+                                            '(rand-int 10000000))}
                 util/*cache* (atom {})
                 request/*request* (atom {})]
         %
@@ -161,12 +163,28 @@
     ((first x) @*dal-state*)
     @*dal-state*))
 
-(defn handle-cmd [ctx cmd]
-  (if (contains? cmd :commands)
-    (cmd/handle-commands ctx
-                         cmd)
-    (cmd/handle-commands ctx
-                         {:commands [cmd]})))
+(defn handle-cmd
+  [{:keys [include-meta no-summary] :as ctx} cmd]
+  (let [resp (if (contains? cmd :commands)
+               (cmd/handle-commands ctx
+                                    cmd)
+               (cmd/handle-commands ctx
+                                    {:commands [cmd]}))]
+
+    (if include-meta
+      resp
+      (do
+        (if no-summary
+          (do
+            (update resp
+                    :events #(map
+                              (fn [event]
+                                (dissoc event
+                                        :request-id
+                                        :interaction-id
+                                        :meta))
+                              %)))
+          resp)))))
 
 (defn get-commands-response
   [ctx cmd]
@@ -209,6 +227,6 @@
   (apply-cmd ctx cmd)
   (execute-fx-apply-all ctx))
 
-(defn apply
+(defn apply-events
   [ctx id]
   (event/handle-event (assoc ctx :apply {:aggregate-id id})))

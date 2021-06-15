@@ -9,9 +9,7 @@
    [lambda.uuid :as uuid]))
 
 (def ctx
-  (-> {}
-      (view-store/register)
-      (event-store/register)
+  (-> mock/ctx
       (edd/reg-cmd :create-1 (fn [ctx cmd]
                                [{:sequence :limit-application
                                  :id       (:id cmd)}

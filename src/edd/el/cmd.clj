@@ -5,13 +5,16 @@
    [lambda.util :as util]
    [edd.dal :as dal]
    [lambda.request :as request]
-   [edd.cache :as cache]
+   [edd.response.cache :as response-cache]
    [edd.schema :as s]
+   [edd.cache :as cache]
    [edd.el.query :as query]
    [malli.core :as m]
    [aws :as aws]
    [malli.error :as me]
-   [malli.util :as mu]))
+   [malli.util :as mu]
+   [edd.response.s3 :as s3-cache]
+   [compojure.response :as response]))
 
 (defn calc-service-url
   [service]
@@ -88,8 +91,37 @@
     (log/debug "Fetching context for" cmd-id dps)
     (assoc ctx :dps-resolved dps-value)))
 
+(defn with-breadcrumbs [ctx cmds]
+  (let [parent-breadcrumb (or (get-in ctx [:breadcrumbs]) [])]
+    (map-indexed
+     (fn [i cmd]
+       (assoc cmd :breadcrumbs
+              (conj parent-breadcrumb i))) cmds)))
+
+(defn wrap-commands
+  [ctx commands]
+  (if-not (contains? (into [] commands) :commands)
+    (into []
+          (map
+           (fn [cmd]
+             (if-not (contains? cmd :commands)
+               {:service  (:service-name ctx)
+                :commands [cmd]}
+               cmd))
+           (if (map? commands)
+             [commands]
+             commands)))
+    [commands]))
+
+(defn clean-effects
+  [ctx effects]
+  (->> effects
+       (remove nil?)
+       (wrap-commands ctx)
+       (with-breadcrumbs ctx)))
+
 (defn handle-effects
-  [{:keys [resp] :as ctx}]
+  [{:keys [resp cmd] :as ctx}]
   (let [events (:events resp)
         effects (reduce
                  (fn [cmd fx]
@@ -101,7 +133,13 @@
                  []
                  (:fx ctx))
         effects (->>
-                 (flatten effects))]
+                 (flatten effects))
+        effects (clean-effects ctx effects)
+        effects (map #(assoc %
+                             :request-id (:request-id ctx)
+                             :interaction-id (:interaction-id ctx)
+                             :meta (:meta ctx {}))
+                     effects)]
     (assoc-in ctx [:resp :commands] effects)))
 
 (defn to-clean-vector
@@ -113,6 +151,16 @@
     (if resp
       [resp]
       [])))
+
+(defn add-meta-to-events
+  [ctx events]
+  (map
+   #(if-not (:error %)
+      (assoc % :meta (:meta ctx {})
+             :request-id (:request-id ctx)
+             :interaction-id (:interaction-id ctx))
+      %)
+   events))
 
 (defn add-user-to-events
   [{:keys [user] :as ctx}]
@@ -203,6 +251,7 @@
                          %
                          :id (:id cmd)))
                   (remove nil?)
+                  (add-meta-to-events ctx)
                   (reduce
                    (fn [p event]
                      (cond-> p
@@ -327,34 +376,6 @@
       (assoc ctx :error errors)
       ctx)))
 
-(defn with-breadcrumbs [ctx cmds]
-  (let [parent-breadcrumb (or (get-in ctx [:breadcrumbs]) [])]
-    (map-indexed (fn [i cmd] (assoc cmd :breadcrumbs (conj parent-breadcrumb i))) cmds)))
-
-(defn wrap-commands
-  [ctx commands]
-  (if-not (contains? (into [] commands) :commands)
-    (into []
-          (map
-           (fn [cmd]
-             (if-not (contains? cmd :commands)
-               {:service  (:service-name ctx)
-                :commands [cmd]}
-               cmd))
-           (if (map? commands)
-             [commands]
-             commands)))
-    [commands]))
-
-(defn clean-effects
-  [ctx]
-  (update-in ctx [:resp :commands]
-             (fn [effects]
-               (->> effects
-                    (remove nil?)
-                    (wrap-commands ctx)
-                    (with-breadcrumbs ctx)))))
-
 (defn retry [f n]
   (let [response (f)]
     (if (and (= (get-in response [:error :key])
@@ -376,24 +397,37 @@
 (defn add-response-summary [ctx]
   (assoc ctx :response-summary (set-response-summary ctx)))
 
+(defn store-results
+  [ctx]
+  (let [cache-result (response-cache/cache-response ctx)]
+    (when (:error cache-result)
+      (throw (ex-info "Error caching result" (:error cache-result))))
+    (let [ctx (if cache-result
+                (assoc-in ctx [:response-summary :cache-key] cache-result)
+                ctx)]
+      (dal/store-results ctx))))
+
 (defn process-commands [ctx body]
 
-  (let [ctx (assoc ctx :commands (:commands body)
-                   :breadcrumbs (or (get body :breadcrumbs)
-                                    [0]))]
+  (let [ctx (-> ctx
+                (assoc :commands (:commands body)
+                       :meta (:meta body {})
+                       :breadcrumbs (or (get body :breadcrumbs)
+                                        [0]))
+                (s3-cache/register))]
 
     (log-request ctx body)
+
     (if-let [resp (:data (dal/get-command-response ctx))]
       resp
       (e-> ctx
            (validate-commands)
            (get-command-response)
            (check-for-errors)
-           (clean-effects)
            (versioned-events!)
            (add-metadata)
            (add-response-summary)
-           (dal/store-results)
+           (store-results)
            :response-summary))))
 
 (defn handle-commands
@@ -403,4 +437,10 @@
                     3)]
     (if (:error resp)
       (select-keys resp [:error])
-      resp)))
+      (do
+        (swap! request/*request*
+               update
+               :cache-keys
+               (fn [v]
+                 (conj v (:cache-key resp))))
+        (dissoc resp :cache-key)))))

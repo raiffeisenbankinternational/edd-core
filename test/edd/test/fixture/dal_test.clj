@@ -377,10 +377,10 @@
 
 (deftest when-identity-exists-then-ok
   (with-mock-dal
-    (dal/store-identity {:id "id1"
+    (dal/store-identity {:id       "id1"
                          :identity 1})
     (dal/store-identity
-     {:id "id1"
+     {:id       "id1"
       :identity 2})
     (verify-state [{:id "id1" :identity 1}
                    {:id "id1" :identity 2}] :identity-store)))
@@ -415,4 +415,33 @@
               :sequences  0
               :success    true}
              (mock/handle-cmd ctx {:cmd-id :test-cmd
-                                   :id     id}))))))
+                                   :id     id})))
+      (is (= {:commands   []
+              :events     [{:event-id  :1
+                            :event-seq 3
+                            :id        id}]
+              :identities []
+              :meta       [{:test-cmd {:id id}}]
+              :sequences  []}
+             (mock/get-commands-response ctx {:cmd-id :test-cmd
+                                              :id     id})))
+      (let [request-id (uuid/gen)
+            interaction-id (uuid/gen)]
+        (is (= {:commands   []
+                :events     [{:event-id       :1
+                              :event-seq      4
+                              :id             id
+                              :meta           {:realm :realm2}
+                              :request-id     request-id
+                              :interaction-id interaction-id}]
+                :identities []
+                :meta       [{:test-cmd {:id id}}]
+                :sequences  []}
+               (mock/get-commands-response (assoc ctx :include-meta true
+                                                  :request-id request-id
+                                                  :interaction-id interaction-id)
+                                           {:commands       [{:cmd-id :test-cmd
+                                                              :id     id}]
+                                            :meta           {:realm :realm2}
+                                            :request-id     request-id
+                                            :interaction-id interaction-id})))))))

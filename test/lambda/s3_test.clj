@@ -84,7 +84,6 @@
           :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
          {:as      :stream
           :headers {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=cfa02ff06ebb0010bcfbae58ee1ec2310379fea4f66f5a0013265ccd1fde16ce"
-                    "Host"                 "s3.eu-central-1.amazonaws.com"
                     "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
                     "x-amz-date"           "20200426T061823Z"
                     "x-amz-security-token" nil}

@@ -10,9 +10,7 @@
 (use 'clojure.test)
 
 (def ctx
-  (-> {}
-      (event-store/register)
-      (view-store/register)
+  (-> mock/ctx
       (edd/reg-cmd :create-1 (fn [ctx cmd]
                                [{:identity (:name cmd)
                                  :id       (:id cmd)}
@@ -66,7 +64,7 @@
       (is (= {:effects    []
               :events     1
               :identities 0
-              :meta      [{:create-2 {:id id}}]
+              :meta       [{:create-2 {:id id}}]
               :sequences  0
               :success    true}
              resp)))))
