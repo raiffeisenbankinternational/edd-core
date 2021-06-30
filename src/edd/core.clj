@@ -11,19 +11,21 @@
             [edd.dal :as dal]
             [edd.search :as search]))
 
+(defn maybe-assoc-in
+  [ctx ks value]
+  (if value
+    (assoc-in ctx ks value)
+    ctx))
+
 (defn reg-cmd
-  [ctx cmd-id reg-fn & {:keys [dps id-fn spec]}]
+  [ctx cmd-id reg-fn & {:keys [dps id-fn spec access-rule]}]
   (log/debug "Registering cmd" cmd-id)
-  (let [new-ctx
-        (-> ctx
-            (update :command-handlers #(assoc % cmd-id reg-fn))
-            (update :dps (if dps
-                           #(assoc % cmd-id dps)
-                           #(assoc % cmd-id [])))
-            (update :spec #(assoc % cmd-id (s/merge-cmd-schema spec))))]
-    (if id-fn
-      (assoc-in new-ctx [:id-fn cmd-id] id-fn)
-      new-ctx)))
+  (-> ctx
+      (assoc-in [:command-handlers cmd-id] reg-fn)
+      (assoc-in [:dps cmd-id] (or dps []))
+      (assoc-in [:spec cmd-id] (s/merge-cmd-schema spec))
+      (maybe-assoc-in [:id-fn cmd-id] id-fn)
+      (maybe-assoc-in [:access-rule cmd-id] access-rule)))
 
 (defn reg-event
   [ctx event-id reg-fn]
