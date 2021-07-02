@@ -176,14 +176,21 @@
       (do
         (if no-summary
           (do
-            (update resp
-                    :events #(map
-                              (fn [event]
-                                (dissoc event
-                                        :request-id
-                                        :interaction-id
-                                        :meta))
-                              %)))
+            (-> resp
+                (update :events #(map
+                                  (fn [event]
+                                    (dissoc event
+                                            :request-id
+                                            :interaction-id
+                                            :meta))
+                                  %))
+                (update :commands #(map
+                                    (fn [cmd]
+                                      (dissoc cmd
+                                              :request-id
+                                              :interaction-id
+                                              :meta))
+                                    %))))
           resp)))))
 
 (defn get-commands-response
