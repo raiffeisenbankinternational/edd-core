@@ -405,7 +405,14 @@
     (let [id (uuid/gen)
           ctx (-> mock/ctx
                   (edd/reg-cmd :test-cmd (fn [ctx cmd]
-                                           {:event-id :1})))]
+                                           {:event-id :1}))
+                  (edd/reg-cmd :test-cmd-fx (fn [ctx cmd]
+                                              {:event-id :2}))
+                  (edd/reg-fx (fn [ctx [event]]
+                                (case (:event-id event)
+                                  :1 []
+                                  :2 {:cmd-id :fx-cmd
+                                      :attrs  event}))))]
       (mock/apply-cmd ctx {:cmd-id :test-cmd
                            :id     id})
       (is (= {:effects    []
@@ -427,21 +434,54 @@
                                               :id     id})))
       (let [request-id (uuid/gen)
             interaction-id (uuid/gen)]
-        (is (= {:commands   []
-                :events     [{:event-id       :1
-                              :event-seq      4
-                              :id             id
-                              :meta           {:realm :realm2}
-                              :request-id     request-id
-                              :interaction-id interaction-id}]
-                :identities []
-                :meta       [{:test-cmd {:id id}}]
-                :sequences  []}
-               (mock/get-commands-response (assoc ctx :include-meta true
-                                                  :request-id request-id
-                                                  :interaction-id interaction-id)
-                                           {:commands       [{:cmd-id :test-cmd
-                                                              :id     id}]
-                                            :meta           {:realm :realm2}
-                                            :request-id     request-id
-                                            :interaction-id interaction-id})))))))
+        (testing "Wirth included meta"
+          (is (= {:commands   [{:breadcrumbs    [0
+                                                 0]
+                                :commands       [{:cmd-id :fx-cmd
+                                                  :attrs  {:event-id :2
+                                                           :id       id}}]
+                                :interaction-id interaction-id
+                                :meta           {:realm :realm2}
+                                :request-id     request-id
+                                :service        nil}]
+                  :events     [{:event-id       :2
+                                :event-seq      4
+                                :id             id
+                                :meta           {:realm :realm2}
+                                :request-id     request-id
+                                :interaction-id interaction-id}]
+                  :identities []
+                  :meta       [{:test-cmd-fx {:id id}}]
+                  :sequences  []}
+                 (mock/get-commands-response (assoc ctx :include-meta true
+                                                    :request-id request-id
+                                                    :interaction-id interaction-id)
+                                             {:commands       [{:cmd-id :test-cmd-fx
+                                                                :id     id}]
+                                              :meta           {:realm :realm2}
+                                              :request-id     request-id
+                                              :interaction-id interaction-id}))))
+        (testing "Without including meta"
+          (mock/verify-state :command-store [{:commands [{:cmd-id :fx-cmd
+                                                          :attrs  {:event-id :2
+                                                                   :id       id}}]
+                                              :service  nil}])
+          (is (= {:commands   [{:breadcrumbs [0
+                                              0]
+                                :commands    [{:cmd-id :fx-cmd
+                                               :attrs  {:event-id :2
+                                                        :id       id}}]
+                                :service     nil}]
+                  :events     [{:event-id  :2
+                                :event-seq 4
+                                :id        id}]
+                  :identities []
+                  :meta       [{:test-cmd-fx {:id id}}]
+                  :sequences  []}
+                 (mock/get-commands-response (assoc ctx :request-id request-id
+                                                    :interaction-id interaction-id)
+                                             {:commands       [{:cmd-id :test-cmd-fx
+                                                                :id     id}]
+                                              :meta           {:realm :realm2}
+                                              :request-id     request-id
+                                              :interaction-id interaction-id}))))))))

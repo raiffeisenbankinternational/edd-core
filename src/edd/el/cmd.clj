@@ -153,14 +153,18 @@
       [])))
 
 (defn add-meta-to-events
-  [ctx events]
-  (map
-   #(if-not (:error %)
-      (assoc % :meta (:meta ctx {})
-             :request-id (:request-id ctx)
-             :interaction-id (:interaction-id ctx))
-      %)
-   events))
+  [ctx]
+  (update-in ctx
+             [:resp :events]
+             (fn [events]
+               (map
+                (fn [{:keys [error] :as %}]
+                  (if-not error
+                    (assoc % :meta (:meta ctx {})
+                           :request-id (:request-id ctx)
+                           :interaction-id (:interaction-id ctx))
+                    %))
+                events))))
 
 (defn add-user-to-events
   [{:keys [user] :as ctx}]
@@ -251,7 +255,6 @@
                          %
                          :id (:id cmd)))
                   (remove nil?)
-                  (add-meta-to-events ctx)
                   (reduce
                    (fn [p event]
                      (cond-> p
@@ -268,6 +271,7 @@
         (assoc :resp resp)
         (add-user-to-events)
         (handle-effects)
+        (add-meta-to-events)
         (cache/track-intermediate-events!)
         (:resp))))
 
