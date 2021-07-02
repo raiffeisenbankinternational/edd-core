@@ -91,12 +91,15 @@
     (log/debug "Fetching context for" cmd-id dps)
     (assoc ctx :dps-resolved dps-value)))
 
-(defn with-breadcrumbs [ctx cmds]
+(defn with-breadcrumbs [ctx resp]
   (let [parent-breadcrumb (or (get-in ctx [:breadcrumbs]) [])]
-    (map-indexed
-     (fn [i cmd]
-       (assoc cmd :breadcrumbs
-              (conj parent-breadcrumb i))) cmds)))
+    (update resp :commands
+            (fn [cmds]
+              (vec
+               (map-indexed
+                (fn [i cmd]
+                  (assoc cmd :breadcrumbs
+                         (conj parent-breadcrumb i))) cmds))))))
 
 (defn wrap-commands
   [ctx commands]
@@ -117,8 +120,7 @@
   [ctx effects]
   (->> effects
        (remove nil?)
-       (wrap-commands ctx)
-       (with-breadcrumbs ctx)))
+       (wrap-commands ctx)))
 
 (defn handle-effects
   [{:keys [resp cmd] :as ctx}]
@@ -291,20 +293,21 @@
   [{:keys [commands] :as ctx}]
   (assoc ctx
          :resp
-         (reduce-kv
-          (fn [p idx cmd]
-            (merge-with
-             concat
-             p
-             (handle-command (-> ctx
-                                 (assoc :cmd cmd
-                                        :idx idx)))))
-          {:meta       []
-           :events     []
-           :commands   []
-           :sequences  []
-           :identities []}
-          (vec commands))))
+         (->> (reduce-kv
+               (fn [p idx cmd]
+                 (merge-with
+                  concat
+                  p
+                  (handle-command (-> ctx
+                                      (assoc :cmd cmd
+                                             :idx idx)))))
+               {:meta       []
+                :events     []
+                :commands   []
+                :sequences  []
+                :identities []}
+               (vec commands))
+              (with-breadcrumbs ctx))))
 
 (defn resolve-dependencies-to-context
   [{:keys [commands] :as ctx}]
