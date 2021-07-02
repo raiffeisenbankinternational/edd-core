@@ -29,15 +29,13 @@
              :interaction-id interaction-id
              :meta           {}
              :request-id     request-id
-             :service        "test-svc"
-             :breadcrumbs    [0]}
+             :service        "test-svc"}
             {:commands       {:cmd-id "4"
                               :id     "3"}
              :interaction-id interaction-id
              :meta           {}
              :request-id     request-id
-             :service        "test-svc-2"
-             :breadcrumbs    [1]}]
+             :service        "test-svc-2"}]
            resp))))
 
 (def ctx

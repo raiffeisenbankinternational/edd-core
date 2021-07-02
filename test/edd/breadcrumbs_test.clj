@@ -7,7 +7,8 @@
    [edd.common :as common]
    [lambda.test.fixture.state :as state]
    [lambda.uuid :as uuid]
-   [edd.test.fixture.dal :as mock]))
+   [edd.test.fixture.dal :as mock]
+   [clojure.string :as str]))
 
 (def ctx
   (-> mock/ctx
@@ -44,55 +45,100 @@
 
 (def id1 (uuid/parse "111111-1111-1111-1111-111111111111"))
 
+(defn sort-crumbs
+  [resp]
+  (sort-by #(str/join "-" (:breadcrumbs %)) resp))
+
 (def command-store-with-bc
-  #{{:commands
-     [{:cmd-id :inc,
-       :level  2,
-       :id     id1}
-      {:cmd-id :inc,
-       :level  2,
-       :id     id1}],
-     :breadcrumbs [0 0 1]}
-    {:commands
-     [{:cmd-id :inc,
-       :level  2,
-       :id     id1}
-      {:cmd-id :inc,
-       :level  2,
-       :id     id1}],
-     :breadcrumbs [0 1 0]}
-    {:commands
-     [{:cmd-id :inc,
-       :level  2,
-       :id     id1}
-      {:cmd-id :inc,
-       :level  2,
-       :id     id1}],
-     :breadcrumbs [0 0 0]}
-    {:commands
-     [{:cmd-id :inc,
-       :level  2,
-       :id     id1}
-      {:cmd-id :inc,
-       :level  2,
-       :id     id1}],
-     :breadcrumbs [0 1 1]}
-    {:commands
-     [{:cmd-id :inc,
-       :level  1,
-       :id     id1}
-      {:cmd-id :inc,
-       :level  1,
-       :id     id1}],
-     :breadcrumbs [0 0]}
-    {:commands
-     [{:cmd-id :inc,
-       :level  1,
-       :id     id1}
-      {:cmd-id :inc,
-       :level  1,
-       :id     id1}],
-     :breadcrumbs [0 1]}})
+  (sort-crumbs
+   [{:breadcrumbs [0
+                   0]
+     :commands    [{:cmd-id :inc
+                    :id     id1
+                    :level  1}
+                   {:cmd-id :inc
+                    :id     id1
+                    :level  1}]}
+    {:breadcrumbs [0
+                   1]
+     :commands    [{:cmd-id :inc
+                    :id     id1
+                    :level  1}
+                   {:cmd-id :inc
+                    :id     id1
+                    :level  1}]}
+    {:breadcrumbs [0
+                   0
+                   0]
+     :commands    [{:cmd-id :inc
+                    :id     id1
+                    :level  2}
+                   {:cmd-id :inc
+                    :id     id1
+                    :level  2}]}
+    {:breadcrumbs [0
+                   0
+                   1]
+     :commands    [{:cmd-id :inc
+                    :id     id1
+                    :level  2}
+                   {:cmd-id :inc
+                    :id     id1
+                    :level  2}]}
+    {:breadcrumbs [0
+                   0
+                   2]
+     :commands    [{:cmd-id :inc
+                    :id     id1
+                    :level  2}
+                   {:cmd-id :inc
+                    :id     id1
+                    :level  2}]}
+    {:breadcrumbs [0
+                   0
+                   3]
+     :commands    [{:cmd-id :inc
+                    :id     id1
+                    :level  2}
+                   {:cmd-id :inc
+                    :id     id1
+                    :level  2}]}
+    {:breadcrumbs [0
+                   1
+                   0]
+     :commands    [{:cmd-id :inc
+                    :id     id1
+                    :level  2}
+                   {:cmd-id :inc
+                    :id     id1
+                    :level  2}]}
+    {:breadcrumbs [0
+                   1
+                   1]
+     :commands    [{:cmd-id :inc
+                    :id     id1
+                    :level  2}
+                   {:cmd-id :inc
+                    :id     id1
+                    :level  2}]}
+    {:breadcrumbs [0
+                   1
+                   2]
+     :commands    [{:cmd-id :inc
+                    :id     id1
+                    :level  2}
+                   {:cmd-id :inc
+                    :id     id1
+                    :level  2}]}
+    {:breadcrumbs [0
+                   1
+                   3]
+     :commands    [{:cmd-id :inc
+                    :id     id1
+                    :level  2}
+                   {:cmd-id :inc
+                    :id     id1
+                    :level  2}]}]))
 
 (deftest test-breadcrumbs-for-emtpy-command
   (mock/with-mock-dal
@@ -106,7 +152,7 @@
                                       :id     id1}]})
       (let [cmds (set (:command-store @state/*dal-state*))]
         (is (= command-store-with-bc
-               cmds))))))
+               (sort-crumbs cmds)))))))
 
 (deftest test-breadcrumbs-for-command-with-breadcrumb
   (mock/with-mock-dal
@@ -120,6 +166,6 @@
       (exec/run-cmd! ctx {:commands    [{:cmd-id :inc
                                          :id     id1}]
                           :breadcrumbs [0]})
-      (let [cmds (set (:command-store @state/*dal-state*))]
+      (let [cmds (:command-store @state/*dal-state*)]
         (is (= command-store-with-bc
-               cmds))))))
+               (sort-crumbs cmds)))))))
