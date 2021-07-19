@@ -465,6 +465,7 @@
           (mock/verify-state :command-store [{:commands [{:cmd-id :fx-cmd
                                                           :attrs  {:event-id :2
                                                                    :id       id}}]
+                                              :meta   {:realm :realm2}
                                               :service  nil}])
           (is (= {:commands   [{:breadcrumbs [0
                                               0]

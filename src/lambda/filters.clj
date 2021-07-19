@@ -83,7 +83,10 @@
       (has-role? user role) (assoc ctx :user {:id    (:id user)
                                               :email (:email user)
                                               :role  role
-                                              :roles (:roles user [])})
+                                              :roles (:roles user [])}
+                                   :meta {:user {:id    (:id user)
+                                                 :email (:email user)
+                                                 :role  role}})
       :else (assoc ctx :user {:id    "anonymous"
                               :email "anonymous"
                               :role  :anonymous}))))

@@ -121,15 +121,18 @@
 (defn advanced-direct-search
   [ctx es-qry]
   (let [json-qry (util/to-json es-qry)
-        body (el/query
-              (assoc ctx
-                     :method "POST"
-                     :path (str "/" (str/replace (get ctx :index-name
-                                                      (name (:service-name ctx))) "-" "_") "/_search")
-                     :body json-qry))
+        {:keys [error] :as body} (el/query
+                                  (assoc ctx
+                                         :method "POST"
+                                         :path (str "/" (str/replace (get ctx :index-name
+                                                                          (name (:service-name ctx))) "-" "_") "/_search")
+                                         :body json-qry))
         total (get-in
                body
                [:hits :total :value])]
+
+    (when error
+      (throw (ex-info "Elastic query failed" error)))
     (log/debug "Elastic query")
     (log/debug json-qry)
     (log/debug body)
@@ -235,4 +238,4 @@
   (assoc ctx
          :view-store :elastic
          :elastic-search {:scheme (util/get-env "IndexDomainScheme" "https")
-                          :url (util/get-env "IndexDomainEndpoint")}))
+                          :url    (util/get-env "IndexDomainEndpoint")}))
