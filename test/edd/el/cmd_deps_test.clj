@@ -131,10 +131,12 @@
     (mock/verify-state :event-store [{:event-id  :event-1
                                       :event-seq 1
                                       :value     :2
+                                      :meta      {}
                                       :id        cmd-id-2}
                                      {:event-id  :event-1
                                       :event-seq 1
                                       :value     :1
+                                      :meta      {}
                                       :id        cmd-id-deps}])))
 
 (deftest test-id-fn
@@ -165,6 +167,7 @@
     (let [current-events [{:event-id  :event-1
                            :event-seq 4
                            :value     :2
+                           :meta      {}
                            :id        cmd-id-2}]]
       (mock/with-mock-dal
         {:event-store current-events}
@@ -180,14 +183,17 @@
         (mock/verify-state :event-store [{:event-id  :event-1
                                           :event-seq 1
                                           :value     :1
+                                          :meta      {}
                                           :id        cmd-id-deps}
                                          {:event-id  :event-1
                                           :event-seq 4
                                           :value     :2
+                                          :meta      {}
                                           :id        cmd-id-2}
                                          {:event-id  :event-1
                                           :event-seq 5
                                           :value     :2
+                                          :meta      {}
                                           :id        cmd-id-2}]))
       (mock/with-mock-dal
         {:event-store current-events}
@@ -266,6 +272,7 @@
     (let [current-events [{:event-id  :event-0
                            :event-seq 4
                            :value     :0
+                           :meta      {}
                            :id        cmd-id-1}]]
       (mock/with-mock-dal
         {:event-store current-events}
@@ -276,10 +283,12 @@
         (mock/verify-state :event-store [{:event-id  :event-0
                                           :event-seq 4
                                           :value     :0
+                                          :meta      {}
                                           :id        cmd-id-1}
                                          {:event-id  :event-1
                                           :event-seq 5
                                           :value     :2
+                                          :meta      {}
                                           :c1        current-aggregate
                                           :c2        {:value :v1}
                                           :id        cmd-id-1}])))))

@@ -11,7 +11,7 @@
         schema (get-in ctx [:spec query-id]
                        [:map [:query-id keyword?]])]
 
-    (log/debug "Handling query" query)
+    (log/debug "Handling query" query-id)
     (log/debug "Query handler" query-handler)
     (if (m/validate schema query)
       (if query-handler

@@ -273,6 +273,32 @@
     (is (= expected
            mock-result))))
 
+(deftest test-elastic-mock-parity-test-search-4
+  (let [data [{:k1 "consectetur" :attrs {:type :booking-company}}
+              {:k1 "lorem" :k2 "1adc" :attrs {:type :breaking-company}}
+              {:k1 "ipsum" :k2 "2abc" :attrs {:type :breaking-company}}
+              {:k1 "dolor" :k2 "3abc" :attrs {:type :breaking-company}}
+              {:k1 "lem" :k2 "4adcor" :attrs {:type :breaking-company}}
+              {:k1 "ipsum" :k2 "5abc" :attrs {:type :breaking-company}}
+              {:k1 "dol" :k2 "6abc" :attrs {:type :breaking-company}}
+              {:k1 "amet" :k2 "7abc" :attrs {:type :booking-company}}]
+        query {:search [:fields [:k1 :k2]
+                        :value "or"]
+               :filter [:not
+                        [:eq "attrs.type" :booking-company]]}
+        expected {:total 3
+                  :from  0
+                  :size  50
+                  :hits  [{:k1 "lorem" :k2 "1adc" :attrs {:type :breaking-company}}
+                          {:k1 "dolor" :k2 "3abc" :attrs {:type :breaking-company}}
+                          {:k1 "lem" :k2 "4adcor" :attrs {:type :breaking-company}}]}
+
+        [el-result mock-result] (test-query data query)]
+    (is (= expected
+           el-result))
+    (is (= expected
+           mock-result))))
+
 (deftest test-elastic-mock-parity-select-filter-2
   (let [data [{:k1 "121" :k2 {:k21 "a" :k22 "1"}}
               {:k1 "758" :k2 {:k21 "c" :k22 "2"}}
@@ -546,3 +572,7 @@
         [el-result mock-result] (test-query data query)]
     (is (= expected
            el-result))))
+
+
+
+
