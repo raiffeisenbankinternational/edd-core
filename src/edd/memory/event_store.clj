@@ -72,8 +72,7 @@
   (dissoc cmd
           :request-id
           :interaction-id
-          :breadcrumbs
-          :meta))
+          :breadcrumbs))
 
 (defn store-command
   "Stores command in memory structure"
@@ -97,7 +96,6 @@
                                             (fn [c] (:event-seq c))
                                             (conj v (dissoc
                                                      event
-                                                     :meta
                                                      :interaction-id
                                                      :request-id))))))))
 (defn store-events

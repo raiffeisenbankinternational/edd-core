@@ -30,6 +30,7 @@ RUN set -e &&\
     export AWS_SECRET_ACCESS_KEY=$(echo $cred | jq -r '.Credentials.SecretAccessKey') &&\
     export AWS_SESSION_TOKEN=$(echo $cred | jq -r '.Credentials.SessionToken') &&\
     export AccountId=$TARGET_ACCOUNT_ID &&\
+    export EnvironmentNameLower=pipeline &&\
     export DatabasePassword="$(aws secretsmanager get-secret-value  \
                                        --secret-id /pipeline/alpha-postgres-svc/password \
                                        --query SecretString \
