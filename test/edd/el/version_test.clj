@@ -38,6 +38,7 @@
     (mock/verify-state :event-store [{:event-id  :event-1
                                       :id        cmd-id
                                       :event-seq 1
+                                      :meta      {}
                                       :name      "Test name"}])
     (mock/verify-state :aggregate-store [{:id      cmd-id
                                           :version 1
@@ -48,6 +49,7 @@
     {:event-store [{:event-id  :event-1
                     :id        cmd-id
                     :event-seq 1
+                    :meta      {}
                     :name      "Test name"}]}
 
     (with-redefs [dal/get-max-event-seq (fn [_]
@@ -59,10 +61,12 @@
     (mock/verify-state :event-store [{:event-id  :event-1
                                       :id        cmd-id
                                       :event-seq 1
+                                      :meta      {}
                                       :name      "Test name"}
                                      {:event-id  :event-1
                                       :id        cmd-id
                                       :event-seq 2
+                                      :meta      {}
                                       :name      "Test name"}])
     (mock/verify-state :aggregate-store [{:id      cmd-id
                                           :version 2
@@ -79,6 +83,7 @@
     (mock/verify-state :event-store [{:event-id  :event-1
                                       :id        cmd-id
                                       :event-seq 1
+                                      :meta      {}
                                       :name      "Test name"}])
     (mock/verify-state :aggregate-store [{:id      cmd-id
                                           :version 1

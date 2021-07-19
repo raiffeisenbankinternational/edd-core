@@ -111,42 +111,52 @@
         id (uuid/gen)
         cmd {:request-id     request-id,
              :interaction-id interaction-id,
+             :user           {:selected-role :group-1}
              :commands       [{:cmd-id :ping
                                :id     id}]}]
-    (with-redefs [sqs/sqs-publish (fn [{:keys [message] :as ctx}]
-                                    (is (= {:Records [{:key (str "response/"
-                                                                 request-id
-                                                                 "/0/local-test.json")}]}
-                                           (util/to-edn message))))]
-      (mock-core
-       :invocations [(api-request cmd)]
-       (core/start
-        (register)
-        edd/handler
-        :filters [fl/from-api]
-        :post-filter fl/to-api)
-       (do
-         (verify-traffic-json
-          [{:body   {:body            (util/to-json
-                                       {:result         {:success    true
-                                                         :effects    []
-                                                         :events     1
-                                                         :meta       [{:ping {:id id}}]
-                                                         :identities 0
-                                                         :sequences  0}
-                                        :request-id     request-id
-                                        :interaction-id interaction-id})
-                     :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-                                       :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
-                                       :Access-Control-Allow-Origin   "*"
-                                       :Access-Control-Expose-Headers "*"
-                                       :Content-Type                  "application/json"}
-                     :isBase64Encoded false
-                     :statusCode      200}
-            :method :post
-            :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-           {:method  :get
-            :timeout 90000000
-            :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))))
+    (mock/with-mock-dal
+      (with-redefs [sqs/sqs-publish (fn [{:keys [message] :as ctx}]
+                                      (is (= {:Records [{:key (str "response/"
+                                                                   request-id
+                                                                   "/0/local-test.json")}]}
+                                             (util/to-edn message))))]
+        (mock-core
+         :invocations [(api-request cmd)]
+         (core/start
+          (register)
+          edd/handler
+          :filters [fl/from-api]
+          :post-filter fl/to-api)
+         (do
+           (mock/verify-state :event-store [{:event-id  :ping
+                                             :event-seq 1
+                                             :id        id
+                                             :meta      {:user {:email "john.smith@example.com"
+                                                                :id    "john.smith@example.com"
+                                                                :role  :group-1}}
+                                             :role      :group-1
+                                             :user      "john.smith@example.com"}])
+           (verify-traffic-json
+            [{:body   {:body            (util/to-json
+                                         {:result         {:success    true
+                                                           :effects    []
+                                                           :events     1
+                                                           :meta       [{:ping {:id id}}]
+                                                           :identities 0
+                                                           :sequences  0}
+                                          :request-id     request-id
+                                          :interaction-id interaction-id})
+                       :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                                         :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
+                                         :Access-Control-Allow-Origin   "*"
+                                         :Access-Control-Expose-Headers "*"
+                                         :Content-Type                  "application/json"}
+                       :isBase64Encoded false
+                       :statusCode      200}
+              :method :post
+              :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
+             {:method  :get
+              :timeout 90000000
+              :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))))
 
 

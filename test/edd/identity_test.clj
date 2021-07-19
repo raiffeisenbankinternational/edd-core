@@ -38,6 +38,7 @@
       (mock/verify-state :event-store [{:event-id  :e1
                                         :name      "e1"
                                         :event-seq 1
+                                        :meta      {}
                                         :id        id}])
       (mock/verify-state :identity-store [{:identity "e1",
                                            :id       id}])
@@ -60,6 +61,7 @@
       (mock/verify-state :event-store [{:event-id  :e2
                                         :name      "e2"
                                         :event-seq 1
+                                        :meta      {}
                                         :id        id}])
       (is (= {:effects    []
               :events     1
@@ -80,6 +82,7 @@
       (mock/verify-state :event-store [{:event-id  :e3
                                         :name      "e3"
                                         :event-seq 1
+                                        :meta      {}
                                         :id        id}])
       (is (= {:effects    []
               :events     1

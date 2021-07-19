@@ -89,7 +89,9 @@
     (mock/verify-state :command-store
                        [{:service  "source-svc"
                          :commands [{:id     "2"
-                                     :cmd-id "2"}]}
+                                     :cmd-id "2"}]
+                         :meta {}}
                         {:service  "target-svc"
                          :commands [{:id     "1"
-                                     :cmd-id "1"}]}])))
+                                     :cmd-id "1"}]
+                         :meta {}}])))

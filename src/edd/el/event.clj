@@ -92,6 +92,7 @@
 
 (defn handle-event
   [{:keys [apply] :as ctx}]
+  (log/info "Handling apply" (:aggregate-id apply))
   (try
     (let [agg-id (:aggregate-id apply)]
       (if (:scoped @request/*request*)

@@ -240,7 +240,7 @@
 
 (defn handle-command
   [{:keys [cmd command-handlers] :as ctx}]
-
+  (log/info "Handling command" (:cmd-id cmd))
   (let [ctx (fetch-dependencies-for-command ctx cmd)
         cmd (resolve-command-id ctx cmd)
         cmd-id (:cmd-id cmd)
@@ -418,7 +418,9 @@
 
   (let [ctx (-> ctx
                 (assoc :commands (:commands body)
-                       :meta (:meta body {})
+                       :meta (merge
+                              (:meta ctx {})
+                              (:meta body {}))
                        :breadcrumbs (or (get body :breadcrumbs)
                                         [0]))
                 (s3-cache/register))]

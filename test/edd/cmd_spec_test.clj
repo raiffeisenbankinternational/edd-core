@@ -32,6 +32,7 @@
     (mock/verify-state :event-store [{:event-id  :dummy-event
                                       :handled   true
                                       :event-seq 1
+                                      :meta {}
                                       :id        cmd-id}])
     (mock/verify-state :identities [])
     (mock/verify-state :sequences [])

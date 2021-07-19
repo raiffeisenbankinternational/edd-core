@@ -135,18 +135,22 @@
         (mock/verify-state :event-store [{:event-id  :dummy-event-1
                                           :handled   true
                                           :event-seq 6
+                                          :meta      {}
                                           :id        cmd-id-2}
                                          {:event-id  :dummy-event-2
                                           :handled   true
                                           :event-seq 7
+                                          :meta      {}
                                           :id        cmd-id-2}
                                          {:event-id  :dummy-event
                                           :handled   true
                                           :event-seq 22
+                                          :meta      {}
                                           :id        cmd-id}
                                          {:event-id  :dummy-event-3
                                           :handled   true
                                           :event-seq 32
+                                          :meta      {}
                                           :id        dps-id}])
         (is (= {:effects    [{:cmd-id       :fx-command
                               :id           #uuid "22222111-1111-1111-1111-111111111111"
