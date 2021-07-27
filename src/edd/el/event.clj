@@ -92,11 +92,15 @@
 
 (defn handle-event
   [{:keys [apply] :as ctx}]
-  (log/info "Handling apply" (:aggregate-id apply))
   (try
-    (let [agg-id (:aggregate-id apply)]
+    (let [meta (:meta apply)
+          ctx (assoc ctx :meta meta)
+          realm (:realm meta)
+          agg-id (:aggregate-id apply)]
+
+      (log/info "Handling apply:" realm (:aggregate-id apply))
       (if (:scoped @request/*request*)
-        (let [applied (get-in @request/*request* [:applied agg-id])]
+        (let [applied (get-in @request/*request* [:applied realm agg-id])]
           (if-not applied
             (do (-> ctx
                     (assoc :id agg-id)
@@ -104,7 +108,7 @@
                     (update-aggregate))
 
                 (swap! request/*request*
-                       #(assoc-in % [:applied agg-id] {:apply true})))))
+                       #(assoc-in % [:applied realm agg-id] {:apply true})))))
         (-> ctx
             (assoc :id agg-id)
             (get-by-id)
