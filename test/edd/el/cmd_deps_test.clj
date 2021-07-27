@@ -19,63 +19,72 @@
 
 (deftest test-prepare-context-for-command-with-remote-query
   "Test if context if properly prepared for remote queries"
-  (mock/with-mock-dal
-    {:dps [{:service        :remote-svc
-            :request-id     request-id
-            :interaction-id interaction-id
-            :query          {:param "Some Value"}
-            :resp           {:remote :response}}]}
-    (let [ctx (cmd/resolve-dependencies-to-context
-               (-> {:dps            {:test-cmd
-                                     {:test-value {:query   (fn [cmd]
-                                                              {:param (:value cmd)})
-                                                   :service :remote-svc}}}
-                    :commands       [{:cmd-id :test-cmd
-                                      :id     cmd-id
-                                      :value  "Some Value"}]
-                    :request-id     request-id
-                    :interaction-id interaction-id}
-                   (event-store/register)))]
-      (is (= {:request-id     request-id
+  (let [meta {:realm :realm3}]
+    (mock/with-mock-dal
+      {:dps [{:service        :remote-svc
+              :request-id     request-id
               :interaction-id interaction-id
-              :dps-resolved   {:test-value
-                               {:remote :response}}}
-             (dissoc ctx :dps :commands :event-store)))
+              :meta           meta
+              :query          {:param "Some Value"}
+              :resp           {:remote :response}}]}
+      (let [ctx (cmd/resolve-dependencies-to-context
+                 (-> {:dps            {:test-cmd
+                                       {:test-value {:query   (fn [cmd]
+                                                                {:param (:value cmd)})
+                                                     :service :remote-svc}}}
+                      :commands       [{:cmd-id :test-cmd
+                                        :id     cmd-id
+                                        :value  "Some Value"}]
+                      :request-id     request-id
+                      :interaction-id interaction-id}
+                     (assoc :meta meta)
+                     (event-store/register)))]
+        (is (= {:request-id     request-id
+                :interaction-id interaction-id
+                :meta           meta
+                :dps-resolved   {:test-value
+                                 {:remote :response}}}
+               (dissoc ctx :dps :commands :event-store)))
 
-      (client/verify-traffic [{:body    (util/to-json
-                                         {:query          {:param "Some Value"}
-                                          :request-id     request-id
-                                          :interaction-id interaction-id})
-                               :headers {"X-Authorization" "#mock-id-token"
-                                         "Content-Type"    "application/json"}
-                               :method  :post
-                               :timeout 10000
-                               :url     "https://remote-svc./query"}]))))
+        (client/verify-traffic [{:body    (util/to-json
+                                           {:query          {:param "Some Value"}
+                                            :meta           meta
+                                            :request-id     request-id
+                                            :interaction-id interaction-id})
+                                 :headers {"X-Authorization" "#mock-id-token"
+                                           "Content-Type"    "application/json"}
+                                 :method  :post
+                                 :timeout 10000
+                                 :url     "https://remote-svc./query"}])))))
 
 (deftest test-remote-dependency
-  (with-redefs [aws/get-token (fn [ctx] "#id-token")
-                dal/log-dps (fn [ctx] ctx)
-                util/get-env (fn [v]
-                               (get {"PrivateHostedZoneName" "mock.com"} v))]
-    (client/mock-http
-     [{:post "https://some-remote-service.mock.com/query"
-       :body (util/to-json {:result {:a :b}})}]
-     (is (= {:a :b}
-            (cmd/resolve-remote-dependency
-             {:request-id     request-id
-              :interaction-id interaction-id}
-             {}
-             {:query   (fn [cmd] {:a :b})
-              :service :some-remote-service})))
-     (client/verify-traffic [{:body    (util/to-json
-                                        {:query          {:a :b}
-                                         :request-id     request-id
-                                         :interaction-id interaction-id})
-                              :headers {"X-Authorization" "#id-token"
-                                        "Content-Type"    "application/json"}
-                              :method  :post
-                              :timeout 10000
-                              :url     "https://some-remote-service.mock.com/query"}]))))
+  (let [meta {:realm :realm4}
+        ctx {:request-id     request-id
+             :interaction-id interaction-id
+             :meta           meta}]
+    (with-redefs [aws/get-token (fn [ctx] "#id-token")
+                  dal/log-dps (fn [ctx] ctx)
+                  util/get-env (fn [v]
+                                 (get {"PrivateHostedZoneName" "mock.com"} v))]
+      (client/mock-http
+       [{:post "https://some-remote-service.mock.com/query"
+         :body (util/to-json {:result {:a :b}})}]
+       (is (= {:a :b}
+              (cmd/resolve-remote-dependency
+               ctx
+               {}
+               {:query   (fn [cmd] {:a :b})
+                :service :some-remote-service})))
+       (client/verify-traffic [{:body    (util/to-json
+                                          {:query          {:a :b}
+                                           :meta           meta
+                                           :request-id     request-id
+                                           :interaction-id interaction-id})
+                                :headers {"X-Authorization" "#id-token"
+                                          "Content-Type"    "application/json"}
+                                :method  :post
+                                :timeout 10000
+                                :url     "https://some-remote-service.mock.com/query"}])))))
 
 (def cmd-id-1 #uuid "11111eeb-e677-4d73-a10a-1d08b45fe4dd")
 (def cmd-id-deps #uuid "33333eeb-e677-4d73-a10a-1d08b45fe4dd")
@@ -142,10 +151,14 @@
 (deftest test-id-fn
   (let [ctx (-> mock/ctx
                 (edd/reg-query :query-1 (fn [ctx query]
+                                          (is (= {:realm :realm2}
+                                                 (:meta ctx)))
                                           (get
                                            cmd-1-deps
                                            (:id query))))
                 (edd/reg-cmd :cmd-1 (fn [ctx cmd]
+                                      (is (= {:realm :realm2}
+                                             (:meta ctx)))
                                       (if (= :1 (:value cmd))
                                         (is (= (:id cmd)
                                                cmd-id-deps))
@@ -173,7 +186,8 @@
         {:event-store current-events}
 
         (mock/handle-cmd ctx
-                         {:commands [{:cmd-id :cmd-1
+                         {:meta     {:realm :realm2}
+                          :commands [{:cmd-id :cmd-1
                                       :value  :1
                                       :id     cmd-id-1}
                                      {:cmd-id  :cmd-1
@@ -183,7 +197,7 @@
         (mock/verify-state :event-store [{:event-id  :event-1
                                           :event-seq 1
                                           :value     :1
-                                          :meta      {}
+                                          :meta      {:realm :realm2}
                                           :id        cmd-id-deps}
                                          {:event-id  :event-1
                                           :event-seq 4
@@ -193,7 +207,7 @@
                                          {:event-id  :event-1
                                           :event-seq 5
                                           :value     :2
-                                          :meta      {}
+                                          :meta      {:realm :realm2}
                                           :id        cmd-id-2}]))
       (mock/with-mock-dal
         {:event-store current-events}
@@ -201,7 +215,8 @@
         (is (thrown?
              ExceptionInfo
              (mock/handle-cmd ctx
-                              {:commands [{:cmd-id  :cmd-1
+                              {:meta     {:realm :realm2}
+                               :commands [{:cmd-id  :cmd-1
                                            :value   :2
                                            :id      cmd-id-2
                                            :version 6}]})))))))
@@ -214,11 +229,13 @@
             :interaction-id interaction-id
             :query          {:param "Some Value"}
             :resp           {:remote :response}}]}
-    (let [ctx (cmd/fetch-dependencies-for-command
+    (let [meta {:realm :realm5}
+          ctx (cmd/fetch-dependencies-for-command
                {:dps            {:test-cmd
                                  [:test-value {:query   (fn [cmd]
                                                           {:param (:value cmd)})
                                                :service :remote-svc}]}
+                :meta           meta
                 :request-id     request-id
                 :interaction-id interaction-id}
                {:cmd-id :test-cmd
@@ -226,12 +243,14 @@
                 :value  "Some Value"})]
       (is (= {:request-id     request-id
               :interaction-id interaction-id
+              :meta           meta
               :dps-resolved   {:test-value
                                {:remote :response}}}
              (dissoc ctx :dps)))
 
       (client/verify-traffic [{:body    (util/to-json
                                          {:query          {:param "Some Value"}
+                                          :meta           meta
                                           :request-id     request-id
                                           :interaction-id interaction-id})
                                :headers {"X-Authorization" "#mock-id-token"

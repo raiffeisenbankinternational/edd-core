@@ -44,6 +44,7 @@
                   {:timeout 10000
                    :body    (util/to-json
                              {:query          (call-query-fn ctx cmd query-fn)
+                              :meta           (:meta ctx)
                               :request-id     (:request-id ctx)
                               :interaction-id (:interaction-id ctx)})
                    :headers {"Content-Type"    "application/json"
@@ -241,6 +242,8 @@
 (defn handle-command
   [{:keys [cmd command-handlers] :as ctx}]
   (log/info "Handling command" (:cmd-id cmd))
+
+  (log/info (:meta ctx))
   (let [ctx (fetch-dependencies-for-command ctx cmd)
         cmd (resolve-command-id ctx cmd)
         cmd-id (:cmd-id cmd)

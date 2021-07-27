@@ -111,8 +111,11 @@
                                                          :cmd-id :object-uploaded
                                                          :id     request-id
                                                          :key    key}]
+                                       :meta           {:realm :test
+                                                        :user  {:email "non-interractiva@s3.amazonws.com"
+                                                                :id    #uuid "1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"
+                                                                :role  :non-interactive}}
                                        :user           "local-test"
-                                       :role           :non-interactive
                                        :interaction-id interaction-id
                                        :request-id     request-id}
                               :method :post

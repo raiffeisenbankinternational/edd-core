@@ -12,38 +12,38 @@
 (deftest test-meta-fx
   (let [request-id (uuid/gen)
         interaction-id (uuid/gen)
-        ctx (-> {:request-id     request-id
+        ctx (-> {:request-id request-id
                  :interaction-id interaction-id}
                 (edd.core/reg-fx
                  (fn [ctx events]
-                   [{:service  "test-svc"
-                     :commands {:id     "1"
+                   [{:service "test-svc"
+                     :commands {:id "1"
                                 :cmd-id "2"}}
-                    {:service  "test-svc-2"
-                     :commands {:id     "3"
+                    {:service "test-svc-2"
+                     :commands {:id "3"
                                 :cmd-id "4"}}])))
         resp (cmd/handle-effects ctx)
         resp (get-in resp [:resp :commands])]
-    (is (= [{:commands       {:cmd-id "2"
-                              :id     "1"}
+    (is (= [{:commands {:cmd-id "2"
+                        :id "1"}
              :interaction-id interaction-id
-             :meta           {}
-             :request-id     request-id
-             :service        "test-svc"}
-            {:commands       {:cmd-id "4"
-                              :id     "3"}
+             :meta {}
+             :request-id request-id
+             :service "test-svc"}
+            {:commands {:cmd-id "4"
+                        :id "3"}
              :interaction-id interaction-id
-             :meta           {}
-             :request-id     request-id
-             :service        "test-svc-2"}]
+             :meta {}
+             :request-id request-id
+             :service "test-svc-2"}]
            resp))))
 
 (def ctx
   (-> {}
       (edd.core/reg-fx
        (fn [ctx events]
-         {:service  "test-svc"
-          :commands {:id     "1"
+         {:service "test-svc"
+          :commands {:id "1"
                      :cmd-id "2"}}))))
 
 (deftest test-apply-fx-when-fx-returns-map
@@ -55,8 +55,8 @@
   (-> {}
       (edd.core/reg-fx
        (fn [ctx events]
-         [{:service  "test-svc"
-           :commands {:id     "1"
+         [{:service "test-svc"
+           :commands {:id "1"
                       :cmd-id "2"}}]))))
 
 (deftest test-apply-fx-when-fx-returns-list
@@ -76,22 +76,63 @@
          {:event-id :e1}))
       (edd.core/reg-fx
        (fn [ctx events]
-         [{:id     "2"
+         [{:id "2"
            :cmd-id "2"}
-          {:service  "target-svc"
-           :commands [{:id     "1"
+          {:service "target-svc"
+           :commands [{:id "1"
                        :cmd-id "1"}]}]))))
 
 (deftest test-command-storage
   (mock/with-mock-dal
-    (mock/handle-cmd ctx3 {:id     cmd-id
+    (mock/handle-cmd ctx3 {:id cmd-id
                            :cmd-id :cmd-1})
     (mock/verify-state :command-store
-                       [{:service  "source-svc"
-                         :commands [{:id     "2"
+                       [{:service "source-svc"
+                         :commands [{:id "2"
                                      :cmd-id "2"}]
                          :meta {}}
-                        {:service  "target-svc"
-                         :commands [{:id     "1"
+                        {:service "target-svc"
+                         :commands [{:id "1"
                                      :cmd-id "1"}]
                          :meta {}}])))
+
+(deftest test-fx-evt
+  (let [ctxevt (-> mock/ctx
+                   (merge {:service-name "source-svc"})
+                   (edd.core/reg-cmd
+                    :cmd-1
+                    (fn [ctx cmd]
+                      [{:event-id :e1}
+                       {:event-id :e2}]))
+                   (edd.core/reg-event-fx
+                    :e1 (fn [ctx events]
+                          [{:id "2"
+                            :cmd-id "2"}])))]
+    (testing "If one handler works"
+      (mock/with-mock-dal
+        (mock/handle-cmd ctxevt {:id cmd-id
+                                 :cmd-id :cmd-1})
+        (mock/verify-state :command-store
+                           [{:service "source-svc"
+                             :commands [{:id "2"
+                                         :cmd-id "2"}]
+                             :meta {}}])))
+    (testing "If multiple handlers work"
+      (mock/with-mock-dal
+        (mock/handle-cmd (edd.core/reg-event-fx
+                          ctxevt
+                          :e2 (fn [ctx event]
+                                {:service "target-svc"
+                                 :commands [{:id "1"
+                                             :cmd-id "1"}]}))
+                         {:id cmd-id
+                          :cmd-id :cmd-1})
+        (mock/verify-state :command-store
+                           [{:service "source-svc"
+                             :commands [{:id "2"
+                                         :cmd-id "2"}]
+                             :meta {}}
+                            {:service "target-svc"
+                             :commands [{:id "1"
+                                         :cmd-id "1"}]
+                             :meta {}}])))))

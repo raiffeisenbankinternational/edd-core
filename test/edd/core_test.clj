@@ -195,6 +195,7 @@
                                                         :meta       [{:object-uploaded {:id #uuid "1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"}}]
                                                         :sequences  0
                                                         :success    true}
+                                       :invocation-id  0
                                        :interaction-id interaction-id
                                        :request-id     request-id}
                               :method :post
@@ -244,6 +245,7 @@
                                                                            :meta       [{:dummy-cmd {:id cmd-id}}]
                                                                            :identities 0
                                                                            :sequences  0}
+                                                          :invocation-id  0
                                                           :request-id     request-id
                                                           :interaction-id interaction-id})
                                        :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"

@@ -18,6 +18,10 @@
     (str/trim v)
     v))
 
+(defn realm
+  [ctx]
+  (name (get-in ctx [:meta :realm] :no_realm)))
+
 (def el
   {:and      (fn [ctx & rest]
                {:bool
@@ -124,8 +128,11 @@
         {:keys [error] :as body} (el/query
                                   (assoc ctx
                                          :method "POST"
-                                         :path (str "/" (str/replace (get ctx :index-name
-                                                                          (name (:service-name ctx))) "-" "_") "/_search")
+                                         :path (str "/"
+                                                    (realm ctx)
+                                                    "_"
+                                                    (str/replace (get ctx :index-name
+                                                                      (name (:service-name ctx))) "-" "_") "/_search")
                                          :body json-qry))
         total (get-in
                body
@@ -197,7 +204,10 @@
         body (elastic/query
               (assoc ctx
                      :method "POST"
-                     :path (str "/" index "/_search")
+                     :path (str "/"
+                                (realm ctx)
+                                "_"
+                                index "/_search")
                      :body (create-simple-query param)))]
     (mapv
      (fn [%]
@@ -216,7 +226,10 @@
                   (str/replace "-" "_"))
         {:keys [error]} (elastic/query (assoc ctx
                                               :method "POST"
-                                              :path (str "/" index "/_doc/" (:id aggregate))
+                                              :path (str "/"
+                                                         (realm ctx)
+                                                         "_"
+                                                         index "/_doc/" (:id aggregate))
                                               :body (util/to-json aggregate)))]
     (if error
       (throw (ex-info "could not store aggregate" {:error error}))

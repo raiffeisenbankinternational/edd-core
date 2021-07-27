@@ -73,6 +73,7 @@
                            :version 2
                            :value   "1"}])
       (is (= [{:result         {:apply true}
+               :invocation-id  nil
                :interaction-id int-id
                :request-id     req-id}]
              resp)))))
@@ -120,6 +121,7 @@
                              :name    nil
                              :version 3}])
         (is (= [{:result         {:apply true}
+                 :invocation-id  nil
                  :interaction-id int-id
                  :request-id     req-id}]
                resp))))))
@@ -138,6 +140,7 @@
                            [{:id      agg-id
                              :version 1}])
         (is (= [{:result         {:apply true}
+                 :invocation-id  nil
                  :interaction-id int-id
                  :request-id     req-id}]
                resp))))))

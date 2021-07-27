@@ -1,6 +1,7 @@
 (ns lambda.test.fixture.client
   (:require [clojure.test :refer :all]
             [lambda.util :as util]
+            [clojure.data :refer [diff]]
             [org.httpkit.client :as http]))
 
 (def ^:dynamic *world*)
@@ -54,9 +55,16 @@
    (= (get v method) url)
    (or (= (:req v) nil)
        (= (get v :req) body)
-       (= (get v :req) (util/to-edn body)))))
+        ; We want :req to be subset of expected body
+       (= (first
+           (diff (get v :req)
+                 (util/to-edn body)))
+          nil))))
 
 (defn handle-request
+  "Each request contained :method :url pair and response :body.
+  Optionally there might be :req which is body of request that
+  has to me matched"
   [{:keys [url method] :as req} & rest]
   (record-traffic req)
   (let [all (:responses @*world*)

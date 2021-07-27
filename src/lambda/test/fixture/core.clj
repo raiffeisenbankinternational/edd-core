@@ -1,6 +1,7 @@
 (ns lambda.test.fixture.core
   (:require [clojure.test :refer :all]
             [lambda.core :as core]
+            [lambda.filters :as fl]
             [lambda.util :as utils]
             [lambda.test.fixture.client :as client]))
 
@@ -14,6 +15,10 @@
                "Region"                 region}
               base) e def))
 
+; TODO Update JWT tokens for this to work properl
+(defn realm-mock
+  [_ _ _] :test)
+
 (defmacro mock-core
   [& {:keys [invocations requests env] :or {env {}} :as body}]
   `(let [req-calls#
@@ -24,7 +29,8 @@
              :headers {:lambda-runtime-aws-request-id idx#}})
           ~invocations)
          responses# (vec (concat req-calls# ~requests))]
-     (with-redefs [core/get-loop (fn [] (range 0 (count ~invocations)))
+     (with-redefs [fl/get-realm realm-mock
+                   core/get-loop (fn [] (range 0 (count ~invocations)))
                    utils/get-env (partial get-env-mock ~env)
                    utils/get-current-time-ms (fn [] 1587403965)]
        (client/mock-http
