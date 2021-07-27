@@ -53,6 +53,25 @@
   (update ctx :fx
           #(conj % reg-fn)))
 
+(defn event-fx-handler
+  [ctx events]
+  (mapv
+   (fn [event]
+     (let [handler (get-in ctx [:event-fx (:event-id event)])]
+       (if handler
+         (apply handler [ctx event])
+         [])))
+   events))
+
+(defn reg-event-fx
+  [ctx event-id reg-fn]
+  (let [ctx (if (:event-fx ctx)
+              ctx
+              (reg-fx ctx event-fx-handler))]
+    (update ctx
+            :event-fx
+            #(assoc % event-id reg-fn))))
+
 (defn- add-log-level
   [attrs body]
   (if-let [level (:log-level body)]
@@ -66,6 +85,7 @@
                                     (fn [mdc]
                                       (-> (assoc mdc
                                                  :invocation-id (:invocation-id ctx)
+                                                 :realm (get-in ctx [:meta :realm])
                                                  :request-id (:request-id item)
                                                  :interaction-id (:interaction-id item))
                                           (add-log-level item)))))
@@ -74,7 +94,9 @@
                      :interaction-id (:interaction-id item))
           resp (cond
                  (contains? item :apply) (event/handle-event (-> ctx
-                                                                 (assoc :apply (:apply item))))
+                                                                 (assoc :apply (assoc
+                                                                                (:apply item)
+                                                                                :meta (:meta item)))))
                  (contains? item :query) (-> ctx
                                              (query/handle-query item))
                  (contains? item :commands) (-> ctx
@@ -82,11 +104,13 @@
                  (contains? item :error) item
                  :else {:error :invalid-request})]
       (if (:error resp)
-        {:error          (:error resp)
-         :request-id     (:request-id item)
+        {:error (:error resp)
+         :invocation-id (:invocation-id ctx)
+         :request-id (:request-id item)
          :interaction-id (:interaction-id ctx)}
-        {:result         resp
-         :request-id     (:request-id item)
+        {:result resp
+         :invocation-id (:invocation-id ctx)
+         :request-id (:request-id item)
          :interaction-id (:interaction-id ctx)}))
 
     (catch Throwable e

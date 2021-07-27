@@ -48,9 +48,13 @@ RUN set -e &&\
                -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
                clean &&\
     flyway -password="${DatabasePassword}" \
-           -schemas=glms \
+           -schemas=test\
            -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
-           -locations="filesystem:${PWD}/sql/files" migrate &&\
+           -locations="filesystem:${PWD}/sql/files/edd" migrate &&\
+    flyway -password="${DatabasePassword}" \
+            -schemas=prod \
+            -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
+            -locations="filesystem:${PWD}/sql/files/edd" migrate &&\
     clj -A:test:it
 
 ARG BUILD_ID

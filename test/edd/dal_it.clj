@@ -17,6 +17,7 @@
    :request-id             (uuid/gen)
    :interaction-id         (uuid/gen)
    :invocation-id          (uuid/gen)
+   :meta                   {:realm :test}
    :environment-name-lower "pipeline"
    :elastic-search         {:url (util/get-env "IndexDomainEndpoint")}
    :db                     {:endpoint (util/get-env "DatabaseEndpoint")

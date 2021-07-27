@@ -46,7 +46,8 @@
 
 (def ctx
   (-> {}
-      (assoc :service-name "local-test")
+      (assoc :service-name "local-test"
+             :meta {:realm :test})
       (event-store/register)
       (view-store/register)
       (edd/reg-cmd :cmd-1 (fn [ctx cmd]
@@ -72,48 +73,55 @@
      :invocations [(util/to-json (req
                                   [{:apply          {:service      "glms-booking-company-svc",
                                                      :aggregate-id agg-id}
+                                    :meta           {:realm :test}
                                     :request-id     req-id1
                                     :interaction-id int-id}
                                    {:apply          {:service      "glms-booking-company-svc",
                                                      :aggregate-id agg-id}
+
+                                    :meta           {:realm :test}
                                     :request-id     req-id2
                                     :interaction-id int-id}
                                    {:apply          {:service      "glms-booking-company-svc",
                                                      :aggregate-id agg-id}
                                     :request-id     req-id3
+                                    :meta           {:realm :test}
                                     :interaction-id int-id}]))]
 
      :requests [{:post "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"}
-                {:post   (str "https:///local_test/_doc/" agg-id)
+                {:post   (str "https:///test_local_test/_doc/" agg-id)
                  :status 200}
-                {:post   (str "https:///local_test/_doc/" agg-id)
+                {:post   (str "https:///test_local_test/_doc/" agg-id)
                  :status 200}
-                {:post   (str "https:///local_test/_doc/" agg-id)
+                {:post   (str "https:///test_local_test/_doc/" agg-id)
                  :status 200}]
      (core/start
       ctx
       edd/handler)
      (verify-traffic [{:body   (util/to-json
                                 [{:result         {:apply true}
+                                  :invocation-id  0
                                   :request-id     req-id1,
                                   :interaction-id int-id}
                                  {:result         {:apply true}
+                                  :invocation-id  0
                                   :request-id     req-id2,
                                   :interaction-id int-id}
                                  {:result         {:apply true}
+                                  :invocation-id  0
                                   :request-id     req-id3,
                                   :interaction-id int-id}])
                        :method :post
                        :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
                       {:body      "{\"id\":\"#05120289-90f3-423c-ad9f-c46f9927a53e\"}"
-                       :headers   {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-west-1/es/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=bf9e7749d888bc5b25a3cb4715899ec2d68709ffa8771cb80532d29cdb4d014e"
+                       :headers   {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-west-1/es/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=42fa62b509004a82bb3c070c22b0a1a8ffcdaa35e136502b16976f18426ca14e"
                                    "Content-Type"         "application/json"
                                    "X-Amz-Date"           "20210322T232540Z"
                                    "X-Amz-Security-Token" ""}
                        :keepalive 300000
                        :method    :post
                        :timeout   20000
-                       :url       "https:///local_test/_doc/05120289-90f3-423c-ad9f-c46f9927a53e"}
+                       :url       "https:///test_local_test/_doc/05120289-90f3-423c-ad9f-c46f9927a53e"}
                       {:method  :get
                        :timeout 90000000
                        :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
@@ -156,13 +164,16 @@
       ctx
       edd/handler)
      (verify-traffic [{:body   (util/to-json
-                                [{:error "Unknown error in event handler"
+                                [{:error          "Unknown error in event handler"
+                                  :invocation-id  0
                                   :request-id     req-id1,
                                   :interaction-id int-id}
-                                 {:error {:badly :1wrong}
+                                 {:error          {:badly :1wrong}
+                                  :invocation-id  0
                                   :request-id     req-id2,
                                   :interaction-id int-id}
-                                 {:error "Unknown error in event handler"
+                                 {:error          "Unknown error in event handler"
+                                  :invocation-id  0
                                   :request-id     req-id3,
                                   :interaction-id int-id}])
                        :method :post

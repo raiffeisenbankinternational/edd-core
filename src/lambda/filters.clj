@@ -14,12 +14,12 @@
                 (= (:eventSource (first (:Records body))) "aws:sqs"))
              true
              false))
-   :fn   (fn [{:keys [body] :as ctx}]
-           (assoc ctx
-                  :body (util/to-edn (-> body
-                                         (:Records)
-                                         (first)
-                                         (:body)))))})
+   :fn (fn [{:keys [body] :as ctx}]
+         (assoc ctx
+                :body (util/to-edn (-> body
+                                       (:Records)
+                                       (first)
+                                       (:body)))))})
 
 (defn parse-key
   [key]
@@ -31,9 +31,9 @@
                          (nth 2)
                          (str/split #"\.")
                          (first))]
-      {:request-id     (uuid/parse request-id)
+      {:request-id (uuid/parse request-id)
        :interaction-id (uuid/parse interaction-id)
-       :realm          realm})
+       :realm realm})
     (catch Exception e
       (log/error "Unable to parse key. Shouls be in format /{{ realm }}/{{ uuid }}/{{ uuid }}.*")
       (throw (ex-info "Unable to parse key"
@@ -44,32 +44,54 @@
            (if (and
                 (contains? body :Records)
                 (= (:eventSource (first (:Records body))) "aws:s3")) true))
-   :fn   (fn [{:keys [body] :as ctx}]
-           (-> ctx
-               (assoc-in [:user :id] (name (:service-name ctx)))
-               (assoc-in [:user :role] :non-interactive)
-               (assoc :body
-                      (let [record (first (:Records body))
-                            key (get-in record [:s3 :object :key])]
-                        (if-not (str/ends-with? key "/")
-                          (let [{:keys [request-id
-                                        interaction-id
-                                        realm]} (parse-key key)]
-                            {:request-id     request-id
-                             :interaction-id interaction-id
-                             :user           (name
-                                              (:service-name ctx))
-                             :role           :non-interactive
-                             :commands       [{:cmd-id :object-uploaded
-                                               :id     request-id
-                                               :body   (aws/get-object record)
-                                               :key    key}]})
-                          {})))))})
+   :fn (fn [{:keys [body] :as ctx}]
+         (-> ctx
+             (assoc-in [:user :id] (name (:service-name ctx)))
+             (assoc-in [:user :role] :non-interactive)
+             (assoc :body
+                    (let [record (first (:Records body))
+                          key (get-in record [:s3 :object :key])
+                          bucket (get-in record [:s3 :bucket :name])]
+                      (if-not (str/ends-with? key "/")
+                        (let [{:keys [request-id
+                                      interaction-id
+                                      realm]} (parse-key key)]
+                          {:request-id request-id
+                           :interaction-id interaction-id
+                           :user (name
+                                  (:service-name ctx))
+                           :meta {:realm (keyword realm)
+                                  :user {:id request-id
+                                         :email "non-interractiva@s3.amazonws.com"
+                                         :role :non-interactive}}
+                           :commands [{:cmd-id :object-uploaded
+                                       :id request-id
+                                       :body (aws/get-object record)
+                                       :key key}]})
+                        {})))))})
 
 (defn has-role?
   [user role]
   (some #(= role %)
         (get user :roles [])))
+
+(defn get-realm
+  [body {:keys [roles]} role]
+  (println roles)
+  (let [realm (->> roles
+                   (map name)
+                   (filter #(str/starts-with? % "realm-"))
+                   (first))]
+    (when-not realm
+      (throw (ex-info (str "Realm: " realm) {:error "Missing realm in request token"})))
+    (keyword (subs realm 6))))
+
+(defn non-interactive
+  [user]
+  (first
+   (filter
+    #(= % :non-interactive)
+    (:roles user))))
 
 (defn check-user-role
   [{:keys [body req] :as ctx}]
@@ -77,43 +99,53 @@
                              ctx
                              (or (get-in req [:headers :x-authorization])
                                  (get-in req [:headers :X-Authorization])))
-        role (get-in body [:user :selected-role])]
+        role (or (get-in body [:user :selected-role])
+                 (non-interactive user)
+                 (first (remove
+                         #(or (= % :anonymous)
+                              (str/starts-with? (name %)
+                                                "realm-"))
+                         (:roles user))))]
+    (println role)
+
     (cond
       (:error body) (assoc ctx :body body)
-      (has-role? user role) (assoc ctx :user {:id    (:id user)
+      (= role :non-interactive) (assoc ctx :meta (:meta body))
+      (has-role? user role) (assoc ctx :user {:id (:id user)
                                               :email (:email user)
-                                              :role  role
+                                              :role role
                                               :roles (:roles user [])}
-                                   :meta {:user {:id    (:id user)
+                                   :meta {:realm (get-realm body user role)
+                                          :user {:id (:id user)
                                                  :email (:email user)
-                                                 :role  role}})
-      :else (assoc ctx :user {:id    "anonymous"
+                                                 :role role}})
+      :else (assoc ctx :user {:id "anonymous"
                               :email "anonymous"
-                              :role  :anonymous}))))
+                              :role :anonymous}))))
 
 (def from-api
   {:init jwt/fetch-jwks-keys
    :cond (fn [{:keys [body]}]
            (contains? body :path))
-   :fn   (fn [{:keys [req body] :as ctx}]
-           (cond
-             (= (:path req)
-                "/health") (assoc ctx :health-check true)
-             (= (:httpMethod req)
-                "OPTIONS") (assoc ctx :health-check true)
-             :else (-> ctx
-                       (assoc :body (util/to-edn (:body body)))
-                       (check-user-role))))})
+   :fn (fn [{:keys [req body] :as ctx}]
+         (cond
+           (= (:path req)
+              "/health") (assoc ctx :health-check true)
+           (= (:httpMethod req)
+              "OPTIONS") (assoc ctx :health-check true)
+           :else (-> ctx
+                     (assoc :body (util/to-edn (:body body)))
+                     (check-user-role))))})
 
 (defn to-api
   [{:keys [resp] :as ctx}]
   (log/debug "to-api" resp)
   (assoc ctx
-         :resp {:statusCode      200
+         :resp {:statusCode 200
                 :isBase64Encoded false
-                :headers         {"Access-Control-Allow-Headers"  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-                                  "Access-Control-Allow-Methods"  "OPTIONS,POST,PUT,GET"
-                                  "Access-Control-Expose-Headers" "*"
-                                  "Content-Type"                  "application/json"
-                                  "Access-Control-Allow-Origin"   "*"}
-                :body            (util/to-json resp)}))
+                :headers {"Access-Control-Allow-Headers" "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                          "Access-Control-Allow-Methods" "OPTIONS,POST,PUT,GET"
+                          "Access-Control-Expose-Headers" "*"
+                          "Content-Type" "application/json"
+                          "Access-Control-Allow-Origin" "*"}
+                :body (util/to-json resp)}))
