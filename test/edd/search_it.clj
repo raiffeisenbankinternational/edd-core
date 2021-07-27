@@ -13,6 +13,7 @@
 
 (def ctx
   {:elastic-search {:url (util/get-env "IndexDomainEndpoint")}
+   :meta           {:realm :test}
    :aws            {:region                (util/get-env "AWS_DEFAULT_REGION")
                     :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID")
                     :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY")
@@ -23,14 +24,16 @@
     (log/info (el/query
                (assoc ctx
                       :method "POST"
-                      :path (str "/" (:service-name ctx) "/_doc")
+                      :path (str "/"
+                                 (elastic-view-store/realm ctx)
+                                 "_" (:service-name ctx) "/_doc")
                       :body (util/to-json
                              i))))))
 
 (defn test-query
   [data q]
   (binding [state/*dal-state* (atom {:aggregate-store data})]
-    (let [service-name (str/replace (str "test-" (uuid/gen)) "-" "_")
+    (let [service-name (str/replace (str (uuid/gen)) "-" "_")
           local-ctx (assoc ctx :service-name service-name)
           body {:settings
                 {:index
@@ -52,7 +55,10 @@
       (el/query
        (assoc local-ctx
               :method "PUT"
-              :path (str "/" service-name)
+              :path (str "/"
+                         (elastic-view-store/realm ctx)
+                         "_"
+                         service-name)
               :body (util/to-json body)))
       (load-data local-ctx)
       (Thread/sleep 2000)

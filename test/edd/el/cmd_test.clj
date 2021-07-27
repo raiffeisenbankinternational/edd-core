@@ -89,6 +89,7 @@
        (verify-traffic-json
         [{:body   {:body            (util/to-json
                                      {:error          {:spec [{:id ["missing required key"]}]}
+                                      :invocation-id 0
                                       :request-id     request-id
                                       :interaction-id interaction-id})
                    :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
@@ -131,9 +132,10 @@
            (mock/verify-state :event-store [{:event-id  :ping
                                              :event-seq 1
                                              :id        id
-                                             :meta      {:user {:email "john.smith@example.com"
-                                                                :id    "john.smith@example.com"
-                                                                :role  :group-1}}
+                                             :meta      {:realm :test
+                                                         :user  {:email "john.smith@example.com"
+                                                                 :id    "john.smith@example.com"
+                                                                 :role  :group-1}}
                                              :role      :group-1
                                              :user      "john.smith@example.com"}])
            (verify-traffic-json
@@ -144,6 +146,7 @@
                                                            :meta       [{:ping {:id id}}]
                                                            :identities 0
                                                            :sequences  0}
+                                          :invocation-id 0
                                           :request-id     request-id
                                           :interaction-id interaction-id})
                        :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"

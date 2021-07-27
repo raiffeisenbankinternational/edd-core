@@ -9,7 +9,8 @@
    [lambda.core :as core]
    [lambda.jwt-test :as jwt-test]
    [lambda.test.fixture.client :refer [verify-traffic-json]]
-   [lambda.test.fixture.core :refer [mock-core]]))
+   [lambda.test.fixture.core :refer [mock-core]])
+  (:import (clojure.lang ExceptionInfo)))
 
 (def cmd-id #uuid "c5c4d4df-0570-43c9-a0c5-2df32f3be124")
 
@@ -432,3 +433,9 @@
       {:source body
        :user   (:user ctx)}))
    (do)))
+
+(deftest test-realm-filter
+  (is (= :test
+         (fl/get-realm {} {:roles [:some-role :realm-test]} :some-role)))
+  (is (thrown? ExceptionInfo
+               (fl/get-realm {} {:roles [:some-role]} :some-role))))

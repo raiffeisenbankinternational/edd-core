@@ -120,7 +120,7 @@
            from-api] :as ctx} body]
 
   (log/info "Response" from-api)
-  (util/d-time "Enqueue success"
+  (util/d-time "Enqueueing success"
                (enqueue-response ctx body))
   (util/to-json
    (util/http-post
@@ -205,7 +205,7 @@
                       (count (:Records req))))
           (delete-message-batch ctx items-to-delete))))
 
-    (util/d-time "Enqueue error"
+    (util/d-time "Enqueueing error"
                  (enqueue-response ctx body))
 
     (log/error (util/to-json

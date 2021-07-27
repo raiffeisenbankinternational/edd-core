@@ -43,6 +43,43 @@ To register commands user `reg-cmd`
        [edd.]))
 ```
 
+## Register effects
+Output of each individual command are events. Based on events we can determine 
+if there are any other actions needed to be executed it he system. This can be
+triggering another service or calling same service recursively (i.e Send email 
+after user was created). Commands that are created based on events are called
+`effects`. Effects are stores together with events in a database transactionaly
+and are executed as commands on target services asynchronously. 
+
+Effects are stored transactionally to make sure that we are not triggering any
+action that is not valid (i.e. Send email when creating user if user creation 
+has failed or rolled-back). 
+
+Effect handlers are registered declarative using `edd-core/reg-fx-evt`. 
+
+Example of effect registration: 
+
+``` clojure
+
+; When user-create event is creted, trigger command :send email to the same service
+(edd.core/reg-event-fx :user-created
+    (fn [ctx events]
+         [{:id "2"
+           :cmd-id :send-email}]))
+
+; When user-create event is creted, trigger command :send email to the :email-sending-svc
+(edd.core/reg-event-fx :user-created
+    (fn [ctx events]
+         [{:service :email-sending-svc
+           :commands [{:id "2"
+                       :cmd-id :send-email}]
+                       :meta {}}]))
+```
+
+Output of fx handler can be either vector or map. If output is map it can contain `:service` 
+keyword which would indicate that target is another service. In that case we have to have
+actual commands inside `:commands` vector
+
 ## JSON Serialization and De-Serialization
 
 Serialization is implemented using `metosin/jsonista` (Crrently using 
