@@ -55,7 +55,7 @@ Effects are stored transactionally to make sure that we are not triggering any
 action that is not valid (i.e. Send email when creating user if user creation 
 has failed or rolled-back). 
 
-Effect handlers are registered declarative using `edd-core/reg-fx-evt`. 
+Effect handlers are registered declarative using `edd-core/reg-event-fx`. 
 
 Example of effect registration: 
 
@@ -109,6 +109,36 @@ serialized prefixed with "#".
 {:a #uuid "d13d8c5c-2704-4fe1-8938-c339db9db15c"}
 => (util/to-edn "{\"a\":\"##some\"}")
 {:a "#some"}
+```
+
+## Building modules
+
+All handlers are easily composable. Handler registration is just currently just adding 
+keys to map. Modules are not feature of library. It is just way how to structure code. 
+
+Following is example of project structure with module: 
+
+``` clojue 
+
+```
+
+## Mocking external dependecies 
+
+When testing code against edd test fixtures you can declare how dependencies to external
+services will be resolved. Example: 
+
+``` clojure
+(mock/with-mock-dal
+      {:dps [{:service        :remote-svc
+              :request-id     request-id
+              :interaction-id interaction-id
+              :meta           meta
+              :query          {:param "Some Value"}
+              :resp           {:remote :response}}]
+       :event-store []
+       ...})
+      ....
+      )
 ```
 
 ## UUID Gen
