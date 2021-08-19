@@ -132,6 +132,10 @@
           :realm          "test"
           :request-id     #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"}
          (fl/parse-key "test/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fca3.matching1L.csv")))
+  (is (= {:interaction-id #uuid "af42568c-f8e9-40ff-9329-d13f1c82fce5"
+          :realm          "prod"
+          :request-id     #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"}
+         (fl/parse-key "upload/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fca3.matching1L.csv")))
   (is (thrown?
        ExceptionInfo
        (fl/parse-key "test/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fcz3.matching1L.csv"))))
