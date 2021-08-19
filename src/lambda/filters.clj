@@ -26,6 +26,9 @@
   (try
     (let [parts (str/split key #"/")
           realm (nth parts 0)
+          realm (if (= realm "upload")
+                  "prod"
+                  realm)
           interaction-id (nth parts 1)
           request-id (-> parts
                          (nth 2)
