@@ -148,5 +148,3 @@
                                           (uuid/parse invocation-id)
                                           invocation-id)))
               request)))))))
-
-

@@ -17,7 +17,7 @@
   (-> {}
       (assoc :service-name "local-test")
       (assoc :invocation-id invocation-id)
-      (assoc :environment-name-lower "pipeline")
+      (assoc :environment-name-lower (util/get-env "EnvironmentNameLower"))
       (assoc :aws {:account-id (util/get-env "AccountId")})
       (assoc :meta {:realm :test})
       (event-store/register)
@@ -165,4 +165,28 @@
               :request-id request-id}
              resp)))))
 
+(deftest test-saving-of-request-error
+  (binding [*dal-state* (atom {})]
+    (let [invocation-id (uuid/gen)
+          ctx (get-ctx invocation-id)
+          agg-id (uuid/gen)
+          interaction-id (uuid/gen)
+          request-id (uuid/gen)
+          req {:request-id request-id
+               :interaction-id interaction-id
+               :commands [{:cmd-id :cmd-1
+                           :no-id "schema should fail"}]}
+          resp (edd/handler ctx
+                            (assoc req :log-level :debug))
+          expected-error {:spec [{:id ["missing required key"]}]}]
 
+      (edd/with-stores
+        ctx (fn [ctx]
+              (is (= [{:error expected-error}]
+                     (mapv :error (event-store/get-request-log ctx request-id ""))))))
+
+      (is (= {:error expected-error
+              :invocation-id invocation-id
+              :interaction-id interaction-id
+              :request-id request-id}
+             resp)))))

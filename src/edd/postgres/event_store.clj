@@ -13,6 +13,7 @@
                              get-command-response
                              log-dps
                              log-request
+                             log-request-error
                              log-response
                              store-results]]
             [next.jdbc.prepare :as p]
@@ -24,16 +25,10 @@
   {:concurrent-modification ["event_store" "pkey"
                              "duplicate key value violates unique constraint"]})
 
-(defn t
-  "Form table name"
+(defn ->table
   [ctx table]
-  (str
-   " "
-   (name
-    (get-in ctx [:meta :realm] :no_realm))
-   "."
-   (name table)
-   " "))
+  (let [realm (get-in ctx [:meta :realm] :no_realm)]
+    (str " " (name realm) "." (name table) " ")))
 
 (defn error-matches?
   [msg words]
@@ -72,7 +67,7 @@
   (log/debug "Storing event" event)
   (when event
     (jdbc/execute! (:con ctx)
-                   [(str "INSERT INTO " (t ctx :event_store) " (id,
+                   [(str "INSERT INTO " (->table ctx :event_store) " (id,
                                                   service_name,
                                                   invocation_id,
                                                   request_id,
@@ -101,7 +96,7 @@
                     (count))
                 0))
     (jdbc/execute! (:con ctx)
-                   [(str "INSERT INTO " (t ctx :command_store) " (id,
+                   [(str "INSERT INTO " (->table ctx :command_store) " (id,
                                                     invocation_id,
                                                     request_id,
                                                     interaction_id,
@@ -128,46 +123,57 @@
   :postgres
   [{:keys [invocation-id request-id interaction-id service-name] :as ctx} body]
   (log/debug "Storing request" (:commands body))
-  (let [ps (jdbc/prepare (:con ctx)
-                         [(str "INSERT INTO " (t ctx :command_request_log) " (
+  (let [receive-count (or (-> ctx :req :attributes :ApproximateReceiveCount) "1")
+        receive-count-int (Integer/parseInt receive-count)]
+    (let [ps (jdbc/prepare (:con ctx)
+                           [(str "INSERT INTO " (->table ctx :command_request_log) " (
                                                          invocation_id,
                                                          request_id,
                                                          interaction_id,
                                                          breadcrumbs,
                                                          service_name,
                                                          cmd_index,
+                                                         receive_count,
                                                          data)
-                            VALUES (?,?,?,?,?,?,?)")])
-        params [[invocation-id
-                 request-id
-                 interaction-id
-                 (breadcrumb-str (:breadcrumbs body))
-                 service-name
-                 0
-                 body]]]
-    (p/execute-batch! ps params)))
+                            VALUES (?,?,?,?,?,?,?,?)
+                            ON CONFLICT (request_id, breadcrumbs) DO UPDATE
+                            SET receive_count = ?")])
+          params [[invocation-id
+                   request-id
+                   interaction-id
+                   (breadcrumb-str (:breadcrumbs body))
+                   service-name
+                   0
+                   receive-count-int
+                   body
+                   receive-count-int]]]
+      (p/execute-batch! ps params))))
+
+(def ^:private updateable-fields #{"error" "receive_count"})
+
+(defn- update-request
+  [{:keys [invocation-id request-id interaction-id service-name] :as ctx} body field data]
+  (when (contains? updateable-fields field)
+    (let [ps (jdbc/prepare (:con ctx)
+                           [(str "UPDATE " (->table ctx :command_request_log)
+                                 "SET " field " = ?
+                               WHERE request_id = ?
+                                 AND breadcrumbs = ?")])
+          params [[data
+                   request-id
+                   (breadcrumb-str (:breadcrumbs body))]]]
+      (p/execute-batch! ps params))))
+
+(defmethod log-request-error
+  :postgres
+  [ctx body error]
+  (log/debug "Storing request error" (error))
+  (update-request ctx body "error" error))
 
 (defmethod log-dps
   :postgres
   [{:keys [dps-resolved request-id interaction-id service-name] :as ctx}]
   (log/debug "Storing deps" dps-resolved)
-  #_(when dps-resolved
-      (let [ps (jdbc/prepare (:con ctx)
-                             ["INSERT INTO glms.command_deps_log(request_id,
-                                                          interaction_id,
-                                                          service_name,
-                                                          cmd_index,
-                                                          data)
-                            VALUES (?,?,?,?,?)"])
-            params (map-indexed
-                    (fn [idx itm] [request-id
-                                   interaction-id
-                                   service-name
-                                   idx
-                                   itm])
-                    dps-resolved)]
-        (p/execute-batch! ps params))
-      ctx)
   ctx)
 
 (defn log-response-impl
@@ -175,7 +181,7 @@
   (log/debug "Storing response" response-summary)
   (when response-summary
     (jdbc/execute! (:con ctx)
-                   [(str "INSERT INTO " (t ctx :command_response_log) " (invocation_id,
+                   [(str "INSERT INTO " (->table ctx :command_response_log) " (invocation_id,
                                                            request_id,
                                                            interaction_id,
                                                            breadcrumbs,
@@ -200,7 +206,7 @@
   [ctx identity]
   (log/debug "Storing identity" identity)
   (jdbc/execute! (:con ctx)
-                 [(str "INSERT INTO " (t ctx :identity_store) " (id,
+                 [(str "INSERT INTO " (->table ctx :identity_store) " (id,
                                                    invocation_id,
                                                    request_id,
                                                    interaction_id,
@@ -224,10 +230,10 @@
         aggregate-id (:id sequence)]
     (jdbc/execute! (:con ctx)
                    [(str "BEGIN WORK;
-                        LOCK TABLE " (t ctx :sequence_store) " IN EXCLUSIVE MODE;
-                       UPDATE " (t ctx :sequence_store) "
+                        LOCK TABLE " (->table ctx :sequence_store) " IN EXCLUSIVE MODE;
+                       UPDATE " (->table ctx :sequence_store) "
                           SET value =  (SELECT COALESCE(MAX(value), 0) +1
-                                                   FROM " (t ctx :sequence_store) "
+                                                   FROM " (->table ctx :sequence_store) "
                                                   WHERE service_name = ?)
                           WHERE aggregate_id = ? AND service_name = ?;
                      COMMIT WORK;")
@@ -242,7 +248,7 @@
   (let [service-name (:service-name ctx)
         aggregate-id (:id sequence)]
     (jdbc/execute! (:con ctx)
-                   [(str "INSERT INTO " (t ctx :sequence_store) " (invocation_id,
+                   [(str "INSERT INTO " (->table ctx :sequence_store) " (invocation_id,
                                                       request_id,
                                                       interaction_id,
                                                       breadcrumbs,
@@ -269,7 +275,7 @@
                          created_on,
                          data,
                          service_name
-                  FROM " (t ctx :command_response_log) "
+                  FROM " (->table ctx :command_response_log) "
                   WHERE request_id = ?
                   AND breadcrumbs = ?")
                  request-id
@@ -284,7 +290,7 @@
         value-fn #(-> (jdbc/execute-one!
                        (:con ctx)
                        [(str "SELECT value
-                               FROM " (t ctx :sequence_store) "
+                               FROM " (->table ctx :sequence_store) "
                               WHERE aggregate_id = ?
                                 AND service_name = ?")
                         id
@@ -311,7 +317,7 @@
         result (jdbc/execute-one!
                 (:con ctx)
                 [(str "SELECT aggregate_id
-                     FROM " (t ctx :sequence_store) "
+                     FROM " (->table ctx :sequence_store) "
                     WHERE value = ?
                       AND service_name = ?")
                  sequence
@@ -324,7 +330,7 @@
   [{:keys [identity] :as ctx}]
   (let [result
         (jdbc/execute-one! (:con ctx)
-                           [(str "SELECT aggregate_id FROM " (t ctx :identity_store) "
+                           [(str "SELECT aggregate_id FROM " (->table ctx :identity_store) "
                                            WHERE id = ?
                                            AND service_name = ?")
                             identity
@@ -343,7 +349,7 @@
   (let [data (try-to-data
               #(jdbc/execute! (:con ctx)
                               [(str "SELECT data
-                                FROM " (t ctx :event_store) "
+                                FROM " (->table ctx :event_store) "
                                 WHERE aggregate_id=?
                                   AND service_name=?
                                   AND event_seq>?
@@ -362,7 +368,7 @@
   (:max
    (jdbc/execute-one! (:con ctx)
                       [(str "SELECT COALESCE(MAX(event_seq), 0) AS max
-                         FROM " (t ctx :event_store) "
+                         FROM " (->table ctx :event_store) "
                          WHERE aggregate_id=?
                          AND service_name=?") id (:service-name ctx)]
                       {:builder-fn rs/as-unqualified-lower-maps})))
@@ -428,7 +434,20 @@
    first
    (-> (jdbc/execute! (:con ctx)
                       [(str "SELECT data
-                                FROM " (t ctx :command_response_log) "
+                                FROM " (->table ctx :command_response_log) "
                                 WHERE invocation_id=?") invocation-id]
                       {:builder-fn rs/as-arrays})
        (rest))))
+
+(defn get-request-log
+  [ctx request-id breadcrumbs]
+  (log/info "Fetching request " request-id breadcrumbs)
+  (let [query (str "SELECT *
+                    FROM " (->table ctx :command_request_log) "
+                    WHERE request_id=?
+                     AND breadcrumbs=?")]
+    (-> (jdbc/execute! (:con ctx)
+                       [query
+                        request-id
+                        breadcrumbs]
+                       {:builder-fn rs/as-unqualified-kebab-maps}))))

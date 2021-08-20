@@ -10,6 +10,7 @@
             [edd.postgres.event-store :as postgres]
             [jsonista.core :as json]
             [lambda.core :as lambda]
+            [lambda.jwt :as jwt]
             [lambda.util :as util]
             [lambda.uuid :as uuid]
             [ring.adapter.jetty9 :as jetty]))
@@ -53,6 +54,58 @@
 
 ;; --- lambda lifecycle
 
+(defn- parse-token-redef
+  [ctx _]
+  (assoc ctx :user {:id "email"
+                    :email "email"
+                    :roles [:realm-test :role]}))
+
+(defn- send-response-redef
+  [response-handler message]
+  (fn [{:keys [resp] :as ctx}]
+    (if response-handler
+      (response-handler resp message)
+      (default-response-handler resp message))))
+
+(defn- get-env-redef
+  [config-load]
+  (fn [var-name & [default]]
+    ;; NOTE: we load config on every request because some vars can expire
+    ;; does not matter from performance perspective, since it is for dev purposes only
+    (let [config (config-load)]
+      (or (get config var-name)
+          (do
+            (log/warn (str "returning default value: " default " for ENV var " var-name) ::ns)
+            default)))))
+
+(defn- get-next-invocation-redef
+  [config-load cmd-id query-id message]
+  (fn [_]
+    ;; NOTE: here we inject the message with command / query into the lambda workflow
+    (log/info "received request" message)
+    {:headers {:lambda-runtime-aws-request-id (str (uuid/gen))}
+     :body    {:headers {:x-authorization (get (config-load) "id-token")}
+               :path (if query-id "/query" "/command")
+               :attributes {:ApproximateReceiveCount "1"}
+               :body (util/to-json (cond-> {:request-id     (uuid/gen)
+                                            :interaction-id (uuid/gen)
+                                            :user {:selected-role :role}}
+                                     cmd-id   (assoc :commands       [message])
+                                     query-id (assoc :query message)))}}))
+
+(defn- store-command-redef
+  [ctx {:keys [service commands] :as cmd}]
+  ;; NOTE: here we inject effects
+  (log/info "storing effect" cmd)
+  (postgres/store-cmd ctx (assoc
+                           cmd
+                           :request-id (:request-id ctx)
+                           :interaction-id (:interaction-id ctx)))
+  (doall
+   (for [command commands]
+     ;; queue all the effects in the respective queue for that service
+     (queue-message! service command))))
+
 (defn start* [{:keys [service-name config-load entrypoint response-handler]
                :as   args}]
   (log/info (str "Starting " service-name) args)
@@ -61,40 +114,14 @@
           handle-message (fn [{:keys [cmd-id query-id]
                                :as   message}]
                            (log/info "handling message" message)
-                           (with-redefs [util/load-config     (fn [_] {})
-                                         lambda/get-loop      (fn [] [0])
-                                         lambda/send-response (fn [{:keys [resp] :as ctx}]
-                                                                (if response-handler
-                                                                  (response-handler resp message)
-                                                                  (default-response-handler resp message)))
-                                         util/get-env         (fn [var-name & [default]]
-                                                                ;; NOTE: we load config on every request because some vars can expire (
-                                                                ;; does not matter from performance perspective, since it is for dev purposes only
-                                                                (let [config (config-load)]
-                                                                  (or (get config var-name)
-                                                                      (do
-                                                                        (log/warn (str "returning default value: " default " for ENV var " var-name) ::ns)
-                                                                        default))))
-                                         ;; NOTE: here we inject the message with command / query into the lambda workflow
-                                         aws/get-next-request (fn [_]
-                                                                (log/info "received request" message)
-                                                                {:headers {:lambda-runtime-aws-request-id (str (uuid/gen))}
-                                                                 :body    (cond-> {:request-id     (uuid/gen)
-                                                                                   :interaction-id (uuid/gen)}
-                                                                            cmd-id   (assoc :commands       [message])
-                                                                            query-id (assoc :query message))})
-
-                                         ;; NOTE: here we inject effects
-                                         postgres/store-command (fn [ctx {:keys [service commands] :as cmd}]
-                                                                  (log/info "storing effect" cmd)
-                                                                  (postgres/store-cmd ctx (assoc
-                                                                                           cmd
-                                                                                           :request-id (:request-id ctx)
-                                                                                           :interaction-id (:interaction-id ctx)))
-                                                                  (doall
-                                                                   (for [command commands]
-                                                                      ;; queue all the effects in the respective queue for that service
-                                                                     (queue-message! service command))))]
+                           (with-redefs [jwt/parse-token parse-token-redef
+                                         aws/get-token (fn [_] (get (config-load) "id-token"))
+                                         util/load-config (fn [_] {})
+                                         lambda/get-loop (fn [] [0])
+                                         lambda/send-response (send-response-redef response-handler message)
+                                         util/get-env (get-env-redef config-load)
+                                         aws/get-next-invocation (get-next-invocation-redef config-load cmd-id query-id message)
+                                         postgres/store-command store-command-redef]
                              ;; NOTE : usually `-main`
                              (entrypoint)))]
       (cond

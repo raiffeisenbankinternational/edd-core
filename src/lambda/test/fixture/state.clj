@@ -6,7 +6,9 @@
    :identity-store  []
    :sequence-store  []
    :command-store   []
-   :aggregate-store []})
+   :aggregate-store []
+   :response-log    []
+   :command-log     []})
 
 (def ^:dynamic *dal-state* (atom default-db))
 
