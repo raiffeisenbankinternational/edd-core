@@ -80,14 +80,14 @@
 
 (defn get-realm
   [body {:keys [roles]} role]
-  (println roles)
-  (let [realm (->> roles
+  (let [realm-prefix "realm-"
+        realm (->> roles
                    (map name)
-                   (filter #(str/starts-with? % "realm-"))
+                   (filter #(str/starts-with? % realm-prefix))
                    (first))]
     (when-not realm
       (throw (ex-info (str "Realm: " realm) {:error "Missing realm in request token"})))
-    (keyword (subs realm 6))))
+    (keyword (subs realm (count realm-prefix)))))
 
 (defn non-interactive
   [user]
@@ -109,7 +109,6 @@
                               (str/starts-with? (name %)
                                                 "realm-"))
                          (:roles user))))]
-    (println role)
 
     (cond
       (:error body) (assoc ctx :body body)

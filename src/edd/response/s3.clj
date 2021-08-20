@@ -31,6 +31,4 @@
 
 (defn register
   [ctx]
-  (if-not (:response-cache ctx)
-    (assoc ctx :response-cache :s3)
-    ctx))
+  (update ctx :response-cache #(or % :s3)))

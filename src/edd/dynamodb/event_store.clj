@@ -12,6 +12,7 @@
                     get-aggregate-id-by-identity
                     log-dps
                     log-request
+                    log-request-error
                     log-response
                     store-results]]
    [lambda.util :as util]
@@ -30,6 +31,11 @@
 (defmethod log-request
   :dynamodb
   [{:keys [body request-id interaction-id service-name] :as ctx} body]
+  ctx)
+
+(defmethod log-request-error
+  :dynamodb
+  [{:keys [body request-id interaction-id service-name] :as ctx} body error]
   ctx)
 
 (defmethod log-dps

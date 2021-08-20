@@ -240,25 +240,21 @@
           {:error "Command handler failed"}))))
 
 (defn handle-command
-  [{:keys [cmd command-handlers] :as ctx}]
-  (log/info "Handling command" (:cmd-id cmd))
-
+  [{:keys [command-handlers] :as ctx}
+   {:keys [cmd-id] :as cmd}]
+  (log/info "Handling command" cmd-id)
   (log/info (:meta ctx))
   (let [ctx (fetch-dependencies-for-command ctx cmd)
         cmd (resolve-command-id ctx cmd)
-        cmd-id (:cmd-id cmd)
         ctx (cache/fetch-event-sequence-for-command ctx cmd)
-        command-handler (get command-handlers cmd-id (fn [_ _]
-                                                       {:error :handler-no-found}))
+        command-handler (get command-handlers cmd-id (fn [_ _] {:error :handler-no-found}))
         dps-resolved (get-in ctx [:dps-resolved])
         ctx-with-dps (merge ctx dps-resolved)
         resp (->> ctx-with-dps
                   (#(verify-command-version % cmd))
                   (invoke-handler command-handler cmd)
                   (to-clean-vector)
-                  (map #(assoc
-                         %
-                         :id (:id cmd)))
+                  (map #(assoc % :id (:id cmd)))
                   (remove nil?)
                   (reduce
                    (fn [p event]
@@ -292,25 +288,23 @@
     (log/debug "Sequence" sequence)
     sequence))
 
+(def initial-response
+  {:meta       []
+   :events     []
+   :commands   []
+   :sequences  []
+   :identities []})
+
+(defn merge-responses [responses]
+  (reduce #(merge-with concat %1 %2) initial-response responses))
+
 (defn get-command-response
   [{:keys [commands] :as ctx}]
-  (assoc ctx
-         :resp
-         (->> (reduce-kv
-               (fn [p idx cmd]
-                 (merge-with
-                  concat
-                  p
-                  (handle-command (-> ctx
-                                      (assoc :cmd cmd
-                                             :idx idx)))))
-               {:meta       []
-                :events     []
-                :commands   []
-                :sequences  []
-                :identities []}
-               (vec commands))
-              (with-breadcrumbs ctx))))
+  (let [response (->> commands
+                      (map #(handle-command ctx %))
+                      (merge-responses)
+                      (with-breadcrumbs ctx))]
+    (assoc ctx :resp response)))
 
 (defn resolve-dependencies-to-context
   [{:keys [commands] :as ctx}]
@@ -338,18 +332,15 @@
   [{:keys [commands] :as ctx}]
   (let [result (mapv
                 (fn [{:keys [cmd-id] :as cmd}]
-                  (let [schema (get-in ctx [:spec cmd-id]
-                                       default-command-schema)
-                        schema (mu/merge default-command-schema
-                                         schema)
-                        schema-valid (m/validate schema cmd)
-                        cmd-exits (get-in ctx [:command-handlers cmd-id])]
+                  (let [schema (mu/merge default-command-schema
+                                         (get-in ctx [:spec cmd-id]))
+                        schema-valid? (m/validate schema cmd)
+                        handler-exists? (get-in ctx [:command-handlers cmd-id])]
                     (cond
-                      (not schema-valid) (->> cmd
-                                              (m/explain schema)
-                                              (me/humanize))
-                      (not cmd-exits) {:unknown-command-handler
-                                       cmd-id}
+                      (not schema-valid?) (->> cmd
+                                               (m/explain schema)
+                                               (me/humanize))
+                      (not handler-exists?) {:unknown-command-handler cmd-id}
                       :else :valid)))
                 commands)]
     (cond-> ctx
@@ -447,8 +438,11 @@
   (cache/clear!)
   (let [resp (retry #(process-commands ctx body)
                     3)]
+
     (if (:error resp)
-      (select-keys resp [:error])
+      (let [error (select-keys resp [:error])]
+        (dal/log-request-error ctx body error)
+        error)
       (do
         (swap! request/*request*
                update
