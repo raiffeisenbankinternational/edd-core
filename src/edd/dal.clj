@@ -27,6 +27,10 @@
   (fn [{:keys [commands] :as ctx} body]
     (:event-store ctx)))
 
+(defmulti log-request-error
+  (fn [{:keys [commands] :as ctx} body error]
+    (:event-store ctx)))
+
 (defmulti log-response
   (fn [ctx]
     (:event-store ctx)))

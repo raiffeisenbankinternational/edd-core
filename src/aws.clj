@@ -86,16 +86,16 @@
         (log/error "Failed to sns:SendMessage" response))
       response)))
 
+(defn get-next-invocation
+  [runtime-api]
+  (util/http-get
+   (str "http://" runtime-api "/2018-06-01/runtime/invocation/next")
+   {:timeout 90000000}))
+
 (defn get-next-request [runtime-api]
-  (let [req (util/http-get
-             (str "http://" runtime-api "/2018-06-01/runtime/invocation/next")
-             {:timeout 90000000})
-        body (:body req)]
-    (log/debug "Lambda request" req)
-    (if (:isBase64Encoded body)
-      (assoc-in req
-                [:body :body]
-                (util/base64decode (:body body)))
+  (let [req (get-next-invocation runtime-api)]
+    (if (-> req :body :isBase64Encoded)
+      (update-in req [:body :body] util/base64decode)
       req)))
 
 (def response

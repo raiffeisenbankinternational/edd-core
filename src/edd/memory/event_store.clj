@@ -11,6 +11,7 @@
                     get-command-response
                     log-dps
                     log-request
+                    log-request-error
                     log-response
                     store-results]]))
 
@@ -199,6 +200,11 @@
   (log/info "Storing mock request" body)
   (swap! *dal-state*
          #(update % :command-log (fn [v] (conj v body)))))
+
+(defmethod log-request-error
+  :memory
+  [ct body error]
+  (log/info "Should store mock request error" body error))
 
 (defmethod log-dps
   :memory
