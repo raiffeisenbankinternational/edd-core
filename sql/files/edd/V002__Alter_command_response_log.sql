@@ -14,6 +14,20 @@ CREATE TABLE command_request_log (
     PRIMARY KEY (request_id, breadcrumbs)
 ) PARTITION BY hash (request_id, breadcrumbs);
 
+DO
+$do$
+DECLARE
+   m CHARACTER VARYING := 'command_request_log';
+BEGIN
+   FOR i IN 0..31 LOOP
+    raise info 'Creating % %', m, i;
+    EXECUTE 'CREATE TABLE ' || 'part_pk_' || m || '_' || i || ' ' ||
+            'PARTITION OF ' || m || ' '  ||
+            'FOR VALUES WITH (MODULUS 32, REMAINDER ' || i || ')';
+   END LOOP;
+END
+$do$;
+
 INSERT INTO command_request_log
 SELECT DISTINCT invocation_id,
   request_id,
@@ -28,17 +42,3 @@ SELECT DISTINCT invocation_id,
 FROM command_request_log_without_pk;
 
 DROP TABLE command_request_log_without_pk;
-
-DO
-$do$
-DECLARE
-   m CHARACTER VARYING := 'command_request_log';
-BEGIN
-   FOR i IN 0..31 LOOP
-    raise info 'Creating % %', m, i;
-    EXECUTE 'CREATE TABLE ' || 'part_' || m || '_' || i || ' ' ||
-            'PARTITION OF ' || m || ' '  ||
-            'FOR VALUES WITH (MODULUS 32, REMAINDER ' || i || ')';
-   END LOOP;
-END
-$do$;
