@@ -42,25 +42,31 @@
         response (util/http-post
                   url
                   {:timeout 10000
-                   :body    (util/to-json
-                             {:query          (call-query-fn ctx cmd query-fn)
-                              :meta           (:meta ctx)
-                              :request-id     (:request-id ctx)
-                              :interaction-id (:interaction-id ctx)})
-                   :headers {"Content-Type"    "application/json"
+                   :body (util/to-json
+                          {:query (call-query-fn ctx cmd query-fn)
+                           :meta (:meta ctx)
+                           :request-id (:request-id ctx)
+                           :interaction-id (:interaction-id ctx)})
+                   :headers {"Content-Type" "application/json"
                              "X-Authorization" token}})]
+    (log/info "AAA" response)
     (when (:error response)
-      (log/error "Deps request error for " service (:error response)))
+      (throw (ex-info (str "Deps request error for " service) {:error (:error response)})))
     (when (:error (get response :body))
-      (log/error "Deps result error for " service (get response :body)))
-    (get-in response [:body :result])))
+      (throw (ex-info (str "Deps request error for " service) (get response :body))))
+    (if (> (:status response 0) 299)
+      (throw (ex-info (str "Deps request error for " service) {:status (:status response)}))
+      (get-in response [:body :result]))))
 
 (defn resolve-local-dependency
   [ctx cmd query-fn]
   (log/debug "Resolving local dependency")
   (let [query (call-query-fn ctx cmd query-fn)]
     (when query
-      (query/handle-query ctx {:query query}))))
+      (let [resp (query/handle-query ctx {:query query})]
+        (if (:error resp)
+          (throw (ex-info "Failed ro resole local deps" {:error resp}))
+          resp)))))
 
 (defn fetch-dependencies-for-command
   [ctx cmd]
@@ -109,7 +115,7 @@
           (map
            (fn [cmd]
              (if-not (contains? cmd :commands)
-               {:service  (:service-name ctx)
+               {:service (:service-name ctx)
                 :commands [cmd]}
                cmd))
            (if (map? commands)
@@ -263,9 +269,9 @@
                        (contains? event :identity) (update :identities conj event)
                        (contains? event :sequence) (update :sequences conj event)
                        (contains? event :event-id) (update :events conj event)))
-                   {:events     []
+                   {:events []
                     :identities []
-                    :sequences  []}))
+                    :sequences []}))
         resp (assoc resp :meta {cmd-id (:id cmd)})]
 
     (-> ctx-with-dps
@@ -289,10 +295,10 @@
     sequence))
 
 (def initial-response
-  {:meta       []
-   :events     []
-   :commands   []
-   :sequences  []
+  {:meta []
+   :events []
+   :commands []
+   :sequences []
    :identities []})
 
 (defn merge-responses [responses]
@@ -352,22 +358,22 @@
   (cond
     (:error resp) {:error (:error resp)}
     no-summary resp
-    :else {:success    true
-           :effects    (reduce
-                        (fn [p v]
-                          (concat
-                           p
-                           (map
-                            (fn [%] {:id           (:id %)
-                                     :cmd-id       (:cmd-id %)
-                                     :service-name (:service v)})
-                            (:commands v))))
-                        []
-                        (:commands resp))
-           :events     (count (:events resp))
-           :meta       (:meta resp)
+    :else {:success true
+           :effects (reduce
+                     (fn [p v]
+                       (concat
+                        p
+                        (map
+                         (fn [%] {:id (:id %)
+                                  :cmd-id (:cmd-id %)
+                                  :service-name (:service v)})
+                         (:commands v))))
+                     []
+                     (:commands resp))
+           :events (count (:events resp))
+           :meta (:meta resp)
            :identities (count (:identities resp))
-           :sequences  (count (:sequences resp))}))
+           :sequences (count (:sequences resp))}))
 
 (defn check-for-errors
   [{:keys [resp] :as ctx}]
