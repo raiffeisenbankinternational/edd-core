@@ -25,13 +25,18 @@
   [key]
   (try
     (let [parts (str/split key #"/")
-          realm (nth parts 0)
+          realm (first parts)
+          parts (rest parts)
           realm (if (= realm "upload")
                   "prod"
                   realm)
-          interaction-id (nth parts 1)
+          parts (if (re-matches #"[\d]{4}-[\d]{2}-[\d]{2}" (first parts))
+                  (rest parts)
+                  parts)
+          interaction-id (first parts)
+          parts (rest parts)
           request-id (-> parts
-                         (nth 2)
+                         (first)
                          (str/split #"\.")
                          (first))]
       {:request-id (uuid/parse request-id)
@@ -71,7 +76,7 @@
                                        :id request-id
                                        :body (aws/get-object record)
                                        :key key}]})
-                        {})))))})
+                        {:skip true})))))})
 
 (defn has-role?
   [user role]

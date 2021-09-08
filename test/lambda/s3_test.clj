@@ -12,7 +12,8 @@
    [lambda.test.fixture.client :refer [verify-traffic-json]]
    [clojure.test :refer :all]
    [clojure.tools.logging :as log]
-   [sdk.aws.common :as common])
+   [sdk.aws.common :as common]
+   [edd.core :as edd])
   (:import (clojure.lang ExceptionInfo)))
 
 (def interaction-id #uuid "0000b7b5-9f50-4dc4-86d1-2e4fe1f6d491")
@@ -110,12 +111,10 @@
                    :body (char-array "Of something")}]
        (core/start
         {}
-        (fn [ctx body]
-          "Slurp content of S3 request into response"
-          (log/info (:commands body)))
+        edd/handler
         :filters [fl/from-bucket])
        (verify-traffic-json
-        [{:body   nil
+        [{:body   {}
           :method :post
           :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
          {:method  :get
@@ -136,6 +135,10 @@
           :realm          "prod"
           :request-id     #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"}
          (fl/parse-key "upload/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fca3.matching1L.csv")))
+  (is (= {:interaction-id #uuid "af42568c-f8e9-40ff-9329-d13f1c82fce5"
+          :realm          "prod"
+          :request-id     #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"}
+         (fl/parse-key "prod/2021-08-21/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fca3.matching1L.csv")))
   (is (thrown?
        ExceptionInfo
        (fl/parse-key "test/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fcz3.matching1L.csv"))))
