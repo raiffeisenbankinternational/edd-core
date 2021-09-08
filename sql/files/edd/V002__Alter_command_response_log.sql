@@ -1,4 +1,4 @@
-ALTER TABLE command_request_log RENAME TO command_request_log_without_pk;
+DROP TABLE command_request_log;
 
 CREATE TABLE command_request_log (
     invocation_id uuid NOT NULL,
@@ -28,17 +28,4 @@ BEGIN
 END
 $do$;
 
-INSERT INTO command_request_log
-SELECT DISTINCT invocation_id,
-  request_id,
-  interaction_id,
-  breadcrumbs,
-  cmd_index,
-  created_on,
-  service_name,
-  1,
-  data,
-  NULL::jsonb
-FROM command_request_log_without_pk;
 
-DROP TABLE command_request_log_without_pk;
