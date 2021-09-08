@@ -193,10 +193,13 @@
   [ctx body]
   (log/debug "Handler body" body)
   (log/debug "Context" ctx)
-  (with-stores
-    ctx
-    #(-> (assoc % :body body)
-         (filter-queue-request)
-         (validate-request)
-         (dispatch-request)
-         (prepare-response))))
+  (if (:skip body)
+    (do (log/info "Skipping request")
+        {})
+    (with-stores
+      ctx
+      #(-> (assoc % :body body)
+           (filter-queue-request)
+           (validate-request)
+           (dispatch-request)
+           (prepare-response)))))
