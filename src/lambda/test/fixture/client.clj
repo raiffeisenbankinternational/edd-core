@@ -1,6 +1,7 @@
 (ns lambda.test.fixture.client
   (:require [clojure.test :refer :all]
             [lambda.util :as util]
+            [clojure.tools.logging :as log]
             [clojure.data :refer [diff]]
             [org.httpkit.client :as http]))
 
@@ -80,11 +81,15 @@
 
         (ref
          (dissoc resp method :req :keep)))
-      (ref
-       {:error {:message "Mock not Found"
-                :url     url
-                :method  method
-                :req     req}}))))
+
+      (do
+        (log/error {:error {:message "Mock not Found"
+                            :url url
+                            :method method
+                            :req req}})
+        (ref
+         {:status 200
+          :body (util/to-json {:result nil})})))))
 
 (defmacro mock-http
   [responses & body]
