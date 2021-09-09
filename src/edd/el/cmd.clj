@@ -65,7 +65,7 @@
     (when query
       (let [resp (query/handle-query ctx {:query query})]
         (if (:error resp)
-          (throw (ex-info "Failed ro resole local deps" {:error resp}))
+          (throw (ex-info "Failed to resole local deps" {:error resp}))
           resp)))))
 
 (defn fetch-dependencies-for-command
@@ -201,8 +201,8 @@
     (if id-fn
       (let [new-id
             (id-fn
-             (merge ctx
-                    (get-in ctx [:dps-resolved]))
+             (merge (get-in ctx [:dps-resolved])
+                    ctx)
              cmd)]
         (if new-id
           (assoc cmd :id new-id
@@ -255,7 +255,7 @@
         ctx (cache/fetch-event-sequence-for-command ctx cmd)
         command-handler (get command-handlers cmd-id (fn [_ _] {:error :handler-no-found}))
         dps-resolved (get-in ctx [:dps-resolved])
-        ctx-with-dps (merge ctx dps-resolved)
+        ctx-with-dps (merge dps-resolved ctx)
         resp (->> ctx-with-dps
                   (#(verify-command-version % cmd))
                   (invoke-handler command-handler cmd)
