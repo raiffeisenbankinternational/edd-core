@@ -172,6 +172,13 @@
     (is (= nil
            (:aggregate (common/get-by-id (assoc ctx :id 5)))))))
 
+(deftest when-no-id-passed-in-return-nil
+  (with-mock-dal
+    (dal/store-event (first events))
+    (verify-state [(first events)] :event-store)
+    (is (= nil
+           (:aggregate (common/get-by-id ctx {}))))))
+
 (deftest verify-predefined-state
   (with-mock-dal
     {:event-store [{:event-id :e1}]}

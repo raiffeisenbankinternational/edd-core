@@ -18,7 +18,7 @@
          versioned-events []
          new-versions last-event-seqs]
     (if (empty? evts)
-      {:events         versioned-events
+      {:events versioned-events
        :last-event-seq new-versions}
       (let [evt (first evts)
             nv (update new-versions (:id evt) (fnil inc 0))
@@ -43,7 +43,7 @@
 
         agg (event/create-aggregate agg events def-apply)]
     {:aggregate agg
-     :version   (get agg :version 0)}))
+     :version (get agg :version 0)}))
 
 (defn get-by-id-from-store
   [ctx id]
@@ -51,7 +51,7 @@
                (event/get-by-id (assoc ctx :id id))
                (catch Exception e
                  (ex-data e)))]
-    {:version   (get-in resp [:aggregate :version] 0)
+    {:version (get-in resp [:aggregate :version] 0)
      :aggregate (:aggregate resp)}))
 
 (defn get-stored-aggregate! [ctx id]
@@ -71,16 +71,16 @@
 
 (defn get-by-id
   [ctx & [query]]
-  {:pre [(or (:id ctx)
-             (:id query))]}
-  (let [agg (get-current-aggregate! ctx (or (:id query) (:id ctx)))]
-
-    (if query
-      (or (:aggregate agg) nil)
-      (merge ctx
-             (if (:aggregate agg)
-               agg
-               {:aggregate nil})))))
+  (if (not (or (:id ctx)
+               (:id query)))
+    {:aggregate nil}
+    (let [agg (get-current-aggregate! ctx (or (:id query) (:id ctx)))]
+      (if query
+        (or (:aggregate agg) nil)
+        (merge ctx
+               (if (:aggregate agg)
+                 agg
+                 {:aggregate nil}))))))
 
 (defn fetch-event-sequence-for-command
   [ctx cmd]
