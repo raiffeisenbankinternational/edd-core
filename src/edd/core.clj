@@ -78,17 +78,27 @@
     (assoc attrs :level level)
     attrs))
 
-(defn dispatch-item
-  [{:keys [item] :as ctx}]
-  (log/debug "Dispatching" item)
+(defn get-meta
+  [ctx item]
+  (merge
+   (:meta ctx {})
+   (:meta item {})))
+
+(defn update-mdc-for-request
+  [ctx item]
   (swap! request/*request* #(update % :mdc
                                     (fn [mdc]
                                       (-> (assoc mdc
                                                  :invocation-id (:invocation-id ctx)
-                                                 :realm (get-in ctx [:meta :realm])
+                                                 :realm (:realm (get-meta ctx item))
                                                  :request-id (:request-id item)
                                                  :interaction-id (:interaction-id item))
-                                          (add-log-level item)))))
+                                          (add-log-level item))))))
+
+(defn dispatch-item
+  [{:keys [item] :as ctx}]
+  (log/debug "Dispatching" item)
+  (update-mdc-for-request ctx item)
   (try
     (let [ctx (assoc ctx :request-id (:request-id item)
                      :interaction-id (:interaction-id item))
@@ -96,7 +106,7 @@
                  (contains? item :apply) (event/handle-event (-> ctx
                                                                  (assoc :apply (assoc
                                                                                 (:apply item)
-                                                                                :meta (:meta item)))))
+                                                                                :meta (get-meta ctx item)))))
                  (contains? item :query) (-> ctx
                                              (query/handle-query item))
                  (contains? item :commands) (-> ctx

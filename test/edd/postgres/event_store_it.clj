@@ -169,7 +169,6 @@
   (binding [*dal-state* (atom {})]
     (let [invocation-id (uuid/gen)
           ctx (get-ctx invocation-id)
-          agg-id (uuid/gen)
           interaction-id (uuid/gen)
           request-id (uuid/gen)
           req {:request-id request-id
