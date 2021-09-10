@@ -415,12 +415,8 @@
       (dal/store-results ctx))))
 
 (defn process-commands [ctx body]
-
   (let [ctx (-> ctx
                 (assoc :commands (:commands body)
-                       :meta (merge
-                              (:meta ctx {})
-                              (:meta body {}))
                        :breadcrumbs (or (get body :breadcrumbs)
                                         [0]))
                 (s3-cache/register))]
@@ -442,7 +438,11 @@
 (defn handle-commands
   [ctx body]
   (cache/clear!)
-  (let [resp (retry #(process-commands ctx body)
+  (let [ctx (assoc ctx
+                   :meta (merge
+                          (:meta ctx {})
+                          (:meta body {})))
+        resp (retry #(process-commands ctx body)
                     3)]
 
     (if (:error resp)
