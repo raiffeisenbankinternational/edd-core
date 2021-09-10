@@ -12,6 +12,10 @@
 
 (def fx-id (uuid/gen))
 
+(defn- with-realm
+  [ctx]
+  (assoc-in ctx [:meta :realm] :test))
+
 (defn get-ctx
   [invocation-id]
   (-> {}
@@ -19,7 +23,6 @@
       (assoc :invocation-id invocation-id)
       (assoc :environment-name-lower (util/get-env "EnvironmentNameLower"))
       (assoc :aws {:account-id (util/get-env "AccountId")})
-      (assoc :meta {:realm :test})
       (event-store/register)
       (view-store/register)
       (edd/reg-cmd :cmd-1 (fn [ctx cmd]
@@ -56,6 +59,7 @@
           request-id (uuid/gen)
           req {:request-id request-id
                :interaction-id interaction-id
+               :meta {:realm :test}
                :commands [{:cmd-id :cmd-1
                            :id agg-id}]}
           apply {:request-id interaction-id
@@ -96,6 +100,7 @@
             request-id (uuid/gen)
             req {:request-id request-id
                  :interaction-id interaction-id
+                 :meta {:realm :test}
                  :commands [{:cmd-id :cmd-1
                              :id agg-id}]}
             resp (edd/handler ctx
@@ -104,7 +109,7 @@
         (edd/with-stores
           ctx (fn [ctx]
                 (is (= []
-                       (event-store/get-response-log ctx invocation-id)))))
+                       (event-store/get-response-log (with-realm ctx) invocation-id)))))
 
         (is (= {:error "CMD Store failure"
                 :invocation-id invocation-id
@@ -132,6 +137,7 @@
           agg-id-2 (uuid/gen)
           req {:request-id request-id
                :interaction-id interaction-id
+               :meta {:realm :test}
                :commands [{:cmd-id :cmd-i1
                            :id agg-id}]}
           resp (with-redefs [event-store/update-sequence (fn [ctx cmd]
@@ -142,22 +148,23 @@
       (edd/handler ctx
                    {:request-id (uuid/gen)
                     :interaction-id interaction-id
+                    :meta {:realm :test}
                     :commands [{:cmd-id :cmd-i1
                                 :id agg-id-2}]})
       (edd/with-stores
         ctx (fn [ctx]
               (is (not= []
-                        (event-store/get-response-log ctx invocation-id)))
+                        (event-store/get-response-log (with-realm ctx) invocation-id)))
               (let [seq (event-store/get-sequence-number-for-id-imp
-                         (assoc ctx :id agg-id))]
+                         (with-realm (assoc ctx :id agg-id)))]
                 (is (> seq
                        0))
                 (is (= (dec seq)
                        (event-store/get-sequence-number-for-id-imp
-                        (assoc ctx :id agg-id-2)))))
+                        (with-realm (assoc ctx :id agg-id-2))))))
               (is (= nil
                      (event-store/get-sequence-number-for-id-imp
-                      (assoc ctx :id (uuid/gen)))))))
+                      (with-realm (assoc ctx :id (uuid/gen))))))))
 
       (is (= {:error "Sequence Store failure"
               :invocation-id invocation-id
@@ -173,6 +180,7 @@
           request-id (uuid/gen)
           req {:request-id request-id
                :interaction-id interaction-id
+               :meta {:realm :test}
                :commands [{:cmd-id :cmd-1
                            :no-id "schema should fail"}]}
           resp (edd/handler ctx
@@ -182,7 +190,7 @@
       (edd/with-stores
         ctx (fn [ctx]
               (is (= [{:error expected-error}]
-                     (mapv :error (event-store/get-request-log ctx request-id ""))))))
+                     (mapv :error (event-store/get-request-log (with-realm ctx) request-id ""))))))
 
       (is (= {:error expected-error
               :invocation-id invocation-id
