@@ -73,7 +73,7 @@
   [ctx & [query]]
   (if (not (or (:id ctx)
                (:id query)))
-    {:aggregate nil}
+    nil
     (let [agg (get-current-aggregate! ctx (or (:id query) (:id ctx)))]
       (if query
         (or (:aggregate agg) nil)
