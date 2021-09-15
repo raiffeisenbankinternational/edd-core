@@ -7,6 +7,13 @@
 
   (:import (java.time OffsetDateTime)))
 
+
+; Dear security guy! All tokens and JWKS information here
+; is from non existing user pools
+; please go somewhere else to find secrets as there are none usefull
+; to be found here.
+
+
 (deftest test-parser-deserialization
   (let [result (util/to-edn
                 "{\"json\": true, \"converted\": { \"edn\": true, \"bla\" : \":ble\",\"blo\":\"::bli\", \"li\":[\"a\", \":a\",\"::a\"]}}")]
@@ -124,12 +131,12 @@
   (is (= "V5OClWSQlzec3bOC3WyC1eBGBkWo/QFnSkinbeYUJkY="
          (util/hmac-sha256 "secret123" "hello world"))))
 
-(def user-pool-client-id "48lks9h1rd3kv2f12v0ouvg4ud")
-(def user-pool-id "eu-west-1_Btgyjpp8Q")
-(def user-pool-client-secret "1s5qeke2jhstfjeqttop9oj7okms6nt9tn9m6h02p6jsvbe1r7ql")
+(def user-pool-client-id "5fb55843f1doj3hjlq7ongfmn1")
+(def user-pool-id "eu-central-1_ACXYul00Q")
+(def user-pool-client-secret "1as33ab08jtsd778p3nfuivmi1rn4ddci6g58jar399prd19ser")
 
 (deftest hmac256-test
-  (is (= "qyhnsYcOHY/OCsTqeoE5rMrV5gWYJwTErkvs5l6Yyrk="
+  (is (= "CFwQXIkeWlWshlq4e+bfuUrIAoUL780KUm0JMmugvFw="
          (util/hmac-sha256 user-pool-client-secret
                            (str "test-svc@internal"
                                 user-pool-client-id)))))

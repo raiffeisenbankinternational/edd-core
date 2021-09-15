@@ -17,7 +17,8 @@
 (def ctx
   {:aws  {:aws-access-key-id     "test-key-id"
           :aws-secret-access-key "secret-access-key-id"
-          :aws-session-token     "session-token"}
+          :aws-session-token     "session-token"
+          :region "eu-central-1"}
    :svc  {:username "test-svc@internal"
           :password "AA33test-svc"}
    :auth {:user-pool-id  util-test/user-pool-id
@@ -27,15 +28,15 @@
 (def id-token "id-token")
 
 (def login-request
-  {:body    "{\"AuthFlow\":\"ADMIN_NO_SRP_AUTH\",\"AuthParameters\":{\"USERNAME\":\"test-svc@internal\",\"PASSWORD\":\"AA33test-svc\",\"SECRET_HASH\":\"qyhnsYcOHY/OCsTqeoE5rMrV5gWYJwTErkvs5l6Yyrk=\"},\"ClientId\":\"48lks9h1rd3kv2f12v0ouvg4ud\",\"UserPoolId\":\"eu-west-1_Btgyjpp8Q\"}"
-   :headers {"Authorization"        "AWS4-HMAC-SHA256 Credential=test-key-id/20200504/eu-central-1/cognito-idp/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-target, Signature=335587cf26a865637c49b0c366fdaa19d9188a44694fdc1848ae101b2ef4ab2a"
-             "Content-Type"         "application/x-amz-json-1.1"
-             "X-Amz-Date"           "20200504T080055Z"
+  {:body "{\"AuthFlow\":\"ADMIN_NO_SRP_AUTH\",\"AuthParameters\":{\"USERNAME\":\"test-svc@internal\",\"PASSWORD\":\"AA33test-svc\",\"SECRET_HASH\":\"CFwQXIkeWlWshlq4e+bfuUrIAoUL780KUm0JMmugvFw=\"},\"ClientId\":\"5fb55843f1doj3hjlq7ongfmn1\",\"UserPoolId\":\"eu-central-1_ACXYul00Q\"}"
+   :headers {"Authorization" "AWS4-HMAC-SHA256 Credential=test-key-id/20200504/eu-central-1/cognito-idp/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-target, Signature=00ca23907f7b0b64d3e80cd8c7ebfbf13f030cbdb2b7adaa23d8f8f91d1c0da4"
+             "Content-Type" "application/x-amz-json-1.1"
+             "X-Amz-Date" "20200504T080055Z"
              "X-Amz-Security-Token" "session-token"
-             "X-Amz-Target"         "AWSCognitoIdentityProviderService.AdminInitiateAuth"}
-   :method  :post
+             "X-Amz-Target" "AWSCognitoIdentityProviderService.AdminInitiateAuth"}
+   :method :post
    :timeout 5000
-   :url     "https://cognito-idp.eu-central-1.amazonaws.com"})
+   :url "https://cognito-idp.eu-central-1.amazonaws.com"})
 
 (def auth-success-response)
 

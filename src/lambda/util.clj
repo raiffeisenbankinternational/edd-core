@@ -123,6 +123,10 @@
   [name & [default]]
   (get (System/getenv) name default))
 
+(defn get-property
+  [name & [default]]
+  (get (System/getProperties) name default))
+
 (defn escape
   [value]
   (str/replace value "\"" "\\\""))

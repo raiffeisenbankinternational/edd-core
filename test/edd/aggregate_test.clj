@@ -98,6 +98,8 @@
                                   {:event-id :event-2
                                    :id       cmd-id
                                    :k2       "b"}])
+                util/http-get (fn [url request & {:keys [raw]}]
+                                {:status 304})
                 util/http-post (fn [url request & {:keys [raw]}]
                                  {:status 303})]
     (is (= {:error {:status 303}}

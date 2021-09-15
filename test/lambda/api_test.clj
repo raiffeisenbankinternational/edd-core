@@ -218,7 +218,7 @@
                                     :user   {:id    "john.smith@example.com"
                                              :email "john.smith@example.com",
                                              :role  :group-2
-                                             :roles [:anonymous :group-1 :group-2 :group-3]}})
+                                             :roles [:anonymous :group-3 :group-2 :group-1]}})
                  :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
                                    :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
                                    :Access-Control-Allow-Origin   "*"
@@ -249,7 +249,7 @@
                                     :user   {:id    "john.smith@example.com"
                                              :email "john.smith@example.com",
                                              :role  :group-2
-                                             :roles [:anonymous :group-1 :group-2 :group-3]}})
+                                             :roles [:anonymous :group-3 :group-2 :group-1]}})
                  :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
                                    :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
                                    :Access-Control-Allow-Origin   "*"

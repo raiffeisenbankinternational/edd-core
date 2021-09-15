@@ -9,24 +9,24 @@
 
 (defn sqs-publish
   [{:keys [queue ^String message aws] :as ctx}]
-  (let [req {:method     "POST"
-             :uri        (str "/"
-                              (:account-id aws)
-                              "/"
-                              (:environment-name-lower ctx)
-                              "-"
-                              queue)
-             :query      ""
-             :payload    (str "Action=SendMessage"
-                              "&MessageBody=" (URLEncoder/encode message "UTF-8"))
-             :headers    {"Host"         (str "sqs."
-                                              (get aws :region)
-                                              ".amazonaws.com")
-                          "Content-Type" "application/x-www-form-urlencoded"
-                          "Accept"       "application/json"
-                          "X-Amz-Date"   (sdk/create-date)}
-             :service    "sqs"
-             :region     "eu-central-1"
+  (let [req {:method "POST"
+             :uri (str "/"
+                       (:account-id aws)
+                       "/"
+                       (:environment-name-lower ctx)
+                       "-"
+                       queue)
+             :query ""
+             :payload (str "Action=SendMessage"
+                           "&MessageBody=" (URLEncoder/encode message "UTF-8"))
+             :headers {"Host" (str "sqs."
+                                   (get aws :region)
+                                   ".amazonaws.com")
+                       "Content-Type" "application/x-www-form-urlencoded"
+                       "Accept" "application/json"
+                       "X-Amz-Date" (sdk/create-date)}
+             :service "sqs"
+             :region (get aws :region)
              :access-key (:aws-access-key-id aws)
              :secret-key (:aws-secret-access-key aws)}
         auth (sdk/authorize req)]
@@ -36,7 +36,7 @@
                       (str "https://"
                            (get (:headers req) "Host")
                            (:uri req))
-                      {:body    (:payload req)
+                      {:body (:payload req)
                        :version :http1.1
                        :headers (-> (:headers req)
                                     (assoc "Authorization" auth)
@@ -48,10 +48,66 @@
         (throw (-> "Failed to send message" (ex-info response))))
 
       (if (> (:status response) 299)
-        {:error {:queue   (:uri req)
-                 :body    (:body response)
+        {:error {:queue (:uri req)
+                 :body (:body response)
                  :message (get-in response [:body :Error :Message])}}
         (:body response)))))
 
-
-
+(defn delete-message-batch
+  [{:keys [aws] :as ctx} records]
+  (log/info (first records))
+  (let [queue-arn (get-in (first records) [:eventSourceARN])
+        parts (str/split queue-arn #":")
+        queue-name (peek parts)
+        account-id (peek (pop parts))
+        req {:method "POST"
+             :payload (str "Action=DeleteMessageBatch"
+                           "&QueueUrl=https://sqs."
+                           (get aws :region)
+                           ".amazonaws.com"
+                           (str "/"
+                                account-id
+                                "/"
+                                queue-name)
+                           (str/join (map-indexed
+                                      (fn [idx %]
+                                        (str "&DeleteMessageBatchRequestEntry." (inc idx) ".Id="
+                                             (:messageId %)
+                                             "&DeleteMessageBatchRequestEntry." (inc idx) ".ReceiptHandle="
+                                             (:receiptHandle %)))
+                                      records))
+                           "&Expires=2020-04-18T22%3A52%3A43PST"
+                           "&Version=2012-11-05")
+             :uri (str "/"
+                       account-id
+                       "/"
+                       queue-name)
+             :headers {"Host" (str "sqs."
+                                   (:region aws)
+                                   ".amazonaws.com")
+                       "Content-Type" "application/x-www-form-urlencoded"
+                       "Accept" "application/json"
+                       "X-Amz-Date" (sdk/create-date)}
+             :service "sqs"
+             :region (get aws :region)
+             :access-key (:aws-access-key-id aws)
+             :secret-key (:aws-secret-access-key aws)}
+        auth (sdk/authorize req)]
+    (log/info "Dispatching message delete")
+    (let [response (sdk/retry
+                    #(util/http-post
+                      (str "https://"
+                           (get (:headers req) "Host")
+                           (:uri req))
+                      {:body (:payload req)
+                       :version :http1.1
+                       :headers (-> (:headers req)
+                                    (dissoc "Host")
+                                    (assoc "Authorization" auth)
+                                    (assoc "X-Amz-Security-Token" (:aws-session-token aws)))
+                       :timeout 5000
+                       :raw true}) 3)]
+      (when (or (contains? response :error)
+                (> (get response :status 0) 299))
+        (log/error "Failed to sqs:ChangeMessageVisibility" response))
+      (:body response))))
