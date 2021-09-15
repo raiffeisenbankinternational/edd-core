@@ -58,7 +58,7 @@
                             ctx
                             :aggregate result-agg))
     snapshot (assoc ctx :aggregate snapshot)
-    :else (throw (ex-info "Aggregate not found" {:error :no-events-found}))))
+    :else (assoc ctx :aggregate nil)))
 
 (defn fetch-snapshot
   [ctx]
