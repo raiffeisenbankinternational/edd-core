@@ -248,39 +248,40 @@
 (defn handle-command
   [{:keys [command-handlers] :as ctx}
    {:keys [cmd-id] :as cmd}]
-  (log/info "Handling command" cmd-id)
   (log/info (:meta ctx))
-  (let [ctx (fetch-dependencies-for-command ctx cmd)
-        cmd (resolve-command-id ctx cmd)
-        ctx (cache/fetch-event-sequence-for-command ctx cmd)
-        command-handler (get command-handlers cmd-id (fn [_ _] {:error :handler-no-found}))
-        dps-resolved (get-in ctx [:dps-resolved])
-        ctx-with-dps (merge dps-resolved ctx)
-        resp (->> ctx-with-dps
-                  (#(verify-command-version % cmd))
-                  (invoke-handler command-handler cmd)
-                  (to-clean-vector)
-                  (map #(assoc % :id (:id cmd)))
-                  (remove nil?)
-                  (reduce
-                   (fn [p event]
-                     (cond-> p
-                       (contains? event :error) (update :events conj event)
-                       (contains? event :identity) (update :identities conj event)
-                       (contains? event :sequence) (update :sequences conj event)
-                       (contains? event :event-id) (update :events conj event)))
-                   {:events []
-                    :identities []
-                    :sequences []}))
-        resp (assoc resp :meta {cmd-id (:id cmd)})]
+  (util/d-time
+   (str "handling-command-" cmd-id)
+   (let [ctx (fetch-dependencies-for-command ctx cmd)
+         cmd (resolve-command-id ctx cmd)
+         ctx (cache/fetch-event-sequence-for-command ctx cmd)
+         command-handler (get command-handlers cmd-id (fn [_ _] {:error :handler-no-found}))
+         dps-resolved (get-in ctx [:dps-resolved])
+         ctx-with-dps (merge dps-resolved ctx)
+         resp (->> ctx-with-dps
+                   (#(verify-command-version % cmd))
+                   (invoke-handler command-handler cmd)
+                   (to-clean-vector)
+                   (map #(assoc % :id (:id cmd)))
+                   (remove nil?)
+                   (reduce
+                    (fn [p event]
+                      (cond-> p
+                        (contains? event :error) (update :events conj event)
+                        (contains? event :identity) (update :identities conj event)
+                        (contains? event :sequence) (update :sequences conj event)
+                        (contains? event :event-id) (update :events conj event)))
+                    {:events []
+                     :identities []
+                     :sequences []}))
+         resp (assoc resp :meta {cmd-id (:id cmd)})]
 
-    (-> ctx-with-dps
-        (assoc :resp resp)
-        (add-user-to-events)
-        (handle-effects)
-        (add-meta-to-events)
-        (cache/track-intermediate-events!)
-        (:resp))))
+     (-> ctx-with-dps
+         (assoc :resp resp)
+         (add-user-to-events)
+         (handle-effects)
+         (add-meta-to-events)
+         (cache/track-intermediate-events!)
+         (:resp)))))
 
 (defn handle-identities
   [ctx events]

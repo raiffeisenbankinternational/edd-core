@@ -4,7 +4,8 @@
    [clojure.tools.logging :as log]
    [edd.dal :as dal]
    [lambda.request :as request]
-   [edd.search :as search]))
+   [edd.search :as search]
+   [lambda.util :as util]))
 
 (defn apply-event
   [agr event func]
@@ -62,12 +63,7 @@
 
 (defn fetch-snapshot
   [ctx]
-  (if-let [snapshot
-           (first
-            (search/simple-search
-             (assoc ctx
-                    :query {:id (:id ctx)})))]
-
+  (if-let [snapshot (search/get-snapshot ctx (:id ctx))]
     (assoc ctx
            :snapshot snapshot
            :version (:version snapshot))
@@ -98,21 +94,22 @@
           realm (:realm meta)
           agg-id (:aggregate-id apply)]
 
-      (log/info "Handling apply:" realm (:aggregate-id apply))
-      (if (:scoped @request/*request*)
-        (let [applied (get-in @request/*request* [:applied realm agg-id])]
-          (if-not applied
-            (do (-> ctx
-                    (assoc :id agg-id)
-                    (get-by-id)
-                    (update-aggregate))
+      (util/d-time
+       (str "Handling apply: " realm  " " (:aggregate-id apply))
+       (if (:scoped @request/*request*)
+         (let [applied (get-in @request/*request* [:applied realm agg-id])]
+           (if-not applied
+             (do (-> ctx
+                     (assoc :id agg-id)
+                     (get-by-id)
+                     (update-aggregate))
 
-                (swap! request/*request*
-                       #(assoc-in % [:applied realm agg-id] {:apply true})))))
-        (-> ctx
-            (assoc :id agg-id)
-            (get-by-id)
-            (update-aggregate))))
+                 (swap! request/*request*
+                        #(assoc-in % [:applied realm agg-id] {:apply true})))))
+         (-> ctx
+             (assoc :id agg-id)
+             (get-by-id)
+             (update-aggregate)))))
     {:apply true}
     (catch Exception e
       (log/error e)

@@ -5,7 +5,7 @@
             [lambda.util :as utils]
             [lambda.test.fixture.client :as client]))
 
-(def region "eu-west-1")
+(def region "eu-central-1")
 
 (def next-url "http://mock/2018-06-01/runtime/invocation/next")
 

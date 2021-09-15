@@ -114,6 +114,10 @@
       (view-store/register)
       (event-store/register)))
 
+(defn mock-snapshot
+  [_ _]
+  nil)
+
 (defmacro with-mock-dal [& body]
   `(edd/with-stores
      ctx

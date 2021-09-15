@@ -114,7 +114,7 @@
                        :method :post
                        :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
                       {:body      "{\"id\":\"#05120289-90f3-423c-ad9f-c46f9927a53e\"}"
-                       :headers   {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-west-1/es/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=42fa62b509004a82bb3c070c22b0a1a8ffcdaa35e136502b16976f18426ca14e"
+                       :headers   {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/es/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=8b2d9b4b2390562f95edc1b2dc52223e9cac7eb1b50b460156d53183ef2346e3"
                                    "Content-Type"         "application/json"
                                    "X-Amz-Date"           "20210322T232540Z"
                                    "X-Amz-Security-Token" ""}

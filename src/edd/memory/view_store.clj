@@ -6,7 +6,8 @@
             [edd.search :refer [with-init
                                 simple-search
                                 advanced-search
-                                update-aggregate]]))
+                                update-aggregate
+                                get-snapshot]]))
 
 (defn filter-aggregate
   [query aggregate]
@@ -60,6 +61,16 @@
     (body-fn ctx)
     (binding [*dal-state* (atom {})]
       (body-fn ctx))))
+
+(defmethod get-snapshot
+  :memory
+  [ctx id]
+  (log/debug "Fetching snapshot aggregate" id)
+  (->> @*dal-state*
+       (:aggregate-store)
+       (filter
+        #(= (:id %) id))
+       (first)))
 
 (defn register
   [ctx]

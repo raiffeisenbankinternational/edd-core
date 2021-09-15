@@ -6,7 +6,8 @@
                                 simple-search
                                 default-size
                                 advanced-search
-                                update-aggregate]]
+                                update-aggregate
+                                get-snapshot]]
             [lambda.util :as util]
             [lambda.elastic :as elastic]
             [clojure.tools.logging :as log]
@@ -23,47 +24,47 @@
   (name (get-in ctx [:meta :realm] :no_realm)))
 
 (def el
-  {:and      (fn [ctx & rest]
-               {:bool
-                {:filter (mapv
-                          (fn [%] (parse ctx %))
-                          rest)}})
-   :or       (fn [ctx & rest]
-               {:bool
-                {:should               (mapv
-                                        (fn [%] (parse ctx %))
-                                        rest)
-                 :minimum_should_match 1}})
-   :eq       (fn [_ & [a b]]
-               {:term
-                {(str (name a) ".keyword") (->trim b)}})
-   :=        (fn [_ & [a b]]
-               {:term
-                {(name a) (->trim b)}})
+  {:and (fn [ctx & rest]
+          {:bool
+           {:filter (mapv
+                     (fn [%] (parse ctx %))
+                     rest)}})
+   :or (fn [ctx & rest]
+         {:bool
+          {:should (mapv
+                    (fn [%] (parse ctx %))
+                    rest)
+           :minimum_should_match 1}})
+   :eq (fn [_ & [a b]]
+         {:term
+          {(str (name a) ".keyword") (->trim b)}})
+   := (fn [_ & [a b]]
+        {:term
+         {(name a) (->trim b)}})
    :wildcard (fn [_ & [a b]]
                {:wildcard
                 {(str (name a)) {:value (str "*" (->trim b) "*")}}})
-   :not      (fn [ctx & rest]
-               {:bool
-                {:must_not (parse ctx rest)}})
-   :in       (fn [_ & [a b]]
-               {:terms
-                {(str (name a) ".keyword") b}})
-   :exists   (fn [_ & [a _]]
-               {:exists
-                {:field (name a)}})
-   :lte      (fn [_ & [a b]]
-               {:range
-                {(name a) {:lte b}}})
-   :gte      (fn [_ & [a b]]
-               {:range
-                {(name a) {:gte b}}})
-   :nested   (fn [ctx path & rest]
-               {:bool
-                {:must [{:nested {:path  (name path)
-                                  :query (mapv
-                                          (fn [%] (parse ctx %))
-                                          rest)}}]}})})
+   :not (fn [ctx & rest]
+          {:bool
+           {:must_not (parse ctx rest)}})
+   :in (fn [_ & [a b]]
+         {:terms
+          {(str (name a) ".keyword") b}})
+   :exists (fn [_ & [a _]]
+             {:exists
+              {:field (name a)}})
+   :lte (fn [_ & [a b]]
+          {:range
+           {(name a) {:lte b}}})
+   :gte (fn [_ & [a b]]
+          {:range
+           {(name a) {:gte b}}})
+   :nested (fn [ctx path & rest]
+             {:bool
+              {:must [{:nested {:path (name path)
+                                :query (mapv
+                                        (fn [%] (parse ctx %))
+                                        rest)}}]}})})
 
 (defn search-filter
   [_ filter q]
@@ -71,12 +72,12 @@
         search (mapv
                 (fn [p]
                   {:bool
-                   {:should               [{:match
-                                            {(str (name p))
-                                             {:query value
-                                              :boost 2}}}
-                                           {:wildcard
-                                            {(str (name p)) {:value (str "*" (->trim value) "*")}}}]
+                   {:should [{:match
+                              {(str (name p))
+                               {:query value
+                                :boost 2}}}
+                             {:wildcard
+                              {(str (name p)) {:value (str "*" (->trim value) "*")}}}]
                     :minimum_should_match 1}})
                 fields)]
 
@@ -144,15 +145,15 @@
     (log/debug json-qry)
     (log/debug body)
     {:total total
-     :from  (get es-qry :from 0)
-     :size  (get es-qry :size default-size)
-     :hits  (mapv
-             (fn [%]
-               (get % :_source))
-             (get-in
-              body
-              [:hits :hits]
-              []))}))
+     :from (get es-qry :from 0)
+     :size (get es-qry :size default-size)
+     :hits (mapv
+            (fn [%]
+              (get % :_source))
+            (get-in
+             body
+             [:hits :hits]
+             []))}))
 
 (defmethod advanced-search
   :elastic
@@ -186,7 +187,7 @@
   [query]
   {:pre [query]}
   (util/to-json
-   {:size  600
+   {:size 600
     :query {:bool
             {:must (mapv
                     (fn [%]
@@ -251,4 +252,22 @@
   (assoc ctx
          :view-store :elastic
          :elastic-search {:scheme (util/get-env "IndexDomainScheme" "https")
-                          :url    (util/get-env "IndexDomainEndpoint")}))
+                          :url (util/get-env "IndexDomainEndpoint")}))
+
+(defmethod get-snapshot
+  :elastic
+  [ctx id]
+  (log/info "Fetching snapshot aggregate" id)
+  (let [index (-> ctx
+                  (:service-name)
+                  (name)
+                  (str/replace "-" "_"))
+        {:keys [error body]} (elastic/query (assoc (dissoc ctx :body)
+                                                   :method "GET"
+                                                   :path (str "/"
+                                                              (realm ctx)
+                                                              "_"
+                                                              index "/_doc/" id)))]
+    (if error
+      nil
+      body)))

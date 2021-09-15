@@ -141,7 +141,7 @@
                                  "Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/sqs/aws4_request, SignedHeaders=accept;content-type;host;x-amz-date, Signature=15c52699656249eb14aadde7232a50e8e6ac9dfa3cca36e54a7ec071495b4dd8"
                                  "Content-Type"         "application/x-www-form-urlencoded"
                                  "X-Amz-Date"           "20210322T232540Z"
-                                 "X-Amz-Security-Token" nil}
+                                 "X-Amz-Security-Token" ""}
                        :method  :post
                        :raw     true
                        :timeout 5000
@@ -269,7 +269,7 @@
                                  "Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/sqs/aws4_request, SignedHeaders=accept;content-type;host;x-amz-date, Signature=15c52699656249eb14aadde7232a50e8e6ac9dfa3cca36e54a7ec071495b4dd8"
                                  "Content-Type"         "application/x-www-form-urlencoded"
                                  "X-Amz-Date"           "20210322T232540Z"
-                                 "X-Amz-Security-Token" nil}
+                                 "X-Amz-Security-Token" ""}
                        :method  :post
                        :raw     true
                        :timeout 5000
@@ -343,7 +343,7 @@
                                  "Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/sqs/aws4_request, SignedHeaders=accept;content-type;host;x-amz-date, Signature=15c52699656249eb14aadde7232a50e8e6ac9dfa3cca36e54a7ec071495b4dd8"
                                  "Content-Type"         "application/x-www-form-urlencoded"
                                  "X-Amz-Date"           "20210322T232540Z"
-                                 "X-Amz-Security-Token" nil}
+                                 "X-Amz-Security-Token" ""}
                        :method  :post
                        :raw     true
                        :timeout 5000

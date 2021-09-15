@@ -1,9 +1,8 @@
 (ns lambda.filters
   (:require [lambda.util :as util]
             [clojure.tools.logging :as log]
-            [lambda.uuid :as uuid?]
-            [aws :as aws]
             [clojure.string :as str]
+            [sdk.aws.s3 :as s3]
             [lambda.jwt :as jwt]
             [lambda.uuid :as uuid]))
 
@@ -74,7 +73,7 @@
                                          :role :non-interactive}}
                            :commands [{:cmd-id :object-uploaded
                                        :id request-id
-                                       :body (aws/get-object record)
+                                       :body (s3/get-object ctx record)
                                        :key key}]})
                         {:skip true})))))})
 
