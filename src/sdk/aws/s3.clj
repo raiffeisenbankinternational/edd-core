@@ -6,6 +6,12 @@
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
+(defn get-host
+  [ctx]
+  (str "s3."
+       (get-in ctx [:aws :region])
+       ".amazonaws.com"))
+
 (defn convert-query-params
   [params]
   (reduce
@@ -25,38 +31,38 @@
                                      (log/error "S3 Response failed"
                                                 (:status response)
                                                 (:body response))
-                                     {:error {:status  (:status response)
+                                     {:error {:status (:status response)
                                               :message (slurp (:body response))
-                                              :key     (get-in object [:s3 :object :key])
-                                              :bucket  (get-in object [:s3 :bucket :name])}})
+                                              :key (get-in object [:s3 :object :key])
+                                              :bucket (get-in object [:s3 :bucket :name])}})
     :else response))
 
 (defn put-object
   "puts object.content (should be plain string) into object.s3.bucket.name under object.s3.bucket.key"
-  [object]
-  (let [req {:method     "PUT"
-             :uri        (str "/"
-                              (get-in object [:s3 :bucket :name])
-                              "/"
-                              (get-in object [:s3 :object :key]))
-             :headers    {"Host"                 "s3.eu-central-1.amazonaws.com"
-                          "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                          "x-amz-date"           (common/create-date)
-                          "x-amz-security-token" (System/getenv "AWS_SESSION_TOKEN")}
-             :service    "s3"
-             :region     "eu-central-1"
-             :access-key (System/getenv "AWS_ACCESS_KEY_ID")
-             :secret-key (System/getenv "AWS_SECRET_ACCESS_KEY")}
+  [{:keys [aws] :as ctx} object]
+  (let [req {:method "PUT"
+             :uri (str "/"
+                       (get-in object [:s3 :bucket :name])
+                       "/"
+                       (get-in object [:s3 :object :key]))
+             :headers {"Host" (get-host ctx)
+                       "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                       "x-amz-date" (common/create-date)
+                       "x-amz-security-token" (System/getenv "AWS_SESSION_TOKEN")}
+             :service "s3"
+             :region (:region aws)
+             :access-key (:aws-access-key-id aws)
+             :secret-key (:aws-secret-access-key aws)}
         common (common/authorize req)
         response (common/retry #(util/http-put
                                  (str "https://"
                                       (get (:headers req) "Host")
                                       (:uri req))
-                                 {:as      :stream
+                                 {:as :stream
                                   :headers (-> (:headers req)
                                                (dissoc "Host")
                                                (assoc "Authorization" common))
-                                  :body    (get-in object [:s3 :object :content])
+                                  :body (get-in object [:s3 :object :content])
                                   :timeout 8000}
                                  :raw true)
                                3)
@@ -66,27 +72,27 @@
       (io/reader (:body response) :encoding "UTF-8"))))
 
 (defn get-object
-  [object]
-  (let [req {:method     "GET"
-             :uri        (str "/"
-                              (get-in object [:s3 :bucket :name])
-                              "/"
-                              (get-in object [:s3 :object :key]))
-             :headers    {"Host"                 "s3.eu-central-1.amazonaws.com"
-                          "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                          "x-amz-date"           (common/create-date)
-                          "x-amz-security-token" (System/getenv "AWS_SESSION_TOKEN")}
-             :service    "s3"
-             :region     "eu-central-1"
-             :access-key (System/getenv "AWS_ACCESS_KEY_ID")
-             :secret-key (System/getenv "AWS_SECRET_ACCESS_KEY")}
+  [{:keys [aws] :as ctx} object]
+  (let [req {:method "GET"
+             :uri (str "/"
+                       (get-in object [:s3 :bucket :name])
+                       "/"
+                       (get-in object [:s3 :object :key]))
+             :headers {"Host" (get-host ctx)
+                       "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                       "x-amz-date" (common/create-date)
+                       "x-amz-security-token" (System/getenv "AWS_SESSION_TOKEN")}
+             :service "s3"
+             :region (:region aws)
+             :access-key (:aws-access-key-id aws)
+             :secret-key (:aws-secret-access-key aws)}
         common (common/authorize req)]
 
     (let [response (common/retry #(util/http-get
                                    (str "https://"
                                         (get (:headers req) "Host")
                                         (:uri req))
-                                   {:as      :stream
+                                   {:as :stream
                                     :headers (-> (:headers req)
                                                  (dissoc "Host")
                                                  (assoc "Authorization" common))
@@ -99,27 +105,27 @@
         (io/reader (:body response) :encoding "UTF-8")))))
 
 (defn delete-object
-  [object]
-  (let [req {:method     "DELETE"
-             :uri        (str "/"
-                              (get-in object [:s3 :bucket :name])
-                              "/"
-                              (get-in object [:s3 :object :key]))
-             :headers    {"Host"                 "s3.eu-central-1.amazonaws.com"
-                          "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                          "x-amz-date"           (common/create-date)
-                          "x-amz-security-token" (System/getenv "AWS_SESSION_TOKEN")}
-             :service    "s3"
-             :region     "eu-central-1"
-             :access-key (System/getenv "AWS_ACCESS_KEY_ID")
-             :secret-key (System/getenv "AWS_SECRET_ACCESS_KEY")}
+  [{:keys [aws] :as ctx} object]
+  (let [req {:method "DELETE"
+             :uri (str "/"
+                       (get-in object [:s3 :bucket :name])
+                       "/"
+                       (get-in object [:s3 :object :key]))
+             :headers {"Host" (get-host ctx)
+                       "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                       "x-amz-date" (common/create-date)
+                       "x-amz-security-token" (System/getenv "AWS_SESSION_TOKEN")}
+             :service "s3"
+             :region (:region aws)
+             :access-key (:aws-access-key-id aws)
+             :secret-key (:aws-secret-access-key aws)}
         common (common/authorize req)]
 
     (let [response (common/retry #(util/http-delete
                                    (str "https://"
                                         (get (:headers req) "Host")
                                         (:uri req))
-                                   {:as      :stream
+                                   {:as :stream
                                     :headers (-> (:headers req)
                                                  (dissoc "host")
                                                  (assoc "Authorization" common))
@@ -130,26 +136,28 @@
         (log/error "Failed to fetch object" response))
       (if (> (:status response) 299)
         {:error (:body response)}
-        {:body    (io/reader (:body response) :encoding "UTF-8")
+        {:body (io/reader (:body response) :encoding "UTF-8")
          :headers (:headers response)}))))
 
 (defn get-object-tagging
-  [object]
-  (let [req {:method     "GET"
-             :uri        (str "/" (get-in object [:s3 :object :key]))
-             :query      [["tagging" "True"]]
-             :headers    {"Host"                 (str
-                                                  (get-in object [:s3 :bucket :name])
-                                                  ".s3.eu-central-1.amazonaws.com")
-                          "Content-Type"         "application/json"
-                          "Accept"               "application/json"
-                          "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                          "x-amz-date"           (common/create-date)
-                          "x-amz-security-token" (util/get-env "AWS_SESSION_TOKEN")}
-             :service    "s3"
-             :region     "eu-central-1"
-             :access-key (util/get-env "AWS_ACCESS_KEY_ID")
-             :secret-key (util/get-env "AWS_SECRET_ACCESS_KEY")}
+  [{:keys [aws] :as ctx} object]
+  (let [req {:method "GET"
+             :uri (str "/" (get-in object [:s3 :object :key]))
+             :query [["tagging" "True"]]
+             :headers {"Host" (str
+                               (get-in object [:s3 :bucket :name])
+                               ".s3."
+                               (:region aws)
+                               ".amazonaws.com")
+                       "Content-Type" "application/json"
+                       "Accept" "application/json"
+                       "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                       "x-amz-date" (common/create-date)
+                       "x-amz-security-token" (util/get-env "AWS_SESSION_TOKEN")}
+             :service "s3"
+             :region (:region aws)
+             :access-key (:aws-access-key-id aws)
+             :secret-key (:aws-secret-access-key aws)}
         common (common/authorize req)]
 
     (let [response (common/retry #(util/http-get
@@ -157,10 +165,10 @@
                                         (get (:headers req) "Host")
                                         (:uri req))
                                    {:query-params (convert-query-params (:query req))
-                                    :headers      (-> (:headers req)
-                                                      (dissoc "host")
-                                                      (assoc "Authorization" common))
-                                    :timeout      8000}
+                                    :headers (-> (:headers req)
+                                                 (dissoc "host")
+                                                 (assoc "Authorization" common))
+                                    :timeout 8000}
                                    :raw true)
                                  3)]
       (when (contains? response :error)
@@ -194,45 +202,47 @@
                      (first))))))))))
 
 (defn put-object-tagging
-  [object tags]
+  [{:keys [aws] :as ctx} {:keys [object tags]}]
   (let [tags (xml/emit-str
-              {:tag     "Tagging"
-               :content [{:tag     "TagSet"
+              {:tag "Tagging"
+               :content [{:tag "TagSet"
                           :content (mapv
                                     (fn [{:keys [key value]}]
-                                      {:tag     "Tag"
-                                       :content [{:tag     "Key"
+                                      {:tag "Tag"
+                                       :content [{:tag "Key"
                                                   :content [key]}
-                                                 {:tag     "Value"
+                                                 {:tag "Value"
                                                   :content [value]}]})
                                     tags)}]})
-        req {:method     "PUT"
-             :uri        (str "/" (get-in object [:s3 :object :key]))
-             :query      [["tagging" "True"]]
-             :headers    {"Host"                 (str
-                                                  (get-in object [:s3 :bucket :name])
-                                                  ".s3.eu-central-1.amazonaws.com")
-                          "Content-Type"         "application/json"
-                          "Accept"               "application/json"
-                          "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                          "x-amz-date"           (common/create-date)
-                          "x-amz-security-token" (util/get-env "AWS_SESSION_TOKEN")}
-             :service    "s3"
-             :region     "eu-central-1"
-             :payload    tags
-             :access-key (util/get-env "AWS_ACCESS_KEY_ID")
-             :secret-key (util/get-env "AWS_SECRET_ACCESS_KEY")}
+        req {:method "PUT"
+             :uri (str "/" (get-in object [:s3 :object :key]))
+             :query [["tagging" "True"]]
+             :headers {"Host" (str
+                               (get-in object [:s3 :bucket :name])
+                               ".s3."
+                               (:region aws)
+                               ".amazonaws.com")
+                       "Content-Type" "application/json"
+                       "Accept" "application/json"
+                       "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                       "x-amz-date" (common/create-date)
+                       "x-amz-security-token" (util/get-env "AWS_SESSION_TOKEN")}
+             :service "s3"
+             :region (:region aws)
+             :payload tags
+             :access-key (:aws-access-key-id aws)
+             :secret-key (:aws-secret-access-key aws)}
         common (common/authorize req)]
     (let [response (common/retry #(util/http-put
                                    (str "https://"
                                         (get (:headers req) "Host")
                                         (:uri req))
                                    {:query-params (convert-query-params (:query req))
-                                    :body         (:payload req)
-                                    :headers      (-> (:headers req)
-                                                      (dissoc "host")
-                                                      (assoc "Authorization" common))
-                                    :timeout      8000}
+                                    :body (:payload req)
+                                    :headers (-> (:headers req)
+                                                 (dissoc "host")
+                                                 (assoc "Authorization" common))
+                                    :timeout 8000}
                                    :raw true)
                                  3)]
       (when (contains? response :error)

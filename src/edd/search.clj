@@ -31,4 +31,8 @@
   (log/info "Default search init")
   (body-fn ctx))
 
+(defmulti get-snapshot
+  (fn [ctx id]
+    (:view-store ctx)))
+
 (def default-size 50)

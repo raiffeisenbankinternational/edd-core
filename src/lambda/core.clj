@@ -37,14 +37,16 @@
 
 (defn invoke-handler
   [{:keys [body handler] :as ctx}]
-  (cond
-    (:error body) (assoc ctx :resp body)
-    (:health-check ctx) (assoc ctx :resp {:healthy  true
-                                          :build-id (util/get-env "BuildId" "b0")})
-    :else (assoc ctx
-                 :resp
-                 (handler ctx
-                          body))))
+  (util/d-time
+   "time-invoke-handler"
+   (cond
+     (:error body) (assoc ctx :resp body)
+     (:health-check ctx) (assoc ctx :resp {:healthy true
+                                           :build-id (util/get-env "BuildId" "b0")})
+     :else (assoc ctx
+                  :resp
+                  (handler ctx
+                           body)))))
 
 (defn handle-error
   [ctx e]
@@ -106,8 +108,14 @@
 
 (defn start
   [init-ctx handler & {:keys [filters post-filter]
-                       :or   {filters     []
-                              post-filter (fn [ctx] ctx)}}]
+                       :or {filters []
+                            post-filter (fn [ctx] ctx)}}]
+
+  (let [startup-milis (Long/parseLong
+                       (str
+                        (util/get-property "edd.startup-milis" 0)))]
+    (log/info "Server started: " (- (System/currentTimeMillis)
+                                    startup-milis)))
 
   (with-cache
     #(let [api (util/get-env "AWS_LAMBDA_RUNTIME_API")
@@ -121,11 +129,11 @@
                    (assoc :service-name (keyword (util/get-env
                                                   "ServiceName"
                                                   "local-test"))
-                          :aws {:region                (util/get-env "Region" "local")
-                                :account-id            (util/get-env "AccountId" "local")
-                                :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID" "")
+                          :aws {:region (util/get-env "Region" "local")
+                                :account-id (util/get-env "AccountId" "local")
+                                :aws-access-key-id (util/get-env "AWS_ACCESS_KEY_ID" "")
                                 :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY" "")
-                                :aws-session-token     (util/get-env "AWS_SESSION_TOKEN" "")}
+                                :aws-session-token (util/get-env "AWS_SESSION_TOKEN" "")}
                           :hosted-zone-name (util/get-env
                                              "PublicHostedZoneName"
                                              "example.com")
@@ -138,7 +146,7 @@
                invocation-id (get-in
                               request
                               [:headers :lambda-runtime-aws-request-id])]
-           (log/debug "Loop" i)
+           (log/info "Handling next request: " i)
            (binding [request/*request* (atom {:scoped true})]
              (handle-request
               (-> ctx

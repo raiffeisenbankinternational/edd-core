@@ -21,6 +21,7 @@
                                     (name service-name)
                                     ".json")}}}
         {:keys [error]} (s3/put-object
+                         ctx
                          (assoc-in s3
                                    [:s3 :object :content]
                                    (util/to-json {:resp    resp

@@ -22,7 +22,11 @@
       (assoc :service-name "local-test")
       (assoc :invocation-id invocation-id)
       (assoc :environment-name-lower (util/get-env "EnvironmentNameLower"))
-      (assoc :aws {:account-id (util/get-env "AccountId")})
+      (assoc :aws {:region (util/get-env "AWS_DEFAULT_REGION")
+                   :account-id (util/get-env "AccountId")
+                   :aws-access-key-id (util/get-env "AWS_ACCESS_KEY_ID")
+                   :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY")
+                   :aws-session-token (util/get-env "AWS_SESSION_TOKEN")})
       (event-store/register)
       (view-store/register)
       (edd/reg-cmd :cmd-1 (fn [ctx cmd]

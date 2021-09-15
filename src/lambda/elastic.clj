@@ -15,43 +15,47 @@
 
 (defn query
   [{:keys [method path body elastic-search aws]}]
-  (let [req (cond-> {:method     method
-                     :uri        path
-                     :query      ""
-                     :headers    {"Host"         (:url elastic-search)
-                                  "Content-Type" "application/json"
-                                  "X-Amz-Date"   (common/create-date)}
-                     :service    "es"
-                     :region     (:region aws)
+  (let [req (cond-> {:method method
+                     :uri path
+                     :query ""
+                     :headers {"Host" (:url elastic-search)
+                               "Content-Type" "application/json"
+                               "X-Amz-Date" (common/create-date)}
+                     :service "es"
+                     :region (:region aws)
                      :access-key (:aws-access-key-id aws)
                      :secret-key (:aws-secret-access-key aws)}
               body (assoc :payload body))
         auth (common/authorize req)
-        body (cond-> {:headers   (-> (:headers req)
-                                     (dissoc "Host")
-                                     (assoc
-                                      "X-Amz-Security-Token" (:aws-session-token aws)
-                                      "Authorization" auth))
-                      :timeout   20000
-                      :keepalive 300000}
-               body (assoc :body body))]
+        request (cond-> {:headers (-> (:headers req)
+                                      (dissoc "Host")
+                                      (assoc
+                                       "X-Amz-Security-Token" (:aws-session-token aws)
+                                       "Authorization" auth))
+                         :timeout 20000
+                         :keepalive 300000}
+                  body (assoc :body body))]
 
     (let [url (str (or (:scheme elastic-search) "https")
                    "://"
                    (get (:headers req) "Host")
                    (:uri req))
           response (cond
+                     (= method "GET") (util/http-get
+                                       url
+                                       request
+                                       :raw true)
                      (= method "POST") (util/http-post
                                         url
-                                        body
+                                        request
                                         :raw true)
                      (= method "PUT") (util/http-put
                                        url
-                                       body
+                                       request
                                        :raw true)
                      (= method "DELETE") (util/http-delete
                                           url
-                                          body
+                                          request
                                           :raw true))]
       (cond
         (contains? response :error) (do
