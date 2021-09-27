@@ -1,11 +1,14 @@
 (ns edd.search
   (:require [clojure.tools.logging :as log]))
 
-(defn parse [ctx q]
-  (let [% (first q)]
-    (cond
-      (vector? %) (recur ctx %)
-      :else (apply (get ctx %) ctx (rest q)))))
+(defn parse
+; TODO parse => build-filter
+  [op->filter-builder filter-spec]
+  (let [[fst & rst] filter-spec]
+    (if (vector? fst)
+      (recur op->filter-builder fst)
+      (let [builder-fn (get op->filter-builder fst)]
+        (apply builder-fn op->filter-builder rst)))))
 
 (defmulti update-aggregate
   (fn [ctx] (:view-store ctx)))

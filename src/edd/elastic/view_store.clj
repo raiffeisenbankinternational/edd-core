@@ -14,42 +14,46 @@
             [clojure.string :as str]
             [edd.search :refer [parse]]))
 
+(defn realm
+  [ctx]
+  (name (get-in ctx [:meta :realm] :no_realm)))
+
+(defn- make-index-name
+  [realm-name service-name]
+  (str realm-name "_" (str/replace (name service-name) "-" "_")))
+
+(defn- field+keyword
+  [field]
+  (str (name field) ".keyword"))
+
 (defn ->trim [v]
   (if (string? v)
     (str/trim v)
     v))
 
-(defn realm
-  [ctx]
-  (name (get-in ctx [:meta :realm] :no_realm)))
-
-(def el
-  {:and (fn [ctx & rest]
+(def op->filter-builder
+  {:and (fn [op->fn & filter-spec]
           {:bool
-           {:filter (mapv
-                     (fn [%] (parse ctx %))
-                     rest)}})
-   :or (fn [ctx & rest]
+           {:filter (mapv #(parse op->fn %) filter-spec)}})
+   :or (fn [op->fn & filter-spec]
          {:bool
-          {:should (mapv
-                    (fn [%] (parse ctx %))
-                    rest)
+          {:should (mapv #(parse op->fn %) filter-spec)
            :minimum_should_match 1}})
    :eq (fn [_ & [a b]]
          {:term
-          {(str (name a) ".keyword") (->trim b)}})
+          {(field+keyword a) (->trim b)}})
    := (fn [_ & [a b]]
         {:term
          {(name a) (->trim b)}})
    :wildcard (fn [_ & [a b]]
                {:wildcard
                 {(str (name a)) {:value (str "*" (->trim b) "*")}}})
-   :not (fn [ctx & rest]
+   :not (fn [op->fn & filter-spec]
           {:bool
-           {:must_not (parse ctx rest)}})
+           {:must_not (parse op->fn filter-spec)}})
    :in (fn [_ & [a b]]
          {:terms
-          {(str (name a) ".keyword") b}})
+          {(field+keyword a) b}})
    :exists (fn [_ & [a _]]
              {:exists
               {:field (name a)}})
@@ -59,15 +63,13 @@
    :gte (fn [_ & [a b]]
           {:range
            {(name a) {:gte b}}})
-   :nested (fn [ctx path & rest]
+   :nested (fn [op->fn path & filter-spec]
              {:bool
               {:must [{:nested {:path (name path)
-                                :query (mapv
-                                        (fn [%] (parse ctx %))
-                                        rest)}}]}})})
+                                :query (mapv #(parse op->fn %) filter-spec)}}]}})})
 
-(defn search-filter
-  [_ filter q]
+(defn search-with-filter
+  [filter q]
   (let [[fields-key fields value-key value] (:search q)
         search (mapv
                 (fn [p]
@@ -90,80 +92,55 @@
   (map
    (fn [[a b]]
      (case (keyword b)
-       :asc {(str (name a) ".keyword") {:order "asc"}}
-       :desc {(str (name a) ".keyword") {:order "desc"}}
+       :asc {(field+keyword a) {:order "asc"}}
+       :desc {(field+keyword a) {:order "desc"}}
        :asc-number {(str (name a) ".number") {:order "asc"}}
        :desc-number {(str (name a) ".number") {:order "desc"}}
        :asc-date {(name a) {:order "asc"}}
        :desc-date {(name a) {:order "desc"}}))
    (partition 2 sort)))
 
-(defn create-query
-  [ctx q]
-  (let [filter (if (:filter q)
-                 {:query {:bool
-                          {:filter (parse el (:filter q))}}}
-                 {})
-        query (if (:search q)
-                (search-filter ctx filter q)
-                filter)
-
-        select-query (if (:select q)
-                       (assoc query
-                              :_source
-                              (mapv
-                               name
-                               (:select q)))
-                       query)
-        sort-query (if (:sort q)
-                     (assoc select-query
-                            :sort
-                            (form-sorting (:sort q)))
-
-                     select-query)]
-    sort-query))
+(defn create-elastic-query
+  [q]
+  (cond-> {}
+    (:filter q) (merge {:query {:bool {:filter (parse op->filter-builder (:filter q))}}})
+    (:search q) (search-with-filter q)
+    (:select q) (assoc :_source (mapv name (:select q)))
+    (:sort q) (assoc :sort (form-sorting (:sort q)))))
 
 (defn advanced-direct-search
-  [ctx es-qry]
-  (let [json-qry (util/to-json es-qry)
+  [ctx elastic-query]
+  (let [json-query (util/to-json elastic-query)
+        index-name (make-index-name (realm ctx) (or (:index-name ctx) (:service-name ctx)))
         {:keys [error] :as body} (el/query
-                                  (assoc ctx
-                                         :method "POST"
-                                         :path (str "/"
-                                                    (realm ctx)
-                                                    "_"
-                                                    (str/replace (get ctx :index-name
-                                                                      (name (:service-name ctx))) "-" "_") "/_search")
-                                         :body json-qry))
-        total (get-in
-               body
-               [:hits :total :value])]
+                                  {:method "POST"
+                                   :path (str "/" index-name "/_search")
+                                   :body json-query
+                                   :elastic-search (:elastic-search ctx)
+                                   :aws (:aws ctx)})
+        total (get-in body [:hits :total :value])]
 
     (when error
       (throw (ex-info "Elastic query failed" error)))
     (log/debug "Elastic query")
-    (log/debug json-qry)
+    (log/debug json-query)
     (log/debug body)
     {:total total
-     :from (get es-qry :from 0)
-     :size (get es-qry :size default-size)
+     :from (get elastic-query :from 0)
+     :size (get elastic-query :size default-size)
      :hits (mapv
-            (fn [%]
-              (get % :_source))
-            (get-in
-             body
-             [:hits :hits]
-             []))}))
+            :_source
+            (get-in body [:hits :hits] []))}))
 
 (defmethod advanced-search
   :elastic
   [{:keys [query] :as ctx}]
-  (let [req (->
-             (create-query ctx query)
-             (assoc
-              :from (get query :from 0)
-              :size (get query :size default-size)))]
-    (advanced-direct-search ctx req)))
+  (let [elastic-query (->
+                       (create-elastic-query query)
+                       (assoc
+                        :from (get query :from 0)
+                        :size (get query :size default-size)))]
+    (advanced-direct-search ctx elastic-query)))
 
 (defn flatten-paths
   ([m separator]
@@ -179,59 +156,43 @@
              m)
         (into {}))))
 
-(defn- add-to-keyword [kw app-str]
-  (keyword (str (name kw)
-                app-str)))
-
 (defn create-simple-query
   [query]
   {:pre [query]}
   (util/to-json
-   {:size 600
+   {:size  600
     :query {:bool
             {:must (mapv
-                    (fn [%]
-                      {:term {(add-to-keyword (first %) ".keyword")
-                              (second %)}})
+                    (fn [[field value]]
+                      {:term {(field+keyword field) value}})
                     (seq (flatten-paths query ".")))}}}))
 
 (defmethod simple-search
   :elastic
   [{:keys [query] :as ctx}]
   (log/debug "Executing simple search" query)
-  (let [index (str/replace (get ctx :index-name
-                                (name (:service-name ctx))) "-" "_")
+  (let [index-name (make-index-name (realm ctx) (:service-name ctx))
         param (dissoc query :query-id)
         body (elastic/query
-              (assoc ctx
-                     :method "POST"
-                     :path (str "/"
-                                (realm ctx)
-                                "_"
-                                index "/_search")
-                     :body (create-simple-query param)))]
+              {:method "POST"
+               :path (str "/" index-name "/_search")
+               :body (create-simple-query param)
+               :elastic-search (:elastic-search ctx)
+               :aws (:aws ctx)})]
     (mapv
-     (fn [%]
-       (get % :_source))
-     (get-in
-      body
-      [:hits :hits]
-      []))))
+     :_source
+     (get-in body [:hits :hits] []))))
 
 (defn store-to-elastic
   [{:keys [aggregate] :as ctx}]
   (log/debug "Updating aggregate" aggregate)
-  (let [index (-> ctx
-                  (:service-name)
-                  (name)
-                  (str/replace "-" "_"))
-        {:keys [error]} (elastic/query (assoc ctx
-                                              :method "POST"
-                                              :path (str "/"
-                                                         (realm ctx)
-                                                         "_"
-                                                         index "/_doc/" (:id aggregate))
-                                              :body (util/to-json aggregate)))]
+  (let [index-name (make-index-name (realm ctx) (:service-name ctx))
+        {:keys [error]} (elastic/query
+                         {:method "POST"
+                          :path (str "/" index-name "/_doc/" (:id aggregate))
+                          :body (util/to-json aggregate)
+                          :elastic-search (:elastic-search ctx)
+                          :aws (:aws ctx)})]
     (if error
       (throw (ex-info "could not store aggregate" {:error error}))
       ctx)))
@@ -252,22 +213,18 @@
   (assoc ctx
          :view-store :elastic
          :elastic-search {:scheme (util/get-env "IndexDomainScheme" "https")
-                          :url (util/get-env "IndexDomainEndpoint")}))
+                          :url    (util/get-env "IndexDomainEndpoint")}))
 
 (defmethod get-snapshot
   :elastic
   [ctx id]
   (log/info "Fetching snapshot aggregate" id)
-  (let [index (-> ctx
-                  (:service-name)
-                  (name)
-                  (str/replace "-" "_"))
-        {:keys [error body]} (elastic/query (assoc (dissoc ctx :body)
-                                                   :method "GET"
-                                                   :path (str "/"
-                                                              (realm ctx)
-                                                              "_"
-                                                              index "/_doc/" id)))]
+  (let [index-name (make-index-name (realm ctx) (:service-name ctx))
+        {:keys [error body]} (elastic/query
+                              {:method "GET"
+                               :path (str "/" index-name "/_doc/" id)
+                               :elastic-search (:elastic-search ctx)
+                               :aws (:aws ctx)})]
     (if error
       nil
       body)))
