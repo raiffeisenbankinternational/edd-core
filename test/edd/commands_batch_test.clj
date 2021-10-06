@@ -144,7 +144,8 @@
                                  "X-Amz-Security-Token" ""}
                        :method  :post
                        :raw     true
-                       :timeout 5000
+                       :connect-timeout 200
+                       :idle-timeout 5000
                        :url     "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"
                        :version :http1.1}
                       {:method  :get
@@ -272,7 +273,8 @@
                                  "X-Amz-Security-Token" ""}
                        :method  :post
                        :raw     true
-                       :timeout 5000
+                       :connect-timeout 200
+                       :idle-timeout 5000
                        :url     "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"
                        :version :http1.1}
                       {:method  :get
@@ -346,7 +348,8 @@
                                  "X-Amz-Security-Token" ""}
                        :method  :post
                        :raw     true
-                       :timeout 5000
+                       :connect-timeout 200
+                       :idle-timeout 5000
                        :url     "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"
                        :version :http1.1}
                       {:method  :get
