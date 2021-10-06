@@ -7,6 +7,22 @@
 
 (def batch-version "2012-11-05")
 
+(def retry-count 3)
+(defn with-timeouts
+  "Assign timeouts based on retry attempt
+  We take squre function of attempt and multiply"
+  [n req]
+  (let [attempt (- retry-count n)]
+    (assoc
+     req
+     :connect-timeout (-> attempt
+                          (* attempt)
+                          (* 500)
+                          (+ 200))
+     :idle-timeout (-> attempt
+                       (* attempt)
+                       (* 4000)
+                       (+ 5000)))))
 (defn sqs-publish
   [{:keys [queue ^String message aws] :as ctx}]
   (let [req {:method "POST"
@@ -31,19 +47,21 @@
              :secret-key (:aws-secret-access-key aws)}
         auth (sdk/authorize req)]
 
-    (let [response (sdk/retry
+    (let [response (sdk/retry-n
                     #(util/http-post
                       (str "https://"
                            (get (:headers req) "Host")
                            (:uri req))
-                      {:body (:payload req)
-                       :version :http1.1
-                       :headers (-> (:headers req)
-                                    (assoc "Authorization" auth)
-                                    (dissoc "Host")
-                                    (assoc "X-Amz-Security-Token"
-                                           (:aws-session-token aws)))
-                       :timeout 5000}) 3)]
+                      (with-timeouts
+                        %
+                        {:body (:payload req)
+                         :version :http1.1
+                         :headers (-> (:headers req)
+                                      (assoc "Authorization" auth)
+                                      (dissoc "Host")
+                                      (assoc "X-Amz-Security-Token"
+                                             (:aws-session-token aws)))}))
+                    retry-count)]
       (when (contains? response :error)
         (throw (-> "Failed to send message" (ex-info response))))
 
@@ -94,19 +112,21 @@
              :secret-key (:aws-secret-access-key aws)}
         auth (sdk/authorize req)]
     (log/info "Dispatching message delete")
-    (let [response (sdk/retry
+    (let [response (sdk/retry-n
                     #(util/http-post
                       (str "https://"
                            (get (:headers req) "Host")
                            (:uri req))
-                      {:body (:payload req)
-                       :version :http1.1
-                       :headers (-> (:headers req)
-                                    (dissoc "Host")
-                                    (assoc "Authorization" auth)
-                                    (assoc "X-Amz-Security-Token" (:aws-session-token aws)))
-                       :timeout 5000
-                       :raw true}) 3)]
+                      (with-timeouts
+                        %
+                        {:body (:payload req)
+                         :version :http1.1
+                         :headers (-> (:headers req)
+                                      (dissoc "Host")
+                                      (assoc "Authorization" auth)
+                                      (assoc "X-Amz-Security-Token" (:aws-session-token aws)))
+                         :raw true}))
+                    retry-count)]
       (when (or (contains? response :error)
                 (> (get response :status 0) 299))
         (log/error "Failed to sqs:ChangeMessageVisibility" response))
