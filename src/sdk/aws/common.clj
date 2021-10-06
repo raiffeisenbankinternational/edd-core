@@ -6,6 +6,8 @@
   (:import (java.time.format DateTimeFormatter)
            (java.time OffsetDateTime ZoneOffset)))
 
+(def ^:dynamic retry-count)
+
 (defn retry [f n & [resp]]
   (if (zero? n)
     (do (log/error "Retry failed" resp)
@@ -14,6 +16,17 @@
       (if (:error response)
         (do (Thread/sleep (+ 1000 (rand-int 1000)))
             (retry f (dec n) response))
+        response))))
+
+(defn retry-n [f n & [resp]]
+  "Retry function with 1 that accepts retry count"
+  (if (zero? n)
+    (do (log/error "Retry failed" resp)
+        (throw (RuntimeException. "Failed to execute request")))
+    (let [response (f n)]
+      (if (:error response)
+        (do (Thread/sleep (+ 1000 (rand-int 1000)))
+            (retry-n f (dec n) response))
         response))))
 
 (defn create-date

@@ -206,7 +206,8 @@
                                         "x-amz-date"           "20200426T061823Z"
                                         "x-amz-security-token" nil}
                               :method  :get
-                              :timeout 8000
+                              :connect-timeout 200
+                              :idle-timeout 5000
                               :url     "https://s3.eu-central-1.amazonaws.com/example-bucket/test/2222b7b5-9f50-4dc4-86d1-2e4fe1f6d491/1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"}
                              {:method  :get
                               :timeout 90000000
