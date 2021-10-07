@@ -1,8 +1,6 @@
 (ns lambda.elastic
-  (:import (java.time.format DateTimeFormatter)
-           (java.time OffsetDateTime ZoneOffset))
   (:require
-   [clj-aws-sign.core :as awssign]
+   [lambda.http-client :as client]
    [lambda.util :as util]
    [clojure.tools.logging :as log]
    [clojure.string :refer [join]]
@@ -32,7 +30,6 @@
                                       (assoc
                                        "X-Amz-Security-Token" (:aws-session-token aws)
                                        "Authorization" auth))
-                         :timeout 20000
                          :keepalive 300000}
                   body (assoc :body body))]
 
@@ -40,23 +37,29 @@
                    "://"
                    (get (:headers req) "Host")
                    (:uri req))
-          response (cond
-                     (= method "GET") (util/http-get
-                                       url
-                                       request
-                                       :raw true)
-                     (= method "POST") (util/http-post
-                                        url
-                                        request
-                                        :raw true)
-                     (= method "PUT") (util/http-put
-                                       url
-                                       request
-                                       :raw true)
-                     (= method "DELETE") (util/http-delete
-                                          url
-                                          request
-                                          :raw true))]
+          response (client/retry-n
+                    #(let [request (client/request->with-timeouts
+                                    %
+                                    request
+                                    :idle-timeout 20000)]
+                       (cond
+                         (= method "GET") (util/http-get
+                                           url
+                                           request
+                                           :raw true)
+                         (= method "POST") (util/http-post
+                                            url
+                                            request
+                                            :raw true)
+                         (= method "PUT") (util/http-put
+                                           url
+                                           request
+                                           :raw true)
+                         (= method "DELETE") (util/http-delete
+                                              url
+                                              request
+                                              :raw true)))
+                    :retries 3)]
       (cond
         (contains? response :error) (do
                                       (log/error "Failed update" response)

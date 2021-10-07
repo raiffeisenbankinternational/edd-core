@@ -120,7 +120,8 @@
                                    "X-Amz-Security-Token" ""}
                        :keepalive 300000
                        :method    :post
-                       :timeout   20000
+                       :idle-timeout 20000
+                       :connect-timeout 200
                        :url       "https:///test_local_test/_doc/05120289-90f3-423c-ad9f-c46f9927a53e"}
                       {:method  :get
                        :timeout 90000000
