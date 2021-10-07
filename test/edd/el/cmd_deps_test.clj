@@ -54,7 +54,8 @@
                                  :headers {"X-Authorization" "#mock-id-token"
                                            "Content-Type" "application/json"}
                                  :method :post
-                                 :timeout 10000
+                                 :idle-timeout 10000
+                                 :connect-timeout 200
                                  :url "https://remote-svc./query"}])))))
 
 (deftest test-remote-dependency
@@ -83,7 +84,8 @@
                                 :headers {"X-Authorization" "#id-token"
                                           "Content-Type" "application/json"}
                                 :method :post
-                                :timeout 10000
+                                :idle-timeout 10000
+                                :connect-timeout 200
                                 :url "https://some-remote-service.mock.com/query"}])))))
 
 (deftest test-when-dependency-in-context-should-override
@@ -321,7 +323,8 @@
                                :headers {"X-Authorization" "#mock-id-token"
                                          "Content-Type" "application/json"}
                                :method :post
-                               :timeout 10000
+                               :idle-timeout 10000
+                               :connect-timeout 200
                                :url "https://remote-svc./query"}]))))
 
 (deftest dependant-deps
