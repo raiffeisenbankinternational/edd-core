@@ -200,10 +200,12 @@
  expr."
   {:added "1.0"}
   [message & expr]
-  `(let [start# (. System (nanoTime))
-         ret# ~@expr]
-     (log/info {:type    :time
-                :message ~message
-                :elapsed (/ (double (- (. System (nanoTime)) start#)) 1000000.0)
-                :unit    "msec"})
-     ret#))
+  `(do
+     (log/info {:message (str "START " ~message)})
+     (let [start# (. System (nanoTime))
+           ret# ~@expr]
+       (log/info {:type :time
+                  :message (str "END " ~message)
+                  :elapsed (/ (double (- (. System (nanoTime)) start#)) 1000000.0)
+                  :unit "msec"})
+       ret#)))

@@ -33,10 +33,12 @@
                         {:total-attempts total})))
     (let [response (f attempt)]
       (if (:error response)
-        (do (when (not= attempt total)
-              ;sleep only when second attempt
-              (Thread/sleep (+ 1000 (rand-int 1000))))
-            (retry-n-impl f (dec attempt) total response))
+        (do
+          (log/warn "Retrying" (- total attempt))
+          (when (not= attempt total)
+            ;sleep only when second attempt
+            (Thread/sleep (+ 1000 (rand-int 1000))))
+          (retry-n-impl f (dec attempt) total response))
         response))))
 
 (defn retry-n

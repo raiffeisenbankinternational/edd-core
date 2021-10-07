@@ -146,13 +146,15 @@
                invocation-id (get-in
                               request
                               [:headers :lambda-runtime-aws-request-id])]
-           (log/info "Handling next request: " i)
-           (binding [request/*request* (atom {:scoped true})]
-             (handle-request
-              (-> ctx
-                  (assoc :from-api (is-from-api request))
-                  (assoc :api api
-                         :invocation-id (if-not (int? invocation-id)
-                                          (uuid/parse invocation-id)
-                                          invocation-id)))
-              request)))))))
+
+           (util/d-time
+            (str "Handling next request: " i)
+            (binding [request/*request* (atom {:scoped true})]
+              (handle-request
+               (-> ctx
+                   (assoc :from-api (is-from-api request))
+                   (assoc :api api
+                          :invocation-id (if-not (int? invocation-id)
+                                           (uuid/parse invocation-id)
+                                           invocation-id)))
+               request))))))))
