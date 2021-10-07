@@ -3,6 +3,7 @@
    [edd.flow :refer :all]
    [clojure.tools.logging :as log]
    [lambda.util :as util]
+   [lambda.http-client :as http-client]
    [edd.dal :as dal]
    [lambda.request :as request]
    [edd.response.cache :as response-cache]
@@ -39,17 +40,20 @@
         url (calc-service-url
              service)
         token (aws/get-token ctx)
-        response (util/http-post
-                  url
-                  {:timeout 10000
-                   :body (util/to-json
-                          {:query (call-query-fn ctx cmd query-fn)
-                           :meta (:meta ctx)
-                           :request-id (:request-id ctx)
-                           :interaction-id (:interaction-id ctx)})
-                   :headers {"Content-Type" "application/json"
-                             "X-Authorization" token}})]
-    (log/info "AAA" response)
+        response (http-client/retry-n
+                  #(util/http-post
+                    url
+                    (http-client/request->with-timeouts
+                     %
+                     {:body (util/to-json
+                             {:query (call-query-fn ctx cmd query-fn)
+                              :meta (:meta ctx)
+                              :request-id (:request-id ctx)
+                              :interaction-id (:interaction-id ctx)})
+                      :headers {"Content-Type" "application/json"
+                                "X-Authorization" token}}
+                     :idle-timeout 10000))
+                  :retries 3)]
     (when (:error response)
       (throw (ex-info (str "Deps request error for " service) {:error (:error response)})))
     (when (:error (get response :body))
