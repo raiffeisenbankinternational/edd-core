@@ -12,7 +12,7 @@
   (get (System/getenv) name default))
 
 (defn query
-  [{:keys [method path body elastic-search aws]}]
+  [{:keys [method path body elastic-search aws]} & {:keys [ignored-status]}]
   (let [req (cond-> {:method method
                      :uri path
                      :query ""
@@ -64,6 +64,7 @@
         (contains? response :error) (do
                                       (log/error "Failed update" response)
                                       {:error {:error response}})
+        (= (:status response) ignored-status) {:body nil}
         (> (:status response) 299) (do
                                      (log/error "Elastic query" body)
                                      (log/error "Elastic response"
