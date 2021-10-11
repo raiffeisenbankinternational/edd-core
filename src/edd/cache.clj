@@ -47,10 +47,7 @@
 
 (defn get-by-id-from-store
   [ctx id]
-  (let [resp (try
-               (event/get-by-id (assoc ctx :id id))
-               (catch Exception e
-                 (ex-data e)))]
+  (let [resp (event/get-by-id (assoc ctx :id id))]
     {:version (get-in resp [:aggregate :version] 0)
      :aggregate (:aggregate resp)}))
 

@@ -18,12 +18,14 @@
             [edd.el.query :as query]
             [lambda.s3-test :as s3]
             [edd.memory.view-store :as view-store]
+            [edd.elastic.view-store :as elastic-view-store]
             [edd.memory.event-store :as event-store]
             [edd.test.fixture.dal :as mock]
             [edd.postgres.event-store :as pg]
             [lambda.uuid :as uuid]
             [sdk.aws.common :as sdk-common]
-            [sdk.aws.sqs :as sqs]))
+            [sdk.aws.sqs :as sqs])
+  (:import (clojure.lang ExceptionInfo)))
 
 (defn dummy-command-handler
   [ctx cmd]
@@ -307,6 +309,55 @@
               :version 1
               :id      nil}
              (:aggregate agg))))))
+
+(deftest test-get-by-id-missing-snapshot
+  "Test combinations of get-by. If aggregate snapshot return nil we apply events"
+  "If no events we return nil"
+  (mock/with-mock-dal
+    (with-redefs [dal/get-events (fn [_]
+                                   [])
+                  util/http-get (fn [url request & {:keys [raw]}]
+                                  {:status 404})]
+      (let [response (query/handle-query
+                      (-> (prepare {})
+                          (elastic-view-store/register))
+                      {:query
+                       {:query-id :get-by-id
+                        :id "bla"}})]
+        (is (contains? response :aggregate))
+        (is (= nil
+               (:aggregate response))))))
+  (mock/with-mock-dal
+    (with-redefs [dal/get-events (fn [_]
+                                   [{:event-id :e7
+                                     :event-seq 1}])
+                  util/http-get (fn [url request & {:keys [raw]}]
+                                  {:status 403})]
+      (is (thrown? ExceptionInfo
+                   (query/handle-query
+                    (-> (prepare {})
+                        (elastic-view-store/register))
+                    {:query
+                     {:query-id :get-by-id
+                      :id "bla"}})))))
+  (mock/with-mock-dal
+    (with-redefs [dal/get-events (fn [_]
+                                   [{:event-id :e7
+                                     :event-seq 1
+                                     :id "bla"}])
+                  util/http-get (fn [url request & {:keys [raw]}]
+                                  {:status 404})]
+      (let [response (query/handle-query
+                      (-> (prepare {})
+                          (elastic-view-store/register))
+                      {:query
+                       {:query-id :get-by-id
+                        :id "bla"}})]
+        (is (contains? response :aggregate))
+        (is (= {:id "bla"
+                :name :e7
+                :version 1}
+               (:aggregate response)))))))
 
 (deftest test-query-with-invalid-schema
 

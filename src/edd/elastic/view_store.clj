@@ -224,7 +224,8 @@
                               {:method "GET"
                                :path (str "/" index-name "/_doc/" id)
                                :elastic-search (:elastic-search ctx)
-                               :aws (:aws ctx)})]
+                               :aws (:aws ctx)}
+                              :ignored-status 404)]
     (if error
-      nil
+      (throw (ex-info "Failed to fetch snapshot" error))
       body)))
