@@ -45,7 +45,7 @@
                   (error-matches? m v))
                 errors))]
     (if match
-      {:key              (first match)
+      {:key (first match)
        :original-message m}
       m)))
 
@@ -342,8 +342,8 @@
 (defmethod get-events
   :postgres
   [{:keys [id service-name version]
-    :as   ctx
-    :or   {version 0}}]
+    :as ctx
+    :or {version 0}}]
   {:pre [id service-name]}
   (log/info "Fetching events for aggregate" id)
   (let [data (try-to-data
@@ -415,13 +415,23 @@
         (update-sequence ctx i))
       ctx)))
 
+(def connection-lock (Object.))
+(def ^:dynamic database-connection (atom nil))
+
 (defmethod with-init
   :postgres
   [ctx body-fn]
   (log/debug "Initializing")
-  (let [db-ctx (db/init ctx)]
-    (with-open [con (jdbc/get-connection (:ds db-ctx))]
-      (body-fn (assoc db-ctx :con con)))))
+  (let [db-ctx (db/init ctx)
+        db-conn @database-connection]
+    (if db-conn
+      (body-fn (assoc db-ctx :con db-conn))
+      (locking connection-lock
+        (let [con (util/d-time
+                   "Opening db connection"
+                   (jdbc/get-connection (:ds db-ctx)))]
+          (swap! database-connection (fn [_] con))
+          (body-fn (assoc db-ctx :con con)))))))
 
 (defn register
   [ctx]
