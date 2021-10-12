@@ -173,12 +173,14 @@
   (log/debug "Executing simple search" query)
   (let [index-name (make-index-name (realm ctx) (:service-name ctx))
         param (dissoc query :query-id)
-        body (elastic/query
-              {:method "POST"
-               :path (str "/" index-name "/_search")
-               :body (create-simple-query param)
-               :elastic-search (:elastic-search ctx)
-               :aws (:aws ctx)})]
+        body (util/d-time
+              "Doing elastic search (Simple-search)"
+              (elastic/query
+               {:method "POST"
+                :path (str "/" index-name "/_search")
+                :body (create-simple-query param)
+                :elastic-search (:elastic-search ctx)
+                :aws (:aws ctx)}))]
     (mapv
      :_source
      (get-in body [:hits :hits] []))))
