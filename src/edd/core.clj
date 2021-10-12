@@ -134,12 +134,13 @@
 
 (defn dispatch-request
   [{:keys [body] :as ctx}]
-  (log/debug "Dispatching" body)
-  (assoc
-   ctx
-   :resp (mapv
-          #(dispatch-item (assoc ctx :item %))
-          body)))
+  (util/d-time
+   "Dispatching"
+   (assoc
+    ctx
+    :resp (mapv
+           #(dispatch-item (assoc ctx :item %))
+           body))))
 
 (defn filter-queue-request
   "If request is coming from queue we need to get out all request bodies"
