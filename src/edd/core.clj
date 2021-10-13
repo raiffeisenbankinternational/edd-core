@@ -72,6 +72,12 @@
             :event-fx
             #(assoc % event-id reg-fn))))
 
+(defn reg-service-schema
+  "Register a service schema that will be serialised and returned when
+  requested."
+  [ctx schema]
+  (assoc-in ctx [:edd-core :service-schema] schema))
+
 (defn- add-log-level
   [attrs body]
   (if-let [level (:log-level body)]

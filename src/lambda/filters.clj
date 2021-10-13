@@ -4,6 +4,7 @@
             [clojure.string :as str]
             [sdk.aws.s3 :as s3]
             [lambda.jwt :as jwt]
+            [lambda.service-schema :as service-schema]
             [lambda.uuid :as uuid]))
 
 (def from-queue
@@ -134,17 +135,27 @@
    :cond (fn [{:keys [body]}]
            (contains? body :path))
    :fn (fn [{:keys [req body] :as ctx}]
-         (cond
-           (= (:path req)
-              "/health") (assoc ctx :health-check true)
-           (= (:httpMethod req)
-              "OPTIONS") (assoc ctx :health-check true)
-           :else (-> ctx
-                     (assoc :body (util/to-edn (:body body)))
-                     (check-user-role))))})
+         (let [{http-method :httpMethod
+                path        :path}       req]
+           (cond
+             (= path "/health")
+             (assoc ctx :health-check true)
+
+             (= http-method "OPTIONS")
+             (assoc ctx :health-check true)
+
+             (service-schema/relevant-request? http-method path)
+             (assoc ctx :service-schema-request {:format (service-schema/requested-format path)})
+
+             :else (-> ctx
+                       (assoc :body (util/to-edn (:body body)))
+                       (check-user-role)))))})
 
 (defn to-api
-  [{:keys [resp] :as ctx}]
+  [{:keys [resp resp-content-type resp-serializer-fn]
+    :or {resp-content-type "application/json"
+         resp-serializer-fn util/to-json}
+    :as ctx}]
   (log/debug "to-api" resp)
   (assoc ctx
          :resp {:statusCode 200
@@ -152,6 +163,6 @@
                 :headers {"Access-Control-Allow-Headers" "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
                           "Access-Control-Allow-Methods" "OPTIONS,POST,PUT,GET"
                           "Access-Control-Expose-Headers" "*"
-                          "Content-Type" "application/json"
+                          "Content-Type" resp-content-type
                           "Access-Control-Allow-Origin" "*"}
-                :body (util/to-json resp)}))
+                :body (resp-serializer-fn resp)}))
