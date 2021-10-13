@@ -7,7 +7,7 @@
             [lambda.util :as util]
             [lambda.util :as util]
             [lambda.test.fixture.core :refer [mock-core]]
-            [lambda.test.fixture.client :refer [verify-traffic-json]]
+            [lambda.test.fixture.client :refer [verify-traffic-edn]]
 
             [edd.postgres.event-store :as postgres-event-store]
             [edd.memory.view-store :as view-store]
