@@ -3,6 +3,7 @@
   (:require [lambda.util :as util]
             [aws :as aws]
             [lambda.request :as request]
+            [lambda.service-schema :as service-schema]
             [clojure.tools.logging :as log]
             [clojure.java.io :as io]
             [clojure.string :as str]
@@ -43,6 +44,8 @@
      (:error body) (assoc ctx :resp body)
      (:health-check ctx) (assoc ctx :resp {:healthy true
                                            :build-id (util/get-env "BuildId" "b0")})
+     (:service-schema-request ctx) (service-schema/handler ctx)
+
      :else (assoc ctx
                   :resp
                   (handler ctx

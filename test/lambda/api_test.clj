@@ -1,16 +1,14 @@
 (ns lambda.api-test
-  (:require
-   [lambda.core :refer [handle-request]]
-   [clojure.string :as str]
-   [lambda.util :refer [to-edn]]
-   [lambda.filters :as fl]
-   [lambda.util :as util]
-   [clojure.test :refer :all]
-   [lambda.core :as core]
-   [lambda.jwt-test :as jwt-test]
-   [lambda.test.fixture.client :refer [verify-traffic-json]]
-   [lambda.test.fixture.core :refer [mock-core]])
-  (:import (clojure.lang ExceptionInfo)))
+  (:require [clojure.test :refer :all]
+            [yaml.core :as yaml]
+            [lambda.core :as core]
+            [lambda.filters :as fl]
+            [lambda.jwt-test :as jwt-test]
+            [lambda.test.fixture.client :as client :refer [verify-traffic-edn]]
+            [lambda.test.fixture.core :refer [mock-core]]
+            [lambda.util :as util])
+  (:import
+   clojure.lang.ExceptionInfo))
 
 (def cmd-id #uuid "c5c4d4df-0570-43c9-a0c5-2df32f3be124")
 
@@ -211,26 +209,25 @@
        :user   (:user ctx)})
     :filters [fl/from-api]
     :post-filter fl/to-api)
-   (do
-     (verify-traffic-json
-      [{:body   {:body            (util/to-json
-                                   {:source dummy-cmd
-                                    :user   {:id    "john.smith@example.com"
-                                             :email "john.smith@example.com",
-                                             :role  :group-2
-                                             :roles [:anonymous :group-3 :group-2 :group-1]}})
-                 :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-                                   :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
-                                   :Access-Control-Allow-Origin   "*"
-                                   :Access-Control-Expose-Headers "*"
-                                   :Content-Type                  "application/json"}
-                 :isBase64Encoded false
-                 :statusCode      200}
-        :method :post
-        :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-       {:method  :get
-        :timeout 90000000
-        :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
+   (verify-traffic-edn
+    [{:body   {:body            (util/to-json
+                                 {:source dummy-cmd
+                                  :user   {:id    "john.smith@example.com"
+                                           :email "john.smith@example.com",
+                                           :role  :group-2
+                                           :roles [:anonymous :group-3 :group-2 :group-1]}})
+               :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                                 :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
+                                 :Access-Control-Allow-Origin   "*"
+                                 :Access-Control-Expose-Headers "*"
+                                 :Content-Type                  "application/json"}
+               :isBase64Encoded false
+               :statusCode      200}
+      :method :post
+      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
+     {:method  :get
+      :timeout 90000000
+      :url     "http://mock/2018-06-01/runtime/invocation/next"}])))
 
 (deftest api-handler-test-base64
   (mock-core
@@ -243,7 +240,7 @@
     :filters [fl/from-api]
     :post-filter fl/to-api)
    (do
-     (verify-traffic-json
+     (verify-traffic-edn
       [{:body   {:body            (util/to-json
                                    {:source dummy-cmd
                                     :user   {:id    "john.smith@example.com"
@@ -273,7 +270,7 @@
        :user   (:user ctx)})
     :filters [fl/from-api]
     :post-filter fl/to-api)
-   (verify-traffic-json
+   (verify-traffic-edn
     [{:body   {:body            (util/to-json
                                  {:error {:jwt :invalid}})
                :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
@@ -298,7 +295,7 @@
       {:error "Some error"})
     :filters [fl/from-api]
     :post-filter fl/to-api)
-   (verify-traffic-json
+   (verify-traffic-edn
     [{:body   {:body            (util/to-json
                                  {:error "Some error"})
                :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
@@ -323,7 +320,7 @@
       (throw (new RuntimeException "Some error")))
     :filters [fl/from-api]
     :post-filter fl/to-api)
-   (verify-traffic-json
+   (verify-traffic-edn
     [{:body   {:body            (util/to-json
                                  {:error "Some error"})
                :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
@@ -348,7 +345,7 @@
       {:source body})
     :filters [fl/from-bucket]
     :post-filter fl/to-api)
-   (verify-traffic-json
+   (verify-traffic-edn
     [{:body   {:body            (util/to-json
                                  {:source (request dummy-cmd)})
                :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
@@ -374,7 +371,7 @@
       {:healthy false})
     :filters [fl/from-api]
     :post-filter fl/to-api)
-   (verify-traffic-json
+   (verify-traffic-edn
     [{:body   {:body            (util/to-json
                                  {:healthy  true
                                   :build-id "b0"})
@@ -401,7 +398,7 @@
       {:healthy false})
     :filters [fl/from-api]
     :post-filter fl/to-api)
-   (verify-traffic-json
+   (verify-traffic-edn
     [{:body   {:body            (util/to-json
                                  {:healthy  true
                                   :build-id "b0"})
@@ -417,6 +414,43 @@
      {:method  :get
       :timeout 90000000
       :url     "http://mock/2018-06-01/runtime/invocation/next"}])))
+
+(deftest test-schema-request
+  (let [service-schema {:name "string"
+                        :age  "number"}]
+    (testing "should respond with JSON if schema.json requested"
+      (mock-core
+       :invocations [(api-request nil
+                                  :path "/api/schema.json"
+                                  :http-method "GET")]
+       (core/start
+        {:edd-core {:service-schema service-schema}}
+        (fn [ctx _]
+          (:service-schema ctx))
+        :filters [fl/from-api]
+        :post-filter fl/to-api)
+       (is (= service-schema
+              (-> (client/responses)
+                  (first)
+                  :body
+                  (util/to-edn))))))
+
+    (testing "should respond with YAML if schema.yaml requested"
+      (mock-core
+       :invocations [(api-request nil
+                                  :path "/api/schema.yaml"
+                                  :http-method "GET")]
+       (core/start
+        {:edd-core {:service-schema service-schema}}
+        (fn [ctx _]
+          (:service-schema ctx))
+        :filters [fl/from-api]
+        :post-filter fl/to-api)
+       (is (= service-schema
+              (-> (client/responses)
+                  (first)
+                  :body
+                  (yaml/parse-string))))))))
 
 (deftest test-custom-config
   (mock-core

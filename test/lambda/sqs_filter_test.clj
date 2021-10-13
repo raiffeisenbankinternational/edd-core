@@ -10,7 +10,7 @@
    [lambda.util :as util]
    [lambda.core :as core]
    [lambda.test.fixture.core :refer [mock-core]]
-   [lambda.test.fixture.client :refer [verify-traffic-json]]
+   [lambda.test.fixture.client :refer [verify-traffic-edn]]
    [clojure.test :refer :all]
    [sdk.aws.common :as common]))
 
@@ -107,30 +107,29 @@
                                 (slurp (:body cmd)))]
             (assoc body :commands [response])))
         :filters [fl/from-queue fl/from-bucket])
-       (verify-traffic-json [{:body {:commands [{:body "Of something"
-                                                 :cmd-id :object-uploaded
-                                                 :id request-id
-                                                 :key key}]
-                                     :meta {:realm :test
-                                            :user {:email "non-interractiva@s3.amazonws.com"
-                                                   :id #uuid "1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"
-                                                   :role :non-interactive}}
-                                     :user "local-test"
-                                     :interaction-id interaction-id
-                                     :request-id request-id}
-                              :method :post
-                              :url "http://mock/2018-06-01/runtime/invocation/0/response"}
-                             {:as :stream
-                              :headers {"Authorization" "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=14a5852e25815e3ef3307b9302d72841668fb66a6525328b95b4b77794271316"
-                                        "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                                        "x-amz-date" "20200426T061823Z"
-                                        "x-amz-security-token" nil}
-                              :method :get
-                              :connect-timeout 200
-                              :idle-timeout 5000
-                              :url (str "https://s3.eu-central-1.amazonaws.com/s3-bucket/"
-                                        key)}
-                             {:method :get
-                              :timeout 90000000
-                              :url "http://mock/2018-06-01/runtime/invocation/next"}])))))
-
+       (verify-traffic-edn [{:body {:commands [{:body "Of something"
+                                                :cmd-id :object-uploaded
+                                                :id request-id
+                                                :key key}]
+                                    :meta {:realm :test
+                                           :user {:email "non-interractiva@s3.amazonws.com"
+                                                  :id #uuid "1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"
+                                                  :role :non-interactive}}
+                                    :user "local-test"
+                                    :interaction-id interaction-id
+                                    :request-id request-id}
+                             :method :post
+                             :url "http://mock/2018-06-01/runtime/invocation/0/response"}
+                            {:as :stream
+                             :headers {"Authorization" "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=14a5852e25815e3ef3307b9302d72841668fb66a6525328b95b4b77794271316"
+                                       "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                                       "x-amz-date" "20200426T061823Z"
+                                       "x-amz-security-token" nil}
+                             :method :get
+                             :connect-timeout 200
+                             :idle-timeout 5000
+                             :url (str "https://s3.eu-central-1.amazonaws.com/s3-bucket/"
+                                       key)}
+                            {:method :get
+                             :timeout 90000000
+                             :url "http://mock/2018-06-01/runtime/invocation/next"}])))))

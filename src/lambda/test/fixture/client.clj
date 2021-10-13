@@ -7,25 +7,32 @@
 
 (def ^:dynamic *world*)
 
-(defn map-body-to-json
+(defn map-body-to-edn
   [traffic]
   (if (:body traffic)
-    (assoc traffic
-           :body
-           (util/to-edn (:body traffic)))
+    (update traffic :body util/to-edn)
     traffic))
 
-(defmacro verify-traffic-json
+(defmacro verify-traffic-edn
   [y]
   `(is (= ~y
           (mapv
-           map-body-to-json
+           map-body-to-edn
            (:traffic @*world*)))))
 
 (defmacro verify-traffic
   [y]
   `(is (= ~y
           (:traffic @*world*))))
+
+(defn traffic
+  ([]
+   (mapv map-body-to-edn (:traffic @*world*)))
+  ([n]
+   (nth (traffic) n)))
+
+(defn responses []
+  (map :body (traffic)))
 
 (defn record-traffic
   [req]
@@ -96,5 +103,3 @@
   `(binding [*world* (atom {:responses ~responses})]
      (with-redefs [http/request handle-request]
        (do ~@body))))
-
-

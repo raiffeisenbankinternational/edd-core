@@ -1,27 +1,23 @@
 (ns edd.core-test
-  (:require [clojure.tools.logging :as log]
+  (:require [clojure.test :refer :all]
+            [clojure.tools.logging :as log]
+            [edd.common :as common]
             [edd.core :as edd]
             [edd.dal :as dal]
-            [edd.search :as search]
-            [edd.el.event :as event]
             [edd.el.cmd :as cmd]
-            [clojure.test :refer :all]
-            [lambda.util :as util]
-            [lambda.core :as core]
-            [lambda.api-test :as api]
-            [lambda.filters :as fl]
-            [lambda.util :as util]
-            [edd.common :as common]
-            [next.jdbc :as jdbc]
-            [lambda.test.fixture.core :refer [mock-core]]
-            [lambda.test.fixture.client :refer [verify-traffic-json]]
+            [edd.el.event :as event]
             [edd.el.query :as query]
-            [lambda.s3-test :as s3]
-            [edd.memory.view-store :as view-store]
             [edd.elastic.view-store :as elastic-view-store]
             [edd.memory.event-store :as event-store]
+            [edd.search :as search]
             [edd.test.fixture.dal :as mock]
-            [edd.postgres.event-store :as pg]
+            [lambda.api-test :as api]
+            [lambda.core :as core]
+            [lambda.filters :as fl]
+            [lambda.s3-test :as s3]
+            [lambda.test.fixture.client :as client :refer [verify-traffic-edn]]
+            [lambda.test.fixture.core :refer [mock-core]]
+            [lambda.util :as util]
             [lambda.uuid :as uuid]
             [sdk.aws.common :as sdk-common]
             [sdk.aws.sqs :as sqs])
@@ -189,7 +185,7 @@
         (prepare {})
         edd/handler
         :filters [fl/from-bucket])
-       (verify-traffic-json [{:body   {:result         {:effects    [{:cmd-id       :fx-command
+       (verify-traffic-edn  [{:body   {:result         {:effects    [{:cmd-id       :fx-command
                                                                       :id           #uuid "22222111-1111-1111-1111-111111111111"
                                                                       :service-name :local-test}]
                                                         :events     1
@@ -239,30 +235,30 @@
         edd/handler
         :filters [fl/from-api]
         :post-filter fl/to-api)
-       (verify-traffic-json [{:body   {:body            (util/to-json
-                                                         {:result         {:success    true
-                                                                           :effects    [{:id           fx-id
-                                                                                         :cmd-id       :fx-command
-                                                                                         :service-name :local-test}]
-                                                                           :events     1
-                                                                           :meta       [{:dummy-cmd {:id cmd-id}}]
-                                                                           :identities 0
-                                                                           :sequences  0}
-                                                          :invocation-id  0
-                                                          :request-id     request-id
-                                                          :interaction-id interaction-id})
-                                       :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-                                                         :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
-                                                         :Access-Control-Allow-Origin   "*"
-                                                         :Access-Control-Expose-Headers "*"
-                                                         :Content-Type                  "application/json"}
-                                       :isBase64Encoded false
-                                       :statusCode      200}
-                              :method :post
-                              :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-                             {:method  :get
-                              :timeout 90000000
-                              :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
+       (verify-traffic-edn [{:body   {:body            (util/to-json
+                                                        {:result         {:success    true
+                                                                          :effects    [{:id           fx-id
+                                                                                        :cmd-id       :fx-command
+                                                                                        :service-name :local-test}]
+                                                                          :events     1
+                                                                          :meta       [{:dummy-cmd {:id cmd-id}}]
+                                                                          :identities 0
+                                                                          :sequences  0}
+                                                         :invocation-id  0
+                                                         :request-id     request-id
+                                                         :interaction-id interaction-id})
+                                      :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                                                        :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
+                                                        :Access-Control-Allow-Origin   "*"
+                                                        :Access-Control-Expose-Headers "*"
+                                                        :Content-Type                  "application/json"}
+                                      :isBase64Encoded false
+                                      :statusCode      200}
+                             :method :post
+                             :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
+                            {:method  :get
+                             :timeout 90000000
+                             :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
 
 (def apply-ctx
   {:def-apply {:event-1 (fn [p v]
@@ -420,3 +416,22 @@
   (is (= [{:value :a}]
          (edd/prepare-response {:resp          [{:value :a}]
                                 :queue-request true}))))
+
+(deftest test-service-schema
+  (let [service-schema {:name "string"
+                        :age  "number"}
+        ctx-with-schema (edd/reg-service-schema
+                         (prepare {})
+                         service-schema)]
+    (mock-core
+     :invocations [(api/api-request nil :path "/api/schema.json" :http-method "GET")]
+     (core/start
+      ctx-with-schema
+      edd/handler
+      :filters [fl/from-api]
+      :post-filter fl/to-api)
+     (is (= service-schema
+            (-> (client/responses)
+                (first)
+                :body
+                (util/to-edn)))))))

@@ -9,7 +9,7 @@
    [lambda.core :as core]
    [lambda.util :as util]
    [lambda.test.fixture.core :refer [mock-core]]
-   [lambda.test.fixture.client :refer [verify-traffic-json]]
+   [lambda.test.fixture.client :refer [verify-traffic-edn]]
    [clojure.test :refer :all]
    [clojure.tools.logging :as log]
    [sdk.aws.common :as common]
@@ -72,7 +72,7 @@
                    :user (get-in ctx [:user :id])
                    :role (get-in ctx [:user :role]))))
         :filters [fl/from-bucket])
-       (verify-traffic-json
+       (verify-traffic-edn
         [{:body   {:commands       [{:body   "Of something"
                                      :cmd-id :object-uploaded
                                      :id     request-id
@@ -114,7 +114,7 @@
         {}
         edd/handler
         :filters [fl/from-bucket])
-       (verify-traffic-json
+       (verify-traffic-edn
         [{:body   {}
           :method :post
           :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
@@ -143,4 +143,3 @@
   (is (thrown?
        ExceptionInfo
        (fl/parse-key "test/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fcz3.matching1L.csv"))))
-

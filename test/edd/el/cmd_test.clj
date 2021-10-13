@@ -7,7 +7,7 @@
             [lambda.util :as util]
             [edd.memory.event-store :as event-store]
             [edd.memory.view-store :as view-store]
-            [lambda.test.fixture.client :refer [verify-traffic-json]]
+            [lambda.test.fixture.client :refer [verify-traffic-edn]]
             [lambda.test.fixture.core :refer [mock-core]]
             [lambda.api-test :refer [api-request]]
             [lambda.uuid :as uuid]
@@ -86,7 +86,7 @@
       :filters [fl/from-api]
       :post-filter fl/to-api)
      (do
-       (verify-traffic-json
+       (verify-traffic-edn
         [{:body   {:body            (util/to-json
                                      {:error          {:spec [{:id ["missing required key"]}]}
                                       :invocation-id 0
@@ -138,7 +138,7 @@
                                                                  :role  :group-1}}
                                              :role      :group-1
                                              :user      "john.smith@example.com"}])
-           (verify-traffic-json
+           (verify-traffic-edn
             [{:body   {:body            (util/to-json
                                          {:result         {:success    true
                                                            :effects    []

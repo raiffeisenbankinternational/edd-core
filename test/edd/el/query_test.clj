@@ -5,7 +5,7 @@
             [lambda.core :as core]
             [lambda.filters :as fl]
             [lambda.util :as util]
-            [lambda.test.fixture.client :refer [verify-traffic-json]]
+            [lambda.test.fixture.client :refer [verify-traffic-edn]]
             [lambda.test.fixture.core :refer [realm-mock mock-core]]
             [lambda.api-test :refer [api-request]]
             [lambda.uuid :as uuid]

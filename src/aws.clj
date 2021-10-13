@@ -42,7 +42,7 @@
            invocation-id
            from-api] :as ctx} body]
 
-  (log/info "Response" from-api)
+  (log/info "Response from-api?" from-api)
   (util/d-time "Enqueueing success"
                (enqueue-response ctx body))
   (util/to-json
