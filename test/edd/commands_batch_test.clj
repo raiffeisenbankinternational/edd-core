@@ -244,8 +244,7 @@
                                   :invocation-id  0
                                   :request-id     req-id1
                                   :interaction-id int-id}
-                                 {:error          [{:error "Command handler failed",
-                                                    :id    agg-id}],
+                                 {:error          {:failed "have I!"},
                                   :invocation-id  0
                                   :request-id     req-id2
                                   :interaction-id int-id}
@@ -323,7 +322,10 @@
                                   :invocation-id  0
                                   :request-id     req-id1
                                   :interaction-id int-id}
-                                 {:error {:failed "yes"}}
+                                 {:error {:failed "yes"}
+                                  :invocation-id  0
+                                  :request-id     req-id2
+                                  :interaction-id int-id}
                                  {:result         {:success    true,
                                                    :effects    [],
                                                    :events     1,

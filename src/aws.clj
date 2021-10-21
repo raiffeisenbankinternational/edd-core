@@ -4,9 +4,7 @@
    [clojure.tools.logging :as log]
    [lambda.request :as request]
    [sdk.aws.common :as common]
-   [clojure.string :as str]
    [sdk.aws.cognito-idp :as cognito-idp]
-   [sdk.aws.s3 :as s3]
    [sdk.aws.sqs :as sqs]))
 
 (defn get-next-invocation
@@ -26,7 +24,7 @@
    :headers    {"Content-Type" "application/json"}})
 
 (defn enqueue-response
-  [ctx body]
+  [ctx _]
   (let [resp (get @request/*request* :cache-keys)]
     (when resp
       (log/info "Distributing response")
@@ -76,10 +74,11 @@
     (util/d-time "Enqueueing error"
                  (enqueue-response ctx body))
 
-    (log/error (util/to-json
-                (util/http-post
-                 (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/" target)
-                 {:body resp})))))
+    (log/error resp)
+    (util/to-json
+     (util/http-post
+      (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/" target)
+      {:body resp}))))
 
 (defn get-or-set
   [cache key get-fn]

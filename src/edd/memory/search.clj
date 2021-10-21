@@ -1,7 +1,7 @@
 (ns edd.memory.search
   (:require
    [clojure.string :as str]
-   [edd.search :refer [advanced-search parse default-size]]
+   [edd.search :refer [parse default-size]]
    [lambda.test.fixture.state :as state]
    [clojure.tools.logging :as log]))
 

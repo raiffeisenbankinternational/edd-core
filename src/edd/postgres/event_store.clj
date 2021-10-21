@@ -1,9 +1,11 @@
 (ns edd.postgres.event-store
   (:require [clojure.tools.logging :as log]
+            [clojure.test :refer [is]]
             [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]
             [lambda.uuid :as uuid]
             [clojure.string :as str]
+            [edd.core :as edd]
             [edd.dal :refer [with-init
                              get-events
                              get-max-event-seq
@@ -18,17 +20,17 @@
                              store-results]]
             [next.jdbc.prepare :as p]
             [edd.db :as db]
-            [lambda.util :as util]
-            [lambda.elastic :as elastic]))
+            [lambda.util :as util]))
 
 (def errors
-  {:concurrent-modification ["event_store" "pkey"
-                             "duplicate key value violates unique constraint"]})
+  {:concurrent-modification ["pkey" "duplicate key value violates unique constraint"]})
 
 (defn ->table
   [ctx table]
   (let [realm (get-in ctx [:meta :realm] :no_realm)]
-    (str " " (name realm) "." (name table) " ")))
+    (str " " (name realm) "." (-> table
+                                  (name)
+                                  (str/replace #"-" "_")) " ")))
 
 (defn error-matches?
   [msg words]
@@ -45,7 +47,7 @@
                   (error-matches? m v))
                 errors))]
     (if match
-      {:key (first match)
+      {:key              (first match)
        :original-message m}
       m)))
 
@@ -54,10 +56,10 @@
   (try
     (func)
     (catch Exception e
-      (log/error e "Postgres error")
-      {:error (-> (.getMessage e)
-                  (str/replace "\n" "")
-                  (parse-error))})))
+      (throw (ex-info "Postgres error"
+                      {:error (-> (.getMessage e)
+                                  (str/replace "\n" "")
+                                  (parse-error))})))))
 
 (defn breadcrumb-str [breadcrumbs]
   (str/join ":" (or breadcrumbs [])))
@@ -177,9 +179,9 @@
   ctx)
 
 (defn log-response-impl
-  [{:keys [response-summary invocation-id request-id interaction-id service-name] :as ctx}]
-  (log/debug "Storing response" response-summary)
-  (when response-summary
+  [{:keys [invocation-id request-id interaction-id service-name] :as ctx} summary]
+  (log/debug "Storing response" summary)
+  (when summary
     (jdbc/execute! (:con ctx)
                    [(str "INSERT INTO " (->table ctx :command_response_log) " (invocation_id,
                                                            request_id,
@@ -195,12 +197,13 @@
                     (breadcrumb-str (:breadcrumbs ctx))
                     service-name
                     0,
-                    response-summary])))
+                    summary])))
 
 (defmethod log-response
   :postgres
   [ctx]
-  (log-response-impl ctx))
+  (throw (ex-info "Deprecated"
+                  {:message "Deprecated, done together with sore-result in transaction"})))
 
 (defn store-identity
   [ctx identity]
@@ -342,8 +345,8 @@
 (defmethod get-events
   :postgres
   [{:keys [id service-name version]
-    :as ctx
-    :or {version 0}}]
+    :as   ctx
+    :or   {version 0}}]
   {:pre [id service-name]}
   (log/info "Fetching events for aggregate" id)
   (let [data (try-to-data
@@ -391,12 +394,12 @@
 (defn store-results-impl
   [{:keys [resp] :as ctx}]
   (log/debug "Storing results impl")
-  (log-response-impl ctx)
+  (log-response-impl ctx (:summary resp))
   (store-events ctx (:events resp))
   (doseq [i (:identities resp)]
     (store-identity ctx i))
 
-  (doseq [i (:commands resp)]
+  (doseq [i (:effects resp)]
     (store-command ctx i))
   ctx)
 
@@ -461,3 +464,21 @@
                         request-id
                         breadcrumbs]
                        {:builder-fn rs/as-unqualified-kebab-maps}))))
+
+(defmacro verify-state
+  [ctx interaction-id x y]
+  `(let [query# (str "SELECT *
+                    FROM " (->table ~ctx :event-store) "
+                    WHERE interaction_id=?
+                    ORDER BY event_seq")
+         result# (edd/with-stores
+                   ~ctx
+                   #(-> (jdbc/execute! (:con %)
+                                       [query#
+                                        ~interaction-id]
+                                       {:builder-fn rs/as-unqualified-kebab-maps})))
+         result# (mapv
+                  #(get % :data)
+                  result#)]
+     (is (= ~y
+            result#))))

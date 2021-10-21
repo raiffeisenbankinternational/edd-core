@@ -6,21 +6,23 @@
             [lambda.uuid :as uuid]
             [edd.dal :as dal]
             [edd.memory.event-store :as event-store]
-            [edd.response.s3 :as s3-cache])
+            [edd.response.s3 :as s3-cache]
+            [edd.ctx :as edd-ctx]
+            [edd.core :as edd])
   (:import (clojure.lang ExceptionInfo)))
 
 (def cmd-id (uuid/gen))
 
-(deftest test-prepare-context-no-dependencies
-  "Test if context if properly prepared for no-dependencies"
+(deftest test-if-properly-working-when-no-deps
+  "Test if properly prepared for no-dependencies"
   (with-redefs [query/handle-query (fn [ctx q] {:response true})
                 dal/log-dps (fn [ctx] ctx)
                 dal/get-max-event-seq (fn [ctx id] 0)]
-    (let [ctx (cmd/resolve-dependencies-to-context
-               {:commands [{:cmd-id :test-cmd
-                            :id cmd-id}]})]
-      (is (= {:dps-resolved {}}
-             (dissoc ctx :commands))))))
+    (let [cmd {:cmd-id :test-cmd
+               :id     cmd-id}
+          deps (cmd/fetch-dependencies-for-command {} cmd)]
+      (is (= {}
+             deps)))))
 
 (deftest test-prepare-context-for-command-local
   "Test if context if properly prepared for local queries. If local query return nill
@@ -28,56 +30,58 @@
   to prearrange context"
   (with-redefs [dal/log-dps (fn [ctx] ctx)
                 dal/get-max-event-seq (fn [ctx id] 0)]
-    (let [ctx {:dps {:test-cmd
-                     {:test-value (fn [cmd]
-                                    {:query-id :q1
-                                     :query {}})
-                      :test-value-2 (fn [cmd]
-                                      {:query-id :q2
-                                       :query {}})}}
-               :commands [{:cmd-id :test-cmd
-                           :id cmd-id}]}]
+    (let [ctx (edd-ctx/put-cmd {}
+                               :cmd-id :test-cmd
+                               :options {:deps {:test-value   (fn [cmd]
+                                                                {:query-id :q1
+                                                                 :query    {}})
+                                                :test-value-2 (fn [cmd]
+                                                                {:query-id :q2
+                                                                 :query    {}})}})
+          cmd {:cmd-id :test-cmd
+               :id     cmd-id}]
       (with-redefs [query/handle-query (fn [ctx q]
                                          (if (= (get-in q [:query :query-id]) :q1)
                                            {:response true}
                                            nil))]
-        (let [resolved-ctx (cmd/resolve-dependencies-to-context ctx)]
-          (is (= {:dps-resolved {:test-value {:response true}}}
-                 (dissoc resolved-ctx
-                         :dps
-                         :commands)))))
+        (let [deps (cmd/fetch-dependencies-for-command ctx cmd)]
+          (is (= {:test-value {:response true}}
+                 deps))))
       (testing "If error is returned"
         (with-redefs [query/handle-query (fn [ctx q]
                                            (if (= (get-in q [:query :query-id]) :q1)
                                              {:error true}
                                              nil))]
           (is (thrown? ExceptionInfo
-                       (cmd/resolve-dependencies-to-context ctx)))))
+                       (cmd/fetch-dependencies-for-command ctx cmd)))))
       (testing "If resolved returns exception"
         (with-redefs [query/handle-query (fn [ctx q]
                                            (if (= (get-in q [:query :query-id]) :q1)
                                              (throw (ex-info "Some" {:error :happened}))
                                              nil))]
           (is (thrown? ExceptionInfo
-                       (cmd/resolve-dependencies-to-context ctx))))))))
+                       (cmd/fetch-dependencies-for-command ctx cmd))))))))
 
 (deftest test-prepare-context-for-command-remote-deps
   "Test if context if properly prepared for remote queries"
   (with-redefs [aws/get-token (fn [ctx] "")
                 dal/log-dps (fn [ctx] ctx)
                 dal/get-max-event-seq (fn [ctx id] 0)]
-    (let [ctx {:dps {:test-cmd
-                     {:test-value {:service :remote
-                                   :query (fn [cmd]
-                                            {:query-id :q1
-                                             :query {}})}}}
-               :commands [{:cmd-id :test-cmd
-                           :id cmd-id}]}]
+    (let [ctx (edd-ctx/put-cmd {}
+                               :cmd-id :test-cmd
+                               :options {:deps
+                                         {:test-value
+                                          {:service :remote
+                                           :query   (fn [cmd]
+                                                      {:query-id :q1
+                                                       :query    {}})}}})
+          cmd {:cmd-id :test-cmd
+               :id     cmd-id}]
       (with-redefs [util/http-post (fn [ctx q]
                                      {:status 200
-                                      :body {:result {:response true}}})]
-        (let [resolved-ctx (cmd/resolve-dependencies-to-context ctx)]
-          (is (= {:dps-resolved {:test-value {:response true}}}
+                                      :body   {:result {:response true}}})]
+        (let [resolved-ctx (cmd/fetch-dependencies-for-command ctx cmd)]
+          (is (= {:test-value {:response true}}
                  (dissoc resolved-ctx
                          :dps
                          :commands)))))
@@ -85,44 +89,45 @@
         (with-redefs [util/http-post (fn [ctx q]
                                        {:error "ConnectionTimeout"})]
           (is (thrown? ExceptionInfo
-                       (cmd/resolve-dependencies-to-context ctx)))))
+                       (cmd/fetch-dependencies-for-command ctx cmd)))))
       (testing "If resolved returns exception"
         (with-redefs [util/http-post (fn [ctx q]
                                        {:status 499
-                                        :body {:response true}})]
+                                        :body   {:response true}})]
           (is (thrown? ExceptionInfo
-                       (cmd/resolve-dependencies-to-context ctx))))))))
+                       (cmd/fetch-dependencies-for-command ctx cmd))))))))
 
 (def id-1 (uuid/gen))
 (def id-2 (uuid/gen))
 
 (deftest test-resolve-id
   "Test if id is properly resolved"
-  (let [id (cmd/resolve-command-id
+  (let [id (cmd/resolve-command-id-with-id-fn
             {}
             {:cmd-id :dummy-cmd
-             :id id-1})]
+             :id     id-1})]
     (is (= id {:cmd-id :dummy-cmd
-               :id id-1}))))
+               :id     id-1}))))
 
 (deftest test-resolve-id-when-id-override-present
-  "Test if id is properly resolved when override present"
-  (let [id (cmd/resolve-command-id
-            {:id-fn {:dummy-cmd (fn [ctx cmd] (+ (:dps-1 ctx)
-                                                 (:dps-2 ctx)))}
-             :dps-1 2
-             :dps-resolved {:dps-2 3}}
-            {:cmd-id :dummy-cmd
-             :id id-1})]
-    (is (= id {:cmd-id :dummy-cmd
-               :id 5
-               :original-id id-1}))))
-
-(deftest test-resolve-id-when-id-override-returns-nil
-  "Test if id is properly resolved when override method return nil, we should fallback to (:id cmd)"
-  (let [id (cmd/resolve-command-id
-            {:id-fn {:dummy-cmd (fn [ctx cmd] nil)}}
-            {:cmd-id :dummy-cmd
-             :id id-1})]
-    (is (= id {:cmd-id :dummy-cmd
-               :id id-1}))))
+  "Test if id is properly resolved when override present.
+  when override method return nil, we should fallback to (:id cmd)"
+  (let [ctx (-> {:dps-1 2
+                 :dps-2 3}
+                (edd/reg-cmd :dummy-cmd (fn [ctx cmd])
+                             :id-fn (fn [ctx cmd] (+ (:dps-1 ctx)
+                                                     (:dps-2 ctx))))
+                (edd/reg-cmd :dummy-cmd-1 (fn [ctx cmd])
+                             :id-fn (fn [ctx cmd] nil)))
+        cmd-1 (cmd/resolve-command-id-with-id-fn
+               ctx
+               {:cmd-id :dummy-cmd
+                :id     id-1})
+        cmd-2 (cmd/resolve-command-id-with-id-fn
+               ctx
+               {:cmd-id :dummy-cmd-1
+                :id     id-1})]
+    (is (= cmd-1 {:cmd-id :dummy-cmd
+                  :id     5}))
+    (is (= cmd-2 {:cmd-id :dummy-cmd-1
+                  :id     id-1}))))

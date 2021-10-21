@@ -9,29 +9,69 @@
             [malli.error :as me]
             [malli.core :as m]
             [edd.dal :as dal]
-            [edd.search :as search]))
+            [edd.search :as search]
+            [edd.ctx :as edd-ctx]))
 
-(defn maybe-assoc-in
-  [ctx ks value]
-  (if value
-    (assoc-in ctx ks value)
-    ctx))
+(def EddCoreRegCmd
+  (m/schema
+   [:map
+    [:handler [:fn fn?]]
+    [:id-fn [:fn fn?]]
+    [:deps [:or
+            [:map]
+            [:vector :any]]]
+    [:consumes
+     [:fn #(m/schema? (m/schema %))]]]))
 
 (defn reg-cmd
-  [ctx cmd-id reg-fn & {:keys [dps id-fn spec access-rule]}]
+  [ctx cmd-id reg-fn & rest]
   (log/debug "Registering cmd" cmd-id)
-  (-> ctx
-      (assoc-in [:command-handlers cmd-id] reg-fn)
-      (assoc-in [:dps cmd-id] (or dps []))
-      (assoc-in [:spec cmd-id] (s/merge-cmd-schema spec))
-      (maybe-assoc-in [:id-fn cmd-id] id-fn)
-      (maybe-assoc-in [:access-rule cmd-id] access-rule)))
+  (let [input-options (reduce
+                       (fn [c [k v]]
+                         (assoc c k v))
+                       {}
+                       (partition 2 rest))
+        options input-options
+        ; For compatibility
+        options (-> options
+                    (dissoc :spec)
+                    (assoc :consumes (:spec options
+                                            (:consumes options))))
+        options (-> options
+                    (assoc :id-fn (:id-fn options
+                                          (fn [_ _] nil))))
+        ; For compatibility
+        options (-> options
+                    (dissoc :dps)
+                    (assoc :deps (:dps options
+                                       (:deps options {}))))
+        options (update options
+                        :consumes
+                        #(s/merge-cmd-schema % cmd-id))
+        options (assoc options :handler (when reg-fn
+                                          (fn [& rest]
+                                            (apply reg-fn rest))))]
+
+    (when (:dps input-options)
+      (log/warn ":dps is deprecated and will be removed in future"))
+    (when (:spec input-options)
+      (log/warn ":spec is deprecated and will be removed in future"))
+
+    (when-not (m/validate EddCoreRegCmd options)
+      (throw (ex-info "Invalid command registration"
+                      {:explain (-> (m/explain EddCoreRegCmd options)
+                                    (me/humanize))})))
+    (edd-ctx/put-cmd ctx
+                     :cmd-id cmd-id
+                     :options options)))
 
 (defn reg-event
   [ctx event-id reg-fn]
   (log/debug "Registering apply" event-id)
   (update ctx :def-apply
-          #(assoc % event-id reg-fn)))
+          #(assoc % event-id (when reg-fn
+                               (fn [& rest]
+                                 (apply reg-fn rest))))))
 
 (defn reg-agg-filter
   [ctx reg-fn]
@@ -39,19 +79,48 @@
   (assoc ctx :agg-filter
          (conj
           (get ctx :agg-filter [])
-          reg-fn)))
+          (when reg-fn
+            (fn [& rest]
+              (apply reg-fn rest))))))
+
+(def EddCoreRegQuery
+  (m/schema
+   [:map
+    [:handler [:fn fn?]]
+    [:produces
+     [:fn #(m/schema? (m/schema %))]]
+    [:consumes
+     [:fn #(m/schema? (m/schema %))]]]))
 
 (defn reg-query
-  [ctx query-id reg-fn & {:keys [spec]}]
+  [ctx query-id reg-fn & rest]
   (log/debug "Registering query" query-id)
-  (-> ctx
-      (update :query #(assoc % query-id reg-fn))
-      (update-in [:edd-core :queries :spec] #(assoc % query-id (s/merge-query-schema spec)))))
+  (let [options (reduce
+                 (fn [c [k v]]
+                   (assoc c k v))
+                 {}
+                 (partition 2 rest))
+        options (update options
+                        :consumes
+                        #(s/merge-query-consumes-schema % query-id))
+        options (update options
+                        :produces
+                        #(s/merge-query-produces-schema %))
+        options (assoc options :handler (when reg-fn
+                                          (fn [& rest]
+                                            (apply reg-fn rest))))]
+    (when-not (m/validate EddCoreRegQuery options)
+      (throw (ex-info "Invalid query registration"
+                      {:explain (-> (m/explain EddCoreRegQuery options)
+                                    (me/humanize))})))
+    (assoc-in ctx [:edd-core :queries query-id] options)))
 
 (defn reg-fx
   [ctx reg-fn]
   (update ctx :fx
-          #(conj % reg-fn)))
+          #(conj % (when reg-fn
+                     (fn [& rest]
+                       (apply reg-fn rest))))))
 
 (defn event-fx-handler
   [ctx events]
@@ -70,7 +139,8 @@
               (reg-fx ctx event-fx-handler))]
     (update ctx
             :event-fx
-            #(assoc % event-id reg-fn))))
+            #(assoc % event-id (fn [& rest]
+                                 (apply reg-fn rest))))))
 
 (defn reg-service-schema
   "Register a service schema that will be serialised and returned when
@@ -105,38 +175,51 @@
   [{:keys [item] :as ctx}]
   (log/debug "Dispatching" item)
   (update-mdc-for-request ctx item)
-  (try
-    (let [ctx (assoc ctx :request-id (:request-id item)
-                     :interaction-id (:interaction-id item))
-          resp (cond
-                 (contains? item :apply) (event/handle-event (-> ctx
-                                                                 (assoc :apply (assoc
-                                                                                (:apply item)
-                                                                                :meta (get-meta ctx item)))))
-                 (contains? item :query) (-> ctx
-                                             (query/handle-query item))
-                 (contains? item :commands) (-> ctx
-                                                (cmd/handle-commands item))
-                 (contains? item :error) item
-                 :else {:error :invalid-request})]
-      (if (:error resp)
-        {:error (:error resp)
-         :invocation-id (:invocation-id ctx)
-         :request-id (:request-id item)
-         :interaction-id (:interaction-id ctx)}
-        {:result resp
-         :invocation-id (:invocation-id ctx)
-         :request-id (:request-id item)
-         :interaction-id (:interaction-id ctx)}))
+  (let [ctx (assoc ctx :request-id (:request-id item)
+                   :interaction-id (:interaction-id item))]
+    (try
+      (let [item (if (contains? item :command)
+                   (-> item
+                       (assoc :commands [(:command item)])
+                       (dissoc :command))
+                   item)
+            resp (cond
+                   (contains? item :apply) (event/handle-event (-> ctx
+                                                                   (assoc :apply (assoc
+                                                                                  (:apply item)
+                                                                                  :meta (get-meta ctx item)))))
+                   (contains? item :query) (-> ctx
+                                               (query/handle-query item))
+                   (contains? item :commands) (-> ctx
+                                                  (cmd/handle-commands item))
+                   (contains? item :error) item
+                   :else (do
+                           (log/info item)
+                           {:error :invalid-request}))]
+        (if (:error resp)
+          {:error          (:error resp)
+           :invocation-id  (:invocation-id ctx)
+           :request-id     (:request-id item)
+           :interaction-id (:interaction-id ctx)}
+          {:result         resp
+           :invocation-id  (:invocation-id ctx)
+           :request-id     (:request-id item)
+           :interaction-id (:interaction-id ctx)}))
 
-    (catch Throwable e
-      (do
-        (log/error e)
-        (let [data (ex-data e)]
-          (cond
-            (:error data) data
-            data {:error data}
-            :else {:error "Unknown error processing item"}))))))
+      (catch Exception e
+        (do
+          (log/error e)
+          (let [data (ex-data e)]
+            (cond
+              (:error data) (assoc data
+                                   :invocation-id (:invocation-id ctx)
+                                   :request-id (:request-id item)
+                                   :interaction-id (:interaction-id ctx))
+              data {:error          data
+                    :invocation-id  (:invocation-id ctx)
+                    :request-id     (:request-id item)
+                    :interaction-id (:interaction-id ctx)}
+              :else {:error "Unknown error processing item"})))))))
 
 (defn dispatch-request
   [{:keys [body] :as ctx}]
@@ -180,6 +263,8 @@
     [:interaction-id uuid?]]
    [:or
     [:map
+     [:command [:map]]]
+    [:map
      [:commands sequential?]]
     [:map
      [:apply map?]]
@@ -188,6 +273,7 @@
 
 (defn validate-request
   [{:keys [body] :as ctx}]
+  (log/info "Validating request")
   (assoc
    ctx
    body

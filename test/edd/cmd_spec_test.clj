@@ -32,7 +32,7 @@
     (mock/verify-state :event-store [{:event-id  :dummy-event
                                       :handled   true
                                       :event-seq 1
-                                      :meta {}
+                                      :meta      {}
                                       :id        cmd-id}])
     (mock/verify-state :identities [])
     (mock/verify-state :sequences [])
@@ -40,20 +40,26 @@
 
 (deftest test-missing-id-command
   (mock/with-mock-dal
-    (let [resp (mock/handle-cmd
-                ctx
-                {:cmd-id :dummy-cmd})]
-      (is (= {:error {:spec '({:id ["missing required key"]})}}
-             (select-keys resp [:error]))))))
+    (try
+      (mock/handle-cmd
+       ctx
+       {:cmd-id :dummy-cmd})
+      (throw (ex-info "Should not come here" {}))
+      (catch Exception e
+        (is (= {:error [{:id ["missing required key"]}]}
+               (ex-data e)))))))
 
 (deftest test-missing-failed-custom-validation-command
   (mock/with-mock-dal
-    (let [resp (mock/handle-cmd
-                (-> ctx
-                    (edd/reg-cmd :dummy-cmd dummy-command-handler
-                                 :spec [:map
-                                        [:name string?]]))
-                {:cmd-id :dummy-cmd
-                 :id     cmd-id})]
-      (is (= {:error {:spec '({:name ["missing required key"]})}}
-             (select-keys resp [:error]))))))
+    (try
+      (mock/handle-cmd
+       (-> ctx
+           (edd/reg-cmd :dummy-cmd dummy-command-handler
+                        :spec [:map
+                               [:name string?]]))
+       {:cmd-id :dummy-cmd
+        :id     cmd-id})
+      (throw (ex-info "Should not come here" {}))
+      (catch Exception e
+        (is (= {:error [{:name ["missing required key"]}]}
+               (ex-data e)))))))

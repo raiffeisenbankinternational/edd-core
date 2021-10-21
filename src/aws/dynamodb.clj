@@ -1,11 +1,10 @@
 (ns aws.dynamodb
   (:require [clojure.tools.logging :as log]
-            [aws :as aws]
             [lambda.util :as util]
             [sdk.aws.common :as common]))
 
 (defn make-request
-  [{:keys [aws action body] :as ctx}]
+  [{:keys [aws action body]}]
   (let [req {:method     "POST"
              :uri        "/"
              :query      ""

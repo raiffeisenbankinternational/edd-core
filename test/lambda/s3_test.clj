@@ -75,6 +75,7 @@
        (verify-traffic-edn
         [{:body   {:commands       [{:body   "Of something"
                                      :cmd-id :object-uploaded
+                                     :bucket "example-bucket"
                                      :id     request-id
                                      :key    key}]
                    :user           "local-test"
@@ -87,15 +88,15 @@
                    :request-id     request-id}
           :method :post
           :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-         {:as      :stream
-          :headers {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=cfa02ff06ebb0010bcfbae58ee1ec2310379fea4f66f5a0013265ccd1fde16ce"
-                    "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                    "x-amz-date"           "20200426T061823Z"
-                    "x-amz-security-token" nil}
-          :method  :get
+         {:as              :stream
+          :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=cfa02ff06ebb0010bcfbae58ee1ec2310379fea4f66f5a0013265ccd1fde16ce"
+                            "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                            "x-amz-date"           "20200426T061823Z"
+                            "x-amz-security-token" nil}
+          :method          :get
           :connect-timeout 200
-          :idle-timeout 5000
-          :url     (str "https://s3.eu-central-1.amazonaws.com/example-bucket/" key)}
+          :idle-timeout    5000
+          :url             (str "https://s3.eu-central-1.amazonaws.com/example-bucket/" key)}
          {:method  :get
           :timeout 90000000
           :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
@@ -130,16 +131,33 @@
 (deftest test-filter-key
   (is (= {:interaction-id #uuid "af42568c-f8e9-40ff-9329-d13f1c82fce5"
           :realm          "test"
+          :id             #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"
           :request-id     #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"}
          (fl/parse-key "test/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fca3.matching1L.csv")))
   (is (= {:interaction-id #uuid "af42568c-f8e9-40ff-9329-d13f1c82fce5"
           :realm          "prod"
+          :id             #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"
           :request-id     #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"}
          (fl/parse-key "upload/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fca3.matching1L.csv")))
   (is (= {:interaction-id #uuid "af42568c-f8e9-40ff-9329-d13f1c82fce5"
           :realm          "prod"
+          :id             #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"
           :request-id     #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"}
          (fl/parse-key "prod/2021-08-21/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fca3.matching1L.csv")))
+  (let [interaction-id #uuid "86203547-20be-4683-8cbd-b65c710f357a"
+        request-id #uuid "59dea305-5120-4980-ab5c-eeddc0774f6e"
+        id #uuid "6d2423a7-2dae-4a3f-982f-18104d58a8fc"]
+    (is (= {:interaction-id interaction-id
+            :realm          "prod"
+            :id             id
+            :request-id     request-id}
+           (fl/parse-key (str "prod/2021-08-21/"
+                              interaction-id
+                              "/"
+                              id
+                              "/"
+                              request-id
+                              ".matching1L.csv")))))
   (is (thrown?
        ExceptionInfo
        (fl/parse-key "test/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fcz3.matching1L.csv"))))

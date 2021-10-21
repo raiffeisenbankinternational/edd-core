@@ -3,8 +3,10 @@
    [edd.flow :refer :all]
    [clojure.tools.logging :as log]
    [edd.dal :as dal]
+   [edd.request-cache :as request-cache]
    [lambda.request :as request]
    [edd.search :as search]
+   [edd.el.ctx :as el-ctx]
    [lambda.util :as util]))
 
 (defn apply-event
@@ -62,8 +64,9 @@
     :else (assoc ctx :aggregate nil)))
 
 (defn fetch-snapshot
-  [ctx]
-  (if-let [snapshot (search/get-snapshot ctx (:id ctx))]
+  [{:keys [id] :as ctx}]
+
+  (if-let [snapshot (search/get-snapshot ctx id)]
     (assoc ctx
            :snapshot snapshot
            :version (:version snapshot))
@@ -73,12 +76,15 @@
   (assoc ctx :events (dal/get-events ctx)))
 
 (defn get-by-id
-  [ctx]
+  [{:keys [id] :as ctx}]
   {:pre [(:id ctx)]}
-  (-> ctx
-      (fetch-snapshot)
-      (get-events)
-      (get-current-state)))
+  (let [cache-snapshot (request-cache/get-aggregate ctx id)]
+    (if cache-snapshot
+      (assoc ctx :aggregate cache-snapshot)
+      (-> ctx
+          (fetch-snapshot)
+          (get-events)
+          (get-current-state)))))
 
 (defn update-aggregate
   [ctx]
@@ -95,15 +101,14 @@
           agg-id (:aggregate-id apply)]
 
       (util/d-time
-       (str "Handling apply: " realm  " " (:aggregate-id apply))
-       (if (:scoped @request/*request*)
+       (str "handling-apply: " realm " " (:aggregate-id apply))
+       (if (request/is-scoped)
          (let [applied (get-in @request/*request* [:applied realm agg-id])]
            (if-not applied
              (do (-> ctx
                      (assoc :id agg-id)
                      (get-by-id)
                      (update-aggregate))
-
                  (swap! request/*request*
                         #(assoc-in % [:applied realm agg-id] {:apply true})))))
          (-> ctx

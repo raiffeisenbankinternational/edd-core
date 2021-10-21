@@ -92,6 +92,14 @@
   [event]
   (log/info "Emulated 'store-event' dal function")
   (let [aggregate-id (:id event)]
+    (when (some (fn [e]
+                  (and (= (:id e)
+                          aggregate-id)
+                       (= (:event-seq e)
+                          (:event-seq event))))
+                (:event-store @*dal-state*))
+      (throw (ex-info "Already existing event" {:id aggregate-id
+                                                :event-seq (:event-seq event)})))
     (swap! *dal-state*
            #(update % :event-store (fn [v] (sort-by
                                             (fn [c] (:event-seq c))
@@ -111,7 +119,7 @@
     (store-identity i))
   (doseq [i (:sequences resp)]
     (store-sequence i))
-  (doseq [i (:commands resp)]
+  (doseq [i (:effects resp)]
     (store-command i))
   (log/info resp)
   (log/info "Emulated 'with-transaction' dal function")

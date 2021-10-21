@@ -12,58 +12,61 @@
             [lambda.api-test :refer [api-request]]
             [lambda.uuid :as uuid]
             [edd.test.fixture.dal :as mock]
-            [sdk.aws.sqs :as sqs]))
+            [sdk.aws.sqs :as sqs])
+  (:import (clojure.lang ExceptionInfo)))
+
+(def ctx (-> {}
+             (edd/reg-cmd :ssa (fn [ctx cmd]))))
 
 (deftest test-empty-commands-list
-  (let [ctx {:req {}}]
-    (is (= (assoc ctx :error {:commands :empty})
-           (el-cmd/validate-commands ctx)))))
+  (try
+    (el-cmd/validate-commands ctx [])
+    (catch ExceptionInfo ex
+      (is (= {:error "No commands present in request"}
+             (ex-data ex))))))
 
 (deftest test-invalid-command
-  (let [ctx {:commands [{}]}]
-    (is (= (assoc ctx :error {:spec [{:cmd-id ["missing required key"]}]})
-           (el-cmd/validate-commands ctx)))))
+  (try
+    (el-cmd/validate-commands ctx [{}])
+    (catch ExceptionInfo ex
+      (is (= {:error [{:cmd-id ["missing required key"]
+                       :id     ["missing required key"]}]}
+             (ex-data ex))))))
 
 (deftest test-invalid-cmd-id-type
-  (let [ctx {:commands [{:cmd-id "wrong"}]}]
-    (is (= (assoc ctx :error {:spec [{:cmd-id ["should be a keyword"]}]})
-           (el-cmd/validate-commands ctx))))
-  (let [ctx {:commands [{:cmd-id :test}]}]
-    (is (= (assoc ctx :error {:spec
-                              [{:unknown-command-handler
-                                :test}]})
-           (el-cmd/validate-commands ctx)))))
+  (try
+    (el-cmd/validate-commands ctx [{:id     (uuid/gen)
+                                    :cmd-id "wrong"}])
+    (catch ExceptionInfo ex
+      (is (= {:error [{:cmd-id ["should be a keyword"]}]}
+             (ex-data ex)))))
 
-(deftest test-missing-command
-  (let [ctx {:commands [{:cmd-id :random-command}]}]
-    (is (= (assoc ctx :error {:spec
-                              [{:unknown-command-handler
-                                :random-command}]})
-           (el-cmd/validate-commands ctx))))
-  (let [ctx {:commands [{:cmd-id :test}]}]
-    (is (= (assoc ctx :error {:spec
-                              [{:unknown-command-handler
-                                :test}]})
-           (el-cmd/validate-commands ctx)))))
+  (try
+    (el-cmd/validate-commands ctx [{:cmd-id :test
+                                    :id     (uuid/gen)}])
+    (catch ExceptionInfo ex
+      (is (= {:error ["Missing handler: :test"]}
+             (ex-data ex))))))
 
 (deftest test-custom-schema
-  (let [ctx {:spec {:test [:map [:name string?]]}}
-        cmd-missing (assoc ctx :commands [{:cmd-id :test}])
-        cmd-invalid (assoc ctx :commands [{:cmd-id :test
-                                           :name   :wrong}])
-        cmd-valid (-> ctx
-                      (assoc-in [:command-handlers :test] (fn []))
-                      (assoc
-                       :commands [{:cmd-id :test
-                                   :name   "name"}]))]
+  (let [ctx (edd/reg-cmd ctx
+                         :test (fn [_ _])
+                         :consumes [:map [:name :string]])
+        cmd-missing {:cmd-id :test-unknown
+                     :id     (uuid/gen)}
+        cmd-invalid {:cmd-id :test
+                     :name   :wrong}
+        cmd-valid {:cmd-id :test
+                   :name   "name"
+                   :id     (uuid/gen)}]
 
-    (is (= (assoc cmd-missing :error {:spec [{:name ["missing required key"]}]})
-           (el-cmd/validate-commands cmd-missing)))
-
-    (is (= (assoc cmd-invalid :error {:spec [{:name ["should be a string"]}]})
-           (el-cmd/validate-commands cmd-invalid)))
-    (is (= cmd-valid
-           (el-cmd/validate-commands cmd-valid)))))
+    (try
+      (el-cmd/validate-commands ctx [cmd-missing cmd-invalid cmd-valid])
+      (catch ExceptionInfo ex
+        (is (= {:error ["Missing handler: :test-unknown"
+                        {:id ["missing required key"]}
+                        :valid]}
+               (ex-data ex)))))))
 
 (defn register
   []
@@ -88,8 +91,8 @@
      (do
        (verify-traffic-edn
         [{:body   {:body            (util/to-json
-                                     {:error          {:spec [{:id ["missing required key"]}]}
-                                      :invocation-id 0
+                                     {:error          [{:id ["missing required key"]}]
+                                      :invocation-id  0
                                       :request-id     request-id
                                       :interaction-id interaction-id})
                    :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
@@ -146,7 +149,7 @@
                                                            :meta       [{:ping {:id id}}]
                                                            :identities 0
                                                            :sequences  0}
-                                          :invocation-id 0
+                                          :invocation-id  0
                                           :request-id     request-id
                                           :interaction-id interaction-id})
                        :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"

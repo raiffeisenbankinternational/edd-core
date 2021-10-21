@@ -3,7 +3,11 @@
 
 (defmulti get-events
   (fn [{:keys [id] :as ctx}]
-    (:event-store ctx)))
+    (:event-store ctx :default)))
+
+(defmethod get-events
+  :default
+  [_] [])
 
 (defmulti get-sequence-number-for-id
   (fn [{:keys [id] :as ctx}]

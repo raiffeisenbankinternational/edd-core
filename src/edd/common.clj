@@ -2,8 +2,9 @@
   (:require
    [edd.dal :as dal]
    [edd.search :as search]
-   [edd.cache :as cache]
-   [lambda.uuid :as uuid]))
+   [edd.el.event :as el-event]
+   [lambda.uuid :as uuid]
+   [clojure.tools.logging :as log]))
 
 (defn parse-param
   [query]
@@ -23,11 +24,16 @@
 
 (defn get-by-id
   [ctx & [query]]
-  (cond
-    (:id query) (cache/get-by-id ctx query)
-    (:id ctx) (cache/get-by-id ctx)
-    query (cache/get-by-id ctx {:id (parse-param query)})
-    :else nil))
+  (if-let [id (cond
+                (:id query) (:id query)
+                (:id ctx) (:id ctx)
+                query (parse-param query)
+                :else nil)]
+    (let [resp (el-event/get-by-id (assoc ctx :id id))]
+      (if query
+        (:aggregate resp)
+        resp))
+    (log/warn "Id is nil")))
 
 (defn get-sequence-number-for-id
   [ctx & [query]]
