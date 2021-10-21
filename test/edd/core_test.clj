@@ -109,13 +109,16 @@
 (deftest handler-builder-test
   "Test if id-fn works correctly together with event seq. This test does multiple things. Sorry!!"
   (mock/with-mock-dal
-    (let [resp (mock/handle-cmd
-                (prepare {})
-                {:commands [{:cmd-id :error-cmd
-                             :id     cmd-id}]})]
-      (is (= {:error [{:error "Some error"
-                       :id    cmd-id}]}
-             (select-keys (dissoc resp :meta) [:error]))))))
+    (try
+      (mock/handle-cmd
+       (prepare {})
+       {:commands [{:cmd-id :error-cmd
+                    :id     cmd-id}]})
+      (throw (ex-info "Should not come here" {}))
+      (catch Exception e
+        (is (= {:error [{:error "Some error"
+                         :id    cmd-id}]}
+               (ex-data e)))))))
 
 (deftest test-error-response
   "Test if id-fn works correctly together with event seq. This test does multiple things. Sorry!!"
@@ -126,11 +129,27 @@
                                                            cmd-id-3 9}
                                                           id))]
     (mock/with-mock-dal
+      {:event-store
+       [{:event-id  :cmd-id
+         :id        cmd-id
+         :event-seq 21}
+        {:event-id  :cmd-id
+         :id        dps-id
+         :event-seq 31}
+        {:event-id  :cmd-id
+         :id        cmd-id-2
+         :event-seq 5}
+        {:event-id  :cmd-id
+         :id        cmd-id-3
+         :event-seq 9}]}
       (let [resp (mock/handle-cmd
                   (-> (prepare {})
                       (edd/reg-query :test-query (fn [_ _] {:id dps-id})))
                   multi-command-request)]
-        (mock/verify-state :event-store [{:event-id  :dummy-event-1
+        (mock/verify-state :event-store [{:event-id  :cmd-id
+                                          :id        cmd-id-2
+                                          :event-seq 5}
+                                         {:event-id  :dummy-event-1
                                           :handled   true
                                           :event-seq 6
                                           :meta      {}
@@ -140,11 +159,20 @@
                                           :event-seq 7
                                           :meta      {}
                                           :id        cmd-id-2}
+                                         {:event-id  :cmd-id
+                                          :id        cmd-id-3
+                                          :event-seq 9}
+                                         {:event-id  :cmd-id
+                                          :id        cmd-id
+                                          :event-seq 21}
                                          {:event-id  :dummy-event
                                           :handled   true
                                           :event-seq 22
                                           :meta      {}
                                           :id        cmd-id}
+                                         {:event-id  :cmd-id
+                                          :id        dps-id
+                                          :event-seq 31}
                                          {:event-id  :dummy-event-3
                                           :handled   true
                                           :event-seq 32
@@ -185,31 +213,31 @@
         (prepare {})
         edd/handler
         :filters [fl/from-bucket])
-       (verify-traffic-edn  [{:body   {:result         {:effects    [{:cmd-id       :fx-command
-                                                                      :id           #uuid "22222111-1111-1111-1111-111111111111"
-                                                                      :service-name :local-test}]
-                                                        :events     1
-                                                        :identities 0
-                                                        :meta       [{:object-uploaded {:id #uuid "1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"}}]
-                                                        :sequences  0
-                                                        :success    true}
-                                       :invocation-id  0
-                                       :interaction-id interaction-id
-                                       :request-id     request-id}
-                              :method :post
-                              :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-                             {:as      :stream
-                              :headers {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=16e997a926d57b9cb47dbeb1aa6a0a18fe58fc5451a1abc129ef27af2a28e776"
-                                        "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                                        "x-amz-date"           "20200426T061823Z"
-                                        "x-amz-security-token" nil}
-                              :method  :get
-                              :connect-timeout 200
-                              :idle-timeout 5000
-                              :url     "https://s3.eu-central-1.amazonaws.com/example-bucket/test/2222b7b5-9f50-4dc4-86d1-2e4fe1f6d491/1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"}
-                             {:method  :get
-                              :timeout 90000000
-                              :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
+       (verify-traffic-edn [{:body   {:result         {:effects    [{:cmd-id       :fx-command
+                                                                     :id           #uuid "22222111-1111-1111-1111-111111111111"
+                                                                     :service-name :local-test}]
+                                                       :events     1
+                                                       :identities 0
+                                                       :meta       [{:object-uploaded {:id #uuid "1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"}}]
+                                                       :sequences  0
+                                                       :success    true}
+                                      :invocation-id  0
+                                      :interaction-id interaction-id
+                                      :request-id     request-id}
+                             :method :post
+                             :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
+                            {:as              :stream
+                             :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=16e997a926d57b9cb47dbeb1aa6a0a18fe58fc5451a1abc129ef27af2a28e776"
+                                               "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                                               "x-amz-date"           "20200426T061823Z"
+                                               "x-amz-security-token" nil}
+                             :method          :get
+                             :connect-timeout 200
+                             :idle-timeout    5000
+                             :url             "https://s3.eu-central-1.amazonaws.com/example-bucket/test/2222b7b5-9f50-4dc4-86d1-2e4fe1f6d491/1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"}
+                            {:method  :get
+                             :timeout 90000000
+                             :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
 
 (deftest test-api-request-with-fx
   "Test that user is added to events and summary is properly returned"
@@ -224,6 +252,55 @@
                       {:commands       [{:cmd-id :dummy-cmd,
                                          :bla    "ble",
                                          :id     cmd-id}],
+                       :user           {:selected-role :group-2}
+                       :request-id     request-id,
+                       :interaction-id interaction-id})]
+
+       :requests [{:get  "https://s3.eu-central-1.amazonaws.com/example-bucket/test/key"
+                   :body (char-array "Of something")}]
+       (core/start
+        (prepare {})
+        edd/handler
+        :filters [fl/from-api]
+        :post-filter fl/to-api)
+       (verify-traffic-edn [{:body   {:body            (util/to-json
+                                                        {:result         {:success    true
+                                                                          :effects    [{:id           fx-id
+                                                                                        :cmd-id       :fx-command
+                                                                                        :service-name :local-test}]
+                                                                          :events     1
+                                                                          :meta       [{:dummy-cmd {:id cmd-id}}]
+                                                                          :identities 0
+                                                                          :sequences  0}
+                                                         :invocation-id  0
+                                                         :request-id     request-id
+                                                         :interaction-id interaction-id})
+                                      :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                                                        :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
+                                                        :Access-Control-Allow-Origin   "*"
+                                                        :Access-Control-Expose-Headers "*"
+                                                        :Content-Type                  "application/json"}
+                                      :isBase64Encoded false
+                                      :statusCode      200}
+                             :method :post
+                             :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
+                            {:method  :get
+                             :timeout 90000000
+                             :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
+
+(deftest test-api-request-single-command
+  "Test if sending single command works on api"
+  (mock/with-mock-dal
+    (with-redefs [sqs/sqs-publish (fn [{:keys [message] :as ctx}]
+                                    (is (= {:Records [{:key (str "response/"
+                                                                 request-id
+                                                                 "/0/local-test.json")}]}
+                                           (util/to-edn message))))]
+      (mock-core
+       :invocations [(api/api-request
+                      {:command        {:cmd-id :dummy-cmd,
+                                        :bla    "ble",
+                                        :id     cmd-id},
                        :user           {:selected-role :group-2}
                        :request-id     request-id,
                        :interaction-id interaction-id})]
@@ -319,13 +396,13 @@
                           (elastic-view-store/register))
                       {:query
                        {:query-id :get-by-id
-                        :id "bla"}})]
+                        :id       "bla"}})]
         (is (contains? response :aggregate))
         (is (= nil
                (:aggregate response))))))
   (mock/with-mock-dal
     (with-redefs [dal/get-events (fn [_]
-                                   [{:event-id :e7
+                                   [{:event-id  :e7
                                      :event-seq 1}])
                   util/http-get (fn [url request & {:keys [raw]}]
                                   {:status 403})]
@@ -335,12 +412,12 @@
                         (elastic-view-store/register))
                     {:query
                      {:query-id :get-by-id
-                      :id "bla"}})))))
+                      :id       "bla"}})))))
   (mock/with-mock-dal
     (with-redefs [dal/get-events (fn [_]
-                                   [{:event-id :e7
+                                   [{:event-id  :e7
                                      :event-seq 1
-                                     :id "bla"}])
+                                     :id        "bla"}])
                   util/http-get (fn [url request & {:keys [raw]}]
                                   {:status 404})]
       (let [response (query/handle-query
@@ -348,23 +425,12 @@
                           (elastic-view-store/register))
                       {:query
                        {:query-id :get-by-id
-                        :id "bla"}})]
+                        :id       "bla"}})]
         (is (contains? response :aggregate))
-        (is (= {:id "bla"
-                :name :e7
+        (is (= {:id      "bla"
+                :name    :e7
                 :version 1}
                (:aggregate response)))))))
-
-(deftest test-query-with-invalid-schema
-
-  (with-redefs [dal/get-events (fn [ctx id]
-                                 [{:event-id :e7}]) Ŧ]
-    (let [agg (query/handle-query
-               (prepare {})
-               {:query
-                {:query-id "get-by-id"
-                 :id       "bla"}})]
-      (is (:error agg)))))
 
 (deftest test-wrap-global-not-list
   (let [result (cmd/wrap-commands {:service-name "a"}

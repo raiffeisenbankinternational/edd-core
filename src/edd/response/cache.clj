@@ -4,12 +4,12 @@
             [clojure.string :as str]))
 
 (defmulti cache-response
-  (fn [{:keys [id] :as ctx}]
+  (fn [ctx _]
     (:response-cache ctx)))
 
 (defmethod cache-response
   :default
-  [{:keys [service-name] :or {service-name ""} :as ctx}]
+  [{:keys [service-name] :or {service-name ""} :as ctx} resp]
   (log/info "No response cache implementation")
   (let [key (str "response/"
                  (:request-id ctx)
@@ -18,7 +18,7 @@
                  "/"
                  (name service-name)
                  ".json")]
-    (swap! state/*dal-state* assoc key (:resp ctx))
+    (swap! state/*dal-state* assoc key resp)
     {:key key}))
 
 (defn register-default

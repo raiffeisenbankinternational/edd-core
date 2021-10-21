@@ -25,8 +25,9 @@
                        (* idle-timeout-step)
                        (+ idle-timeout)))))
 
-(defn retry-n-impl [f attempt total & [resp]]
+(defn retry-n-impl
   "Retry function with 1 that accepts retry count"
+  [f attempt total & [resp]]
   (if (zero? attempt)
     (do (log/error "Retry failed" resp)
         (throw (ex-info "Failed to execute request"
@@ -42,10 +43,9 @@
         response))))
 
 (defn retry-n
+  "Retry function with 1 that accepts retry count"
   [function-to-retry & {:keys [retries]
                         :or {retries retry-count}}]
-
-  "Retry function with 1 that accepts retry count"
   (retry-n-impl function-to-retry
                 retries
                 retries))

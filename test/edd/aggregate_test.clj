@@ -67,11 +67,10 @@
   (with-redefs [search/simple-search identity]
 
     (is (= {:error "No implementation of method: :-execute-all of protocol: #'next.jdbc.protocols/Executable found for class: nil"}
-           (:error
-            (event/handle-event (-> apply-ctx
-                                    (postgres-event-store/register)
-                                    (assoc :apply
-                                           {:aggregate-id 1}))))))))
+           (event/handle-event (-> apply-ctx
+                                   (postgres-event-store/register)
+                                   (assoc :apply
+                                          {:aggregate-id 1})))))))
 
 (deftest test-apply-cmd-storing-error
   (with-redefs [dal/get-events (fn [_]
@@ -101,8 +100,10 @@
                 util/http-get (fn [url request & {:keys [raw]}]
                                 {:status 404})
                 util/http-post (fn [url request & {:keys [raw]}]
-                                 {:status 303})]
-    (is (= {:error {:status 303}}
+                                 {:status 303
+                                  :body "Sorry"})]
+    (is (= {:error {:status 303
+                    :message "Sorry"}}
            (select-keys (event/handle-event (-> apply-ctx
                                                 elastic-view-store/register
                                                 (assoc

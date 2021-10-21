@@ -7,7 +7,7 @@
 
 (defmethod cache-response
   :s3
-  [{:keys [resp aws service-name] :as ctx}]
+  [{:keys [aws service-name] :as ctx} resp]
   (log/info "Storing cache response")
   (let [s3 {:s3 {:bucket {:name (str (:account-id aws)
                                      "-"

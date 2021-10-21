@@ -2,7 +2,6 @@
   (:require
    [clojure.tools.logging :as log]
    [aws.dynamodb :as dynamodb]
-   [lambda.test.fixture.state :refer [*dal-state*]]
    [edd.dal :refer [with-init
                     get-events
                     get-max-event-seq
@@ -30,27 +29,27 @@
 
 (defmethod log-request
   :dynamodb
-  [{:keys [body request-id interaction-id service-name] :as ctx} body]
+  [ctx _]
   ctx)
 
 (defmethod log-request-error
   :dynamodb
-  [{:keys [body request-id interaction-id service-name] :as ctx} body error]
+  [ctx _ _]
   ctx)
 
 (defmethod log-dps
   :dynamodb
-  [{:keys [dps-resolved request-id interaction-id service-name] :as ctx}]
+  [ctx]
   ctx)
 
 (defmethod log-response
   :dynamodb
-  [{:keys [resp request-id interaction-id service-name] :as ctx}]
+  [ctx]
   ctx)
 
 (defmethod get-sequence-number-for-id
   :dynamodb
-  [{:keys [id] :as ctx}]
+  [{:keys [id]}]
   {:pre [id]}
   1)
 
