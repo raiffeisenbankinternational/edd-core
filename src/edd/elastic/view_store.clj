@@ -151,7 +151,7 @@
                  (flatten-paths v separator (conj path k))
                  [(->> (conj path k)
                        (map name)
-                       (clojure.string/join separator)
+                       (str/join separator)
                        keyword) v]))
              m)
         (into {}))))

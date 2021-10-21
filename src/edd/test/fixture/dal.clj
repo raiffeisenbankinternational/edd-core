@@ -188,13 +188,13 @@
                                             :interaction-id
                                             :meta))
                                   %))
-                (update :commands #(map
-                                    (fn [cmd]
-                                      (dissoc cmd
-                                              :request-id
-                                              :interaction-id
-                                              :meta))
-                                    %))))
+                (update :effects #(map
+                                   (fn [cmd]
+                                     (dissoc cmd
+                                             :request-id
+                                             :interaction-id
+                                             :meta))
+                                   %))))
           resp)))))
 
 (defn get-commands-response

@@ -1,6 +1,6 @@
 (ns edd.schema.core-test
-  (:require [glms-schema.core :as sut]
-            [glms-schema.swagger :as swagger]
+  (:require [edd.schema.core :as sut]
+            [edd.schema.swagger :as swagger]
             [clojure.test.check :as tc]
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as prop]
@@ -12,7 +12,8 @@
             [edd.core :as edd]
             [lambda.core :as lambda-core]
             [lambda.util :as util]
-            [jsonista.core :as json]))
+            [jsonista.core :as json]
+            [yaml.core :as yaml]))
 
 (defspec test-non-empty-string-generator
          100
@@ -88,53 +89,145 @@
                {:c "c"} {:a "a" :b "b" :c "c"} {}
                {:a "a1" :b "b1" :c "c1"} {:a "a" :b "b" :c "c"} {:a "a1" :b "b1" :c "c1"}))
 
-(deftest test-missing-failed-custom-validation-command
+(deftest swagger-schema-test
   (mock/with-mock-dal
     (let [ctx (-> mock/ctx
                   (edd/reg-cmd :dummy-cmd (fn [ctx cmd]
                                             [])
                                :spec [:map
+                                      [:date [:re {:error/message      "Not a valid date. The format should be YYYY-MM-DD"
+                                                   :json-schema/type   "string"
+                                                   :json-schema/format "date"}
+                                              #"\d{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[0-1])"]]
                                       [:name string?]])
                   (edd/reg-query :query-1 (fn [ctx query]
                                             [])
-                                 ))]
-      (is (= {"basePath"   "plc2-svc"
-              "components" {"schemas" {"dummy-cmd" {"properties" {"cmd-id" {"type" "string"}
-                                                                  "id"     {"format" "uuid"
-                                                                            "type"   "string"}
-                                                                  "name"   {"type" "string"}}
-                                                    "required"   ["cmd-id"
-                                                                  "id"
-                                                                  "name"]
-                                                    "type"       "object"}}}
-              "host"       "plc2-svc.lime.internal.rbigroup.cloud"
-              "info"       {"description" nil
-                            "title"       nil
-                            "version"     nil}
+                                 :consumes [:map]
+                                 :produces [:map]))]
+      (is (= {"components" {"schemas" {"command-error"    {"properties" {"errors"         {"items" {"properties" {}
+                                                                                                    "type"       "object"}
+                                                                                           "type"  "array"}
+                                                                         "interaction-id" {"format" "uuid"
+                                                                                           "type"   "string"}
+                                                                         "invocation-id"  {"format" "uuid"
+                                                                                           "type"   "string"}
+                                                                         "request-id"     {"format" "uuid"
+                                                                                           "type"   "string"}}
+                                                           "required"   ["errors"
+                                                                         "invocation-id"
+                                                                         "request-id"
+                                                                         "interaction-id"]
+                                                           "type"       "object"}
+                                       "command-success"  {"properties" {"interaction-id" {"format" "uuid"
+                                                                                           "type"   "string"}
+                                                                         "invocation-id"  {"format" "uuid"
+                                                                                           "type"   "string"}
+                                                                         "request-id"     {"format" "uuid"
+                                                                                           "type"   "string"}
+                                                                         "result"         {"properties" {"effects"    {"description" "Indicates how many asnc actions where triggers"
+                                                                                                                       "format"      "int64"
+                                                                                                                       "type"        "integer"}
+                                                                                                         "events"     {"description" "NUmber of events produced"
+                                                                                                                       "format"      "int64"
+                                                                                                                       "type"        "integer"}
+                                                                                                         "identities" {"description" "Number of identities created"
+                                                                                                                       "format"      "int64"
+                                                                                                                       "type"        "integer"}
+                                                                                                         "sequences"  {"description" "Number of sequences created"
+                                                                                                                       "format"      "int64"
+                                                                                                                       "type"        "integer"}
+                                                                                                         "success"    {"description" "Indicates if response was successfull"
+                                                                                                                       "type"        "boolean"}}
+                                                                                           "required"   ["success"
+                                                                                                         "effects"
+                                                                                                         "events"
+                                                                                                         "identities"
+                                                                                                         "sequences"]
+                                                                                           "type"       "object"}}
+                                                           "required"   ["result"
+                                                                         "invocation-id"
+                                                                         "request-id"
+                                                                         "interaction-id"]
+                                                           "type"       "object"}
+                                       "dummy-cmd"        {"properties" {"command"        {"properties" {"cmd-id" {"enum" [":dummy-cmd"]
+                                                                                                                   "type" "string"}
+                                                                                                         "date"   {"format"  "date"
+                                                                                                                   "pattern" "\\d{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[0-1])"
+                                                                                                                   "type"    "string"}
+                                                                                                         "id"     {"format" "uuid"
+                                                                                                                   "type"   "string"}
+                                                                                                         "name"   {"type" "string"}}
+                                                                                           "required"   ["id"
+                                                                                                         "cmd-id"
+                                                                                                         "date"
+                                                                                                         "name"]
+                                                                                           "type"       "object"}
+                                                                         "interaction-id" {"format" "uuid"
+                                                                                           "type"   "string"}
+                                                                         "request-id"     {"format" "uuid"
+                                                                                           "type"   "string"}}
+                                                           "required"   ["request-id"
+                                                                         "interaction-id"
+                                                                         "command"]
+                                                           "type"       "object"}
+                                       "query-1-consumes" {"properties" {"interaction-id" {"format" "uuid"
+                                                                                           "type"   "string"}
+                                                                         "query-id"       {"enum" [":query-1"]
+                                                                                           "type" "string"}
+                                                                         "request-id"     {"format" "uuid"
+                                                                                           "type"   "string"}}
+                                                           "required"   ["query-id"
+                                                                         "request-id"
+                                                                         "interaction-id"]
+                                                           "type"       "object"}
+                                       "query-1-produces" {"properties" {"interaction-id" {"format" "uuid"
+                                                                                           "type"   "string"}
+                                                                         "invocation-id"  {"format" "uuid"
+                                                                                           "type"   "string"}
+                                                                         "request-id"     {"format" "uuid"
+                                                                                           "type"   "string"}
+                                                                         "result"         {"properties" {}
+                                                                                           "type"       "object"}}
+                                                           "required"   ["result"
+                                                                         "invocation-id"
+                                                                         "request-id"
+                                                                         "interaction-id"]
+                                                           "type"       "object"}
+                                       "query-error"      {"properties" {"errors"         {"items" {"properties" {}
+                                                                                                    "type"       "object"}
+                                                                                           "type"  "array"}
+                                                                         "interaction-id" {"format" "uuid"
+                                                                                           "type"   "string"}
+                                                                         "invocation-id"  {"format" "uuid"
+                                                                                           "type"   "string"}
+                                                                         "request-id"     {"format" "uuid"
+                                                                                           "type"   "string"}}
+                                                           "required"   ["errors"
+                                                                         "invocation-id"
+                                                                         "request-id"
+                                                                         "interaction-id"]
+                                                           "type"       "object"}}}
+              "info"       {"title"   "api"
+                            "version" "1.0"}
               "openapi"    "3.0.3"
-              "paths"      {"/command" {"post" {"consumes"    ["application/json"]
-                                                "description" ""
-                                                "parameters"  [{"in"       "body"
-                                                                "name"     "command"
-                                                                "required" true
-                                                                "schema"   {"oneOf" [{"$ref" "#/components/schemas/dummy-cmd"}]}}]
-                                                "produces"    ["application/json"]
-                                                "responses"   {"200" {"description" "OK"
-                                                                      "type"        "object"}}
-                                                "summary"     ""}}
-                            "/query"   {"post" {"consumes"    ["application/json"]
-                                                "description" ""
-                                                "parameters"  [{"in"       "body"
-                                                                "name"     "query"
-                                                                "required" true
-                                                                "schema"   {"oneOf" []}}]
-                                                "produces"    ["application/json"]
-                                                "responses"   {"200" {"description" "OK"
-                                                                      "type"        "object"}}
-                                                "summary"     ""}}}
-              "schemes"    ["http"
-                            "https"]}
+              "paths"      {"/command/dummy-cmd" {"post" {"description" ""
+                                                          "requestBody" {"content"  {"application/json" {"schema" {"$ref" "#/components/schemas/dummy-cmd"}}}
+                                                                         "required" true}
+                                                          "responses"   {"200" {"content"     {"application/json" {"schema" {"$ref" "#/components/schemas/command-success"}}}
+                                                                                "description" "OK"}
+                                                                         "501" {"content"     {"application/json" {"schema" {"$ref" "#/components/schemas/command-error"}}}
+                                                                                "description" "OK"}}
+                                                          "summary"     ""}}
+                            "/query/query-1"     {"post" {"description" ""
+                                                          "requestBody" {"content"  {"application/json" {"schema" {"$ref" "#/components/schemas/query-1-consumes"}}}
+                                                                         "required" true}
+                                                          "responses"   {"200" {"content"     {"application/json" {"schema" {"$ref" "#/components/schemas/query-1-produces"}}}
+                                                                                "description" "OK"}
+                                                                         "501" {"content"     {"application/json" {"schema" {"$ref" "#/components/schemas/query-error"}}}
+                                                                                "description" "OK"}}
+                                                          "summary"     ""}}}}
              (json/read-value
                (with-out-str
                  (lambda-core/start
-                   (assoc ctx :edd/runtime "glms-schema.swagger/swagger-runtime")))))))))
+                   (assoc ctx :edd/runtime "edd.schema.swagger/swagger-runtime"
+                              :edd/schema-format "json")))))))))

@@ -2,18 +2,13 @@
   (:require
    [lambda.util :as util]
    [next.jdbc.result-set :as result-set]
-   [next.jdbc.prepare :as prepare]
-   [clojure.tools.logging :as log]
-   [aws :as aws])
+   [next.jdbc.prepare :as prepare])
   (:import
    (clojure.lang IPersistentMap IPersistentVector Keyword)
-   (java.sql Date Timestamp PreparedStatement)
+   (java.sql Date Timestamp)
    (org.postgresql.util PGobject)
-   (java.time LocalDate LocalDateTime OffsetDateTime ZoneOffset)
-
-   (java.time.format DateTimeFormatter)
-   (org.postgresql.jdbc PgPreparedStatement)
-   (java.util UUID)))
+   (java.time LocalDate LocalDateTime)
+   (org.postgresql.jdbc PgPreparedStatement)))
 
 (def date-format "dd/MM/yyyy")
 

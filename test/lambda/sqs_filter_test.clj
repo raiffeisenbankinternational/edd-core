@@ -110,6 +110,7 @@
        (verify-traffic-edn [{:body {:commands [{:body "Of something"
                                                 :cmd-id :object-uploaded
                                                 :id request-id
+                                                :bucket "s3-bucket"
                                                 :key key}]
                                     :meta {:realm :test
                                            :user {:email "non-interractiva@s3.amazonws.com"

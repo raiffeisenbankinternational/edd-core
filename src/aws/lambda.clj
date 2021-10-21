@@ -50,10 +50,13 @@
   [ctx e]
   (log/error e "Error processing request")
   (send-response
-   (assoc ctx
-          :resp {:error (try (.getMessage e)
-                             (catch IllegalArgumentException e
-                               "Unknown"))})))
+   (let [data (ex-data e)]
+     (assoc ctx
+            :resp {:error (or data
+                              (try (.getMessage e)
+                                   (catch IllegalArgumentException e
+                                     (log/error e)
+                                     "Unknown")))}))))
 
 (defn with-cache
   [fn]

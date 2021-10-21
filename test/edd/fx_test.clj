@@ -23,7 +23,7 @@
                      :commands {:id "3"
                                 :cmd-id "4"}}])))
         resp (cmd/handle-effects ctx)
-        resp (get-in resp [:resp :commands])]
+        resp (get-in resp [:effects])]
     (is (= [{:commands {:cmd-id "2"
                         :id "1"}
              :interaction-id interaction-id
@@ -48,7 +48,7 @@
 
 (deftest test-apply-fx-when-fx-returns-map
   (let [resp (cmd/handle-effects ctx)
-        resp (get-in resp [:resp :commands])]
+        resp (get-in resp [:effects])]
     (is (contains? (first resp) :service))))
 
 (def ctx2
@@ -61,7 +61,7 @@
 
 (deftest test-apply-fx-when-fx-returns-list
   (let [resp (cmd/handle-effects ctx2)
-        resp (get-in resp [:resp :commands])]
+        resp (get-in resp [:effects])]
     (is (contains? (first resp) :service))))
 
 (def cmd-id #uuid "22222111-1111-1111-1111-111111111111")

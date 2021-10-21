@@ -1,6 +1,6 @@
 (ns edd.schema-test
-  (:require [edd.schema :as s]
-            [malli.core :as m]
+  (:require [malli.core :as m]
+            [edd.schema.core :as s]
             [clojure.test :refer :all]))
 
 (def test-date-schema
@@ -23,16 +23,16 @@
    :id #uuid "2812c77d-588c-4808-b10f-ed4836012882"})
 
 (deftest decode-command-schema
-  (let [decoded (s/decode s/command-schema valid-command)]
-    (is (m/validate s/command-schema decoded))))
+  (let [decoded (s/decode (s/EddCoreCommand) valid-command)]
+    (is (m/validate (s/EddCoreCommand) decoded))))
 
 (deftest decode-command-schema-with-extra-fields
-  (let [decoded (s/decode s/command-schema valid-command-extra-fields)]
-    (is (m/validate s/command-schema decoded))))
+  (let [decoded (s/decode (s/EddCoreCommand) valid-command-extra-fields)]
+    (is (m/validate (s/EddCoreCommand) decoded))))
 
 (deftest decode-invalid-command-schema
-  (let [decoded (s/decode s/command-schema invalid-command)]
-    (is (not (m/validate s/command-schema decoded)))))
+  (let [decoded (s/decode (s/EddCoreCommand) invalid-command)]
+    (is (not (m/validate (s/EddCoreCommand) decoded)))))
 
 (deftest valid-date-schema
   (testing "a valid schema with date like YYYY-MM-DD")

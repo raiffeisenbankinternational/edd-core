@@ -36,6 +36,11 @@
 
 (defmulti get-snapshot
   (fn [ctx id]
-    (:view-store ctx)))
+    (:view-store ctx :default)))
+
+(defmethod get-snapshot
+  :default
+  [ctx id]
+  nil)
 
 (def default-size 50)

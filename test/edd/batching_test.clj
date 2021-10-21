@@ -23,7 +23,6 @@
                             :id       (:id cmd)})})
       (edd/reg-cmd :inc-2
                    (fn [ctx cmd]
-                     (println "AAAAAAAAAA" (:attempt @request/*request*))
                      (if (> 0 (get @request/*request* :attempt 0))
                        {:event-id :inced
                         :value    (inc (get-in ctx [:counter :value] 0))}
@@ -49,7 +48,6 @@
                                       :id     id1}
                                      {:cmd-id :inc
                                       :id     id1}]})
-
       (mock/verify-state :aggregate-store
                          [{:id      id1
                            :value   2

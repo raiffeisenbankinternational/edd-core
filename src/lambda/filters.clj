@@ -13,12 +13,12 @@
                 (= (:eventSource (first (:Records body))) "aws:sqs"))
              true
              false))
-   :fn (fn [{:keys [body] :as ctx}]
-         (assoc ctx
-                :body (util/to-edn (-> body
-                                       (:Records)
-                                       (first)
-                                       (:body)))))})
+   :fn   (fn [{:keys [body] :as ctx}]
+           (assoc ctx
+                  :body (util/to-edn (-> body
+                                         (:Records)
+                                         (first)
+                                         (:body)))))})
 
 (defn parse-key
   [key]
@@ -29,20 +29,33 @@
           realm (if (= realm "upload")
                   "prod"
                   realm)
+          ; Skip the date
           parts (if (re-matches #"[\d]{4}-[\d]{2}-[\d]{2}" (first parts))
                   (rest parts)
                   parts)
           interaction-id (first parts)
           parts (rest parts)
-          request-id (-> parts
-                         (first)
-                         (str/split #"\.")
-                         (first))]
-      {:request-id (uuid/parse request-id)
+          id (if (= 2 (count parts))
+               (first parts)
+               (-> parts
+                   (first)
+                   (str/split #"\.")
+                   (first)))
+          request-id (if (= 2 (count parts))
+                       (-> parts
+                           (second)
+                           (str/split #"\.")
+                           (first))
+                       id)]
+      {:request-id     (uuid/parse request-id)
        :interaction-id (uuid/parse interaction-id)
-       :realm realm})
+       :id             (uuid/parse (or id request-id))
+       :realm          realm})
     (catch Exception e
-      (log/error "Unable to parse key. Shouls be in format /{{ realm }}/{{ uuid }}/{{ uuid }}.*")
+      (log/error "Unable to parse key. Should be in format
+                  /{{ realm }}/{{ interaction-id uuid }}/{{ request-id uuid }}.*
+                  or
+                 /{{ realm }}/{{ interaction-id uuid }}/{{ request-id uuid }}/{{ id uuid }}.* ")
       (throw (ex-info "Unable to parse key"
                       {:key key})))))
 
@@ -51,31 +64,35 @@
            (if (and
                 (contains? body :Records)
                 (= (:eventSource (first (:Records body))) "aws:s3")) true))
-   :fn (fn [{:keys [body] :as ctx}]
-         (-> ctx
-             (assoc-in [:user :id] (name (:service-name ctx)))
-             (assoc-in [:user :role] :non-interactive)
-             (assoc :body
-                    (let [record (first (:Records body))
-                          key (get-in record [:s3 :object :key])
-                          bucket (get-in record [:s3 :bucket :name])]
-                      (if-not (str/ends-with? key "/")
-                        (let [{:keys [request-id
-                                      interaction-id
-                                      realm]} (parse-key key)]
-                          {:request-id request-id
-                           :interaction-id interaction-id
-                           :user (name
-                                  (:service-name ctx))
-                           :meta {:realm (keyword realm)
-                                  :user {:id request-id
-                                         :email "non-interractiva@s3.amazonws.com"
-                                         :role :non-interactive}}
-                           :commands [{:cmd-id :object-uploaded
-                                       :id request-id
-                                       :body (s3/get-object ctx record)
-                                       :key key}]})
-                        {:skip true})))))})
+   :fn   (fn [{:keys [body] :as ctx}]
+           (-> ctx
+               (assoc-in [:user :id] (name (:service-name ctx)))
+               (assoc-in [:user :role] :non-interactive)
+               (assoc :body
+                      (let [record (first (:Records body))
+                            key (get-in record [:s3 :object :key])
+                            bucket (get-in record [:s3 :bucket :name])]
+                        (log/info "Parsing key" key)
+                        (if-not (str/ends-with? key "/")
+                          (let [{:keys [request-id
+                                        interaction-id
+                                        realm
+                                        id] :as parsed-key} (parse-key key)]
+                            (log/info "Parsing success " parsed-key)
+                            {:request-id     request-id
+                             :interaction-id interaction-id
+                             :user           (name
+                                              (:service-name ctx))
+                             :meta           {:realm (keyword realm)
+                                              :user  {:id    request-id
+                                                      :email "non-interractiva@s3.amazonws.com"
+                                                      :role  :non-interactive}}
+                             :commands       [{:cmd-id :object-uploaded
+                                               :id     id
+                                               :body   (s3/get-object ctx record)
+                                               :bucket bucket
+                                               :key    key}]})
+                          {:skip true})))))})
 
 (defn has-role?
   [user role]
@@ -117,48 +134,48 @@
     (cond
       (:error body) (assoc ctx :body body)
       (= role :non-interactive) (assoc ctx :meta (:meta body))
-      (has-role? user role) (assoc ctx :user {:id (:id user)
+      (has-role? user role) (assoc ctx :user {:id    (:id user)
                                               :email (:email user)
-                                              :role role
+                                              :role  role
                                               :roles (:roles user [])}
                                    :meta {:realm (get-realm body user role)
-                                          :user {:id (:id user)
-                                                 :email (:email user)
-                                                 :role role}})
-      :else (assoc ctx :user {:id "anonymous"
+                                          :user  {:id    (:id user)
+                                                  :email (:email user)
+                                                  :role  role}})
+      :else (assoc ctx :user {:id    "anonymous"
                               :email "anonymous"
-                              :role :anonymous}))))
+                              :role  :anonymous}))))
 
 (def from-api
   {:init jwt/fetch-jwks-keys
    :cond (fn [{:keys [body]}]
            (contains? body :path))
-   :fn (fn [{:keys [req body] :as ctx}]
-         (let [{http-method :httpMethod
-                path        :path}       req]
-           (cond
-             (= path "/health")
-             (assoc ctx :health-check true)
+   :fn   (fn [{:keys [req body] :as ctx}]
+           (let [{http-method :httpMethod
+                  path        :path} req]
+             (cond
+               (= path "/health")
+               (assoc ctx :health-check true)
 
-             (= http-method "OPTIONS")
-             (assoc ctx :health-check true)
+               (= http-method "OPTIONS")
+               (assoc ctx :health-check true)
 
-             :else (-> ctx
-                       (assoc :body (util/to-edn (:body body)))
-                       (check-user-role)))))})
+               :else (-> ctx
+                         (assoc :body (util/to-edn (:body body)))
+                         (check-user-role)))))})
 
 (defn to-api
   [{:keys [resp resp-content-type resp-serializer-fn]
-    :or {resp-content-type "application/json"
-         resp-serializer-fn util/to-json}
-    :as ctx}]
+    :or   {resp-content-type  "application/json"
+           resp-serializer-fn util/to-json}
+    :as   ctx}]
   (log/debug "to-api" resp)
   (assoc ctx
-         :resp {:statusCode 200
+         :resp {:statusCode      200
                 :isBase64Encoded false
-                :headers {"Access-Control-Allow-Headers" "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-                          "Access-Control-Allow-Methods" "OPTIONS,POST,PUT,GET"
-                          "Access-Control-Expose-Headers" "*"
-                          "Content-Type" resp-content-type
-                          "Access-Control-Allow-Origin" "*"}
-                :body (resp-serializer-fn resp)}))
+                :headers         {"Access-Control-Allow-Headers"  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                                  "Access-Control-Allow-Methods"  "OPTIONS,POST,PUT,GET"
+                                  "Access-Control-Expose-Headers" "*"
+                                  "Content-Type"                  resp-content-type
+                                  "Access-Control-Allow-Origin"   "*"}
+                :body            (resp-serializer-fn resp)}))
