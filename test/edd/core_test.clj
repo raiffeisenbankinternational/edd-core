@@ -417,21 +417,3 @@
          (edd/prepare-response {:resp          [{:value :a}]
                                 :queue-request true}))))
 
-(deftest test-service-schema
-  (let [service-schema {:name "string"
-                        :age  "number"}
-        ctx-with-schema (edd/reg-service-schema
-                         (prepare {})
-                         service-schema)]
-    (mock-core
-     :invocations [(api/api-request nil :path "/api/schema.json" :http-method "GET")]
-     (core/start
-      ctx-with-schema
-      edd/handler
-      :filters [fl/from-api]
-      :post-filter fl/to-api)
-     (is (= service-schema
-            (-> (client/responses)
-                (first)
-                :body
-                (util/to-edn)))))))

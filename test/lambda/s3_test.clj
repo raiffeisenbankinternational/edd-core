@@ -1,7 +1,7 @@
 (ns lambda.s3-test
   (:require
    [lambda.util :as util]
-   [lambda.core :refer [handle-request]]
+   [aws.lambda :refer [handle-request]]
    [clojure.string :as str]
    [lambda.util :refer [to-edn]]
    [lambda.filters :as fl]

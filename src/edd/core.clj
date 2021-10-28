@@ -46,7 +46,7 @@
   (log/debug "Registering query" query-id)
   (-> ctx
       (update :query #(assoc % query-id reg-fn))
-      (update :spec #(assoc % query-id (s/merge-query-schema spec)))))
+      (update-in [:edd-core :queries :spec] #(assoc % query-id (s/merge-query-schema spec)))))
 
 (defn reg-fx
   [ctx reg-fn]

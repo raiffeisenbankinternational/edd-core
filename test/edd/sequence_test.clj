@@ -1,7 +1,7 @@
 (ns edd.sequence-test
   (:require
    [clojure.test :refer :all]
-   [lambda.core :refer [handle-request]]
+   [aws.lambda  :refer [handle-request]]
    [edd.test.fixture.dal :as mock]
    [edd.core :as edd]
    [edd.memory.view-store :as view-store]

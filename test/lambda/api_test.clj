@@ -415,43 +415,6 @@
       :timeout 90000000
       :url     "http://mock/2018-06-01/runtime/invocation/next"}])))
 
-(deftest test-schema-request
-  (let [service-schema {:name "string"
-                        :age  "number"}]
-    (testing "should respond with JSON if schema.json requested"
-      (mock-core
-       :invocations [(api-request nil
-                                  :path "/api/schema.json"
-                                  :http-method "GET")]
-       (core/start
-        {:edd-core {:service-schema service-schema}}
-        (fn [ctx _]
-          (:service-schema ctx))
-        :filters [fl/from-api]
-        :post-filter fl/to-api)
-       (is (= service-schema
-              (-> (client/responses)
-                  (first)
-                  :body
-                  (util/to-edn))))))
-
-    (testing "should respond with YAML if schema.yaml requested"
-      (mock-core
-       :invocations [(api-request nil
-                                  :path "/api/schema.yaml"
-                                  :http-method "GET")]
-       (core/start
-        {:edd-core {:service-schema service-schema}}
-        (fn [ctx _]
-          (:service-schema ctx))
-        :filters [fl/from-api]
-        :post-filter fl/to-api)
-       (is (= service-schema
-              (-> (client/responses)
-                  (first)
-                  :body
-                  (yaml/parse-string))))))))
-
 (deftest test-custom-config
   (mock-core
    :env {"CustomConfig" (util/to-json

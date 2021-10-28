@@ -2,7 +2,7 @@
   (:require [clojure.test :refer :all]
             [clojure.tools.logging :as log]
             [edd.el.event :as event]
-            [lambda.core :as core]
+            [aws.lambda :as core]
             [lambda.filters :as filters]))
 
 (def filter

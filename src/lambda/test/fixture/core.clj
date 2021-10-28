@@ -1,6 +1,6 @@
 (ns lambda.test.fixture.core
   (:require [clojure.test :refer :all]
-            [lambda.core :as core]
+            [aws.lambda :as core]
             [lambda.filters :as fl]
             [lambda.util :as utils]
             [lambda.test.fixture.client :as client]))
