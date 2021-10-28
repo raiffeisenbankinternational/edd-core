@@ -1,7 +1,7 @@
 ARG DOCKER_URL
 ARG DOCKER_ORG
 
-FROM ${DOCKER_URL}/${DOCKER_ORG}/common-img:b844
+FROM ${DOCKER_URL}/${DOCKER_ORG}/common-img:b966
 
 # Custom build from here on
 ENV PROJECT_NAME edd-core
@@ -9,6 +9,7 @@ ENV PROJECT_NAME edd-core
 COPY resources resources
 COPY src src
 COPY test test
+COPY modules modules
 COPY deps.edn deps.edn
 COPY tests.edn tests.edn
 COPY format.sh format.sh
@@ -58,18 +59,33 @@ RUN set -e &&\
     clj -A:test:it
 
 ARG BUILD_ID
-RUN echo "Building b${BUILD_ID}" &&\
-    set -e && clj -A:jar  \
-  --app-group-id app-group-id \
-  --app-artifact-id ${PROJECT_NAME} \
-  --app-version "1.${BUILD_ID}"
+RUN set -e &&\
+    cd modules &&\
+    for i in $(ls); do \
+       cd $i &&\
+       clj -A:jar  \
+             --app-group-id app-group-id \
+             --app-artifact-id ${i} \
+             --app-version "1.${BUILD_ID}" &&\
+       pom.xml /dist/release-libs/${i}-1.${BUILD_ID}.jar.pom.xml &&\
+       target/${i}-1.${BUILD_ID}.jar /dist/release-libs/${PROJECT_NAME}-1.${BUILD_ID}.jar; \
+       cd ..; \
+    done &&\
+    cd .. &&\
+    echo "Building b${BUILD_ID}" &&\
+      clj -A:jar  \
+       --app-group-id app-group-id \
+       --app-artifact-id ${PROJECT_NAME} \
+       --app-version "1.${BUILD_ID}" &&\
+    cp pom.xml /dist/release-libs/${PROJECT_NAME}-1.${BUILD_ID}.jar.pom.xml &&\
+    cp target/${PROJECT_NAME}-1.${BUILD_ID}.jar /dist/release-libs/${PROJECT_NAME}-1.${BUILD_ID}.jar &&\
+    rm -rf /home/build/.m2/repository &&\
+    rm -rf target &&\
+    tree /dist
 
 RUN ls -la
 
-RUN ls -la target
 
 
-RUN cp pom.xml /dist/release-libs/${PROJECT_NAME}-1.${BUILD_ID}.jar.pom.xml
-RUN cp target/${PROJECT_NAME}-1.${BUILD_ID}.jar /dist/release-libs/${PROJECT_NAME}-1.${BUILD_ID}.jar
 
 RUN cat pom.xml

@@ -16,13 +16,15 @@
            org.postgresql/postgresql      {:mvn/version "42.2.22"}
            seancorfield/next.jdbc         {:mvn/version "1.2.659"}}
 
- :paths   ["src" "resources"],
+ :paths   ["src"
+           "resources"
+           "modules/edd-core-schema/src"],
  :aliases {:jar      {:extra-paths ["resources"]
                       :extra-deps  {luchiniatwork/cambada {:mvn/version "1.0.2"}},
                       :main-opts   ["-m" "cambada.jar"
                                     "-m" "lambda.core"
                                     "-m" "--copy-source "]},
-           :test     {:extra-paths ["test"],
+           :test     {:extra-paths ["test" "modules/edd-core-schema/test"],
                       :extra-deps  {org.clojure/test.check {:mvn/version "1.0.0"}}},
            :unit     {:extra-deps {lambdaisland/kaocha {:mvn/version "1.0.700"}},
                       :main-opts  ["-m" "kaocha.runner", "unit"]}
