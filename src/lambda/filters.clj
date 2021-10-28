@@ -4,7 +4,6 @@
             [clojure.string :as str]
             [sdk.aws.s3 :as s3]
             [lambda.jwt :as jwt]
-            [lambda.service-schema :as service-schema]
             [lambda.uuid :as uuid]))
 
 (def from-queue
@@ -143,9 +142,6 @@
 
              (= http-method "OPTIONS")
              (assoc ctx :health-check true)
-
-             (service-schema/relevant-request? http-method path)
-             (assoc ctx :service-schema-request {:format (service-schema/requested-format path)})
 
              :else (-> ctx
                        (assoc :body (util/to-edn (:body body)))

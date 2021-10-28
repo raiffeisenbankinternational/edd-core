@@ -9,7 +9,7 @@
             [ring.middleware.cors :refer [wrap-cors]]
             [edd.postgres.event-store :as postgres]
             [jsonista.core :as json]
-            [lambda.core :as lambda]
+            [aws.lambda :as lambda]
             [lambda.jwt :as jwt]
             [lambda.util :as util]
             [lambda.uuid :as uuid]
