@@ -1,6 +1,6 @@
 (ns aws.lambda
   (:require [lambda.util :as util]
-            [aws :as aws]
+            [aws.aws :as aws]
             [lambda.request :as request]
             [lambda.uuid :as uuid]
             [clojure.tools.logging :as log]))

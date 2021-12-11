@@ -9,7 +9,6 @@
    [edd.response.cache :as response-cache]
    [edd.el.query :as query]
    [malli.core :as m]
-   [aws :as aws]
    [malli.error :as me]
    [edd.response.s3 :as s3-cache]
    [edd.ctx :as edd-ctx]
@@ -17,7 +16,8 @@
    [edd.common :as common]
    [edd.el.event :as event]
    [edd.request-cache :as request-cache]
-   [edd.schema.core :as edd-schema])
+   [edd.schema.core :as edd-schema]
+   [aws.aws :as aws])
   (:import (clojure.lang ExceptionInfo)))
 
 (defn calc-service-url
@@ -31,6 +31,14 @@
 
 (defn call-query-fn
   [ctx cmd query-fn deps]
+  (when (some
+         #(contains? cmd %)
+         (keys deps))
+    (throw (ex-info "Duplicate key in deps and cmd"
+                    {:message "Duplicate key in deps and cmd"
+                     :error (filter
+                             #(contains? cmd %)
+                             (keys deps))})))
   (apply query-fn [(merge cmd deps)]))
 
 (defn resolve-remote-dependency
@@ -140,7 +148,7 @@
 (defn handle-effects
   [ctx & {:keys [resp aggregate]}]
   (let [events (:events resp)
-        ctx (assoc ctx :aggregate aggregate)
+        ctx (el-ctx/put-aggregate ctx aggregate)
         effects (reduce
                  (fn [cmd fx-fn]
                    (let [resp (fx-fn ctx events)]

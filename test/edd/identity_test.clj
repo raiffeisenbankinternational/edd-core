@@ -1,9 +1,6 @@
 (ns edd.identity-test
   (:require
    [aws.lambda  :refer [handle-request]]
-   [edd.el.cmd :as cmd]
-   [edd.memory.event-store :as event-store]
-   [edd.memory.view-store :as view-store]
    [edd.test.fixture.dal :as mock]
    [edd.core :as edd]
    [lambda.uuid :as uuid]))

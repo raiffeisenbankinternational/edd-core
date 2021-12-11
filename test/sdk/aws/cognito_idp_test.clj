@@ -1,7 +1,5 @@
 (ns sdk.aws.cognito-idp-test
   (:require [clojure.test :refer :all]
-            [lambda.util :as utils]
-            [aws :as aws]
             [lambda.util-test :as util-test]
             [lambda.test.fixture.client :as client]
             [lambda.util :as util]

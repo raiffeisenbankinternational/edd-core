@@ -29,7 +29,9 @@
             [edd.memory.view-store :as view-store]
             [lambda.test.fixture.client :as client]
             [lambda.test.fixture.state :refer [*dal-state* *queues*]]
-            [lambda.request :as request]))
+            [lambda.request :as request]
+            [edd.el.query :as query]
+            [aws.aws :as aws]))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Data Access Layer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -84,7 +86,7 @@
 
 (defn create-identity
   [& [id]]
-  (get-in @*dal-state* [:identities id] (uuid/gen)))
+  (get-in @*dal-state* [:identities (keyword id)] (uuid/gen)))
 
 (defn prepare-dps-calls
   []
@@ -121,11 +123,12 @@
 (defmacro with-mock-dal [& body]
   `(edd/with-stores
      ctx
-     #(binding [*dal-state* (atom ~(if (map? (first body))
-                                     (merge
-                                      default-db
-                                      (dissoc (first body) :seed))
-                                     default-db))
+     #(binding [*dal-state* (atom (util/fix-keys
+                                   ~(if (map? (first body))
+                                      (merge
+                                       default-db
+                                       (dissoc (first body) :seed))
+                                      default-db)))
                 *queues* {:command-queue (atom [])
                           :seed          ~(if (and (map? (first body)) (:seed (first body)))
                                             (:seed (first body))
@@ -167,13 +170,22 @@
     ((first x) @*dal-state*)
     @*dal-state*))
 
+(defn- re-parse
+  "Sometimes we parse things from outside differently
+  because keywordize keys is by default. If you have map of string
+  keys they would be keywordized. But if we pass in to test map
+  that has string we would receive string. So here we re-parse requests"
+  [cmd]
+  (util/to-edn
+   (util/to-json cmd)))
+
 (defn handle-cmd
   [{:keys [include-meta no-summary] :as ctx} cmd]
   (let [resp (if (contains? cmd :commands)
                (cmd/handle-commands ctx
-                                    cmd)
+                                    (re-parse cmd))
                (cmd/handle-commands ctx
-                                    {:commands [cmd]}))]
+                                    (re-parse {:commands [cmd]})))]
 
     (if include-meta
       resp
@@ -242,3 +254,9 @@
 (defn apply-events
   [ctx id]
   (event/handle-event (assoc ctx :apply {:aggregate-id id})))
+
+(defn query
+  [ctx query]
+  (if (contains? query :query)
+    (query/handle-query ctx (re-parse query))
+    (query/handle-query ctx (re-parse {:query query}))))

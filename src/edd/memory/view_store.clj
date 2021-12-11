@@ -7,7 +7,14 @@
                                 simple-search
                                 advanced-search
                                 update-aggregate
-                                get-snapshot]]))
+                                get-snapshot]]
+            [lambda.util :as util]))
+
+(defn fix-keys
+  [val]
+  (-> val
+      (util/to-json)
+      (util/to-edn)))
 
 (defn filter-aggregate
   [query aggregate]
@@ -31,15 +38,16 @@
   [{:keys [aggregate] :as ctx}]
   {:pre [aggregate]}
   (log/info "Emulated 'update-aggregate' dal function")
-  (swap! *dal-state*
-         #(update % :aggregate-store
-                  (fn [v]
-                    (->> v
-                         (filter
-                          (fn [el]
-                            (not= (:id el) (:id aggregate))))
-                         (cons aggregate)
-                         (sort-by (fn [{:keys [id]}] (str id)))))))
+  (let [aggregate (fix-keys aggregate)]
+    (swap! *dal-state*
+           #(update % :aggregate-store
+                    (fn [v]
+                      (->> v
+                           (filter
+                            (fn [el]
+                              (not= (:id el) (:id aggregate))))
+                           (cons aggregate)
+                           (sort-by (fn [{:keys [id]}] (str id))))))))
 
   ctx)
 
@@ -65,7 +73,7 @@
 (defmethod get-snapshot
   :memory
   [ctx id]
-  (log/debug "Fetching snapshot aggregate" id)
+  (log/info "Fetching snapshot aggregate" id)
   (->> @*dal-state*
        (:aggregate-store)
        (filter
