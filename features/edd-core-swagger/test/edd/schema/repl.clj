@@ -1,7 +1,6 @@
 (ns edd.schema.repl
   (:require [clojure.test :refer :all]
             [edd.core :as edd]
-            [edd.schema.core :as schema-core]
             [edd.schema.swagger :as swagger]))
 
 

@@ -4,7 +4,6 @@
    [lambda.util :as util]
    [clojure.tools.logging :as log]
    [clojure.string :refer [join]]
-   [aws :as aws]
    [sdk.aws.common :as common]))
 
 (defn get-env

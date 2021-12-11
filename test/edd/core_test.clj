@@ -197,7 +197,7 @@
   (mock/with-mock-dal
     (with-redefs [sdk-common/create-date (fn [] "20200426T061823Z")
                   uuid/gen (fn [] request-id)
-                  key (str "test/" interaction-id "/"
+                  key (str "test/2021-12-27/" interaction-id "/"
                            request-id)
                   sqs/sqs-publish (fn [{:keys [message] :as ctx}]
                                     (is (= {:Records [{:key (str "response/"
@@ -227,14 +227,15 @@
                              :method :post
                              :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
                             {:as              :stream
-                             :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=16e997a926d57b9cb47dbeb1aa6a0a18fe58fc5451a1abc129ef27af2a28e776"
+                             :connect-timeout 300
+                             :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=a574e8bfe0d25d8565c3cc47a17f225ec5c1e246c9a7b8646c44b80ba4c50e5c"
                                                "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
                                                "x-amz-date"           "20200426T061823Z"
                                                "x-amz-security-token" nil}
-                             :method          :get
-                             :connect-timeout 200
                              :idle-timeout    5000
-                             :url             "https://s3.eu-central-1.amazonaws.com/example-bucket/test/2222b7b5-9f50-4dc4-86d1-2e4fe1f6d491/1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"}
+                             :method          :get
+                             :url             "https://s3.eu-central-1.amazonaws.com/example-bucket/test/2021-12-27/2222b7b5-9f50-4dc4-86d1-2e4fe1f6d491/1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"}
+
                             {:method  :get
                              :timeout 90000000
                              :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
@@ -382,6 +383,18 @@
               :version 1
               :id      nil}
              (:aggregate agg))))))
+
+(deftest test-get-by-id-from-shapshot
+
+  (mock/with-mock-dal
+    {:aggregate-store [{:id      "1"
+                        :value   "bla"
+                        :version 3}]}
+
+    (is (= {:id      "1"
+            :value   "bla"
+            :version 3}
+           (common/get-by-id mock/ctx {:id "1"})))))
 
 (deftest test-get-by-id-missing-snapshot
   "Test combinations of get-by. If aggregate snapshot return nil we apply events"

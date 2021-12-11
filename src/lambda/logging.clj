@@ -1,15 +1,16 @@
 (ns lambda.logging
-  (:require [clojure.tools.logging.impl :refer [LoggerFactory Logger]]
-            [jsonista.core :as json]
+  (:require [jsonista.core :as json]
             [clojure.string :as str]
-            [lambda.request :as mdc]
+            [lambda.request :as request]
             [clojure.stacktrace :as cst])
-  (:import (java.time LocalDateTime)))
+  (:import (java.time LocalDateTime)
+           (org.slf4j LoggerFactory)
+           (org.slf4j Logger)))
 
 (defn- stacktrace-as-str
   [e]
-  (if (instance? java.lang.Throwable e)
-    (with-out-str (cst/print-stack-trace e))
+  (if (instance? Throwable e)
+    (with-out-str (cst/print-cause-trace e))
     "Not an exception"))
 
 (defn- log-common-attrs
@@ -17,8 +18,8 @@
   {:level     (str/upper-case (.getName level))
    :message   msg
    :timestamp (LocalDateTime/now)
-   :mdc       (if (bound? #'mdc/*request*)
-                (get @mdc/*request*
+   :mdc       (if (bound? #'request/*request*)
+                (get @request/*request*
                      :mdc {})
                 {})})
 
@@ -38,38 +39,42 @@
   (^String [level msg e]
    (wrapped-json-for-aws (log-structure level msg e))))
 
-(defn to-lower
-  [k]
-  (keyword (clojure.string/lower-case (name k))))
-
-(defn factory
-  "Returns a java.util.logging-based implementation of the LoggerFactory protocol,
-  or nil if not available."
+(defn slf4j-json-factory
+  "Returns a SLF4J-based implementation of the LoggerFactory protocol, or nil if
+  not available."
   []
-  (eval
-   `(let [levels# {:trace java.util.logging.Level/FINEST
-                   :debug java.util.logging.Level/FINE
-                   :info  java.util.logging.Level/INFO
-                   :warn  java.util.logging.Level/WARNING
-                   :error java.util.logging.Level/SEVERE
-                   :fatal java.util.logging.Level/SEVERE}]
-      (extend java.util.logging.Logger
-        Logger
-        {:enabled?
-         (fn [^java.util.logging.Logger logger# level#]
-           (.isLoggable logger# (get levels# level# level#)))
-         :write!
-         (fn [^java.util.logging.Logger logger# level# ^Throwable e# msg#]
-           (let [^clojure.lang.Keyword actual-level# (keyword (to-lower (if (bound? #'mdc/*request*)
-                                                                          (get-in @mdc/*request* [:mdc :level] level#)
-                                                                          level#)))
-                 ^java.util.logging.Level jul-level# (get levels# actual-level# level#)
-                 ^String msg# (str msg#)]
-             (if e#
-               (.log logger# jul-level# (as-json actual-level# msg# e#) e#)
-               (.log logger# jul-level# (as-json actual-level# msg#)))))})
-      (reify LoggerFactory
-        (name [_#]
-          "java.util.logging")
-        (get-logger [_# logger-ns#]
-          (java.util.logging.Logger/getLogger (str logger-ns#)))))))
+  (let [; Same as is done inside LoggerFactory/getLogger(String).
+        factory# (LoggerFactory/getILoggerFactory)]
+    (extend Logger
+      clojure.tools.logging.impl/Logger
+      {:enabled?
+       (fn [^Logger logger# level#]
+         (if (= level#
+                (and (bound? #'request/*request*)
+                     (get-in @request/*request* [:mdc :log-level])
+                     (-> (get-in @request/*request* [:mdc :log-level])
+                         (name)
+                         (str/lower-case)
+                         (keyword))))
+           true
+           (condp = level#
+             :trace (.isTraceEnabled logger#)
+             :debug (.isDebugEnabled logger#)
+             :info (.isInfoEnabled logger#)
+             :warn (.isWarnEnabled logger#)
+             :error (.isErrorEnabled logger#)
+             :fatal (.isErrorEnabled logger#)
+             (throw (IllegalArgumentException. (str level#))))))
+       :write!
+       (fn [^Logger logger# level# ^Throwable e# msg#]
+         (let [^String msg# (if e#
+                              (as-json level# msg# e#)
+                              (as-json level# msg#))]
+           "We don't care much about log level here
+            because it can be overriden"
+           (.info logger# msg#)))})
+    (reify clojure.tools.logging.impl/LoggerFactory
+      (name [_#]
+        "org.slf4j")
+      (get-logger [_# logger-ns#]
+        (.getLogger factory# ^String (str logger-ns#))))))

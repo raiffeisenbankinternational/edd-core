@@ -8,7 +8,8 @@
             [edd.memory.event-store :as event-store]
             [edd.response.s3 :as s3-cache]
             [edd.ctx :as edd-ctx]
-            [edd.core :as edd])
+            [edd.core :as edd]
+            [aws.aws :as aws])
   (:import (clojure.lang ExceptionInfo)))
 
 (def cmd-id (uuid/gen))

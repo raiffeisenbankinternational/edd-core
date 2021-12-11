@@ -2,7 +2,7 @@ ARG DOCKER_URL
 ARG DOCKER_ORG
 ARG ARTIFACT_ORG
 
-FROM ${DOCKER_URL}/${DOCKER_ORG}/common-img:b966
+FROM ${DOCKER_URL}/${DOCKER_ORG}/common-img:b976
 
 # Custom build from here on
 ENV PROJECT_NAME edd-core
@@ -10,19 +10,19 @@ ENV PROJECT_NAME edd-core
 ARG ARTIFACT_ORG
 ENV ARTIFACT_ORG ${ARTIFACT_ORG}
 
-COPY resources resources
-COPY src src
-COPY test test
-COPY modules modules
-COPY deps.edn deps.edn
-COPY tests.edn tests.edn
-COPY format.sh format.sh
+COPY --chown=build:build resources resources
+COPY --chown=build:build src src
+COPY --chown=build:build test test
+COPY --chown=build:build modules modules
+COPY --chown=build:build deps.edn deps.edn
+COPY --chown=build:build tests.edn tests.edn
+COPY --chown=build:build format.sh format.sh
 
 RUN ./format.sh check
 
 RUN set -e && clj -M:test:unit
 
-COPY sql sql
+COPY --chown=build:build sql sql
 
 ARG BUILD_ID
 
@@ -64,7 +64,6 @@ RUN set -e &&\
             -schemas=prod \
             -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
             -locations="filesystem:${PWD}/sql/files/edd" migrate &&\
-    clj -M:test:it &&\
     echo "Building b${BUILD_ID}" &&\
     clj -M:jar  \
        --app-group-id ${ARTIFACT_ORG} \
@@ -77,20 +76,47 @@ RUN set -e &&\
          -Dfile=target/${PROJECT_NAME}-1.${BUILD_ID}.jar \
          -DgroupId=${ARTIFACT_ORG} \
          -DartifactId=${PROJECT_NAME} \
+         -DpomFile=pom.xml \
          -Dversion="1.${BUILD_ID}" \
          -Dpackaging=jar &&\
     cd modules &&\
     for i in $(ls); do \
        cd $i &&\
+       echo "Building module $i" &&\
+       bb -i '(let [build-id "'${BUILD_ID}'" \
+                    lib (symbol `com.rbinternational.glms/edd-core) \
+                    deps (read-string \
+                          (slurp (io/file "deps.edn"))) \
+                    global (get-in deps [:deps lib]) \
+                    deps (if global \
+                           (assoc-in deps [:deps lib] {:mvn/version (str "1." build-id)}) \
+                           deps) \
+                    aliases [:test] \
+                    deps (reduce \
+                           (fn [p alias] \
+                             (if (get-in p [:aliases alias :extra-deps lib]) \
+                               (assoc-in p [:aliases alias :extra-deps lib] \
+                                         {:mvn/version (str "1." build-id)}) \
+                               p)) \
+                           deps \
+                           aliases)] \
+                (spit "deps.edn" (with-out-str \
+                                   (clojure.pprint/pprint deps))))' &&\
+       cat deps.edn &&\
+       clj -Stree &&\
+       clj -M:test:it &&\
+       clj -M:test:unit &&\
        clj -M:jar  \
              --app-group-id ${ARTIFACT_ORG} \
              --app-artifact-id ${i} \
              --app-version "1.${BUILD_ID}" &&\
-       pom.xml /dist/release-libs/${i}-1.${BUILD_ID}.jar.pom.xml &&\
-       target/${i}-1.${BUILD_ID}.jar /dist/release-libs/${i}-1.${BUILD_ID}.jar; \
+       cp pom.xml /dist/release-libs/${i}-1.${BUILD_ID}.jar.pom.xml &&\
+       cp target/${i}-1.${BUILD_ID}.jar /dist/release-libs/${i}-1.${BUILD_ID}.jar; \
+       if [[ $? -gt 0 ]]; then exit 1; fi &&\
        cd ..; \
     done &&\
     cd .. &&\
+    clj -M:test:it &&\
     rm -rf /home/build/.m2/repository &&\
     rm -rf target &&\
     tree /dist

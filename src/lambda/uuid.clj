@@ -11,3 +11,7 @@
     (if (= (type id) UUID)
       id
       (UUID/fromString id))))
+
+(defn named
+  [name]
+  (UUID/nameUUIDFromBytes (.getBytes name)))

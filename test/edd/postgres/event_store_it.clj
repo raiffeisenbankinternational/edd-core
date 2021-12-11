@@ -6,7 +6,10 @@
             [edd.core :as edd]
             [lambda.uuid :as uuid]
             [edd.test.fixture.dal :as mock]
-            [lambda.util :as util]))
+            [lambda.util :as util]
+            [edd.common :as common]
+            [lambda.logging :as lambda-logging]
+            [clojure.tools.logging :as log]))
 
 (def fx-id (uuid/gen))
 
@@ -281,3 +284,59 @@
                 :invocation-id  invocation-id
                 :request-id     request-id}
                resp))))))
+
+(deftest test-find-identity
+  ; Just to play wit logger
+  #_(alter-var-root #'clojure.tools.logging/*logger-factory*
+                    (fn [f] (lambda-logging/slf4j-json-factory)))
+  (log/error "sasa" (ex-info "da" {}))
+  (binding [*dal-state* (atom {})
+            lambda.request/*request* (atom {:mdc {:log-level "debug"}})]
+    (let [invocation-id (uuid/gen)
+          ctx (get-ctx invocation-id)
+          ctx (assoc-in ctx [:meta :realm] :test)
+          ctx (edd/reg-cmd ctx :cmd-id-1 (fn [ctx cmd]
+                                           [{:identity (:ccn cmd)}]))
+          agg-id (uuid/gen)
+          agg-id-2 (uuid/gen)
+          agg-id-3 (uuid/gen)
+          ccn1 (str "c1-" (uuid/gen))
+          ccn2 (str "c2-" (uuid/gen))
+          ccn3 (str "c3-" (uuid/gen))
+          interaction-id (uuid/gen)]
+
+      (edd/handler ctx
+                   {:request-id     (uuid/gen)
+                    :interaction-id interaction-id
+                    :meta           {:realm :test}
+                    :commands       [{:cmd-id :cmd-id-1
+                                      :ccn    ccn1
+                                      :id     agg-id}]})
+      (edd/handler ctx
+                   {:request-id     (uuid/gen)
+                    :interaction-id interaction-id
+                    :meta           {:realm :test}
+                    :commands       [{:cmd-id :cmd-id-1
+                                      :ccn    ccn2
+                                      :id     agg-id-2}]})
+
+      (edd/handler ctx
+                   {:request-id     (uuid/gen)
+                    :interaction-id interaction-id
+                    :meta           {:realm :test}
+                    :commands       [{:cmd-id :cmd-id-1
+                                      :ccn    ccn3
+                                      :id     agg-id-3}]})
+
+      (edd/with-stores
+        ctx
+        (fn [ctx]
+          (is (= nil
+                 (common/get-aggregate-id-by-identity ctx {:ccn nil})))
+          (is (= {}
+                 (common/get-aggregate-id-by-identity ctx {:ccn []})))
+          (is (= {ccn1 agg-id
+                  ccn2 agg-id-2}
+                 (common/get-aggregate-id-by-identity ctx {:ccn [ccn1 ccn2 "777777"]})))
+          (is (=  agg-id-3
+                  (common/get-aggregate-id-by-identity ctx {:ccn ccn3}))))))))

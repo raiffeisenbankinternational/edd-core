@@ -9,7 +9,7 @@
                    connect-timeout-step
                    idle-timeout
                    idle-timeout-step]
-            :or {connect-timeout 200
+            :or {connect-timeout 300
                  connect-timeout-step 500
                  idle-timeout 5000
                  idle-timeout-step 4000}}]

@@ -29,10 +29,11 @@
           realm (if (= realm "upload")
                   "prod"
                   realm)
-          ; Skip the date
-          parts (if (re-matches #"[\d]{4}-[\d]{2}-[\d]{2}" (first parts))
-                  (rest parts)
-                  parts)
+          date (if (re-matches #"[\d]{4}-[\d]{2}-[\d]{2}" (first parts))
+                 (first parts)
+                 (throw (ex-info "Missing date" {:parts parts
+                                                 :error "Missing date"})))
+          parts (rest parts)
           interaction-id (first parts)
           parts (rest parts)
           id (if (= 2 (count parts))
@@ -50,14 +51,17 @@
       {:request-id     (uuid/parse request-id)
        :interaction-id (uuid/parse interaction-id)
        :id             (uuid/parse (or id request-id))
+       :date           date
        :realm          realm})
     (catch Exception e
       (log/error "Unable to parse key. Should be in format
-                  /{{ realm }}/{{ interaction-id uuid }}/{{ request-id uuid }}.*
+                  /{{ realm }}/{{ yyyy-MM-dd }}/{{ interaction-id uuid }}/{{ request-id uuid }}.*
                   or
-                 /{{ realm }}/{{ interaction-id uuid }}/{{ request-id uuid }}/{{ id uuid }}.* ")
+                 /{{ realm }}/{{ yyyy-MM-dd }}/{{ interaction-id uuid }}/{{ request-id uuid }}/{{ id uuid }}.* "
+                 e)
       (throw (ex-info "Unable to parse key"
-                      {:key key})))))
+                      {:key  key
+                       :data (ex-data e)})))))
 
 (def from-bucket
   {:cond (fn [{:keys [body]}]
@@ -76,6 +80,7 @@
                         (if-not (str/ends-with? key "/")
                           (let [{:keys [request-id
                                         interaction-id
+                                        date
                                         realm
                                         id] :as parsed-key} (parse-key key)]
                             (log/info "Parsing success " parsed-key)
@@ -90,6 +95,7 @@
                              :commands       [{:cmd-id :object-uploaded
                                                :id     id
                                                :body   (s3/get-object ctx record)
+                                               :date   date
                                                :bucket bucket
                                                :key    key}]})
                           {:skip true})))))})

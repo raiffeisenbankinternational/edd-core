@@ -1,4 +1,4 @@
-(ns aws
+(ns aws.aws
   (:require
    [lambda.util :as util]
    [clojure.tools.logging :as log]

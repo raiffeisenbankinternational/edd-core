@@ -148,17 +148,17 @@
   [ctx schema]
   (assoc-in ctx [:edd-core :service-schema] schema))
 
-(defn- add-log-level
-  [attrs body]
-  (if-let [level (:log-level body)]
-    (assoc attrs :level level)
-    attrs))
-
 (defn get-meta
   [ctx item]
   (merge
    (:meta ctx {})
    (:meta item {})))
+
+(defn- add-log-level
+  [attrs ctx item]
+  (if-let [level (:log-level (get-meta ctx item))]
+    (assoc attrs :log-level level)
+    attrs))
 
 (defn update-mdc-for-request
   [ctx item]
@@ -169,7 +169,7 @@
                                                  :realm (:realm (get-meta ctx item))
                                                  :request-id (:request-id item)
                                                  :interaction-id (:interaction-id item))
-                                          (add-log-level item))))))
+                                          (add-log-level ctx item))))))
 
 (defn dispatch-item
   [{:keys [item] :as ctx}]

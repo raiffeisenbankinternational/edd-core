@@ -1,5 +1,6 @@
 (ns edd.request-cache
-  (:require [lambda.request :as request]))
+  (:require [lambda.request :as request]
+            [clojure.walk :as clojure-walk]))
 
 (defn- get-realm
   [ctx]
@@ -20,6 +21,8 @@
                                       nil)))
 
 (defn update-aggregate
+  "Here is very important to keywordize kex. See more details on
+  lambda.util/fix-keys"
   [ctx {:keys [id] :as aggregate}]
   (swap! request/*request*
          #(assoc-in % [:edd-core
@@ -27,4 +30,4 @@
                        (get-realm ctx)
                        :aggregate
                        id]
-                    aggregate)))
+                    (clojure-walk/keywordize-keys aggregate))))
