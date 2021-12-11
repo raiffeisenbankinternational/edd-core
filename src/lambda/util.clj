@@ -204,8 +204,22 @@
      (log/info {:message (str "START " ~message)})
      (let [start# (. System (nanoTime))
            ret# ~@expr]
-       (log/info {:type :time
+       (log/info {:type    :time
                   :message (str "END " ~message)
                   :elapsed (/ (double (- (. System (nanoTime)) start#)) 1000000.0)
-                  :unit "msec"})
+                  :unit    "msec"})
        ret#)))
+
+(defn fix-keys
+  "This is used to represent as close as possible when we store
+  to external storage as JSON. Because we are using :keywordize keys
+  for convenience. Problem is when map keys are in aggregate stored as strings.
+  Then when they are being read from storage they are being keywordized.
+  This is affecting when we are caching aggregate between calls because in
+  this case cached aggregate would not represent real aggregate without cache.
+  Other scenario is for tests because in tests we would get aggregate with string
+  keys while in real scenario we would have keys as keywords."
+  [val]
+  (-> val
+      (to-json)
+      (to-edn)))

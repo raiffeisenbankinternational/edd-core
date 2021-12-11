@@ -13,7 +13,14 @@
                     log-request
                     log-request-error
                     log-response
-                    store-results]]))
+                    store-results]]
+   [lambda.util :as util]))
+
+(defn fix-keys
+  [val]
+  (-> val
+      (util/to-json)
+      (util/to-edn)))
 
 (defn store-sequence
   "Stores sequence in memory structure.
@@ -98,7 +105,7 @@
                        (= (:event-seq e)
                           (:event-seq event))))
                 (:event-store @*dal-state*))
-      (throw (ex-info "Already existing event" {:id aggregate-id
+      (throw (ex-info "Already existing event" {:id        aggregate-id
                                                 :event-seq (:event-seq event)})))
     (swap! *dal-state*
            #(update % :event-store (fn [v] (sort-by
@@ -112,18 +119,19 @@
 
 (defn store-results-impl
   [{:keys [resp] :as ctx}]
-  (log-response ctx)
-  (doseq [i (:events resp)]
-    (store-event i))
-  (doseq [i (:identities resp)]
-    (store-identity i))
-  (doseq [i (:sequences resp)]
-    (store-sequence i))
-  (doseq [i (:effects resp)]
-    (store-command i))
-  (log/info resp)
-  (log/info "Emulated 'with-transaction' dal function")
-  ctx)
+  (let [resp (fix-keys resp)]
+    (log-response ctx)
+    (doseq [i (:events resp)]
+      (store-event i))
+    (doseq [i (:identities resp)]
+      (store-identity i))
+    (doseq [i (:sequences resp)]
+      (store-sequence i))
+    (doseq [i (:effects resp)]
+      (store-command i))
+    (log/info resp)
+    (log/info "Emulated 'with-transaction' dal function")
+    ctx))
 
 (defmethod store-results
   :memory
@@ -198,9 +206,23 @@
   {:pre [identity]}
   (log/info "Emulating get-aggregate-id-by-identity" identity)
   (let [store (:identity-store @*dal-state*)]
-    (:id
-     (first
-      (filter #(= (:identity %) identity) store)))))
+    (if (coll? identity)
+      (->> store
+           (filter (fn [it]
+                     (some #(= %
+                               (:identity it))
+                           identity)))
+           (reduce
+            (fn [p v]
+              (assoc p
+                     (:identity v)
+                     (:id v)))
+            {}))
+
+      (->> store
+           (filter #(= (:identity %) identity))
+           (first)
+           :id))))
 
 (defmethod log-request
   :memory

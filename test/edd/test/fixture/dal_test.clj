@@ -381,8 +381,8 @@
                  (dal/store-identity
                   {:id       "id1"
                    :identity 1})))
-    (verify-state [{:id       "id1"
-                    :identity 1}] :identity-store)))
+    (verify-state :identity-store [{:id       "id1"
+                                    :identity 1}])))
 
 (deftest when-identity-exists-then-ok
   (with-mock-dal
@@ -391,8 +391,17 @@
     (dal/store-identity
      {:id       "id1"
       :identity 2})
-    (verify-state [{:id "id1" :identity 1}
-                   {:id "id1" :identity 2}] :identity-store)))
+    (verify-state :identity-store [{:id "id1" :identity 1}
+                                   {:id "id1" :identity 2}])
+
+    (let [ctx (edd/reg-query ctx :get-by-identities common/get-aggregate-id-by-identity)]
+      (is (= {1 "id1"
+              2 "id1"}
+             (mock/query ctx {:query-id :get-by-identities
+                              :ids      [1 2 3]})))
+      (is (= "id1"
+             (mock/query ctx {:query-id :get-by-identities
+                              :ids      1}))))))
 
 (deftest test-identity-generation
   (with-mock-dal {:identities {"id1" "some-id"}}

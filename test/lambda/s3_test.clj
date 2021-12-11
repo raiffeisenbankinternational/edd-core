@@ -49,7 +49,7 @@
 
 (deftest test-s3-bucket-request
   (with-redefs [common/create-date (fn [] "20200426T061823Z")]
-    (let [key (str "test/"
+    (let [key (str "test/2021-12-27/"
                    interaction-id
                    "/"
                    request-id
@@ -76,6 +76,7 @@
         [{:body   {:commands       [{:body   "Of something"
                                      :cmd-id :object-uploaded
                                      :bucket "example-bucket"
+                                     :date   "2021-12-27"
                                      :id     request-id
                                      :key    key}]
                    :user           "local-test"
@@ -89,12 +90,12 @@
           :method :post
           :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
          {:as              :stream
-          :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=cfa02ff06ebb0010bcfbae58ee1ec2310379fea4f66f5a0013265ccd1fde16ce"
+          :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=2c0a385a8728aff9742fb81f8b86bb8635ca11599ad58c856607900e528d1d32"
                             "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
                             "x-amz-date"           "20200426T061823Z"
                             "x-amz-security-token" nil}
           :method          :get
-          :connect-timeout 200
+          :connect-timeout 300
           :idle-timeout    5000
           :url             (str "https://s3.eu-central-1.amazonaws.com/example-bucket/" key)}
          {:method  :get
@@ -103,7 +104,7 @@
 
 (deftest test-s3-bucket-request-when-folder-craeted
   (with-redefs [common/create-date (fn [] "20200426T061823Z")]
-    (let [key (str "test/"
+    (let [key (str "test/2021-12-27/"
                    interaction-id
                    "/")]
       (mock-core
@@ -131,17 +132,20 @@
 (deftest test-filter-key
   (is (= {:interaction-id #uuid "af42568c-f8e9-40ff-9329-d13f1c82fce5"
           :realm          "test"
+          :date           "2020-12-27"
           :id             #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"
           :request-id     #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"}
-         (fl/parse-key "test/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fca3.matching1L.csv")))
+         (fl/parse-key "test/2020-12-27/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fca3.matching1L.csv")))
+  (is (= {:interaction-id #uuid "af42568c-f8e9-40ff-9329-d13f1c82fce5"
+          :realm          "prod"
+          :date           "2020-12-27"
+          :id             #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"
+          :request-id     #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"}
+         (fl/parse-key "upload/2020-12-27/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fca3.matching1L.csv")))
   (is (= {:interaction-id #uuid "af42568c-f8e9-40ff-9329-d13f1c82fce5"
           :realm          "prod"
           :id             #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"
-          :request-id     #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"}
-         (fl/parse-key "upload/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fca3.matching1L.csv")))
-  (is (= {:interaction-id #uuid "af42568c-f8e9-40ff-9329-d13f1c82fce5"
-          :realm          "prod"
-          :id             #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"
+          :date           "2021-08-21"
           :request-id     #uuid "af42568c-f8e9-40ff-9329-d13f1c82fca3"}
          (fl/parse-key "prod/2021-08-21/af42568c-f8e9-40ff-9329-d13f1c82fce5/af42568c-f8e9-40ff-9329-d13f1c82fca3.matching1L.csv")))
   (let [interaction-id #uuid "86203547-20be-4683-8cbd-b65c710f357a"
@@ -150,6 +154,7 @@
     (is (= {:interaction-id interaction-id
             :realm          "prod"
             :id             id
+            :date           "2021-08-21"
             :request-id     request-id}
            (fl/parse-key (str "prod/2021-08-21/"
                               interaction-id

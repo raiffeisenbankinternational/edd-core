@@ -2,6 +2,7 @@
   (:require [clojure.tools.logging :as log]
             [clojure.test :refer [is]]
             [next.jdbc :as jdbc]
+            [next.jdbc.connection :as jdbc-conn]
             [next.jdbc.result-set :as rs]
             [lambda.uuid :as uuid]
             [clojure.string :as str]
@@ -20,7 +21,9 @@
                              store-results]]
             [next.jdbc.prepare :as p]
             [edd.db :as db]
-            [lambda.util :as util]))
+            [lambda.util :as util])
+  (:import [com.zaxxer.hikari HikariDataSource]
+           [com.zaxxer.hikari HikariConfig]))
 
 (def errors
   {:concurrent-modification ["pkey" "duplicate key value violates unique constraint"]})
@@ -331,16 +334,34 @@
 (defmethod get-aggregate-id-by-identity
   :postgres
   [{:keys [identity] :as ctx}]
-  (let [result
-        (jdbc/execute-one! (:con ctx)
-                           [(str "SELECT aggregate_id FROM " (->table ctx :identity_store) "
-                                           WHERE id = ?
-                                           AND service_name = ?")
-                            identity
-                            (:service-name ctx)]
-                           {:builder-fn rs/as-unqualified-lower-maps})]
+  (let [params (if (coll? identity)
+                 identity
+                 [identity])
+        placeholders (map
+                      (fn [%] "?")
+                      params)
+        result (if (empty? params)
+                 []
+                 (jdbc/execute! (:con ctx)
+                                (concat
+                                 [(str "SELECT id, aggregate_id FROM " (->table ctx :identity_store) "
+                                           WHERE id IN (" (str/join ", "
+                                                                    placeholders) ")
+                                           AND service_name = ?")]
+                                 params
+                                 [(:service-name ctx)])
+                                {:builder-fn rs/as-unqualified-lower-maps}))]
     (log/debug "Query result" result)
-    (:aggregate_id result)))
+    (if (coll? identity)
+      (reduce
+       (fn [p result]
+         (assoc p (:id result)
+                (:aggregate_id result)))
+       {}
+       result)
+      (-> result
+          (first)
+          (:aggregate_id)))))
 
 (defmethod get-events
   :postgres
@@ -385,7 +406,7 @@
 
 (defn store-command
   [ctx cmd]
-  (log/info "Storing effect" cmd)
+  (log/debug "Storing effect" cmd)
   (store-cmd ctx (assoc
                   cmd
                   :request-id (:request-id ctx)
@@ -418,23 +439,15 @@
         (update-sequence ctx i))
       ctx)))
 
-(def connection-lock (Object.))
-(def ^:dynamic database-connection (atom nil))
-
 (defmethod with-init
   :postgres
   [ctx body-fn]
-  (log/debug "Initializing")
-  (let [db-ctx (db/init ctx)
-        db-conn @database-connection]
-    (if db-conn
-      (body-fn (assoc db-ctx :con db-conn))
-      (locking connection-lock
-        (let [con (util/d-time
-                   "Opening db connection"
-                   (jdbc/get-connection (:ds db-ctx)))]
-          (swap! database-connection (fn [_] con))
-          (body-fn (assoc db-ctx :con con)))))))
+  (log/info "Initializing postgres event-store")
+  (let [ds-spec (db/init ctx)]
+    (with-open [^HikariDataSource ds (jdbc-conn/->pool HikariDataSource ds-spec)]
+      ;; this code initializes the pool and performs a validation check:
+      (.close (jdbc/get-connection ds))
+      (body-fn (assoc ctx :con (jdbc/get-connection ds))))))
 
 (defn register
   [ctx]

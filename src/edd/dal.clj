@@ -2,7 +2,7 @@
   (:require [clojure.tools.logging :as log]))
 
 (defmulti get-events
-  (fn [{:keys [id] :as ctx}]
+  (fn [{:keys [_id] :as ctx}]
     (:event-store ctx :default)))
 
 (defmethod get-events
@@ -10,15 +10,15 @@
   [_] [])
 
 (defmulti get-sequence-number-for-id
-  (fn [{:keys [id] :as ctx}]
+  (fn [{:keys [_id] :as ctx}]
     (:event-store ctx)))
 
 (defmulti get-id-for-sequence-number
-  (fn [{:keys [sequence] :as ctx}]
+  (fn [{:keys [_sequence] :as ctx}]
     (:event-store ctx)))
 
 (defmulti get-aggregate-id-by-identity
-  (fn [{:keys [identity] :as ctx}]
+  (fn [{:keys [_identity] :as ctx}]
     (:event-store ctx)))
 
 (defmulti store-effects
@@ -28,11 +28,11 @@
   (fn [ctx] (:event-store ctx)))
 
 (defmulti log-request
-  (fn [{:keys [commands] :as ctx} body]
+  (fn [{:keys [_commands] :as ctx} _body]
     (:event-store ctx)))
 
 (defmulti log-request-error
-  (fn [{:keys [commands] :as ctx} body error]
+  (fn [{:keys [_commands] :as ctx} _body _error]
     (:event-store ctx)))
 
 (defmulti log-response
@@ -40,18 +40,18 @@
     (:event-store ctx)))
 
 (defmulti get-max-event-seq
-  (fn [{:keys [id] :as ctx}]
+  (fn [{:keys [_id] :as ctx}]
     (:event-store ctx)))
 
 (defmulti get-command-response
-  (fn [{:keys [request-id breadcrumbs] :as ctx}]
+  (fn [{:keys [_request-id _breadcrumbs] :as ctx}]
     (:event-store ctx)))
 
 (defmulti store-results
   (fn [ctx] (:event-store ctx)))
 
 (defmulti with-init
-  (fn [ctx body-fn] (:event-store ctx)))
+  (fn [ctx _body-fn] (:event-store ctx)))
 
 (defmethod with-init
   :default

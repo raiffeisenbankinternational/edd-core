@@ -1,5 +1,5 @@
 (ns lambda.dev
-  (:require [aws :as aws]
+  (:require [aws.aws :as aws]
             [clojure.core.async :as async :refer [>!! go-loop]]
             [clojure.edn :as edn]
             [clojure.java.io :as io]

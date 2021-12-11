@@ -9,7 +9,9 @@
             [lambda.test.fixture.client :as client]
             [edd.memory.event-store :as event-store]
             [edd.test.fixture.dal :as mock]
-            [edd.ctx :as edd-ctx])
+            [edd.ctx :as edd-ctx]
+            [lambda.uuid :as uuid]
+            [aws.aws :as aws])
   (:import (java.net URLEncoder)
            (clojure.lang ExceptionInfo)))
 
@@ -58,7 +60,7 @@
                                                    "Content-Type"    "application/json"}
                                  :method          :post
                                  :idle-timeout    10000
-                                 :connect-timeout 200
+                                 :connect-timeout 300
                                  :url             "https://remote-svc./query"}])))))
 
 (deftest test-remote-dependency
@@ -89,7 +91,7 @@
                                                   "Content-Type"    "application/json"}
                                 :method          :post
                                 :idle-timeout    10000
-                                :connect-timeout 200
+                                :connect-timeout 300
                                 :url             "https://some-remote-service.mock.com/query"}])))))
 
 (deftest test-when-dependency-in-context-should-override
@@ -189,8 +191,7 @@
 
 (deftest test-id-fn-integration
   (testing
-   "Context defines id-fn for :cmd-1 so we expect that
-    "
+   "Context defines id-fn for :cmd-1 so we expect that"
     (mock/with-mock-dal
       (cmd/handle-commands ctx
                            {:commands [cmd-1
@@ -319,7 +320,7 @@
                                                  "Content-Type"    "application/json"}
                                :method          :post
                                :idle-timeout    10000
-                               :connect-timeout 200
+                               :connect-timeout 300
                                :url             "https://remote-svc./query"}]))))
 
 (deftest dependant-deps
@@ -374,6 +375,94 @@
                                           :c1        current-aggregate
                                           :c2        {:value :v1}
                                           :id        cmd-id-1}])))))
+
+(deftest duplicate-key-when-chaining-deps
+  "When key exist in CMD that is also in DPS then
+  we should not handle request"
+  (let [ctx (-> mock/ctx
+                (edd/reg-query :get-by-id common/get-by-id)
+                (edd/reg-cmd :cmd-1 (fn [ctx cmd]
+                                      [])
+                             :dps [:c1 (fn [cmd]
+                                         {:query-id :get-by-id
+                                          :id       (:id cmd)})
+                                   :c2 (fn [cmd]
+                                         {:query-id :get-by-id
+                                          :id       (:id cmd)})]))]
+    (let [current-events [{:event-id  :event-0
+                           :event-seq 4
+                           :value     :0
+                           :meta      {}
+                           :id        cmd-id-1}]]
+      (mock/with-mock-dal
+        {:event-store current-events}
+
+        (try
+          (mock/handle-cmd ctx {:commands [{:cmd-id :cmd-1
+                                            :c1     :something
+                                            :value  :2
+                                            :id     cmd-id-1}]})
+          (catch ExceptionInfo e
+            (is (= {:message "Duplicate key in deps and cmd"
+                    :error   [:c1]}
+                   (ex-data e)))))))))
+
 (deftest test-encoding
   (is (= "%C3%96VK"
          (URLEncoder/encode "ÖVK", "UTF-8"))))
+
+(deftest serialization-test
+  "when we serialize aggregate or search result
+  we convert map keys to keywords"
+  (let [cmd-id-2 #uuid "0d0532f2-b0df-4a30-99be-ee27783c0f44"
+        ctx (-> mock/ctx
+                (edd/reg-event :event-1 (fn [p e]
+                                          (assoc
+                                           p
+                                           :v0 (:value e))))
+                (edd/reg-query :get-by-id common/get-by-id)
+                (edd/reg-cmd :cmd-1 (fn [{:keys [jack]} cmd]
+                                      (is (= jack
+                                             {:id      cmd-id-2
+                                              :v0      {:first-name "Jack"}
+                                              :version 1}))
+                                      {:event-id :event-1
+                                       :value    {"first-name" (:first-name cmd)}})
+                             :dps [:jack (fn [_cmd]
+                                           {:query-id :get-by-id
+                                            :id       cmd-id-2})])
+                (edd/reg-cmd :cmd-2 (fn [{:keys [aggregate]} _cmd]
+                                      (is (= aggregate
+                                             {:id      cmd-id-1
+                                              :v0      {:first-name "Edd-1"}
+                                              :version 1}))
+                                      [])
+                             :dps [:aggregate (fn [cmd] {:query-id :get-by-id
+                                                         :id       (:id cmd)})]))]
+
+    (mock/with-mock-dal
+      {:aggregate-store [{:id      cmd-id-2
+                          :v0      {"first-name" "Jack"}
+                          :version 1}]}
+      (mock/apply-cmd ctx {:commands [{:cmd-id     :cmd-1
+                                       :first-name "Edd-1"
+                                       :id         cmd-id-1}]})
+      (mock/verify-state :aggregate-store [{:id      cmd-id-2
+                                            :v0      {:first-name "Jack"}
+                                            :version 1}
+                                           {:id      cmd-id-1
+                                            :v0      {:first-name "Edd-1"}
+                                            :version 1}])
+      (is (= {:id      cmd-id-1
+              :v0      {:first-name "Edd-1"}
+              :version 1}
+             (mock/query ctx {:query-id :get-by-id
+                              :id       cmd-id-1})))
+      (mock/verify-state :event-store [{:event-id  :event-1
+                                        :event-seq 1
+                                        :id        cmd-id-1
+                                        :meta      {}
+                                        :value     {:first-name "Edd-1"}}])
+      (mock/apply-cmd ctx {:commands [{:cmd-id     :cmd-2
+                                       :first-name "Edd-2"
+                                       :id         cmd-id-1}]}))))
