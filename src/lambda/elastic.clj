@@ -64,7 +64,7 @@
         (contains? response :error) (do
                                       (log/error "Failed update" response)
                                       {:error {:error response}})
-        (= (:status response) ignored-status) {:body nil}
+        (= (:status response) ignored-status) nil
         (> (:status response) 299) (do
                                      {:error {:message (:body response)
                                               :status  (:status response)}})
