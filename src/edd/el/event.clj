@@ -67,9 +67,12 @@
   [{:keys [id] :as ctx}]
 
   (if-let [snapshot (search/get-snapshot ctx id)]
-    (assoc ctx
-           :snapshot snapshot
-           :version (:version snapshot))
+    (do
+      (when snapshot
+        (log/info "Found snapshot: " (:version snapshot)))
+      (assoc ctx
+             :snapshot snapshot
+             :version (:version snapshot)))
     ctx))
 
 (defn get-events [ctx]
