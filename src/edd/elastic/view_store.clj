@@ -32,41 +32,41 @@
     v))
 
 (def op->filter-builder
-  {:and (fn [op->fn & filter-spec]
-          {:bool
-           {:filter (mapv #(parse op->fn %) filter-spec)}})
-   :or (fn [op->fn & filter-spec]
-         {:bool
-          {:should (mapv #(parse op->fn %) filter-spec)
-           :minimum_should_match 1}})
-   :eq (fn [_ & [a b]]
-         {:term
-          {(field+keyword a) (->trim b)}})
-   := (fn [_ & [a b]]
-        {:term
-         {(name a) (->trim b)}})
+  {:and      (fn [op->fn & filter-spec]
+               {:bool
+                {:filter (mapv #(parse op->fn %) filter-spec)}})
+   :or       (fn [op->fn & filter-spec]
+               {:bool
+                {:should               (mapv #(parse op->fn %) filter-spec)
+                 :minimum_should_match 1}})
+   :eq       (fn [_ & [a b]]
+               {:term
+                {(field+keyword a) (->trim b)}})
+   :=        (fn [_ & [a b]]
+               {:term
+                {(name a) (->trim b)}})
    :wildcard (fn [_ & [a b]]
                {:wildcard
                 {(str (name a)) {:value (str "*" (->trim b) "*")}}})
-   :not (fn [op->fn & filter-spec]
-          {:bool
-           {:must_not (parse op->fn filter-spec)}})
-   :in (fn [_ & [a b]]
-         {:terms
-          {(field+keyword a) b}})
-   :exists (fn [_ & [a _]]
-             {:exists
-              {:field (name a)}})
-   :lte (fn [_ & [a b]]
-          {:range
-           {(name a) {:lte b}}})
-   :gte (fn [_ & [a b]]
-          {:range
-           {(name a) {:gte b}}})
-   :nested (fn [op->fn path & filter-spec]
-             {:bool
-              {:must [{:nested {:path (name path)
-                                :query (mapv #(parse op->fn %) filter-spec)}}]}})})
+   :not      (fn [op->fn & filter-spec]
+               {:bool
+                {:must_not (parse op->fn filter-spec)}})
+   :in       (fn [_ & [a b]]
+               {:terms
+                {(field+keyword a) b}})
+   :exists   (fn [_ & [a _]]
+               {:exists
+                {:field (name a)}})
+   :lte      (fn [_ & [a b]]
+               {:range
+                {(name a) {:lte b}}})
+   :gte      (fn [_ & [a b]]
+               {:range
+                {(name a) {:gte b}}})
+   :nested   (fn [op->fn path & filter-spec]
+               {:bool
+                {:must [{:nested {:path  (name path)
+                                  :query (mapv #(parse op->fn %) filter-spec)}}]}})})
 
 (defn search-with-filter
   [filter q]
@@ -74,12 +74,12 @@
         search (mapv
                 (fn [p]
                   {:bool
-                   {:should [{:match
-                              {(str (name p))
-                               {:query value
-                                :boost 2}}}
-                             {:wildcard
-                              {(str (name p)) {:value (str "*" (->trim value) "*")}}}]
+                   {:should               [{:match
+                                            {(str (name p))
+                                             {:query value
+                                              :boost 2}}}
+                                           {:wildcard
+                                            {(str (name p)) {:value (str "*" (->trim value) "*")}}}]
                     :minimum_should_match 1}})
                 fields)]
 
@@ -113,11 +113,11 @@
   (let [json-query (util/to-json elastic-query)
         index-name (make-index-name (realm ctx) (or (:index-name ctx) (:service-name ctx)))
         {:keys [error] :as body} (el/query
-                                  {:method "POST"
-                                   :path (str "/" index-name "/_search")
-                                   :body json-query
+                                  {:method         "POST"
+                                   :path           (str "/" index-name "/_search")
+                                   :body           json-query
                                    :elastic-search (:elastic-search ctx)
-                                   :aws (:aws ctx)})
+                                   :aws            (:aws ctx)})
         total (get-in body [:hits :total :value])]
 
     (when error
@@ -126,11 +126,11 @@
     (log/debug json-query)
     (log/debug body)
     {:total total
-     :from (get elastic-query :from 0)
-     :size (get elastic-query :size default-size)
-     :hits (mapv
-            :_source
-            (get-in body [:hits :hits] []))}))
+     :from  (get elastic-query :from 0)
+     :size  (get elastic-query :size default-size)
+     :hits  (mapv
+             :_source
+             (get-in body [:hits :hits] []))}))
 
 (defmethod advanced-search
   :elastic
@@ -176,11 +176,11 @@
         body (util/d-time
               "Doing elastic search (Simple-search)"
               (elastic/query
-               {:method "POST"
-                :path (str "/" index-name "/_search")
-                :body (create-simple-query param)
+               {:method         "POST"
+                :path           (str "/" index-name "/_search")
+                :body           (create-simple-query param)
                 :elastic-search (:elastic-search ctx)
-                :aws (:aws ctx)}))]
+                :aws            (:aws ctx)}))]
     (mapv
      :_source
      (get-in body [:hits :hits] []))))
@@ -190,11 +190,11 @@
   (log/debug "Updating aggregate" aggregate)
   (let [index-name (make-index-name (realm ctx) (:service-name ctx))
         {:keys [error]} (elastic/query
-                         {:method "POST"
-                          :path (str "/" index-name "/_doc/" (:id aggregate))
-                          :body (util/to-json aggregate)
+                         {:method         "POST"
+                          :path           (str "/" index-name "/_doc/" (:id aggregate))
+                          :body           (util/to-json aggregate)
                           :elastic-search (:elastic-search ctx)
-                          :aws (:aws ctx)})]
+                          :aws            (:aws ctx)})]
     (if error
       (throw (ex-info "could not store aggregate" {:error error}))
       ctx)))
@@ -222,12 +222,12 @@
   [ctx id]
   (log/info "Fetching snapshot aggregate" id)
   (let [index-name (make-index-name (realm ctx) (:service-name ctx))
-        {:keys [error body]} (elastic/query
-                              {:method "GET"
-                               :path (str "/" index-name "/_doc/" id)
-                               :elastic-search (:elastic-search ctx)
-                               :aws (:aws ctx)}
-                              :ignored-status 404)]
+        {:keys [error] :as body} (elastic/query
+                                  {:method         "GET"
+                                   :path           (str "/" index-name "/_doc/" id)
+                                   :elastic-search (:elastic-search ctx)
+                                   :aws            (:aws ctx)}
+                                  :ignored-status 404)]
     (if error
       (throw (ex-info "Failed to fetch snapshot" error))
       body)))
