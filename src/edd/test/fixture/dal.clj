@@ -210,7 +210,8 @@
     (log/info "apply-cmd returned" resp)
     (doseq [id (distinct (map :id (:events resp)))]
       (event/handle-event (assoc ctx
-                                 :apply {:aggregate-id id})))))
+                                 :apply {:aggregate-id id
+                                         :meta         (get ctx :meta {})})))))
 
 (defn execute-fx [ctx]
   (doall

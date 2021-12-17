@@ -1,13 +1,14 @@
-#/bin/bash
+#!/bin/bash
 
 set -e
 
-docker rm -f "postgres" || echo "Missing"
-docker run -d --name postgres \
-            -p 5432:5432 \
-            -e POSTGRES_PASSWORD=no-secret \
-            -d postgres
-sleep 10
+docker-compose down
+if [[ "$(grep vm.max_map_count /etc/sysctl.conf)" == "" ]]; then
+  sudo sysctl -w vm.max_map_count=262144
+fi
+docker-compose up -d
+
+sleep 15
 flyway -password="no-secret" \
        -schemas=test \
        -url=jdbc:postgresql://127.0.0.1:5432/postgres?user=postgres \
