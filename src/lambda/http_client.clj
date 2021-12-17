@@ -35,7 +35,7 @@
     (let [response (f attempt)]
       (if (:error response)
         (do
-          (log/warn "Retrying" (- total attempt))
+          (log/warn "Retrying" (- total attempt) (:error response))
           (when (not= attempt total)
             ;sleep only when second attempt
             (Thread/sleep (+ 1000 (rand-int 1000))))
