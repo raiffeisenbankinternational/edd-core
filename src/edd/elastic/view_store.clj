@@ -187,7 +187,7 @@
 
 (defn store-to-elastic
   [{:keys [aggregate] :as ctx}]
-  (log/debug "Updating aggregate" aggregate)
+  (log/debug "Updating aggregate" (realm ctx) aggregate)
   (let [index-name (make-index-name (realm ctx) (:service-name ctx))
         {:keys [error]} (elastic/query
                          {:method         "POST"
@@ -196,12 +196,13 @@
                           :elastic-search (:elastic-search ctx)
                           :aws            (:aws ctx)})]
     (if error
-      (throw (ex-info "could not store aggregate" {:error error}))
+      (throw (ex-info "Could not store aggregate" {:error error}))
       ctx)))
 
 (defmethod update-aggregate
   :elastic
   [{:keys [aggregate] :as ctx}]
+  (log/info "Updating aggregate " (realm ctx) (:id aggregate) (:version aggregate))
   (store-to-elastic ctx))
 
 (defmethod with-init
@@ -220,7 +221,7 @@
 (defmethod get-snapshot
   :elastic
   [ctx id]
-  (log/info "Fetching snapshot aggregate" id)
+  (log/info "Fetching snapshot aggregate" (realm ctx) id)
   (let [index-name (make-index-name (realm ctx) (:service-name ctx))
         {:keys [error] :as body} (elastic/query
                                   {:method         "GET"
@@ -230,4 +231,4 @@
                                   :ignored-status 404)]
     (if error
       (throw (ex-info "Failed to fetch snapshot" error))
-      body)))
+      (:_source body))))
