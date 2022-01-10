@@ -46,8 +46,12 @@
                {:term
                 {(name a) (->trim b)}})
    :wildcard (fn [_ & [a b]]
-               {:wildcard
-                {(str (name a)) {:value (str "*" (->trim b) "*")}}})
+               {:bool
+                {:should
+                 [{:wildcard
+                   {(str (name a)) {:value (str "*" (->trim b) "*")}}}
+                  {:match_phrase
+                   {(str (name a)) (str (->trim b))}}]}})
    :not      (fn [op->fn & filter-spec]
                {:bool
                 {:must_not (parse op->fn filter-spec)}})
