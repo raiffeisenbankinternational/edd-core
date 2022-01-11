@@ -36,9 +36,9 @@
          (keys deps))
     (throw (ex-info "Duplicate key in deps and cmd"
                     {:message "Duplicate key in deps and cmd"
-                     :error (filter
-                             #(contains? cmd %)
-                             (keys deps))})))
+                     :error   (filter
+                               #(contains? cmd %)
+                               (keys deps))})))
   (apply query-fn [(merge cmd deps)]))
 
 (defn resolve-remote-dependency
@@ -238,8 +238,10 @@
     (cond
       (nil? version) ctx
       (not= version current-version) (throw (ex-info "Wrong version"
-                                                     {:current current-version
-                                                      :version version}))
+                                                     {:error   :concurrent-modification
+                                                      :message "Version mismatch"
+                                                      :state   {:current current-version
+                                                                :version version}}))
       :else ctx)))
 
 (defn invoke-handler

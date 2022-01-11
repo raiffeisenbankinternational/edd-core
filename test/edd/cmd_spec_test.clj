@@ -37,26 +37,18 @@
 
 (deftest test-missing-id-command
   (mock/with-mock-dal
-    (try
-      (mock/handle-cmd
-       ctx
-       {:cmd-id :dummy-cmd})
-      (throw (ex-info "Should not come here" {}))
-      (catch Exception e
-        (is (= {:error [{:id ["missing required key"]}]}
-               (ex-data e)))))))
+    (is (= {:error [{:id ["missing required key"]}]}
+           (mock/handle-cmd
+            ctx
+            {:cmd-id :dummy-cmd})))))
 
 (deftest test-missing-failed-custom-validation-command
   (mock/with-mock-dal
-    (try
-      (mock/handle-cmd
-       (-> ctx
-           (edd/reg-cmd :dummy-cmd dummy-command-handler
-                        :spec [:map
-                               [:name string?]]))
-       {:cmd-id :dummy-cmd
-        :id     cmd-id})
-      (throw (ex-info "Should not come here" {}))
-      (catch Exception e
-        (is (= {:error [{:name ["missing required key"]}]}
-               (ex-data e)))))))
+    (is (= {:error [{:name ["missing required key"]}]}
+           (mock/handle-cmd
+            (-> ctx
+                (edd/reg-cmd :dummy-cmd dummy-command-handler
+                             :spec [:map
+                                    [:name string?]]))
+            {:cmd-id :dummy-cmd
+             :id     cmd-id})))))
