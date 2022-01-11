@@ -194,7 +194,7 @@
                                                   (cmd/handle-commands item))
                    (contains? item :error) item
                    :else (do
-                           (log/info item)
+                           (log/warn item)
                            {:error :invalid-request}))]
         (if (:error resp)
           {:error          (:error resp)

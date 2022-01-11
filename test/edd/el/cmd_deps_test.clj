@@ -273,14 +273,16 @@
       (mock/with-mock-dal
         {:event-store current-events}
 
-        (is (thrown?
-             ExceptionInfo
-             (mock/handle-cmd ctx
-                              {:meta     {:realm :realm2}
-                               :commands [{:cmd-id  :cmd-1
-                                           :value   :2
-                                           :id      cmd-id-2
-                                           :version 6}]})))))))
+        (is (= {:error   :concurrent-modification
+                :message "Version mismatch"
+                :state   {:current 4
+                          :version 6}}
+               (mock/handle-cmd ctx
+                                {:meta     {:realm :realm2}
+                                 :commands [{:cmd-id  :cmd-1
+                                             :value   :2
+                                             :id      cmd-id-2
+                                             :version 6}]})))))))
 
 (deftest test-dependencies-vector
   "Test if context if properly prepared for remote queries"
@@ -396,16 +398,12 @@
                            :id        cmd-id-1}]]
       (mock/with-mock-dal
         {:event-store current-events}
-
-        (try
-          (mock/handle-cmd ctx {:commands [{:cmd-id :cmd-1
-                                            :c1     :something
-                                            :value  :2
-                                            :id     cmd-id-1}]})
-          (catch ExceptionInfo e
-            (is (= {:message "Duplicate key in deps and cmd"
-                    :error   [:c1]}
-                   (ex-data e)))))))))
+        (is (= {:message "Duplicate key in deps and cmd"
+                :error   [:c1]}
+               (mock/handle-cmd ctx {:commands [{:cmd-id :cmd-1
+                                                 :c1     :something
+                                                 :value  :2
+                                                 :id     cmd-id-1}]})))))))
 
 (deftest test-encoding
   (is (= "%C3%96VK"
@@ -445,7 +443,7 @@
                           :v0      {"first-name" "Jack"}
                           :version 1}]}
       (mock/apply-cmd ctx {:commands [{:cmd-id     :cmd-1
-                                       :first-name "Edd-1"
+                                       "first-name" "Edd-1"
                                        :id         cmd-id-1}]})
       (mock/verify-state :aggregate-store [{:id      cmd-id-2
                                             :v0      {:first-name "Jack"}

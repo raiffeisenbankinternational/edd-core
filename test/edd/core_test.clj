@@ -109,16 +109,12 @@
 (deftest handler-builder-test
   "Test if id-fn works correctly together with event seq. This test does multiple things. Sorry!!"
   (mock/with-mock-dal
-    (try
-      (mock/handle-cmd
-       (prepare {})
-       {:commands [{:cmd-id :error-cmd
-                    :id     cmd-id}]})
-      (throw (ex-info "Should not come here" {}))
-      (catch Exception e
-        (is (= {:error [{:error "Some error"
-                         :id    cmd-id}]}
-               (ex-data e)))))))
+    (is (= {:error [{:error "Some error"
+                     :id    cmd-id}]}
+           (mock/handle-cmd
+            (prepare {})
+            {:commands [{:cmd-id :error-cmd
+                         :id     cmd-id}]})))))
 
 (deftest test-error-response
   "Test if id-fn works correctly together with event seq. This test does multiple things. Sorry!!"

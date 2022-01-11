@@ -176,38 +176,41 @@
   keys they would be keywordized. But if we pass in to test map
   that has string we would receive string. So here we re-parse requests"
   [cmd]
-  (util/to-edn
-   (util/to-json cmd)))
+  (util/fix-keys cmd))
 
 (defn handle-cmd
   [{:keys [include-meta no-summary] :as ctx} cmd]
-  (let [resp (if (contains? cmd :commands)
-               (cmd/handle-commands ctx
-                                    (re-parse cmd))
-               (cmd/handle-commands ctx
-                                    (re-parse {:commands [cmd]})))]
+  (try
+    (let [resp (if (contains? cmd :commands)
+                 (cmd/handle-commands ctx
+                                      (re-parse cmd))
+                 (cmd/handle-commands ctx
+                                      {:commands [(re-parse cmd)]}))]
 
-    (if include-meta
-      resp
-      (do
-        (if no-summary
-          (do
-            (-> resp
-                (update :events #(map
-                                  (fn [event]
-                                    (dissoc event
-                                            :request-id
-                                            :interaction-id
-                                            :meta))
-                                  %))
-                (update :effects #(map
-                                   (fn [cmd]
-                                     (dissoc cmd
-                                             :request-id
-                                             :interaction-id
-                                             :meta))
-                                   %))))
-          resp)))))
+      (if include-meta
+        resp
+        (do
+          (if no-summary
+            (do
+              (-> resp
+                  (update :events #(map
+                                    (fn [event]
+                                      (dissoc event
+                                              :request-id
+                                              :interaction-id
+                                              :meta))
+                                    %))
+                  (update :effects #(map
+                                     (fn [cmd]
+                                       (dissoc cmd
+                                               :request-id
+                                               :interaction-id
+                                               :meta))
+                                     %))))
+            resp))))
+    (catch Exception ex
+      (log/error "CMD execution ERROR" ex)
+      (ex-data ex))))
 
 (defn get-commands-response
   [ctx cmd]
