@@ -365,23 +365,27 @@
 (defn resp->response-summary
   [{:keys [no-summary]} resp]
 
-  (cond
-    no-summary resp :else {:success    true
-                           :effects    (reduce
-                                        (fn [p v]
-                                          (concat
-                                           p
-                                           (map
-                                            (fn [%] {:id           (:id %)
-                                                     :cmd-id       (:cmd-id %)
-                                                     :service-name (:service v)})
-                                            (:commands v))))
-                                        []
-                                        (:effects resp))
-                           :events     (count (:events resp))
-                           :meta       (:meta resp)
-                           :identities (count (:identities resp))
-                           :sequences  (count (:sequences resp))}))
+  (let [effects (:effects resp)
+        effects (if (> (count effects) 100)
+                  []
+                  effects)]
+    (cond
+      no-summary resp :else {:success    true
+                             :effects    (reduce
+                                          (fn [p v]
+                                            (into
+                                             p
+                                             (map
+                                              (fn [%] {:id           (:id %)
+                                                       :cmd-id       (:cmd-id %)
+                                                       :service-name (:service v)})
+                                              (:commands v))))
+                                          []
+                                          effects)
+                             :events     (count (:events resp))
+                             :meta       (:meta resp)
+                             :identities (count (:identities resp))
+                             :sequences  (count (:sequences resp))})))
 
 (defn retry [f n]
   (try
