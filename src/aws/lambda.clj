@@ -152,3 +152,48 @@
                                            (uuid/parse invocation-id)
                                            invocation-id)))
                request))))))))
+
+(defn lambda-request-handler
+  [init-ctx handler body & {:keys [filters post-filter]
+                            :or   {filters     []
+                                   post-filter (fn [ctx] ctx)}}]
+  (with-cache
+    #(let [api (util/get-env "AWS_LAMBDA_RUNTIME_API")
+           ctx (-> init-ctx
+                   (merge (util/load-config "secret.json"))
+                   (assoc :filters filters
+                          :handler handler
+                          :post-filter post-filter)
+                   (merge (util/to-edn
+                           (util/get-env "CustomConfig" "{}")))
+                   (assoc :service-name (keyword (util/get-env
+                                                  "ServiceName"
+                                                  "local-test"))
+                          :aws {:region                (util/get-env "Region" "local")
+                                :account-id            (util/get-env "AccountId" "local")
+                                :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID" "")
+                                :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY" "")
+                                :aws-session-token     (util/get-env "AWS_SESSION_TOKEN" "")}
+                          :hosted-zone-name (util/get-env
+                                             "PublicHostedZoneName"
+                                             "example.com")
+                          :environment-name-lower (util/get-env
+                                                   "EnvironmentNameLower"
+                                                   "local"))
+                   (init-filters))]
+       (let [request {:body body}
+             invocation-id (get-in
+                            request
+                            [:headers :lambda-runtime-aws-request-id])]
+
+         (util/d-time
+          (str "Handling request")
+          (binding [request/*request* (atom {:scoped true})]
+            (handle-request
+             (-> ctx
+                 (assoc :from-api (is-from-api request))
+                 (assoc :api api
+                        :invocation-id (if-not (int? invocation-id)
+                                         (uuid/parse invocation-id)
+                                         invocation-id)))
+             request)))))))

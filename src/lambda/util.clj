@@ -203,10 +203,20 @@
   `(do
      (log/info {:message (str "START " ~message)})
      (let [start# (. System (nanoTime))
+           mem# (-> (- (.totalMemory (Runtime/getRuntime))
+                       (.freeMemory (Runtime/getRuntime)))
+                    (/ 1024)
+                    (/ 1024)
+                    (int))
            ret# ~@expr]
        (log/info {:type    :time
                   :message (str "END " ~message)
                   :elapsed (/ (double (- (. System (nanoTime)) start#)) 1000000.0)
+                  :memory  (str mem# " -> " (-> (- (.totalMemory (Runtime/getRuntime))
+                                                   (.freeMemory (Runtime/getRuntime)))
+                                                (/ 1024)
+                                                (/ 1024)
+                                                (int)))
                   :unit    "msec"})
        ret#)))
 
