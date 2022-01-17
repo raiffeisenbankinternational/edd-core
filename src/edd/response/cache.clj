@@ -9,14 +9,18 @@
 
 (defmethod cache-response
   :default
-  [{:keys [service-name] :or {service-name ""} :as ctx} resp]
+  [{:keys [service-name breadcrumbs request-id]
+    :or   {service-name ""}}
+   {:keys [idx] :as resp}]
   (log/info "No response cache implementation")
   (let [key (str "response/"
-                 (:request-id ctx)
+                 request-id
                  "/"
-                 (str/join "-" (:breadcrumbs ctx))
+                 (str/join "-" breadcrumbs)
                  "/"
                  (name service-name)
+                 (when idx
+                   (str "-part." idx))
                  ".json")]
     (swap! state/*dal-state* assoc key resp)
     {:key key}))
