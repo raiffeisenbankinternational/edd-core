@@ -7,7 +7,7 @@
 
 (defmethod cache-response
   :s3
-  [{:keys [aws service-name] :as ctx} resp]
+  [{:keys [aws service-name] :as ctx} {:keys [idx] :as resp}]
   (util/d-time
    "Storing cache response"
    (let [s3 {:s3 {:bucket {:name (str (:account-id aws)
@@ -20,6 +20,8 @@
                                      (str/join "-" (:breadcrumbs ctx))
                                      "/"
                                      (name service-name)
+                                     (when idx
+                                       (str "-part." idx))
                                      ".json")}}}
          {:keys [error]} (s3/put-object
                           ctx

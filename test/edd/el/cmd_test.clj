@@ -12,7 +12,11 @@
             [lambda.api-test :refer [api-request]]
             [lambda.uuid :as uuid]
             [edd.test.fixture.dal :as mock]
-            [sdk.aws.sqs :as sqs])
+            [sdk.aws.sqs :as sqs]
+            [edd.el.cmd :as cmd]
+            [edd.el.ctx :as el-ctx]
+            [lambda.request :as request]
+            [aws.aws :as aws])
   (:import (clojure.lang ExceptionInfo)))
 
 (def ctx (-> {}
@@ -164,3 +168,46 @@
              {:method  :get
               :timeout 90000000
               :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))))
+
+(deftest test-cache-partitioning
+  (let [ctx {:service-name "local-test"
+             :breadcrumbs  "0"
+             :request-id   "1"}]
+    (is (= {:key "response/1/0/local-test.json"}
+           (cmd/resp->cache-partitioned ctx {:effects [{:a :b}]})))
+    (is (= [{:key "response/1/0/local-test-part.0.json"}
+            {:key "response/1/0/local-test-part.1.json"}]
+           (cmd/resp->cache-partitioned (el-ctx/set-effect-partition-size ctx 2)
+                                        {:effects [{:a :b} {:a :b} {:a :b}]})))))
+
+(deftest enqueue-response
+  (binding [request/*request* (atom {:cache-keys [{:key "response/0/0/local-test-0.json"}
+                                                  {:key "response/1/0/local-test-part.0.json"}
+                                                  {:key "response/1/0/local-test-part.1.json"}
+                                                  {:key "response/2/0/local-test-2.json"}]})]
+    (let [messages (atom [])]
+      (with-redefs [sqs/sqs-publish (fn [{:keys [message]}]
+                                      (swap! messages #(conj % message)))]
+        (aws/enqueue-response ctx {})
+        (is (= [{:Records [{:key "response/0/0/local-test-0.json"}]}
+                {:Records [{:key "response/1/0/local-test-part.0.json"}]}
+                {:Records [{:key "response/1/0/local-test-part.1.json"}]}
+                {:Records [{:key "response/2/0/local-test-2.json"}]}]
+               (map
+                #(util/to-edn %)
+                @messages))))))
+  (binding [request/*request* (atom {:cache-keys [{:key "response/0/0/local-test-0.json"}
+                                                  [{:key "response/1/0/local-test-part.0.json"}
+                                                   {:key "response/1/0/local-test-part.1.json"}]
+                                                  {:key "response/2/0/local-test-2.json"}]})]
+    (let [messages (atom [])]
+      (with-redefs [sqs/sqs-publish (fn [{:keys [message]}]
+                                      (swap! messages #(conj % message)))]
+        (aws/enqueue-response ctx {})
+        (is (= [{:Records [{:key "response/0/0/local-test-0.json"}]}
+                {:Records [{:key "response/1/0/local-test-part.0.json"}]}
+                {:Records [{:key "response/1/0/local-test-part.1.json"}]}
+                {:Records [{:key "response/2/0/local-test-2.json"}]}]
+               (map
+                #(util/to-edn %)
+                @messages)))))))

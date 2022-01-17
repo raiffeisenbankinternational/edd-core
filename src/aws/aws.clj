@@ -28,12 +28,15 @@
   (let [resp (get @request/*request* :cache-keys)]
     (when resp
       (log/info "Distributing response")
-      (let [{:keys [error]} (sqs/sqs-publish
-                             (assoc ctx :queue "glms-router-svc-response"
-                                    :message (util/to-json
-                                              {:Records resp})))]
-        (when error
-          (throw (ex-info "Distribution failed" error)))))))
+      (doall
+       (map
+        #(let [{:keys [error]} (sqs/sqs-publish
+                                (assoc ctx :queue "glms-router-svc-response"
+                                       :message (util/to-json
+                                                 {:Records [%]})))]
+           (when error
+             (throw (ex-info "Distribution failed" error))))
+        (flatten resp))))))
 
 (defn send-success
   [{:keys [api

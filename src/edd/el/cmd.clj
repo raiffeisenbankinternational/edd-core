@@ -406,9 +406,25 @@
   (dal/log-request ctx body)
   ctx)
 
+(defn resp->store-cache-partition
+  [ctx resp]
+  (response-cache/cache-response ctx resp))
+
+(defn resp->cache-partitioned
+  [ctx resp]
+  (let [{:keys [effects]} resp
+        partition-site (el-ctx/get-effect-partition-size ctx)]
+    (if (< (count effects) partition-site)
+      (resp->store-cache-partition ctx resp)
+      (map-indexed
+       (fn [idx %]
+         (resp->store-cache-partition ctx (assoc resp :effects %
+                                                 :idx idx)))
+       (partition partition-site partition-site nil effects)))))
+
 (defn store-results
   [ctx resp]
-  (let [cache-result (response-cache/cache-response ctx resp)]
+  (let [cache-result (resp->cache-partitioned ctx resp)]
     (when (:error cache-result)
       (throw (ex-info "Error caching result" (:error cache-result))))
     (dal/store-results (assoc ctx :resp resp))

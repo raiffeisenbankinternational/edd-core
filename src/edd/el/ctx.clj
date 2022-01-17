@@ -7,3 +7,11 @@
 (defn get-aggregate
   [ctx]
   (get-in ctx [:edd-core :el :aggregate]))
+
+(defn get-effect-partition-size
+  [ctx]
+  (get-in ctx [:edd-core :el :effect-partition-size] 10000))
+
+(defn set-effect-partition-size
+  [ctx size]
+  (assoc-in ctx [:edd-core :el :effect-partition-size] size))
