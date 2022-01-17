@@ -74,286 +74,302 @@
                               {:value "2"})))))
 
 (deftest test-command-handler-returns-error
-  (with-redefs [common/create-date (fn [] "20210322T232540Z")
-                sqs/sqs-publish (fn [{:keys [message]}]
-                                  (is (= {:Records [{:key (str "response/"
-                                                               req-id3
-                                                               "/0/local-test.json")}
-                                                    {:key (str "response/"
-                                                               req-id1
-                                                               "/0/local-test.json")}]}
-                                         (util/to-edn message))))]
-    (mock-core
-     :invocations [(util/to-json (req
-                                  [{:request-id     req-id1
-                                    :interaction-id int-id
-                                    :commands       [{:id     agg-id
-                                                      :cmd-id :cmd-1
-                                                      :name   "CMD1"}]}
-                                   {:request-id     req-id2
-                                    :interaction-id int-id
-                                    :commands       [{:id     agg-id
-                                                      :cmd-id :cmd-2
-                                                      :name   "CMD2"}]}
-                                   {:request-id     req-id3
-                                    :interaction-id int-id
-                                    :commands       [{:id     agg-id
-                                                      :cmd-id :cmd-1
-                                                      :name   "CMD3"}]}]))]
+  (let [messages (atom [])]
+    (with-redefs [common/create-date (fn [] "20210322T232540Z")
+                  sqs/sqs-publish (fn [{:keys [message]}]
+                                    (swap! messages #(conj % message)))]
+      (mock-core
+       :invocations [(util/to-json (req
+                                    [{:request-id     req-id1
+                                      :interaction-id int-id
+                                      :commands       [{:id     agg-id
+                                                        :cmd-id :cmd-1
+                                                        :name   "CMD1"}]}
+                                     {:request-id     req-id2
+                                      :interaction-id int-id
+                                      :commands       [{:id     agg-id
+                                                        :cmd-id :cmd-2
+                                                        :name   "CMD2"}]}
+                                     {:request-id     req-id3
+                                      :interaction-id int-id
+                                      :commands       [{:id     agg-id
+                                                        :cmd-id :cmd-1
+                                                        :name   "CMD3"}]}]))]
 
-     :requests [{:post "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"}]
-     (core/start
-      ctx
-      edd/handler)
-     (verify-traffic [{:body   (util/to-json
-                                [{:result         {:success    true,
-                                                   :effects    [],
-                                                   :events     1,
-                                                   :meta       [{:cmd-1 {:id agg-id}}],
-                                                   :identities 0,
-                                                   :sequences  0}
-                                  :invocation-id  0
-                                  :request-id     req-id1
-                                  :interaction-id int-id}
-                                 {:error          [{:error "failed",
-                                                    :id    agg-id}],
-                                  :invocation-id  0
-                                  :request-id     req-id2
-                                  :interaction-id int-id}
-                                 {:result         {:success    true,
-                                                   :effects    [],
-                                                   :events     1,
-                                                   :meta       [{:cmd-1 {:id agg-id}}],
-                                                   :identities 0,
-                                                   :sequences  0}
-                                  :invocation-id  0
-                                  :request-id     req-id3
-                                  :interaction-id int-id}])
-                       :method :post
-                       :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
-                      {:body    (str "Action=DeleteMessageBatch&QueueUrl=https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue&"
-                                     "DeleteMessageBatchRequestEntry.1.Id=id-1&"
-                                     "DeleteMessageBatchRequestEntry.1.ReceiptHandle=handle-1&"
-                                     "DeleteMessageBatchRequestEntry.2.Id=id-3&"
-                                     "DeleteMessageBatchRequestEntry.2.ReceiptHandle=handle-3&"
-                                     "Expires=2020-04-18T22%3A52%3A43PST&Version=2012-11-05")
-                       :headers {"Accept"               "application/json"
-                                 "Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/sqs/aws4_request, SignedHeaders=accept;content-type;host;x-amz-date, Signature=15c52699656249eb14aadde7232a50e8e6ac9dfa3cca36e54a7ec071495b4dd8"
-                                 "Content-Type"         "application/x-www-form-urlencoded"
-                                 "X-Amz-Date"           "20210322T232540Z"
-                                 "X-Amz-Security-Token" ""}
-                       :method  :post
-                       :raw     true
-                       :connect-timeout 300
-                       :idle-timeout 5000
-                       :url     "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"
-                       :version :http1.1}
-                      {:method  :get
-                       :timeout 90000000
-                       :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
+       :requests [{:post "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"}]
+       (core/start
+        ctx
+        edd/handler)
+       (verify-traffic [{:body   (util/to-json
+                                  [{:result         {:success    true,
+                                                     :effects    [],
+                                                     :events     1,
+                                                     :meta       [{:cmd-1 {:id agg-id}}],
+                                                     :identities 0,
+                                                     :sequences  0}
+                                    :invocation-id  0
+                                    :request-id     req-id1
+                                    :interaction-id int-id}
+                                   {:error          [{:error "failed",
+                                                      :id    agg-id}],
+                                    :invocation-id  0
+                                    :request-id     req-id2
+                                    :interaction-id int-id}
+                                   {:result         {:success    true,
+                                                     :effects    [],
+                                                     :events     1,
+                                                     :meta       [{:cmd-1 {:id agg-id}}],
+                                                     :identities 0,
+                                                     :sequences  0}
+                                    :invocation-id  0
+                                    :request-id     req-id3
+                                    :interaction-id int-id}])
+                         :method :post
+                         :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
+                        {:body            (str "Action=DeleteMessageBatch&QueueUrl=https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue&"
+                                               "DeleteMessageBatchRequestEntry.1.Id=id-1&"
+                                               "DeleteMessageBatchRequestEntry.1.ReceiptHandle=handle-1&"
+                                               "DeleteMessageBatchRequestEntry.2.Id=id-3&"
+                                               "DeleteMessageBatchRequestEntry.2.ReceiptHandle=handle-3&"
+                                               "Expires=2020-04-18T22%3A52%3A43PST&Version=2012-11-05")
+                         :headers         {"Accept"               "application/json"
+                                           "Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/sqs/aws4_request, SignedHeaders=accept;content-type;host;x-amz-date, Signature=15c52699656249eb14aadde7232a50e8e6ac9dfa3cca36e54a7ec071495b4dd8"
+                                           "Content-Type"         "application/x-www-form-urlencoded"
+                                           "X-Amz-Date"           "20210322T232540Z"
+                                           "X-Amz-Security-Token" ""}
+                         :method          :post
+                         :raw             true
+                         :connect-timeout 300
+                         :idle-timeout    5000
+                         :url             "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"
+                         :version         :http1.1}
+                        {:method  :get
+                         :timeout 90000000
+                         :url     "http://mock/2018-06-01/runtime/invocation/next"}]))
+      (is (= [{:Records [{:key (str "response/"
+                                    req-id3
+                                    "/0/local-test.json")}]}
+              {:Records [{:key (str "response/"
+                                    req-id1
+                                    "/0/local-test.json")}]}]
+             (map
+              #(util/to-edn %)
+              @messages))))))
 
 (deftest test-all-ok
-  (with-redefs [common/create-date (fn [] "20210322T232540Z")
-                sqs/sqs-publish (fn [{:keys [message] :as ctx}]
-                                  (is (= {:Records [{:key (str "response/"
-                                                               req-id5
-                                                               "/0/local-test.json")}
-                                                    {:key (str "response/"
-                                                               req-id4
-                                                               "/0/local-test.json")}]}
-                                         (util/to-edn message))))]
-    (mock-core
-     :invocations [(util/to-json (req [{:request-id     req-id4
-                                        :interaction-id int-id
-                                        :commands       [{:id     agg-id
-                                                          :cmd-id :cmd-1
-                                                          :name   "CMD1"}]}
-                                       {:request-id     req-id5
-                                        :interaction-id int-id
-                                        :commands       [{:id     agg-id
-                                                          :cmd-id :cmd-1
-                                                          :name   "CMD2"}]}]))]
-     :requests [{:post "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"}]
-     (core/start
-      ctx
-      edd/handler)
-     (verify-traffic [{:body   (util/to-json
-                                [{:result         {:success    true,
-                                                   :effects    [],
-                                                   :events     1,
-                                                   :meta       [{:cmd-1 {:id agg-id}}],
-                                                   :identities 0,
-                                                   :sequences  0}
-                                  :invocation-id  0
-                                  :request-id     req-id4,
-                                  :interaction-id int-id}
-                                 {:result         {:success    true,
-                                                   :effects    [],
-                                                   :events     1,
-                                                   :meta       [{:cmd-1 {:id agg-id}}],
-                                                   :identities 0,
-                                                   :sequences  0}
-                                  :invocation-id  0
-                                  :request-id     req-id5,
-                                  :interaction-id int-id}])
-                       :method :post
-                       :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-                      {:method  :get
-                       :timeout 90000000
-                       :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
+  (let [messages (atom [])]
+    (with-redefs [common/create-date (fn [] "20210322T232540Z")
+                  sqs/sqs-publish (fn [{:keys [message] :as ctx}]
+                                    (swap! messages #(conj % message)))]
+      (mock-core
+       :invocations [(util/to-json (req [{:request-id     req-id4
+                                          :interaction-id int-id
+                                          :commands       [{:id     agg-id
+                                                            :cmd-id :cmd-1
+                                                            :name   "CMD1"}]}
+                                         {:request-id     req-id5
+                                          :interaction-id int-id
+                                          :commands       [{:id     agg-id
+                                                            :cmd-id :cmd-1
+                                                            :name   "CMD2"}]}]))]
+       :requests [{:post "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"}]
+       (core/start
+        ctx
+        edd/handler)
+       (verify-traffic [{:body   (util/to-json
+                                  [{:result         {:success    true,
+                                                     :effects    [],
+                                                     :events     1,
+                                                     :meta       [{:cmd-1 {:id agg-id}}],
+                                                     :identities 0,
+                                                     :sequences  0}
+                                    :invocation-id  0
+                                    :request-id     req-id4,
+                                    :interaction-id int-id}
+                                   {:result         {:success    true,
+                                                     :effects    [],
+                                                     :events     1,
+                                                     :meta       [{:cmd-1 {:id agg-id}}],
+                                                     :identities 0,
+                                                     :sequences  0}
+                                    :invocation-id  0
+                                    :request-id     req-id5,
+                                    :interaction-id int-id}])
+                         :method :post
+                         :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
+                        {:method  :get
+                         :timeout 90000000
+                         :url     "http://mock/2018-06-01/runtime/invocation/next"}])))
+    (is (= [{:Records [{:key (str "response/"
+                                  req-id5
+                                  "/0/local-test.json")}]}
+            {:Records [{:key (str "response/"
+                                  req-id4
+                                  "/0/local-test.json")}]}]
+           (map
+            #(util/to-edn %)
+            @messages)))))
 
 (deftest test-command-handler-exception
-  (with-redefs [common/create-date (fn [] "20210322T232540Z")
-                sqs/sqs-publish (fn [{:keys [message]}]
-                                  (is (= {:Records [{:key (str "response/"
-                                                               req-id3
-                                                               "/0/local-test.json")}
-                                                    {:key (str "response/"
-                                                               req-id1
-                                                               "/0/local-test.json")}]}
-                                         (util/to-edn message))))]
-    (mock-core
-     :invocations [(util/to-json (req
-                                  [{:request-id     req-id1
-                                    :interaction-id int-id
-                                    :commands       [{:id     agg-id
-                                                      :cmd-id :cmd-1
-                                                      :name   "CMD1"}]}
-                                   {:request-id     req-id2
-                                    :interaction-id int-id
-                                    :commands       [{:id     agg-id
-                                                      :cmd-id :cmd-3
-                                                      :name   "CMD2"}]}
-                                   {:request-id     req-id3
-                                    :interaction-id int-id
-                                    :commands       [{:id     agg-id
-                                                      :cmd-id :cmd-1
-                                                      :name   "CMD3"}]}]))]
+  (let [messages (atom [])]
+    (with-redefs [common/create-date (fn [] "20210322T232540Z")
+                  sqs/sqs-publish (fn [{:keys [message]}]
+                                    (swap! messages #(conj % message)))]
+      (mock-core
+       :invocations [(util/to-json (req
+                                    [{:request-id     req-id1
+                                      :interaction-id int-id
+                                      :commands       [{:id     agg-id
+                                                        :cmd-id :cmd-1
+                                                        :name   "CMD1"}]}
+                                     {:request-id     req-id2
+                                      :interaction-id int-id
+                                      :commands       [{:id     agg-id
+                                                        :cmd-id :cmd-3
+                                                        :name   "CMD2"}]}
+                                     {:request-id     req-id3
+                                      :interaction-id int-id
+                                      :commands       [{:id     agg-id
+                                                        :cmd-id :cmd-1
+                                                        :name   "CMD3"}]}]))]
 
-     :requests [{:post "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"}]
-     (core/start
-      ctx
-      edd/handler)
-     (verify-traffic [{:body   (util/to-json
-                                [{:result         {:success    true,
-                                                   :effects    [],
-                                                   :events     1,
-                                                   :meta       [{:cmd-1 {:id agg-id}}],
-                                                   :identities 0,
-                                                   :sequences  0}
-                                  :invocation-id  0
-                                  :request-id     req-id1
-                                  :interaction-id int-id}
-                                 {:error          {:failed "have I!"},
-                                  :invocation-id  0
-                                  :request-id     req-id2
-                                  :interaction-id int-id}
-                                 {:result         {:success    true,
-                                                   :effects    [],
-                                                   :events     1,
-                                                   :meta       [{:cmd-1 {:id agg-id}}],
-                                                   :identities 0,
-                                                   :sequences  0}
-                                  :invocation-id  0
-                                  :request-id     req-id3
-                                  :interaction-id int-id}])
-                       :method :post
-                       :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
-                      {:body    (str "Action=DeleteMessageBatch&QueueUrl=https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue&"
-                                     "DeleteMessageBatchRequestEntry.1.Id=id-1&"
-                                     "DeleteMessageBatchRequestEntry.1.ReceiptHandle=handle-1&"
-                                     "DeleteMessageBatchRequestEntry.2.Id=id-3&"
-                                     "DeleteMessageBatchRequestEntry.2.ReceiptHandle=handle-3&"
-                                     "Expires=2020-04-18T22%3A52%3A43PST&Version=2012-11-05")
-                       :headers {"Accept"               "application/json"
-                                 "Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/sqs/aws4_request, SignedHeaders=accept;content-type;host;x-amz-date, Signature=15c52699656249eb14aadde7232a50e8e6ac9dfa3cca36e54a7ec071495b4dd8"
-                                 "Content-Type"         "application/x-www-form-urlencoded"
-                                 "X-Amz-Date"           "20210322T232540Z"
-                                 "X-Amz-Security-Token" ""}
-                       :method  :post
-                       :raw     true
-                       :connect-timeout 300
-                       :idle-timeout 5000
-                       :url     "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"
-                       :version :http1.1}
-                      {:method  :get
-                       :timeout 90000000
-                       :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
+       :requests [{:post "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"}]
+       (core/start
+        ctx
+        edd/handler)
+       (verify-traffic [{:body   (util/to-json
+                                  [{:result         {:success    true,
+                                                     :effects    [],
+                                                     :events     1,
+                                                     :meta       [{:cmd-1 {:id agg-id}}],
+                                                     :identities 0,
+                                                     :sequences  0}
+                                    :invocation-id  0
+                                    :request-id     req-id1
+                                    :interaction-id int-id}
+                                   {:error          {:failed "have I!"},
+                                    :invocation-id  0
+                                    :request-id     req-id2
+                                    :interaction-id int-id}
+                                   {:result         {:success    true,
+                                                     :effects    [],
+                                                     :events     1,
+                                                     :meta       [{:cmd-1 {:id agg-id}}],
+                                                     :identities 0,
+                                                     :sequences  0}
+                                    :invocation-id  0
+                                    :request-id     req-id3
+                                    :interaction-id int-id}])
+                         :method :post
+                         :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
+                        {:body            (str "Action=DeleteMessageBatch&QueueUrl=https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue&"
+                                               "DeleteMessageBatchRequestEntry.1.Id=id-1&"
+                                               "DeleteMessageBatchRequestEntry.1.ReceiptHandle=handle-1&"
+                                               "DeleteMessageBatchRequestEntry.2.Id=id-3&"
+                                               "DeleteMessageBatchRequestEntry.2.ReceiptHandle=handle-3&"
+                                               "Expires=2020-04-18T22%3A52%3A43PST&Version=2012-11-05")
+                         :headers         {"Accept"               "application/json"
+                                           "Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/sqs/aws4_request, SignedHeaders=accept;content-type;host;x-amz-date, Signature=15c52699656249eb14aadde7232a50e8e6ac9dfa3cca36e54a7ec071495b4dd8"
+                                           "Content-Type"         "application/x-www-form-urlencoded"
+                                           "X-Amz-Date"           "20210322T232540Z"
+                                           "X-Amz-Security-Token" ""}
+                         :method          :post
+                         :raw             true
+                         :connect-timeout 300
+                         :idle-timeout    5000
+                         :url             "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"
+                         :version         :http1.1}
+                        {:method  :get
+                         :timeout 90000000
+                         :url     "http://mock/2018-06-01/runtime/invocation/next"}]))
+      (is (= [{:Records [{:key (str "response/"
+                                    req-id3
+                                    "/0/local-test.json")}]}
+              {:Records [{:key (str "response/"
+                                    req-id1
+                                    "/0/local-test.json")}]}]
+             (map
+              #(util/to-edn %)
+              @messages))))))
 
 (deftest test-failure-of-deps-resolver
-  (with-redefs [common/create-date (fn [] "20210322T232540Z")
-                sqs/sqs-publish (fn [{:keys [message]}]
-                                  (is (= {:Records [{:key (str "response/"
-                                                               req-id3
-                                                               "/0/local-test.json")}
-                                                    {:key (str "response/"
-                                                               req-id1
-                                                               "/0/local-test.json")}]}
-                                         (util/to-edn message))))]
-    (mock-core
-     :invocations [(util/to-json (req
-                                  [{:request-id     req-id1
-                                    :interaction-id int-id
-                                    :commands       [{:id     agg-id
-                                                      :cmd-id :cmd-1
-                                                      :name   "CMD1"}]}
-                                   {:request-id     req-id2
-                                    :interaction-id int-id
-                                    :commands       [{:id     agg-id
-                                                      :cmd-id :cmd-4
-                                                      :name   "CMD4"}]}
-                                   {:request-id     req-id3
-                                    :interaction-id int-id
-                                    :commands       [{:id     agg-id
-                                                      :cmd-id :cmd-1
-                                                      :name   "CMD3"}]}]))]
+  (let [messages (atom [])]
+    (with-redefs [common/create-date (fn [] "20210322T232540Z")
+                  sqs/sqs-publish (fn [{:keys [message]}]
+                                    (swap! messages #(conj % message)))]
+      (mock-core
+       :invocations [(util/to-json (req
+                                    [{:request-id     req-id1
+                                      :interaction-id int-id
+                                      :commands       [{:id     agg-id
+                                                        :cmd-id :cmd-1
+                                                        :name   "CMD1"}]}
+                                     {:request-id     req-id2
+                                      :interaction-id int-id
+                                      :commands       [{:id     agg-id
+                                                        :cmd-id :cmd-4
+                                                        :name   "CMD4"}]}
+                                     {:request-id     req-id3
+                                      :interaction-id int-id
+                                      :commands       [{:id     agg-id
+                                                        :cmd-id :cmd-1
+                                                        :name   "CMD3"}]}]))]
 
-     :requests [{:post "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"}]
-     (core/start
-      ctx
-      edd/handler)
-     (verify-traffic [{:body   (util/to-json
-                                [{:result         {:success    true,
-                                                   :effects    [],
-                                                   :events     1,
-                                                   :meta       [{:cmd-1 {:id agg-id}}],
-                                                   :identities 0,
-                                                   :sequences  0}
-                                  :invocation-id  0
-                                  :request-id     req-id1
-                                  :interaction-id int-id}
-                                 {:error {:failed "yes"}
-                                  :invocation-id  0
-                                  :request-id     req-id2
-                                  :interaction-id int-id}
-                                 {:result         {:success    true,
-                                                   :effects    [],
-                                                   :events     1,
-                                                   :meta       [{:cmd-1 {:id agg-id}}],
-                                                   :identities 0,
-                                                   :sequences  0}
-                                  :invocation-id  0
-                                  :request-id     req-id3
-                                  :interaction-id int-id}])
-                       :method :post
-                       :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
-                      {:body    (str "Action=DeleteMessageBatch&QueueUrl=https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue&"
-                                     "DeleteMessageBatchRequestEntry.1.Id=id-1&"
-                                     "DeleteMessageBatchRequestEntry.1.ReceiptHandle=handle-1&"
-                                     "DeleteMessageBatchRequestEntry.2.Id=id-3&"
-                                     "DeleteMessageBatchRequestEntry.2.ReceiptHandle=handle-3&"
-                                     "Expires=2020-04-18T22%3A52%3A43PST&Version=2012-11-05")
-                       :headers {"Accept"               "application/json"
-                                 "Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/sqs/aws4_request, SignedHeaders=accept;content-type;host;x-amz-date, Signature=15c52699656249eb14aadde7232a50e8e6ac9dfa3cca36e54a7ec071495b4dd8"
-                                 "Content-Type"         "application/x-www-form-urlencoded"
-                                 "X-Amz-Date"           "20210322T232540Z"
-                                 "X-Amz-Security-Token" ""}
-                       :method  :post
-                       :raw     true
-                       :connect-timeout 300
-                       :idle-timeout 5000
-                       :url     "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"
-                       :version :http1.1}
-                      {:method  :get
-                       :timeout 90000000
-                       :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
+       :requests [{:post "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"}]
+       (core/start
+        ctx
+        edd/handler)
+       (verify-traffic [{:body   (util/to-json
+                                  [{:result         {:success    true,
+                                                     :effects    [],
+                                                     :events     1,
+                                                     :meta       [{:cmd-1 {:id agg-id}}],
+                                                     :identities 0,
+                                                     :sequences  0}
+                                    :invocation-id  0
+                                    :request-id     req-id1
+                                    :interaction-id int-id}
+                                   {:error          {:failed "yes"}
+                                    :invocation-id  0
+                                    :request-id     req-id2
+                                    :interaction-id int-id}
+                                   {:result         {:success    true,
+                                                     :effects    [],
+                                                     :events     1,
+                                                     :meta       [{:cmd-1 {:id agg-id}}],
+                                                     :identities 0,
+                                                     :sequences  0}
+                                    :invocation-id  0
+                                    :request-id     req-id3
+                                    :interaction-id int-id}])
+                         :method :post
+                         :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
+                        {:body            (str "Action=DeleteMessageBatch&QueueUrl=https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue&"
+                                               "DeleteMessageBatchRequestEntry.1.Id=id-1&"
+                                               "DeleteMessageBatchRequestEntry.1.ReceiptHandle=handle-1&"
+                                               "DeleteMessageBatchRequestEntry.2.Id=id-3&"
+                                               "DeleteMessageBatchRequestEntry.2.ReceiptHandle=handle-3&"
+                                               "Expires=2020-04-18T22%3A52%3A43PST&Version=2012-11-05")
+                         :headers         {"Accept"               "application/json"
+                                           "Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/sqs/aws4_request, SignedHeaders=accept;content-type;host;x-amz-date, Signature=15c52699656249eb14aadde7232a50e8e6ac9dfa3cca36e54a7ec071495b4dd8"
+                                           "Content-Type"         "application/x-www-form-urlencoded"
+                                           "X-Amz-Date"           "20210322T232540Z"
+                                           "X-Amz-Security-Token" ""}
+                         :method          :post
+                         :raw             true
+                         :connect-timeout 300
+                         :idle-timeout    5000
+                         :url             "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"
+                         :version         :http1.1}
+                        {:method  :get
+                         :timeout 90000000
+                         :url     "http://mock/2018-06-01/runtime/invocation/next"}]))
+      (is (= [{:Records [{:key (str "response/"
+                                    req-id3
+                                    "/0/local-test.json")}]}
+              {:Records [{:key (str "response/"
+                                    req-id1
+                                    "/0/local-test.json")}]}]
+             (map
+              #(util/to-edn %)
+              @messages))))))
