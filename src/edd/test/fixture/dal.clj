@@ -182,8 +182,12 @@
   [{:keys [include-meta no-summary] :as ctx} cmd]
   (try
     (let [resp (if (contains? cmd :commands)
-                 (cmd/handle-commands ctx
-                                      (re-parse cmd))
+                 (when (or (= (:service-name ctx)
+                              (:service cmd))
+                           (= nil
+                              (:service cmd)))
+                   (cmd/handle-commands ctx
+                                        (re-parse cmd)))
                  (cmd/handle-commands ctx
                                       {:commands [(re-parse cmd)]}))]
 
@@ -231,7 +235,7 @@
 (defn execute-fx [ctx]
   (doall
    (for [cmd (pop-state :command-store)]
-     (cmd/handle-commands ctx cmd))))
+     (handle-cmd ctx cmd))))
 
 (defn execute-fx-apply [ctx]
   (doall
