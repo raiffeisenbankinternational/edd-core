@@ -12,6 +12,7 @@ ENV ARTIFACT_ORG ${ARTIFACT_ORG}
 
 COPY --chown=build:build resources resources
 COPY --chown=build:build src src
+COPY --chown=build:build features features
 COPY --chown=build:build test test
 COPY --chown=build:build modules modules
 COPY --chown=build:build deps.edn deps.edn
