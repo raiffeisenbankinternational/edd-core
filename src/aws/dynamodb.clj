@@ -5,6 +5,7 @@
 
 (defn make-request
   [{:keys [aws action body]}]
+  (log/info "Make request" body)
   (let [req {:method     "POST"
              :uri        "/"
              :query      ""
@@ -30,7 +31,9 @@
                        :timeout 5000})
                     3)]
       (when (contains? response :error)
-        (log/error "Failed to fetch secret" response))
+        (throw (ex-info "Invocation error" (:error response))))
+      (when (> (:status response) 399)
+        (throw (ex-info "Invocation error" (:body response))))
       (:body response))))
 
 (defn list-tables
