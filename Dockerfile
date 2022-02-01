@@ -85,7 +85,7 @@ RUN set -e &&\
        cd $i &&\
        echo "Building module $i" &&\
        bb -i '(let [build-id "'${BUILD_ID}'" \
-                    lib (symbol `app-group-id/edd-core) \
+                    lib (symbol `edd-core.glms/edd-core) \
                     deps (read-string \
                           (slurp (io/file "deps.edn"))) \
                     global (get-in deps [:deps lib]) \

@@ -2,6 +2,6 @@
  :paths   ["src" "api/src" "resources"]
  :aliases {:test   {:extra-paths ["test" "api/test"]
                     :extra-deps  {org.clojure/test.check            {:mvn/version "1.0.0"}
-                                  app-group-id/edd-core {:mvn/version "1.21"}}}
+                                  edd-core.glms/edd-core {:mvn/version "1.21"}}}
            :runner {:extra-deps {lambdaisland/kaocha {:mvn/version "0.0-601"}}
                     :main-opts  ["-m" "kaocha.runner"]}}}
