@@ -5,7 +5,7 @@
 (defn convert
   [file]
   (let [build-id 21
-        lib (symbol `com.rbinternational.glms/edd-core)
+        lib (symbol `edd-core.glms/edd-core)
         deps (read-string
               (slurp file))
 
@@ -34,7 +34,7 @@
          (convert (io/resource "babaska/deps2.edn")))))
 
 (let [build-id 21
-      lib (symbol `com.rbinternational.glms/edd-core)
+      lib (symbol `edd-core.glms/edd-core)
       deps (read-string
             (slurp (io/file "deps.edn")))
       global (get-in deps [:deps lib])
