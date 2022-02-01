@@ -27,6 +27,7 @@
                                  :consumes [:map]
                                  :produces [:map]))]
       (is (= {"components" {"schemas" {"command-error"    {"properties" {"errors"         {"items" {"properties" {}
+                                                                                                    "required"   []
                                                                                                     "type"       "object"}
                                                                                            "type"  "array"}
                                                                          "interaction-id" {"description" "Represents usually one user session which has multiple request.
@@ -140,6 +141,7 @@
                                                                                            "format"      "uuid"
                                                                                            "type"        "string"}
                                                                          "result"         {"properties" {}
+                                                                                           "required"   []
                                                                                            "type"       "object"}}
                                                            "required"   ["result"
                                                                          "invocation-id"
@@ -147,6 +149,7 @@
                                                                          "interaction-id"]
                                                            "type"       "object"}
                                        "query-error"      {"properties" {"errors"         {"items" {"properties" {}
+                                                                                                    "required"   []
                                                                                                     "type"       "object"}
                                                                                            "type"  "array"}
                                                                          "interaction-id" {"description" "Represents usually one user session which has multiple request.
@@ -167,8 +170,9 @@
                                                                          "request-id"
                                                                          "interaction-id"]
                                                            "type"       "object"}}}
-              "info"       {"title"   "api"
-                            "version" "1.0"}
+              "info"       {"description" "api"
+                            "title"       "api"
+                            "version"     "1.0"}
               "openapi"    "3.0.3"
               "paths"      {"/command/dummy-cmd" {"post" {"description" ""
                                                           "requestBody" {"content"  {"application/json" {"schema" {"$ref" "#/components/schemas/dummy-cmd"}}}
@@ -178,14 +182,18 @@
                                                                          "501" {"content"     {"application/json" {"schema" {"$ref" "#/components/schemas/command-error"}}}
                                                                                 "description" "OK"}}
                                                           "summary"     ""}}
-                            "/query/query-1"     {"post" {"description" ""
-                                                          "requestBody" {"content"  {"application/json" {"schema" {"$ref" "#/components/schemas/query-1-consumes"}}}
-                                                                         "required" true}
-                                                          "responses"   {"200" {"content"     {"application/json" {"schema" {"$ref" "#/components/schemas/query-1-produces"}}}
-                                                                                "description" "OK"}
-                                                                         "501" {"content"     {"application/json" {"schema" {"$ref" "#/components/schemas/query-error"}}}
-                                                                                "description" "OK"}}
-                                                          "summary"     ""}}}}
+                            "/query/query-1"     {"get" {"description" ""
+                                                         "parameters"  [{"in"       "query"
+                                                                         "name"     "query"
+                                                                         "required" true
+                                                                         "schema"   {"$ref" "#/components/schemas/query-1-consumes"}}]
+                                                         "responses"   {"200" {"content"     {"application/json" {"schema" {"$ref" "#/components/schemas/query-1-produces"}}}
+                                                                               "description" "OK"}
+                                                                        "404" {"content"     {"application/json" {"schema" {"$ref" "#/components/schemas/query-error"}}}
+                                                                               "description" "Not found"}
+                                                                        "501" {"content"     {"application/json" {"schema" {"$ref" "#/components/schemas/query-error"}}}
+                                                                               "description" "Internal error"}}
+                                                         "summary"     ""}}}}
              (json/read-value
                (with-out-str
                  (lambda-core/start

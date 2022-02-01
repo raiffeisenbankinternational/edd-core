@@ -2,12 +2,14 @@
   (:gen-class)
   (:require [malli.core :as m]
             [malli.util :as mu]
+            [malli.error :as me]
             [yaml.core :as yaml]
             [clojure.tools.logging :as log]
             [malli.swagger :as swagger]
             [edd.schema.core :as schema-core]
             [yaml.writer :refer [YAMLWriter]]
             [jsonista.core :as json]))
+
 
 (def ^:private template
   {:openapi    "3.0.3"
@@ -100,21 +102,24 @@
 
 (defn query->swagger-path
   [_ query]
-  {:post
+  {:get
    {:summary     ""
     :description ""
-    :requestBody {:required true
-                  :content  {
-                             :application/json
-                             {:schema
-                              {:$ref (str "#/components/schemas/" (name query) "-consumes")}}}}
+    :parameters  [{:in       "query"
+                   :name     "query"
+                   :required true
+                   :schema   {:$ref (str "#/components/schemas/" (name query) "-consumes")}}]
     :responses   {"200" {:description "OK"
                          :content     {"application/json"
                                        {:schema
                                         {:$ref (str "#/components/schemas/"
                                                     (name query)
                                                     "-produces")}}}}
-                  "501" {:description "OK"
+                  "404" {:description "Not found"
+                         :content     {"application/json"
+                                       {:schema
+                                        {:$ref (str "#/components/schemas/query-error")}}}}
+                  "501" {:description "Internal error"
                          :content     {"application/json"
                                        {:schema
                                         {:$ref (str "#/components/schemas/query-error")}}}}}}})
@@ -153,8 +158,10 @@
 (defn generate
   [ctx {:keys [service] :as _options}]
   (let [schema (read-schema ctx)]
-    (merge {:info {:title   (or service "api")
-                   :version "1.0"}}
+    (merge {:info {:title       (or service "api")
+                   :description @(get ctx :description (delay
+                                                         (or service "api")))
+                   :version     "1.0"}}
            (generate-swagger schema template))))
 
 (extend-protocol YAMLWriter
