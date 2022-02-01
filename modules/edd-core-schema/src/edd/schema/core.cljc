@@ -71,16 +71,30 @@
         m* (apply dissoc m1 ks)]
     (merge m* m2)))
 
+(def requrest-id-description
+  "Represents one invocation from client. Must be unique for every invocation.
+  I is used for de-duplication and if same request-id is used service
+  will ignore request")
+
+(def interraction-id-description
+  "Represents usually one user session which has multiple request.
+  Does not need ot be re-used and does not need to be unique")
+
 (def EddCoreRequest
   [:map
-   [:request-id :uuid]
-   [:interaction-id :uuid]])
+   [:request-id {:description requrest-id-description}
+    :uuid]
+   [:interaction-id {:description interraction-id-description}
+    :uuid]])
 
 (def EddCoreResponse
   [:map
-   [:invocation-id :uuid]
-   [:request-id :uuid]
-   [:interaction-id :uuid]])
+   [:invocation-id {:description "Invocation ID represents backend invocation
+                                  id for this execution."} :uuid]
+   [:request-id {:description requrest-id-description}
+    :uuid]
+   [:interaction-id {:description interraction-id-description}
+    :uuid]])
 
 (defn EddKeyword
   ([] [:fn {:json-schema/type "string"} keyword?])
@@ -89,8 +103,10 @@
 
 (defn EddCoreCommand
   ([] [:map
-       [:id :uuid]
-       [:cmd-id :keyword]])
+       [:id {:description "Id of aggregate that command is mutating"}
+        :uuid]
+       [:cmd-id {:description "Selects which command will be executed on backend"}
+        :keyword]])
   ([cmd-id] [:map
              [:id :uuid]
              [:cmd-id (EddKeyword cmd-id)]]))
@@ -119,17 +135,23 @@
       :int]
      [:sequences {:description "Number of sequences created"}
       :int]]]
-   [:invocation-id :uuid]
-   [:request-id :uuid]
-   [:interaction-id :uuid]])
+   [:invocation-id {:description "Invocation ID represents backend invocation
+                                  id for this execution."} :uuid]
+   [:request-id {:description requrest-id-description}
+    :uuid]
+   [:interaction-id {:description interraction-id-description}
+    :uuid]])
 
 (def EddCoreCommandError
   [:map
    [:errors
     [:vector [:map]]]
-   [:invocation-id :uuid]
-   [:request-id :uuid]
-   [:interaction-id :uuid]])
+   [:invocation-id {:description "Invocation ID represents backend invocation
+                                  id for this execution."} :uuid]
+   [:request-id {:description requrest-id-description}
+    :uuid]
+   [:interaction-id {:description interraction-id-description}
+    :uuid]])
 
 
 (defn EddCoreQueryConsumes

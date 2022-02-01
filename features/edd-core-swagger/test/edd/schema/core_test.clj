@@ -29,23 +29,37 @@
       (is (= {"components" {"schemas" {"command-error"    {"properties" {"errors"         {"items" {"properties" {}
                                                                                                     "type"       "object"}
                                                                                            "type"  "array"}
-                                                                         "interaction-id" {"format" "uuid"
-                                                                                           "type"   "string"}
-                                                                         "invocation-id"  {"format" "uuid"
-                                                                                           "type"   "string"}
-                                                                         "request-id"     {"format" "uuid"
-                                                                                           "type"   "string"}}
+                                                                         "interaction-id" {"description" "Represents usually one user session which has multiple request.
+  Does not need ot be re-used and does not need to be unique"
+                                                                                           "format"      "uuid"
+                                                                                           "type"        "string"}
+                                                                         "invocation-id"  {"description" "Invocation ID represents backend invocation
+                                  id for this execution."
+                                                                                           "format"      "uuid"
+                                                                                           "type"        "string"}
+                                                                         "request-id"     {"description" "Represents one invocation from client. Must be unique for every invocation.
+  I is used for de-duplication and if same request-id is used service
+  will ignore request"
+                                                                                           "format"      "uuid"
+                                                                                           "type"        "string"}}
                                                            "required"   ["errors"
                                                                          "invocation-id"
                                                                          "request-id"
                                                                          "interaction-id"]
                                                            "type"       "object"}
-                                       "command-success"  {"properties" {"interaction-id" {"format" "uuid"
-                                                                                           "type"   "string"}
-                                                                         "invocation-id"  {"format" "uuid"
-                                                                                           "type"   "string"}
-                                                                         "request-id"     {"format" "uuid"
-                                                                                           "type"   "string"}
+                                       "command-success"  {"properties" {"interaction-id" {"description" "Represents usually one user session which has multiple request.
+  Does not need ot be re-used and does not need to be unique"
+                                                                                           "format"      "uuid"
+                                                                                           "type"        "string"}
+                                                                         "invocation-id"  {"description" "Invocation ID represents backend invocation
+                                  id for this execution."
+                                                                                           "format"      "uuid"
+                                                                                           "type"        "string"}
+                                                                         "request-id"     {"description" "Represents one invocation from client. Must be unique for every invocation.
+  I is used for de-duplication and if same request-id is used service
+  will ignore request"
+                                                                                           "format"      "uuid"
+                                                                                           "type"        "string"}
                                                                          "result"         {"properties" {"effects"    {"description" "Indicates how many asnc actions where triggers"
                                                                                                                        "format"      "int64"
                                                                                                                        "type"        "integer"}
@@ -84,30 +98,47 @@
                                                                                                          "date"
                                                                                                          "name"]
                                                                                            "type"       "object"}
-                                                                         "interaction-id" {"format" "uuid"
-                                                                                           "type"   "string"}
-                                                                         "request-id"     {"format" "uuid"
-                                                                                           "type"   "string"}}
+                                                                         "interaction-id" {"description" "Represents usually one user session which has multiple request.
+  Does not need ot be re-used and does not need to be unique"
+                                                                                           "format"      "uuid"
+                                                                                           "type"        "string"}
+                                                                         "request-id"     {"description" "Represents one invocation from client. Must be unique for every invocation.
+  I is used for de-duplication and if same request-id is used service
+  will ignore request"
+                                                                                           "format"      "uuid"
+                                                                                           "type"        "string"}}
                                                            "required"   ["request-id"
                                                                          "interaction-id"
                                                                          "command"]
                                                            "type"       "object"}
-                                       "query-1-consumes" {"properties" {"interaction-id" {"format" "uuid"
-                                                                                           "type"   "string"}
+                                       "query-1-consumes" {"properties" {"interaction-id" {"description" "Represents usually one user session which has multiple request.
+  Does not need ot be re-used and does not need to be unique"
+                                                                                           "format"      "uuid"
+                                                                                           "type"        "string"}
                                                                          "query-id"       {"enum" [":query-1"]
                                                                                            "type" "string"}
-                                                                         "request-id"     {"format" "uuid"
-                                                                                           "type"   "string"}}
+                                                                         "request-id"     {"description" "Represents one invocation from client. Must be unique for every invocation.
+  I is used for de-duplication and if same request-id is used service
+  will ignore request"
+                                                                                           "format"      "uuid"
+                                                                                           "type"        "string"}}
                                                            "required"   ["query-id"
                                                                          "request-id"
                                                                          "interaction-id"]
                                                            "type"       "object"}
-                                       "query-1-produces" {"properties" {"interaction-id" {"format" "uuid"
-                                                                                           "type"   "string"}
-                                                                         "invocation-id"  {"format" "uuid"
-                                                                                           "type"   "string"}
-                                                                         "request-id"     {"format" "uuid"
-                                                                                           "type"   "string"}
+                                       "query-1-produces" {"properties" {"interaction-id" {"description" "Represents usually one user session which has multiple request.
+  Does not need ot be re-used and does not need to be unique"
+                                                                                           "format"      "uuid"
+                                                                                           "type"        "string"}
+                                                                         "invocation-id"  {"description" "Invocation ID represents backend invocation
+                                  id for this execution."
+                                                                                           "format"      "uuid"
+                                                                                           "type"        "string"}
+                                                                         "request-id"     {"description" "Represents one invocation from client. Must be unique for every invocation.
+  I is used for de-duplication and if same request-id is used service
+  will ignore request"
+                                                                                           "format"      "uuid"
+                                                                                           "type"        "string"}
                                                                          "result"         {"properties" {}
                                                                                            "type"       "object"}}
                                                            "required"   ["result"
@@ -118,12 +149,19 @@
                                        "query-error"      {"properties" {"errors"         {"items" {"properties" {}
                                                                                                     "type"       "object"}
                                                                                            "type"  "array"}
-                                                                         "interaction-id" {"format" "uuid"
-                                                                                           "type"   "string"}
-                                                                         "invocation-id"  {"format" "uuid"
-                                                                                           "type"   "string"}
-                                                                         "request-id"     {"format" "uuid"
-                                                                                           "type"   "string"}}
+                                                                         "interaction-id" {"description" "Represents usually one user session which has multiple request.
+  Does not need ot be re-used and does not need to be unique"
+                                                                                           "format"      "uuid"
+                                                                                           "type"        "string"}
+                                                                         "invocation-id"  {"description" "Invocation ID represents backend invocation
+                                  id for this execution."
+                                                                                           "format"      "uuid"
+                                                                                           "type"        "string"}
+                                                                         "request-id"     {"description" "Represents one invocation from client. Must be unique for every invocation.
+  I is used for de-duplication and if same request-id is used service
+  will ignore request"
+                                                                                           "format"      "uuid"
+                                                                                           "type"        "string"}}
                                                            "required"   ["errors"
                                                                          "invocation-id"
                                                                          "request-id"

@@ -32,8 +32,12 @@
                                                               [:map])))
 
 (defn merge-query-produces-schema [schema]
-  (merge-schema schema-core/EddCoreQueryProduces (or schema
-                                                     [:map])))
+  (merge-schema schema-core/EddCoreQueryProduces (if schema
+                                                   [:map
+                                                    [:result schema]]
+                                                   [:map
+                                                    [:result
+                                                     [:map]]])))
 
 (defn explain-error [schema entity]
   (->> entity

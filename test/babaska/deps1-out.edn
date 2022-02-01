@@ -1,5 +1,5 @@
 {:deps    {org.clojure/clojure               {:mvn/version "1.10.3"}
-           com.rbinternational.glms/edd-core {:mvn/version "1.21"}}
+           edd-core.glms/edd-core {:mvn/version "1.21"}}
  :paths   ["src" "api/src" "resources"]
  :aliases {:test   {:extra-paths ["test" "api/test"]
                     :extra-deps  {org.clojure/test.check {:mvn/version "1.0.0"}}}
