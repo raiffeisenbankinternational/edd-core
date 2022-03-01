@@ -48,10 +48,11 @@
                               (get-in object [:s3 :bucket :name])
                               "/"
                               (get-in object [:s3 :object :key]))
-             :headers    {"Host"                 (get-host ctx)
-                          "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                          "x-amz-date"           (common/create-date)
-                          "x-amz-security-token" (System/getenv "AWS_SESSION_TOKEN")}
+             :headers    (merge {"Host"                 (get-host ctx)
+                                 "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                                 "x-amz-date"           (common/create-date)
+                                 "x-amz-security-token" (System/getenv "AWS_SESSION_TOKEN")}
+                                (get-in object [:s3 :headers]))
              :service    "s3"
              :region     (:region aws)
              :access-key (:aws-access-key-id aws)
