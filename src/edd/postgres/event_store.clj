@@ -442,7 +442,6 @@
 (defmethod with-init
   :postgres
   [ctx body-fn]
-  (log/info "Initializing postgres event-store")
   (let [ds-spec (db/init ctx)]
     (with-open [^HikariDataSource ds (jdbc-conn/->pool HikariDataSource ds-spec)]
       ;; this code initializes the pool and performs a validation check:

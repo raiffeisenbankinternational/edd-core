@@ -168,6 +168,7 @@
                                                  :invocation-id (:invocation-id ctx)
                                                  :realm (:realm (get-meta ctx item))
                                                  :request-id (:request-id item)
+                                                 :breadcrumbs (or (get item :breadcrumbs) [0])
                                                  :interaction-id (:interaction-id item))
                                           (add-log-level ctx item))))))
 

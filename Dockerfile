@@ -2,7 +2,7 @@ ARG DOCKER_URL
 ARG DOCKER_ORG
 ARG ARTIFACT_ORG
 
-FROM ${DOCKER_URL}/${DOCKER_ORG}/common-img:b976
+FROM ${DOCKER_URL}/${DOCKER_ORG}/common-img:latest
 
 # Custom build from here on
 ENV PROJECT_NAME edd-core
@@ -21,14 +21,13 @@ COPY --chown=build:build format.sh format.sh
 
 RUN ./format.sh check
 
-RUN set -e && clj -M:test:unit
-
 COPY --chown=build:build sql sql
 
 ARG BUILD_ID
 
 RUN set -e &&\
     echo "Org: ${ARTIFACT_ORG}" &&\
+    clj -M:test:unit &&\
     export AWS_DEFAULT_REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region) &&\
     TARGET_ACCOUNT_ID="$(aws sts get-caller-identity | jq -r '.Account')" &&\
     cred=$(aws sts assume-role \
@@ -80,6 +79,8 @@ RUN set -e &&\
          -DpomFile=pom.xml \
          -Dversion="1.${BUILD_ID}" \
          -Dpackaging=jar &&\
+    echo "Building modules" &&\
+    env &&\
     cd modules &&\
     for i in $(ls); do \
        cd $i &&\
@@ -117,6 +118,8 @@ RUN set -e &&\
        cd ..; \
     done &&\
     cd .. &&\
+    echo "Running integration tests: $(pwd)" &&\
+    env &&\
     clj -M:test:it &&\
     rm -rf /home/build/.m2/repository &&\
     rm -rf target &&\

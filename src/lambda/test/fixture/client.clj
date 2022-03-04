@@ -10,7 +10,9 @@
 (defn map-body-to-edn
   [traffic]
   (if (:body traffic)
-    (update traffic :body util/to-edn)
+    (try (update traffic :body util/to-edn)
+         (catch Exception _e
+           traffic))
     traffic))
 
 (defmacro verify-traffic-edn
