@@ -123,11 +123,12 @@
                    (assoc :service-name (keyword (util/get-env
                                                   "ServiceName"
                                                   "local-test"))
-                          :aws {:region                (util/get-env "Region" "local")
-                                :account-id            (util/get-env "AccountId" "local")
-                                :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID" "")
-                                :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY" "")
-                                :aws-session-token     (util/get-env "AWS_SESSION_TOKEN" "")}
+                          :aws (merge {:region                (util/get-env "Region" "local")
+                                       :account-id            (util/get-env "AccountId" "local")
+                                       :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID" "")
+                                       :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY" "")
+                                       :aws-session-token     (util/get-env "AWS_SESSION_TOKEN" "")}
+                                      (get init-ctx :aws {}))
                           :hosted-zone-name (util/get-env
                                              "PublicHostedZoneName"
                                              "example.com")
@@ -169,11 +170,13 @@
                    (assoc :service-name (keyword (util/get-env
                                                   "ServiceName"
                                                   "local-test"))
-                          :aws {:region                (util/get-env "Region" "local")
-                                :account-id            (util/get-env "AccountId" "local")
-                                :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID" "")
-                                :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY" "")
-                                :aws-session-token     (util/get-env "AWS_SESSION_TOKEN" "")}
+                          :aws (merge
+                                {:region                (util/get-env "Region" "local")
+                                 :account-id            (util/get-env "AccountId" "local")
+                                 :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID" "")
+                                 :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY" "")
+                                 :aws-session-token     (util/get-env "AWS_SESSION_TOKEN" "")}
+                                (get init-ctx :aws {}))
                           :hosted-zone-name (util/get-env
                                              "PublicHostedZoneName"
                                              "example.com")

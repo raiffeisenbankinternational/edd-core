@@ -52,21 +52,4 @@
                 :breadcrumbs [0]}
                breadcrumbs))))))
 
-#_(deftest test-duplicate-command-is-not-processed
-    (mock/with-mock-dal
-      (with-redefs
-       [event-store/clean-commands (fn [cmd] cmd)]
 
-        (cmd/handle-commands (assoc ctx
-                                    :request-id request-id)
-                             {:commands    [{:cmd-id :invalid-command-but-cached-will-be-taken
-                                             :id     (uuid/gen)}]
-                              :breadcrumbs [0]})
-
-        ;;
-
-        (let [resp (cmd/handle-commands (assoc ctx
-                                               :request-id request-id)
-                                        cmd)]
-
-          (is (= {:success true, :effects [], :events 1, :meta [{:do-sth {:id id1}}], :identities 0, :sequences 0} resp))))))
