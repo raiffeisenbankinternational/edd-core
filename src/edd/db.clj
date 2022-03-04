@@ -2,7 +2,8 @@
   (:require
    [lambda.util :as util]
    [next.jdbc.result-set :as result-set]
-   [next.jdbc.prepare :as prepare])
+   [next.jdbc.prepare :as prepare]
+   [clojure.tools.logging :as log])
   (:import
    (clojure.lang IPersistentMap IPersistentVector Keyword)
    (java.sql Date Timestamp)
@@ -60,15 +61,17 @@
 
 (defn init
   [ctx]
-  {:dbtype                    "postgres"
-   :dbname                    "postgres"
-   :initializationFailTimeout 0
-   :reWriteBatchedInserts     true
-   :password                  (get-in ctx [:db :password]
-                                      (util/get-env "DatabasePassword"
-                                                    "no-secret"))
-   :username                  "postgres"
-   :host                      (util/get-env "DatabaseEndpoint" "127.0.0.1")
-   :schema                    "postgres"
-   :port                      "5432"})
+  (let [spec {:dbtype                    "postgres"
+              :dbname                    "postgres"
+              :initializationFailTimeout 0
+              :reWriteBatchedInserts     true
+              :password                  (get-in ctx [:db :password]
+                                                 (util/get-env "DatabasePassword"
+                                                               "no-secret"))
+              :username                  "postgres"
+              :host                      (util/get-env "DatabaseEndpoint" "127.0.0.1")
+              :schema                    "postgres"
+              :port                      "5432"}]
+    (log/info "Initializing postgres event-store: " (dissoc spec :user :username :password))
+    spec))
 

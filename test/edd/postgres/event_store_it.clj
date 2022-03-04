@@ -1,15 +1,21 @@
 (ns edd.postgres.event-store-it
   (:require [clojure.test :refer :all]
             [edd.postgres.event-store :as event-store]
+            [edd.commands-batch-test :as batch-test]
+            [lambda.test.fixture.client :refer [verify-traffic-edn]]
             [edd.memory.view-store :as view-store]
             [lambda.test.fixture.state :refer [*dal-state*]]
             [edd.core :as edd]
             [lambda.uuid :as uuid]
             [edd.test.fixture.dal :as mock]
+            [lambda.test.fixture.core :as core-mock]
             [lambda.util :as util]
             [edd.common :as common]
             [lambda.logging :as lambda-logging]
-            [clojure.tools.logging :as log]))
+            [clojure.tools.logging :as log]
+            [edd.el.cmd :as cmd]
+            [lambda.core :as core])
+  (:import (clojure.lang ExceptionInfo)))
 
 (def fx-id (uuid/gen))
 
@@ -338,5 +344,102 @@
           (is (= {ccn1 agg-id
                   ccn2 agg-id-2}
                  (common/get-aggregate-id-by-identity ctx {:ccn [ccn1 ccn2 "777777"]})))
-          (is (=  agg-id-3
-                  (common/get-aggregate-id-by-identity ctx {:ccn ccn3}))))))))
+          (is (= agg-id-3
+                 (common/get-aggregate-id-by-identity ctx {:ccn ccn3}))))))))
+
+(deftest test-retry-with-cache
+  "We need to ensure that we send retry events to sqs
+   when response is cached to s3 and we retry"
+  (let [aggregate-id (uuid/gen)
+        attempt (atom 0)
+        request-id (uuid/gen)
+        interaction-id (uuid/gen)
+        invocation-id-1 (uuid/gen)
+        invocation-id-2 (uuid/gen)
+        environment-name-lower (util/get-env "EnvironmentNameLower" "local")
+        account-id (util/get-env "AccountId" "local")
+        ctx (-> mock/ctx
+                (event-store/register)
+                (view-store/register)
+                (dissoc :response-cache)
+                (edd.response.s3/register)
+                (with-realm)
+                (assoc :aws {:aws-session-token "tok"})
+                (assoc :service-name "retry-test")
+                (edd/reg-cmd :error-prone (fn [ctx cmd]
+                                            [{:sequence (:id cmd)}
+                                             {:event-id :error-prone-event
+                                              :attr     "sa"}])))]
+    (with-redefs [sdk.aws.s3/put-object (fn [ctx object]
+                                          {:status 200})
+                  sdk.aws.common/authorize (fn [_] "")
+                  sdk.aws.common/create-date (fn [] "20220304T113706Z")
+                  edd.postgres.event-store/update-sequence (fn [_ctx _sequence]
+                                                             (when (= @attempt 0)
+                                                               (swap! attempt inc)
+                                                               (throw (ex-info "Timeout"
+                                                                               {:data "Timeout"}))))]
+      (core-mock/mock-core
+       :invocations [(util/to-json {:request-id     request-id
+                                    :interaction-id interaction-id
+                                    :invocation-id  invocation-id-1
+                                    :commands       [{:cmd-id :error-prone
+                                                      :id     aggregate-id}]})
+                     (util/to-json {:request-id     request-id
+                                    :interaction-id interaction-id
+                                    :invocation-id  invocation-id-2
+                                    :commands       [{:cmd-id :error-prone
+                                                      :id     aggregate-id}]})]
+
+       :requests [{:post "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"}]
+       (core/start
+        ctx
+        edd/handler)
+       (verify-traffic-edn [{:body   {:result         {:meta       [{:error-prone {:id aggregate-id}}],
+                                                       :events     1,
+                                                       :sequences  1,
+                                                       :success    true,
+                                                       :effects    [],
+                                                       :identities 0},
+                                      :invocation-id  invocation-id-2
+                                      :request-id     request-id
+                                      :interaction-id interaction-id}
+                             :method :post
+                             :url    (str "http://mock/2018-06-01/runtime/invocation/"
+                                          invocation-id-2
+                                          "/response")}
+                            {:body            (str "Action=SendMessage&MessageBody=%7B%22Records%22%3A%5B%7B%22s3%22%3A%7B%22object%22%3A%7B%22key%22%3A%22response%2F"
+                                                   request-id
+                                                   "%2F0%2Flocal-test.json%22%7D%2C%22bucket%22%3A%7B%22name%22%3A%22"
+                                                   account-id
+                                                   "-"
+                                                   environment-name-lower
+                                                   "-sqs%22%7D%7D%7D%5D%7D")
+                             :connect-timeout 300
+                             :headers         {"Accept"               "application/json"
+                                               "Authorization"        ""
+                                               "Content-Type"         "application/x-www-form-urlencoded"
+                                               "X-Amz-Date"           "20220304T113706Z"
+                                               "X-Amz-Security-Token" "tok"}
+                             :idle-timeout    5000
+                             :method          :post
+                             :url             (str "https://sqs.eu-central-1.amazonaws.com/"
+                                                   account-id
+                                                   "/"
+                                                   environment-name-lower
+                                                   "-glms-router-svc-response")
+                             :version         :http1.1}
+                            {:method  :get
+                             :timeout 90000000
+                             :url     "http://mock/2018-06-01/runtime/invocation/next"}
+                            {:body   {:error          "Timeout"
+                                      :invocation-id  invocation-id-1
+                                      :request-id     request-id
+                                      :interaction-id interaction-id}
+                             :method :post
+                             :url    (str "http://mock/2018-06-01/runtime/invocation/"
+                                          invocation-id-1
+                                          "/error")}
+                            {:method  :get
+                             :timeout 90000000
+                             :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))

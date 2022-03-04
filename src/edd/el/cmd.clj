@@ -427,7 +427,10 @@
   (let [cache-result (resp->cache-partitioned ctx resp)]
     (when (:error cache-result)
       (throw (ex-info "Error caching result" (:error cache-result))))
-    (dal/store-results (assoc ctx :resp resp))
+    (dal/store-results (assoc ctx :resp
+                              (assoc-in resp
+                                        [:summary :cache-result]
+                                        cache-result)))
     (swap! request/*request*
            update
            :cache-keys
@@ -446,7 +449,13 @@
     (log-request ctx body)
 
     (if-let [resp (:data (dal/get-command-response ctx))]
-      resp
+      (do
+        (swap! request/*request*
+               update
+               :cache-keys
+               (fn [v]
+                 (conj v (:cache-result resp))))
+        (dissoc resp :cache-result))
       (do
         (validate-commands ctx commands)
         (let [resp (map

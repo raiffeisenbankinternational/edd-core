@@ -3,7 +3,9 @@
             [aws.lambda :as core]
             [lambda.filters :as fl]
             [lambda.util :as utils]
-            [lambda.test.fixture.client :as client]))
+            [lambda.test.fixture.client :as client]
+            [lambda.util :as util]
+            [clojure.tools.logging :as log]))
 
 (def region "eu-central-1")
 
@@ -11,9 +13,12 @@
 
 (defn get-env-mock
   [base e & [def]]
-  (get (merge {"AWS_LAMBDA_RUNTIME_API" "mock"
-               "Region"                 region}
-              base) e def))
+  (let [sysenv (System/getenv)
+        env (merge
+             {"AWS_LAMBDA_RUNTIME_API" "mock"
+              "Region"                 region}
+             base)]
+    (get env e (get sysenv e def))))
 
 ; TODO Update JWT tokens for this to work properl
 (defn realm-mock
@@ -26,7 +31,9 @@
           (fn [idx# itm#]
             {:get     next-url
              :body    itm#
-             :headers {:lambda-runtime-aws-request-id idx#}})
+             :headers {:lambda-runtime-aws-request-id (get (util/to-edn itm#)
+                                                           :invocation-id
+                                                           idx#)}})
           ~invocations)
          responses# (vec (concat req-calls# ~requests))]
      (with-redefs [fl/get-realm realm-mock
