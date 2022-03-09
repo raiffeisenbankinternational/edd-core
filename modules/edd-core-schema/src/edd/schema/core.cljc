@@ -71,7 +71,7 @@
         m* (apply dissoc m1 ks)]
     (merge m* m2)))
 
-(def requrest-id-description
+(def request-id-description
   "Represents one invocation from client. Must be unique for every invocation.
   I is used for de-duplication and if same request-id is used service
   will ignore request")
@@ -82,7 +82,7 @@
 
 (def EddCoreRequest
   [:map
-   [:request-id {:description requrest-id-description}
+   [:request-id {:description request-id-description}
     :uuid]
    [:interaction-id {:description interraction-id-description}
     :uuid]])
@@ -91,7 +91,7 @@
   [:map
    [:invocation-id {:description "Invocation ID represents backend invocation
                                   id for this execution."} :uuid]
-   [:request-id {:description requrest-id-description}
+   [:request-id {:description request-id-description}
     :uuid]
    [:interaction-id {:description interraction-id-description}
     :uuid]])
@@ -137,7 +137,7 @@
       :int]]]
    [:invocation-id {:description "Invocation ID represents backend invocation
                                   id for this execution."} :uuid]
-   [:request-id {:description requrest-id-description}
+   [:request-id {:description request-id-description}
     :uuid]
    [:interaction-id {:description interraction-id-description}
     :uuid]])
@@ -148,7 +148,7 @@
     [:vector [:map]]]
    [:invocation-id {:description "Invocation ID represents backend invocation
                                   id for this execution."} :uuid]
-   [:request-id {:description requrest-id-description}
+   [:request-id {:description request-id-description}
     :uuid]
    [:interaction-id {:description interraction-id-description}
     :uuid]])

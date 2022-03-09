@@ -236,13 +236,19 @@
         aggregate-id (:id sequence)]
     (jdbc/execute! (:con ctx)
                    [(str "BEGIN WORK;
-                        LOCK TABLE " (->table ctx :sequence_store) " IN EXCLUSIVE MODE;
+                       LOCK TABLE " (->table ctx :sequence_lastval) " IN ROW EXCLUSIVE MODE;
+                       INSERT INTO " (->table ctx :sequence_lastval) " AS t
+                         VALUES (?, 1)
+                       ON CONFLICT (service_name) DO UPDATE
+                         SET last_value = t.last_value + 1;
+
                        UPDATE " (->table ctx :sequence_store) "
-                          SET value =  (SELECT COALESCE(MAX(value), 0) +1
-                                                   FROM " (->table ctx :sequence_store) "
-                                                  WHERE service_name = ?)
+                          SET value =  (SELECT last_value
+                                        FROM " (->table ctx :sequence_lastval) "
+                                        WHERE service_name = ?)
                           WHERE aggregate_id = ? AND service_name = ?;
                      COMMIT WORK;")
+                    service-name
                     service-name
                     aggregate-id
                     service-name])))
