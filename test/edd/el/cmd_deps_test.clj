@@ -37,7 +37,7 @@
                     (edd-ctx/put-cmd :cmd-id :test-cmd
                                      :options {:deps
                                                {:test-value
-                                                {:query   (fn [cmd]
+                                                {:query   (fn [_ cmd]
                                                             {:param (:value cmd)})
                                                  :service :remote-svc}}})
                     (assoc :meta meta
@@ -79,7 +79,7 @@
               (cmd/resolve-remote-dependency
                ctx
                {}
-               {:query   (fn [cmd] {:a :b})
+               {:query   (fn [_ cmd] {:a :b})
                 :service :some-remote-service}
                {})))
        (client/verify-traffic [{:body            (util/to-json
@@ -115,7 +115,7 @@
                                     (is (= {:some :values}
                                            (:facility ctx)))
                                     cmd-id-1)
-                           :deps {:facility (fn [_] {:query-id :query-1})})
+                           :deps {:facility (fn [_ _] {:query-id :query-1})})
           ctx (edd/reg-fx ctx (fn [ctx [event]]
                                 (is (= {:some :values}
                                        (:facility ctx)))
@@ -147,7 +147,7 @@
                                            (:facility ctx)))
                                     cmd-id-1)
                            :deps {:facility {:service :some-service
-                                             :query   (fn [_] {:query-id :query-1})}})
+                                             :query   (fn [_ _] {:query-id :query-1})}})
           ctx (edd/reg-fx ctx (fn [ctx [event]]
                                 (is (= nil
                                        (:facility ctx)))
@@ -183,9 +183,9 @@
              (edd/reg-cmd :cmd-1 (fn [ctx cmd]
                                    {:event-id :event-1
                                     :value    (:value cmd)})
-                          :deps {:c1 (fn [cmd] {:query-id :query-1
-                                                :id       (:id cmd)})
-                                 :c2 (fn [_] nil)}
+                          :deps {:c1 (fn [_ cmd] {:query-id :query-1
+                                                  :id       (:id cmd)})
+                                 :c2 (fn [_ _] nil)}
                           :id-fn (fn [ctx cmd]
                                    (get-in ctx [:c1 :id])))))
 
@@ -227,8 +227,8 @@
                                                cmd-id-2)))
                                       {:event-id :event-1
                                        :value    (:value cmd)})
-                             :deps {:c1 (fn [cmd] {:query-id :query-1
-                                                   :id       (:id cmd)})}
+                             :deps {:c1 (fn [_ cmd] {:query-id :query-1
+                                                     :id       (:id cmd)})}
                              :id-fn (fn [ctx cmd]
                                       (get-in ctx [:c1 :id])))
                 (edd/reg-fx (fn [ctx [event]]
@@ -299,7 +299,7 @@
                   (edd/reg-cmd :test-cmd (fn [ctx cmd]
                                            {:event-id :event-1
                                             :value    (:value cmd)})
-                               :deps [:test-value {:query   (fn [cmd]
+                               :deps [:test-value {:query   (fn [_ cmd]
                                                               {:param (:value cmd)})
                                                    :service :remote-svc}]
                                :id-fn (fn [ctx cmd]
@@ -346,11 +346,63 @@
                                        :value    (:value cmd)
                                        :c1       (:c1 ctx)
                                        :c2       (:c2 ctx)})
+                             :deps [:c1 (fn [_ cmd] {:query-id :get-by-id
+                                                     :id       (:id cmd)})
+                                    :c2 (fn [{:keys [c1]} cmd]
+                                          (is (not= nil c1))
+                                          (is (nil? (:c1 cmd)))
+                                          {:query-id :query-1
+                                           :c1       c1
+                                           :id       (:id cmd)})]))]
+    (let [current-events [{:event-id  :event-0
+                           :event-seq 4
+                           :value     :0
+                           :meta      {}
+                           :id        cmd-id-1}]]
+      (mock/with-mock-dal
+        {:event-store current-events}
+
+        (mock/handle-cmd ctx {:commands [{:cmd-id :cmd-1
+                                          :value  :2
+                                          :id     cmd-id-1}]})
+        (mock/verify-state :event-store [{:event-id  :event-0
+                                          :event-seq 4
+                                          :value     :0
+                                          :meta      {}
+                                          :id        cmd-id-1}
+                                         {:event-id  :event-1
+                                          :event-seq 5
+                                          :value     :2
+                                          :meta      {}
+                                          :c1        current-aggregate
+                                          :c2        {:value :v1}
+                                          :id        cmd-id-1}])))))
+
+(deftest dps->deps
+  (let [current-aggregate {:id      cmd-id-1
+                           :version 4
+                           :v0      :0}
+        ctx (-> mock/ctx
+                (edd/reg-event :event-0 (fn [p e]
+                                          (assoc
+                                           p
+                                           :v0 (:value e))))
+                (edd/reg-query :get-by-id common/get-by-id)
+                (edd/reg-query :query-1 (fn [ctx query]
+                                          (is (= {:id       cmd-id-1
+                                                  :query-id :query-1
+                                                  :c1       current-aggregate}
+                                                 query))
+                                          {:value :v1}))
+                (edd/reg-cmd :cmd-1 (fn [ctx cmd]
+                                      {:event-id :event-1
+                                       :value    (:value cmd)
+                                       :c1       (:c1 ctx)
+                                       :c2       (:c2 ctx)})
                              :dps [:c1 (fn [cmd] {:query-id :get-by-id
                                                   :id       (:id cmd)})
                                    :c2 (fn [{:keys [c1] :as cmd}]
-                                         (is (not= nil
-                                                   c1))
+                                         (is (not= nil c1))
                                          {:query-id :query-1
                                           :c1       c1
                                           :id       (:id cmd)})]))]
@@ -377,33 +429,6 @@
                                           :c1        current-aggregate
                                           :c2        {:value :v1}
                                           :id        cmd-id-1}])))))
-
-(deftest duplicate-key-when-chaining-deps
-  "When key exist in CMD that is also in DPS then
-  we should not handle request"
-  (let [ctx (-> mock/ctx
-                (edd/reg-query :get-by-id common/get-by-id)
-                (edd/reg-cmd :cmd-1 (fn [ctx cmd]
-                                      [])
-                             :dps [:c1 (fn [cmd]
-                                         {:query-id :get-by-id
-                                          :id       (:id cmd)})
-                                   :c2 (fn [cmd]
-                                         {:query-id :get-by-id
-                                          :id       (:id cmd)})]))]
-    (let [current-events [{:event-id  :event-0
-                           :event-seq 4
-                           :value     :0
-                           :meta      {}
-                           :id        cmd-id-1}]]
-      (mock/with-mock-dal
-        {:event-store current-events}
-        (is (= {:message "Duplicate key in deps and cmd"
-                :error   [:c1]}
-               (mock/handle-cmd ctx {:commands [{:cmd-id :cmd-1
-                                                 :c1     :something
-                                                 :value  :2
-                                                 :id     cmd-id-1}]})))))))
 
 (deftest test-encoding
   (is (= "%C3%96VK"

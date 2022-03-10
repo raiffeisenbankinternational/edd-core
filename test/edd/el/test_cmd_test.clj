@@ -33,10 +33,10 @@
                 dal/get-max-event-seq (fn [ctx id] 0)]
     (let [ctx (edd-ctx/put-cmd {}
                                :cmd-id :test-cmd
-                               :options {:deps {:test-value   (fn [cmd]
+                               :options {:deps {:test-value   (fn [_ cmd]
                                                                 {:query-id :q1
                                                                  :query    {}})
-                                                :test-value-2 (fn [cmd]
+                                                :test-value-2 (fn [_ cmd]
                                                                 {:query-id :q2
                                                                  :query    {}})}})
           cmd {:cmd-id :test-cmd
@@ -73,7 +73,7 @@
                                :options {:deps
                                          {:test-value
                                           {:service :remote
-                                           :query   (fn [cmd]
+                                           :query   (fn [_ cmd]
                                                       {:query-id :q1
                                                        :query    {}})}}})
           cmd {:cmd-id :test-cmd
