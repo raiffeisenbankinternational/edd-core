@@ -23,6 +23,16 @@
     [:consumes
      [:fn #(m/schema? (m/schema %))]]]))
 
+(defn dps->deps [dps]
+  (let [dps (if (vector? dps) (partition 2 dps) dps)
+        wrap-query (fn [query] (fn [d cmd] (query (merge cmd d))))]
+    (vec (mapcat (fn [[key query]]
+                   [key (if (:service query)
+                          {:query (wrap-query (:query query))
+                           :service (:service query)}
+                          (wrap-query query))])
+                 dps))))
+
 (defn reg-cmd
   [ctx cmd-id reg-fn & rest]
   (log/debug "Registering cmd" cmd-id)
@@ -43,8 +53,9 @@
         ; For compatibility
         options (-> options
                     (dissoc :dps)
-                    (assoc :deps (:dps options
-                                       (:deps options {}))))
+                    (assoc :deps (if (:dps options)
+                                   (dps->deps (:dps options))
+                                   (:deps options {}))))
         options (update options
                         :consumes
                         #(s/merge-cmd-schema % cmd-id))

@@ -31,15 +31,7 @@
 
 (defn call-query-fn
   [ctx cmd query-fn deps]
-  (when (some
-         #(contains? cmd %)
-         (keys deps))
-    (throw (ex-info "Duplicate key in deps and cmd"
-                    {:message "Duplicate key in deps and cmd"
-                     :error   (filter
-                               #(contains? cmd %)
-                               (keys deps))})))
-  (apply query-fn [(merge cmd deps)]))
+  (query-fn deps cmd))
 
 (defn resolve-remote-dependency
   [ctx cmd {:keys [service query]} deps]
@@ -78,7 +70,7 @@
     (when query
       (let [resp (query/handle-query ctx {:query query})]
         (if (:error resp)
-          (throw (ex-info "Failed to resole local deps" {:error resp}))
+          (throw (ex-info "Failed to resolve local deps" {:error resp}))
           resp)))))
 
 (defn fetch-dependencies-for-command
