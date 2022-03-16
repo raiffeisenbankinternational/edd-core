@@ -1,26 +1,23 @@
 (ns edd.el.cmd-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is]]
             [edd.el.cmd :as el-cmd]
             [edd.core :as edd]
             [lambda.core :as core]
             [lambda.filters :as fl]
             [lambda.util :as util]
-            [edd.memory.event-store :as event-store]
-            [edd.memory.view-store :as view-store]
             [lambda.test.fixture.client :refer [verify-traffic-edn]]
             [lambda.test.fixture.core :refer [mock-core]]
             [lambda.api-test :refer [api-request]]
             [lambda.uuid :as uuid]
             [edd.test.fixture.dal :as mock]
             [sdk.aws.sqs :as sqs]
-            [edd.el.cmd :as cmd]
             [edd.el.ctx :as el-ctx]
             [lambda.request :as request]
             [aws.aws :as aws])
   (:import (clojure.lang ExceptionInfo)))
 
 (def ctx (-> {}
-             (edd/reg-cmd :ssa (fn [ctx cmd]))))
+             (edd/reg-cmd :ssa (fn [_ _]))))
 
 (deftest test-empty-commands-list
   (try
@@ -72,12 +69,10 @@
                         :valid]}
                (ex-data ex)))))))
 
-(defn register
-  []
-  (-> mock/ctx
-      (edd/reg-cmd :ping
-                   (fn [ctx cmd]
-                     {:event-id :ping}))))
+(defn register []
+  (edd/reg-cmd mock/ctx
+               :ping
+               (fn [_ _] {:event-id :ping})))
 
 (deftest api-handler-test
   (let [request-id (uuid/gen)
@@ -92,26 +87,25 @@
       edd/handler
       :filters [fl/from-api]
       :post-filter fl/to-api)
-     (do
-       (verify-traffic-edn
-        [{:body   {:body            (util/to-json
-                                     {:invocation-id  0
-                                      :request-id     request-id
-                                      :interaction-id interaction-id
-                                      :error          [{:id ["missing required key"]}]})
 
-                   :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-                                     :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
-                                     :Access-Control-Allow-Origin   "*"
-                                     :Access-Control-Expose-Headers "*"
-                                     :Content-Type                  "application/json"}
-                   :isBase64Encoded false
-                   :statusCode      200}
-          :method :post
-          :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-         {:method  :get
-          :timeout 90000000
-          :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
+     (verify-traffic-edn
+      [{:body   {:body            (util/to-json
+                                   {:invocation-id  0
+                                    :request-id     request-id
+                                    :interaction-id interaction-id
+                                    :error          [{:id ["missing required key"]}]})
+                 :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                                   :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
+                                   :Access-Control-Allow-Origin   "*"
+                                   :Access-Control-Expose-Headers "*"
+                                   :Content-Type                  "application/json"}
+                 :isBase64Encoded false
+                 :statusCode      200}
+        :method :post
+        :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
+       {:method  :get
+        :timeout 90000000
+        :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
 
 (deftest api-handler-response-test
 
@@ -124,7 +118,7 @@
              :commands       [{:cmd-id :ping
                                :id     id}]}]
     (mock/with-mock-dal
-      (with-redefs [sqs/sqs-publish (fn [{:keys [message] :as ctx}]
+      (with-redefs [sqs/sqs-publish (fn [{:keys [message]}]
                                       (is (= {:Records [{:key (str "response/"
                                                                    request-id
                                                                    "/0/local-test.json")}]}
@@ -143,7 +137,9 @@
                                              :meta      {:realm :test
                                                          :user  {:email "john.smith@example.com"
                                                                  :id    "john.smith@example.com"
-                                                                 :role  :group-1}}
+                                                                 :role  :group-1
+                                                                 :department-code nil
+                                                                 :department nil}}
                                              :role      :group-1
                                              :user      "john.smith@example.com"}])
            (verify-traffic-edn
@@ -175,11 +171,11 @@
              :breadcrumbs  "0"
              :request-id   "1"}]
     (is (= {:key "response/1/0/local-test.json"}
-           (cmd/resp->cache-partitioned ctx {:effects [{:a :b}]})))
+           (el-cmd/resp->cache-partitioned ctx {:effects [{:a :b}]})))
     (is (= [{:key "response/1/0/local-test-part.0.json"}
             {:key "response/1/0/local-test-part.1.json"}]
-           (cmd/resp->cache-partitioned (el-ctx/set-effect-partition-size ctx 2)
-                                        {:effects [{:a :b} {:a :b} {:a :b}]})))))
+           (el-cmd/resp->cache-partitioned (el-ctx/set-effect-partition-size ctx 2)
+                                           {:effects [{:a :b} {:a :b} {:a :b}]})))))
 
 (deftest enqueue-response
   (binding [request/*request* (atom {:cache-keys [{:key "response/0/0/local-test-0.json"}

@@ -135,7 +135,7 @@
 (def user-pool-id "eu-central-1_ACXYul00Q")
 (def user-pool-client-secret "1as33ab08jtsd778p3nfuivmi1rn4ddci6g58jar399prd19ser")
 
-(deftest hmac256-test
+(deftest hmac256-test-v2
   (is (= "CFwQXIkeWlWshlq4e+bfuUrIAoUL780KUm0JMmugvFw="
          (util/hmac-sha256 user-pool-client-secret
                            (str "test-svc@internal"

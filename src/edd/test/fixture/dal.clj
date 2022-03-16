@@ -17,8 +17,7 @@
 (ns edd.test.fixture.dal
   (:require [clojure.tools.logging :as log]
             [edd.el.event :as event]
-            [clojure.data :refer [diff]]
-            [clojure.test :refer :all]
+            [clojure.test :refer [is]]
             [edd.el.cmd :as cmd]
             [edd.response.cache :as response-cache]
             [edd.core :as edd]
@@ -66,8 +65,8 @@
   (cond
     (:like condition) (like-cond (:like condition))
     (:equal condition) (equal-cond (:equal condition))
-    (:search condition) (full-search-cond (:search condition)))
-  :default (fn [x] false))
+    (:search condition) (full-search-cond (:search condition))
+    :else (fn [_] false)))
 
 
 
@@ -230,7 +229,7 @@
     (doseq [id (distinct (map :id (:events resp)))]
       (event/handle-event (assoc ctx
                                  :apply {:aggregate-id id
-                                         :meta         (get ctx :meta {})})))))
+                                         :meta         (:meta ctx {})})))))
 
 (defn execute-fx [ctx]
   (doall
