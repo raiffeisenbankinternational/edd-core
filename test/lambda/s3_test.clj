@@ -62,7 +62,7 @@
        (core/start
         {}
         (fn [ctx body]
-          "Slurp content of S3 request into response"
+          ;; "Slurp content of S3 request into response"
           (log/info (:commands body))
           (let [commands (:commands body)
                 cmd (first commands)
