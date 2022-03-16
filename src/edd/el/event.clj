@@ -6,7 +6,6 @@
    [edd.request-cache :as request-cache]
    [lambda.request :as request]
    [edd.search :as search]
-   [edd.el.ctx :as el-ctx]
    [lambda.util :as util]))
 
 (defn apply-event
@@ -106,15 +105,15 @@
      (str "handling-apply: " realm " " (:aggregate-id apply))
      (if (request/is-scoped)
        (let [applied (get-in @request/*request* [:applied realm agg-id])]
-         (if-not applied
-           (do (-> ctx
-                   (assoc :id agg-id)
-                   (get-by-id)
-                   (update-aggregate))
-               (swap! request/*request*
-                      #(assoc-in % [:applied realm agg-id] {:apply true})))))
+         (when-not applied
+           (-> ctx
+               (assoc :id agg-id)
+               (get-by-id)
+               (update-aggregate))
+           (swap! request/*request*
+                  #(assoc-in % [:applied realm agg-id] {:apply true}))))
        (-> ctx
            (assoc :id agg-id)
            (get-by-id)
-           (update-aggregate))))
-    {:apply true}))
+           (update-aggregate)))))
+  {:apply true})

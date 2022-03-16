@@ -87,8 +87,7 @@
                             (log/info "Parsing success " parsed-key)
                             {:request-id     request-id
                              :interaction-id interaction-id
-                             :user           (name
-                                              (:service-name ctx))
+                             :user           (name (:service-name ctx))
                              :meta           {:realm (keyword realm)
                                               :user  {:id    request-id
                                                       :email "non-interractiva@s3.amazonws.com"
@@ -125,12 +124,12 @@
     (:roles user))))
 
 (defn check-user-role
-  [{:keys [body req] :as ctx}]
+  [{:keys [_ req] :as ctx}]
   (let [{:keys [user body]} (jwt/parse-token
                              ctx
                              (or (get-in req [:headers :x-authorization])
                                  (get-in req [:headers :X-Authorization])))
-        role (or (get-in body [:user :selected-role])
+        role (or (-> body :user :selected-role)
                  (non-interactive user)
                  (first (remove
                          #(or (= % :anonymous)
@@ -148,7 +147,9 @@
                                    :meta {:realm (get-realm body user role)
                                           :user  {:id    (:id user)
                                                   :email (:email user)
-                                                  :role  role}})
+                                                  :role  role
+                                                  :department-code (:department-code user "000")
+                                                  :department (:department user "No Department")}})
       :else (assoc ctx :user {:id    "anonymous"
                               :email "anonymous"
                               :role  :anonymous}))))

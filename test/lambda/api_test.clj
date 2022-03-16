@@ -1,6 +1,5 @@
 (ns lambda.api-test
-  (:require [clojure.test :refer :all]
-            [yaml.core :as yaml]
+  (:require [clojure.test :refer [deftest is]]
             [lambda.core :as core]
             [lambda.filters :as fl]
             [lambda.jwt-test :as jwt-test]

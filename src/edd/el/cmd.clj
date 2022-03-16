@@ -30,7 +30,7 @@
        "/query"))
 
 (defn call-query-fn
-  [ctx cmd query-fn deps]
+  [_ cmd query-fn deps]
   (query-fn deps cmd))
 
 (defn resolve-remote-dependency
@@ -184,7 +184,7 @@
           events)))
 
 (defn resp->add-user-to-events
-  [{:keys [user] :as ctx} resp]
+  [{:keys [user]} resp]
   (if-not user
     resp
     (update resp :events

@@ -1,9 +1,7 @@
 (ns lambda.jwt
   (:require [lambda.util :as util]
             [clojure.walk :as walk]
-            [clojure.string :as str]
-            [clojure.tools.logging :as log]
-            [clojure.java.io :as io])
+            [clojure.tools.logging :as log])
 
   (:import (com.auth0.jwt.algorithms Algorithm)
            (com.auth0.jwt JWT)
@@ -46,40 +44,30 @@
   (try
     (let [jwt (JWT/decode token)
           token-kid (.getKeyId jwt)
-          jwks (first
-                (filter
-                 #(= (:kid %)
-                     token-kid)
-                 jwks-all))]
+          [jwks] (filter #(= (:kid %) token-kid) jwks-all)]
+
       (if jwks
         (let [jwk (Jwk/fromValues (walk/stringify-keys jwks))]
-
           (try
-            (.verify (Algorithm/RSA256
-                      (.getPublicKey jwk)
-                      nil) jwt)
+            (.verify (Algorithm/RSA256 (.getPublicKey jwk) nil) jwt)
             (let [resp (validate-token-attributes
                         ctx
                         {:iss (.getIssuer jwt)
                          :aud (.get (.getAudience jwt) 0)
                          :exp (.getTime
                                (.getExpiresAt jwt))})
-                  invalid (first
-                           (filter
-                            (fn [[k v]]
-                              (= v :invalid))
-                            resp))]
+                  [invalid] (filter (fn [[_ v]] (= v :invalid)) resp)]
               (if-not invalid
                 (assoc ctx
                        :user {:id    (.asString (.getClaim jwt "email"))
                               :email (.asString (.getClaim jwt "email"))
+                              :department (.asString (.getClaim jwt "department"))
+                              :department-code (.asString (.getClaim jwt "department_code"))
                               :roles (cons
                                       :anonymous
-                                      (map
+                                      (mapv
                                        keyword
-                                       (vec
-                                        (.asArray (.getClaim jwt "cognito:groups")
-                                                  String))))})
+                                       (.asArray (.getClaim jwt "cognito:groups") String)))})
                 (assoc ctx
                        :body {:error resp})))
 
@@ -94,6 +82,3 @@
       (log/error "Unable to parse token" e)
       (assoc ctx
              :body {:error {:jwt :invalid}}))))
-
-
-
