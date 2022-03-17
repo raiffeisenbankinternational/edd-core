@@ -28,7 +28,7 @@
         wrap-query (fn [query] (fn [d cmd] (query (merge cmd d))))]
     (vec (mapcat (fn [[key query]]
                    [key (if (:service query)
-                          {:query (wrap-query (:query query))
+                          {:query   (wrap-query (:query query))
                            :service (:service query)}
                           (wrap-query query))])
                  dps))))
@@ -183,6 +183,13 @@
                                                  :interaction-id (:interaction-id item))
                                           (add-log-level ctx item))))))
 
+(defn try-parse-exception
+  [e]
+  (try (.getMessage e)
+       (catch IllegalArgumentException e
+         (log/error e)
+         "Unknown error processing item")))
+
 (defn dispatch-item
   [{:keys [item] :as ctx}]
   (log/debug "Dispatching" item)
@@ -223,15 +230,19 @@
           (log/error e)
           (let [data (ex-data e)]
             (cond
-              (:error data) (assoc data
-                                   :invocation-id (:invocation-id ctx)
-                                   :request-id (:request-id item)
-                                   :interaction-id (:interaction-id ctx))
-              data {:error          data
+              (:error data) {:exception      (:error data)
+                             :invocation-id  (:invocation-id ctx)
+                             :request-id     (:request-id item)
+                             :interaction-id (:interaction-id ctx)}
+
+              data {:exception      data
                     :invocation-id  (:invocation-id ctx)
                     :request-id     (:request-id item)
                     :interaction-id (:interaction-id ctx)}
-              :else {:error "Unknown error processing item"})))))))
+              :else {:exception (try-parse-exception e)
+                     :invocation-id  (:invocation-id ctx)
+                     :request-id     (:request-id item)
+                     :interaction-id (:interaction-id ctx)})))))))
 
 (defn dispatch-request
   [{:keys [body] :as ctx}]
