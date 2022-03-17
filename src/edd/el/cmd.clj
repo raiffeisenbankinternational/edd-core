@@ -257,21 +257,22 @@
                     (invoke-handler command-handler cmd)
                     (to-clean-vector)
                     (map #(assoc % :id (:id cmd)))
-                    (remove nil?))]
-    (when (some :error events)
-      (throw (ex-info "Invalid aggregate state"
-                      {:error (filter :error events)})))
-    (reduce
-     (fn [p event]
-       (cond-> p
-         (contains? event :error) (update :events conj event)
-         (contains? event :identity) (update :identities conj event)
-         (contains? event :sequence) (update :sequences conj event)
-         (contains? event :event-id) (update :events conj event)))
-     {:events     []
-      :identities []
-      :sequences  []}
-     events)))
+                    (remove nil?))
+        response {:events     []
+                  :identities []
+                  :sequences  []}]
+    (if (some :error events)
+      (assoc response
+             :error [(first
+                      (filter :error events))])
+      (reduce
+       (fn [p event]
+         (cond-> p
+           (contains? event :identity) (update :identities conj event)
+           (contains? event :sequence) (update :sequences conj event)
+           (contains? event :event-id) (update :events conj event)))
+       response
+       events))))
 
 (defn handle-command
   [ctx {:keys [cmd-id] :as cmd}]
@@ -362,6 +363,7 @@
                   []
                   effects)]
     (cond
+      (:error resp) resp
       no-summary resp :else {:success    true
                              :effects    (reduce
                                           (fn [p v]

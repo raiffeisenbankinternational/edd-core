@@ -123,7 +123,7 @@
                 (is (= []
                        (event-store/get-response-log (with-realm ctx) invocation-id)))))
 
-        (is (= {:error          "CMD Store failure"
+        (is (= {:exception      "CMD Store failure"
                 :invocation-id  invocation-id
                 :interaction-id interaction-id
                 :request-id     request-id}
@@ -178,7 +178,7 @@
                      (event-store/get-sequence-number-for-id-imp
                       (with-realm (assoc ctx :id (uuid/gen))))))))
 
-      (is (= {:error          "Sequence Store failure"
+      (is (= {:exception      "Sequence Store failure"
               :invocation-id  invocation-id
               :interaction-id interaction-id
               :request-id     request-id}
@@ -204,7 +204,7 @@
               (is (= [{:error expected-error}]
                      (mapv :error (event-store/get-request-log (with-realm ctx) request-id ""))))))
 
-      (is (= {:error          expected-error
+      (is (= {:exception      expected-error
               :invocation-id  invocation-id
               :interaction-id interaction-id
               :request-id     request-id}
@@ -284,7 +284,7 @@
                                :commands       [{:cmd-id  :cmd-1
                                                  :version 2
                                                  :id      agg-id}]})]
-        (is = ({:error          {:key              :concurrent-modification
+        (is = ({:exception      {:key              :concurrent-modification
                                  :original-message "ERROR: duplicate key value violates unique constraint \"part_identity_store_31_pkey\"  Detail: Key (aggregate_id, id)=(06bf5f2a-de98-4b0f-bea9-d0fb3f4be51f, 06bf5f2a-de98-4b0f-bea9-d0fb3f4be51f) already exists."}
                 :interaction-id interaction-id
                 :invocation-id  invocation-id

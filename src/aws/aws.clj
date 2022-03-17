@@ -4,6 +4,7 @@
    [clojure.tools.logging :as log]
    [lambda.request :as request]
    [sdk.aws.common :as common]
+   [clojure.set :as clojure-set]
    [sdk.aws.cognito-idp :as cognito-idp]
    [sdk.aws.sqs :as sqs]))
 
@@ -51,13 +52,21 @@
     (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/response")
     {:body (util/to-json body)})))
 
+(defn produce-compatible-error-response
+  "Because we rely on error on client we will replace :exception to :error"
+  [resp]
+  (if (map? resp)
+    (clojure-set/rename-keys resp {:exception :error})
+    (map
+     #(clojure-set/rename-keys % {:exception :error})
+     resp)))
+
 (defn send-error
   [{:keys [api
            invocation-id
            from-api
            req] :as ctx} body]
-  (let [resp (util/to-json body)
-        target (if from-api
+  (let [target (if from-api
                  "response"
                  "error")]
     (when-not from-api
@@ -65,7 +74,7 @@
                               (:Records req))
             items-to-delete (->> (partition 2 items)
                                  (filter (fn [[a _]]
-                                           (not (:error a))))
+                                           (not (:exception a))))
                                  (map
                                   (fn [[_ b]]
                                     b)))]
@@ -77,11 +86,13 @@
     (util/d-time "Enqueueing error"
                  (enqueue-response ctx body))
 
-    (log/error resp)
-    (util/to-json
-     (util/http-post
-      (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/" target)
-      {:body resp}))))
+    (let [body (produce-compatible-error-response body)
+          resp (util/to-json body)]
+      (log/error resp)
+      (util/to-json
+       (util/http-post
+        (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/" target)
+        {:body resp})))))
 
 (defn get-or-set
   [cache key get-fn]

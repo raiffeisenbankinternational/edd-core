@@ -95,10 +95,11 @@
      (do
        (verify-traffic-edn
         [{:body   {:body            (util/to-json
-                                     {:error          [{:id ["missing required key"]}]
-                                      :invocation-id  0
+                                     {:invocation-id  0
                                       :request-id     request-id
-                                      :interaction-id interaction-id})
+                                      :interaction-id interaction-id
+                                      :error          [{:id ["missing required key"]}]})
+
                    :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
                                      :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
                                      :Access-Control-Allow-Origin   "*"

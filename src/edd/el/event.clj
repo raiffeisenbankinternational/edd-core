@@ -97,33 +97,24 @@
 
 (defn handle-event
   [{:keys [apply] :as ctx}]
-  (try
-    (let [meta (:meta apply)
-          ctx (assoc ctx :meta meta)
-          realm (:realm meta)
-          agg-id (:aggregate-id apply)]
+  (let [meta (:meta apply)
+        ctx (assoc ctx :meta meta)
+        realm (:realm meta)
+        agg-id (:aggregate-id apply)]
 
-      (util/d-time
-       (str "handling-apply: " realm " " (:aggregate-id apply))
-       (if (request/is-scoped)
-         (let [applied (get-in @request/*request* [:applied realm agg-id])]
-           (if-not applied
-             (do (-> ctx
-                     (assoc :id agg-id)
-                     (get-by-id)
-                     (update-aggregate))
-                 (swap! request/*request*
-                        #(assoc-in % [:applied realm agg-id] {:apply true})))))
-         (-> ctx
-             (assoc :id agg-id)
-             (get-by-id)
-             (update-aggregate)))))
-    {:apply true}
-    (catch Exception e
-      (log/error e)
-      (let [data (ex-data e)]
-        (if data
-          (if (:error data)
-            data
-            {:error data})
-          {:error "Unknown error in event handler"})))))
+    (util/d-time
+     (str "handling-apply: " realm " " (:aggregate-id apply))
+     (if (request/is-scoped)
+       (let [applied (get-in @request/*request* [:applied realm agg-id])]
+         (if-not applied
+           (do (-> ctx
+                   (assoc :id agg-id)
+                   (get-by-id)
+                   (update-aggregate))
+               (swap! request/*request*
+                      #(assoc-in % [:applied realm agg-id] {:apply true})))))
+       (-> ctx
+           (assoc :id agg-id)
+           (get-by-id)
+           (update-aggregate))))
+    {:apply true}))

@@ -73,7 +73,9 @@
                    :dps {:test-dps (fn [cmd] {:query-id :test-query})}
                    :id-fn (fn [dps cmd] (get-in dps [:test-dps :id])))
       (edd/reg-cmd :object-uploaded dummy-command-handler)
-      (edd/reg-cmd :error-cmd (fn [ctx cmd] {:error "Some error"}))
+      (edd/reg-cmd :error-cmd (fn [ctx cmd]
+                                (throw (ex-info "Error"
+                                                {:error "Some error"}))))
       (edd/reg-query :get-by-id (fn [ctx query]
                                   (common/get-by-id (assoc ctx :id (:id query)))))
       (edd/reg-event :e7 (fn [ctx event] {:name (:event-id event)}))))
@@ -109,8 +111,7 @@
 (deftest handler-builder-test
   "Test if id-fn works correctly together with event seq. This test does multiple things. Sorry!!"
   (mock/with-mock-dal
-    (is (= {:error [{:error "Some error"
-                     :id    cmd-id}]}
+    (is (= {:error "Some error"}
            (mock/handle-cmd
             (prepare {})
             {:commands [{:cmd-id :error-cmd

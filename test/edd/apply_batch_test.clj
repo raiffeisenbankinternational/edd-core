@@ -2,7 +2,7 @@
   (:require [clojure.test :refer :all]
             [lambda.util :as util]
             [lambda.uuid :as uuid]
-            [lambda.test.fixture.client :refer [verify-traffic]]
+            [lambda.test.fixture.client :refer [verify-traffic-edn]]
             [lambda.test.fixture.core :refer [mock-core]]
             [edd.core :as edd]
             [lambda.core :as core]
@@ -98,47 +98,49 @@
      (core/start
       ctx
       edd/handler)
-     (verify-traffic [{:body   (util/to-json
-                                [{:result         {:apply true}
-                                  :invocation-id  0
-                                  :request-id     req-id1,
-                                  :interaction-id int-id}
-                                 {:result         {:apply true}
-                                  :invocation-id  0
-                                  :request-id     req-id2,
-                                  :interaction-id int-id}
-                                 {:result         {:apply true}
-                                  :invocation-id  0
-                                  :request-id     req-id3,
-                                  :interaction-id int-id}])
-                       :method :post
-                       :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-                      {:body      "{\"id\":\"#05120289-90f3-423c-ad9f-c46f9927a53e\"}"
-                       :headers   {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/es/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=8b2d9b4b2390562f95edc1b2dc52223e9cac7eb1b50b460156d53183ef2346e3"
-                                   "Content-Type"         "application/json"
-                                   "X-Amz-Date"           "20210322T232540Z"
-                                   "X-Amz-Security-Token" ""}
-                       :keepalive 300000
-                       :method    :post
-                       :idle-timeout 20000
-                       :connect-timeout 300
-                       :url       "https:///test_local_test/_doc/05120289-90f3-423c-ad9f-c46f9927a53e"}
-                      {:method  :get
-                       :timeout 90000000
-                       :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
+     (verify-traffic-edn [{:body   [{:result         {:apply true}
+                                     :invocation-id  0
+                                     :request-id     req-id1,
+                                     :interaction-id int-id}
+                                    {:result         {:apply true}
+                                     :invocation-id  0
+                                     :request-id     req-id2,
+                                     :interaction-id int-id}
+                                    {:result         {:apply true}
+                                     :invocation-id  0
+                                     :request-id     req-id3,
+                                     :interaction-id int-id}]
+                           :method :post
+                           :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
+                          {:body            {:id agg-id}
+                           :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/es/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=8b2d9b4b2390562f95edc1b2dc52223e9cac7eb1b50b460156d53183ef2346e3"
+                                             "Content-Type"         "application/json"
+                                             "X-Amz-Date"           "20210322T232540Z"
+                                             "X-Amz-Security-Token" ""}
+                           :keepalive       300000
+                           :method          :post
+                           :idle-timeout    20000
+                           :connect-timeout 300
+                           :url             "https:///test_local_test/_doc/05120289-90f3-423c-ad9f-c46f9927a53e"}
+                          {:method  :get
+                           :timeout 90000000
+                           :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
 
 (deftest apply-when-error-all-failed
   (with-redefs [common/create-date (fn [] "20210322T232540Z")
                 event/get-by-id (fn [ctx]
-                                  (if (= (:request-id ctx)
-                                         req-id2)
+                                  (when (= (:request-id ctx)
+                                           req-id2)
                                     (throw (ex-info "Something" {:badly :1wrong})))
+                                  (when (= (:request-id ctx)
+                                           req-id3)
+                                    (throw (RuntimeException. "Non clojure error")))
                                   (assoc ctx
                                          :aggregate {:id agg-id}))
                 event/update-aggregate (fn [ctx]
-                                         (if = ((:request-id ctx)
+                                         (if (= (:request-id ctx)
                                                 req-id1)
-                                             (throw (ex-info "Something" {:badly :unfrndly}))))]
+                                           (throw (ex-info "Something" {:badly :un-happy}))))]
     (mock-core
      :invocations [(util/to-json (req
                                   [{:apply          {:service      "glms-booking-company-svc",
@@ -164,24 +166,23 @@
      (core/start
       ctx
       edd/handler)
-     (verify-traffic [{:body   (util/to-json
-                                [{:error          "Unknown error in event handler"
-                                  :invocation-id  0
-                                  :request-id     req-id1,
-                                  :interaction-id int-id}
-                                 {:error          {:badly :1wrong}
-                                  :invocation-id  0
-                                  :request-id     req-id2,
-                                  :interaction-id int-id}
-                                 {:error          "Unknown error in event handler"
-                                  :invocation-id  0
-                                  :request-id     req-id3,
-                                  :interaction-id int-id}])
-                       :method :post
-                       :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
-                      {:method  :get
-                       :timeout 90000000
-                       :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
+     (verify-traffic-edn [{:body   [{:error          {:badly :un-happy}
+                                     :invocation-id  0
+                                     :request-id     req-id1,
+                                     :interaction-id int-id}
+                                    {:error          {:badly :1wrong}
+                                     :invocation-id  0
+                                     :request-id     req-id2,
+                                     :interaction-id int-id}
+                                    {:error          "Non clojure error"
+                                     :invocation-id  0
+                                     :request-id     req-id3,
+                                     :interaction-id int-id}]
+                           :method :post
+                           :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
+                          {:method  :get
+                           :timeout 90000000
+                           :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
 
 
 

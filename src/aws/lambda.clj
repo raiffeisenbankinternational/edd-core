@@ -3,7 +3,8 @@
             [aws.aws :as aws]
             [lambda.request :as request]
             [lambda.uuid :as uuid]
-            [clojure.tools.logging :as log]))
+            [clojure.tools.logging :as log]
+            [clojure.set :as clojure-set]))
 
 (defn apply-filters
   [{:keys [filters req] :as ctx}]
@@ -23,12 +24,12 @@
 
 (defn send-response
   [{:keys [resp] :as ctx}]
-  (let [error (if (vector? resp)
-                (-> (filter #(contains? % :error) resp)
-                    (first))
-                (:error resp))
+  (let [exception (if (vector? resp)
+                    (-> (filter #(contains? % :exception) resp)
+                        (first))
+                    (:exception resp))
         filtered (:resp (apply-post-filter ctx))]
-    (if error
+    (if exception
       (aws/send-error ctx filtered)
       (aws/send-success ctx filtered))))
 
@@ -52,11 +53,11 @@
   (send-response
    (let [data (ex-data e)]
      (assoc ctx
-            :resp {:error (or data
-                              (try (.getMessage e)
-                                   (catch IllegalArgumentException e
-                                     (log/error e)
-                                     "Unknown")))}))))
+            :resp {:exception (or data
+                                  (try (.getMessage e)
+                                       (catch IllegalArgumentException e
+                                         (log/error e)
+                                         "Unknown")))}))))
 
 (defn with-cache
   [fn]
