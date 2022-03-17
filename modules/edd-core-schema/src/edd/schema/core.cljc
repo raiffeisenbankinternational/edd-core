@@ -145,7 +145,8 @@
 (def EddCoreCommandError
   [:map
    [:errors
-    [:vector [:map]]]
+    [:vector [:map
+              [:message string?]]]]
    [:invocation-id {:description "Invocation ID represents backend invocation
                                   id for this execution."} :uuid]
    [:request-id {:description request-id-description}

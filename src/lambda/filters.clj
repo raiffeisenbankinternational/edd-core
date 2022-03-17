@@ -4,6 +4,7 @@
             [clojure.string :as str]
             [sdk.aws.s3 :as s3]
             [lambda.jwt :as jwt]
+            [aws.aws :as aws]
             [lambda.uuid :as uuid]))
 
 (def from-queue
@@ -176,12 +177,13 @@
            resp-serializer-fn util/to-json}
     :as   ctx}]
   (log/debug "to-api" resp)
-  (assoc ctx
-         :resp {:statusCode      200
-                :isBase64Encoded false
-                :headers         {"Access-Control-Allow-Headers"  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-                                  "Access-Control-Allow-Methods"  "OPTIONS,POST,PUT,GET"
-                                  "Access-Control-Expose-Headers" "*"
-                                  "Content-Type"                  resp-content-type
-                                  "Access-Control-Allow-Origin"   "*"}
-                :body            (resp-serializer-fn resp)}))
+  (let [resp (aws/produce-compatible-error-response resp)]
+    (assoc ctx
+           :resp {:statusCode      200
+                  :isBase64Encoded false
+                  :headers         {"Access-Control-Allow-Headers"  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                                    "Access-Control-Allow-Methods"  "OPTIONS,POST,PUT,GET"
+                                    "Access-Control-Expose-Headers" "*"
+                                    "Content-Type"                  resp-content-type
+                                    "Access-Control-Allow-Origin"   "*"}
+                  :body            (resp-serializer-fn resp)})))

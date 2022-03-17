@@ -66,11 +66,14 @@
 (deftest test-apply-cmd
   (with-redefs [search/simple-search identity]
 
-    (is (= {:error "No implementation of method: :-execute-all of protocol: #'next.jdbc.protocols/Executable found for class: nil"}
-           (event/handle-event (-> apply-ctx
-                                   (postgres-event-store/register)
-                                   (assoc :apply
-                                          {:aggregate-id 1})))))))
+    (try
+      (event/handle-event (-> apply-ctx
+                              (postgres-event-store/register)
+                              (assoc :apply
+                                     {:aggregate-id 1})))
+      (catch Exception e
+        (is (= "Postgres error"
+               (.getMessage e)))))))
 
 (deftest test-apply-cmd-storing-error
   (with-redefs [dal/get-events (fn [_]
@@ -81,13 +84,11 @@
                                    :id       cmd-id
                                    :k2       "b"}])]
 
-    (let [result (event/handle-event (-> apply-ctx
+    (is (thrown? Exception
+                 (event/handle-event (-> apply-ctx
                                          elastic-view-store/register
                                          (assoc :apply {:aggregate-id cmd-id
-                                                        :apply        :cmd-1})))]
-      (is (contains?
-           result
-           :error)))))
+                                                        :apply        :cmd-1})))))))
 
 (deftest test-apply-cmd-storing-response-error
   (with-redefs [dal/get-events (fn [_]
@@ -101,11 +102,13 @@
                                 {:status 404})
                 util/http-post (fn [url request & {:keys [raw]}]
                                  {:status 303
-                                  :body "Sorry"})]
-    (is (= {:error {:status 303
-                    :message "Sorry"}}
-           (select-keys (event/handle-event (-> apply-ctx
-                                                elastic-view-store/register
-                                                (assoc
-                                                 :apply {:aggregate-id cmd-id})))
-                        [:error])))))
+                                  :body   "Sorry"})]
+    (try
+      (event/handle-event (-> apply-ctx
+                              elastic-view-store/register
+                              (assoc
+                               :apply {:aggregate-id cmd-id})))
+      (catch Exception e
+        (is (= {:error {:status  303
+                        :message "Sorry"}}
+               (ex-data e)))))))
