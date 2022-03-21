@@ -16,6 +16,9 @@
                           :query-error     (swagger/transform schema-core/EddCoreCommandError)}}
    :paths      {}})
 
+(def commands-request-schema
+  "commands-request")
+
 (defn- read-schema
   "Return a map of schema names to their definitions defined in a
   `schema-ns`"
@@ -49,6 +52,32 @@
                                                         schema-core/EddCoreResponse))))
     {}
     m))
+(defn cmd->all-commands-schema
+  []
+  (swagger/transform
+    (mu/merge
+      schema-core/EddCoreRequest
+      schema-core/EddCoreCommandRequest)))
+
+
+(defn cmd->all-commands
+  []
+  {:post
+   {:summary     "You can post here any combination of commands"
+    :description ""
+    :requestBody {:required true
+                  :content  {:application/json
+                             {:schema
+                              {:$ref (str "#/components/schemas/" commands-request-schema)}}}}
+
+    :responses   {"200" {:description "OK"
+                         :content     {"application/json"
+                                       {:schema
+                                        {:$ref (str "#/components/schemas/command-success")}}}}
+                  "501" {:description "OK"
+                         :content     {"application/json"
+                                       {:schema
+                                        {:$ref (str "#/components/schemas/command-error")}}}}}}})
 
 (defn cmd->swagger-path
   [_ cmd]
@@ -56,8 +85,7 @@
    {:summary     ""
     :description ""
     :requestBody {:required true
-                  :content  {
-                             :application/json
+                  :content  {:application/json
                              {:schema
                               {:$ref (str "#/components/schemas/" (name cmd))}}}}
 
@@ -98,8 +126,11 @@
       (update-in [:components :schemas]
                  merge (cmd-schemas->swagger (:commands definitions)))
       (update-in [:components :schemas]
+                 assoc commands-request-schema (cmd->all-commands-schema))
+      (update-in [:components :schemas]
                  merge (query-schemas->swagger (:queries definitions)))
 
+      (update-in [:paths] #(assoc % "/commands" (cmd->all-commands)))
       (update-in [:paths]
                  (fn [paths]
                    (reduce
