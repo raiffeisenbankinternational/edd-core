@@ -11,10 +11,12 @@
 (defn retry [f n & [resp]]
   (if (zero? n)
     (do (log/error "Retry failed" resp)
-        (throw (RuntimeException. "Failed to execute request")))
-    (let [response (f)]
-      (if (:error response)
-        (do (Thread/sleep (+ 1000 (rand-int 1000)))
+        (throw (ex-info "Failed to execute request" {:message "Failed to execute request"
+                                                     :error   (:error resp)})))
+    (let [{:keys [error] :as response} (f)]
+      (if error
+        (do (log/warn (str "Failed handling attempt: " n) error)
+            (Thread/sleep (+ 1000 (rand-int 1000)))
             (retry f (dec n) response))
         response))))
 

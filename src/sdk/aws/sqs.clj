@@ -8,8 +8,6 @@
 
 (def batch-version "2012-11-05")
 
-(def retry-count 3)
-
 (defn sqs-publish
   [{:keys [queue ^String message aws] :as ctx}]
   (let [req {:method "POST"
@@ -47,8 +45,7 @@
                                      (assoc "Authorization" auth)
                                      (dissoc "Host")
                                      (assoc "X-Amz-Security-Token"
-                                            (:aws-session-token aws)))}))
-                    :retries retry-count)]
+                                            (:aws-session-token aws)))})))]
       (when (contains? response :error)
         (throw (-> "Failed to send message" (ex-info response))))
 
@@ -112,8 +109,7 @@
                                      (dissoc "Host")
                                      (assoc "Authorization" auth)
                                      (assoc "X-Amz-Security-Token" (:aws-session-token aws)))
-                        :raw true}))
-                    :retries retry-count)]
+                        :raw true})))]
       (when (or (contains? response :error)
                 (> (get response :status 0) 299))
         (log/error "Failed to sqs:ChangeMessageVisibility" response))

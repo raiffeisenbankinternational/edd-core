@@ -98,12 +98,14 @@
   [cache key get-fn]
   (let [current-time (util/get-current-time-ms)
         meta (get-in cache [:meta key])]
-    (if (> (- current-time (get meta :time 0)) 1800000)
-      (-> cache
-          (assoc-in [:meta key] {:time current-time})
-          (assoc key (common/retry
-                      get-fn
-                      2)))
+    (if (or (not (get cache key))
+            (> (- current-time (get meta :time 0)) 1800000))
+      (do
+        (-> cache
+            (assoc-in [:meta key] {:time current-time})
+            (assoc key (common/retry
+                        get-fn
+                        3))))
       cache)))
 
 (defn admin-auth

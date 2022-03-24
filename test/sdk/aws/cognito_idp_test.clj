@@ -29,7 +29,8 @@
              "X-Amz-Security-Token" "session-token"
              "X-Amz-Target" "AWSCognitoIdentityProviderService.AdminGetUser"}
    :method :post
-   :timeout 5000
+   :connect-timeout 300
+   :idle-timeout 5000
    :url "https://cognito-idp.eu-central-1.amazonaws.com"})
 
 (def user-response
@@ -74,7 +75,8 @@
              "X-Amz-Security-Token" "session-token"
              "X-Amz-Target" "AWSCognitoIdentityProviderService.AdminListGroupsForUser"}
    :method :post
-   :timeout 5000
+   :connect-timeout 300
+   :idle-timeout 5000
    :url "https://cognito-idp.eu-central-1.amazonaws.com"})
 
 (def user-groups-response

@@ -1,7 +1,8 @@
 (ns sdk.aws.cognito-idp
   (:require [lambda.util :as util]
             [sdk.aws.common :as common]
-            [clojure.tools.logging :as log]))
+            [clojure.tools.logging :as log]
+            [lambda.http-client :as client]))
 
 (defn- cognito-request
   [{{:keys
@@ -28,17 +29,17 @@
              :access-key aws-access-key-id
              :secret-key aws-secret-access-key}
         auth (common/authorize req)
-        response (common/retry
+        response (client/retry-n
                   #(util/http-post
                     (str "https://" (get (:headers req) "Host"))
-                    {:body    (:payload req)
-                     :headers (-> (:headers req)
-                                  (dissoc "Host")
-                                  (assoc
-                                   "X-Amz-Security-Token" aws-session-token
-                                   "Authorization" auth))
-                     :timeout 5000})
-                  3)]
+                    (client/request->with-timeouts
+                     %
+                     {:body    (:payload req)
+                      :headers (-> (:headers req)
+                                   (dissoc "Host")
+                                   (assoc
+                                    "X-Amz-Security-Token" aws-session-token
+                                    "Authorization" auth))})))]
     (log/debug "Auth response" response)
     (cond
       (contains? response :error) (do
