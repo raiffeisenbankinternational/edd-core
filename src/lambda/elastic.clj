@@ -57,8 +57,7 @@
                          (= method "DELETE") (util/http-delete
                                               url
                                               request
-                                              :raw true)))
-                    :retries 3)]
+                                              :raw true))))]
       (cond
         (contains? response :error) (do
                                       (log/error "Failed update" response)

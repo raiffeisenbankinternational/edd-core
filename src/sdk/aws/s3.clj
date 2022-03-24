@@ -21,8 +21,6 @@
    {}
    params))
 
-(def retry-count 3)
-
 (defn- parse-response
   [response object]
   (log/debug "Auth response" response)
@@ -70,8 +68,7 @@
                                                   (dissoc "Host")
                                                   (assoc "Authorization" common))
                                      :body    (get-in object [:s3 :object :content])})
-                                   :raw true)
-                                 :retries retry-count)
+                                   :raw true))
         {:keys [error] :as response} (parse-response response object)]
     (if error
       response
@@ -103,8 +100,7 @@
                                      :headers (-> (:headers req)
                                                   (dissoc "Host")
                                                   (assoc "Authorization" common))})
-                                   :raw true)
-                                 :retries retry-count)
+                                   :raw true))
         {:keys [error] :as response} (parse-response response object)]
     (if error
       response
@@ -136,8 +132,7 @@
                                      :headers (-> (:headers req)
                                                   (dissoc "host")
                                                   (assoc "Authorization" common))})
-                                   :raw true)
-                                 :retries retry-count)]
+                                   :raw true))]
     (when (contains? response :error)
       (log/error "Failed to fetch object" response))
     (if (> (:status response) 299)
@@ -176,8 +171,7 @@
                                        :headers      (-> (:headers req)
                                                          (dissoc "host")
                                                          (assoc "Authorization" common))})
-                                     :raw true)
-                                   :retries retry-count)]
+                                     :raw true))]
       (when (contains? response :error)
         (log/error "Failed to fetch object tagging" response))
       (if (or (:error response)
@@ -253,8 +247,7 @@
                                        :headers      (-> (:headers req)
                                                          (dissoc "host")
                                                          (assoc "Authorization" common))})
-                                     :raw true)
-                                   :retries retry-count)]
+                                     :raw true))]
       (when (contains? response :error)
         (log/error "Failed to fetch object" response))
       (if (or (:error response)
