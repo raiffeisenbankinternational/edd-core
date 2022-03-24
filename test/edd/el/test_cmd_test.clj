@@ -10,7 +10,8 @@
             [edd.ctx :as edd-ctx]
             [edd.core :as edd]
             [aws.aws :as aws])
-  (:import (clojure.lang ExceptionInfo)))
+  (:import (clojure.lang ExceptionInfo)
+           (org.httpkit.client TimeoutException)))
 
 (def cmd-id (uuid/gen))
 
@@ -95,6 +96,11 @@
         (with-redefs [util/http-post (fn [ctx q]
                                        {:status 499
                                         :body   {:response true}})]
+          (is (thrown? ExceptionInfo
+                       (cmd/fetch-dependencies-for-command ctx cmd)))))
+      (testing "If resolved returns exception"
+        (with-redefs [util/http-post (fn [ctx q]
+                                       (throw (TimeoutException. "")))]
           (is (thrown? ExceptionInfo
                        (cmd/fetch-dependencies-for-command ctx cmd))))))))
 

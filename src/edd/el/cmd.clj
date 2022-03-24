@@ -38,29 +38,48 @@
   (log/info "Resolving remote dependency: " service (:cmd-id cmd))
 
   (let [query-fn query
+        service-name (:service-name ctx)
         url (calc-service-url
              service)
         token (aws/get-token ctx)
+        resolved-query (call-query-fn ctx cmd query-fn deps)
         response (http-client/retry-n
                   #(util/http-post
                     url
                     (http-client/request->with-timeouts
                      %
                      {:body    (util/to-json
-                                {:query          (call-query-fn ctx cmd query-fn deps)
+                                {:query          resolved-query
                                  :meta           (:meta ctx)
                                  :request-id     (:request-id ctx)
                                  :interaction-id (:interaction-id ctx)})
                       :headers {"Content-Type"    "application/json"
                                 "X-Authorization" token}}
                      :idle-timeout 10000))
-                  :retries 3)]
+                  :meta {:to-service   service
+                         :from-service service-name
+                         :query-id     (:query-id resolved-query)})]
     (when (:error response)
-      (throw (ex-info (str "Deps request error for " service) {:error (:error response)})))
+      (throw (ex-info (str "Error fetching dependency" service)
+                      {:error {:to-service   service
+                               :from-service service-name
+                               :query-id     (:query-id resolved-query)
+                               :message      (:error response)}})))
     (when (:error (get response :body))
-      (throw (ex-info (str "Deps request error for " service) (get response :body))))
+      (throw (ex-info (str "Error response from service " service)
+                      {:error {:to-service   service
+                               :from-service service-name
+                               :query-id     (:query-id resolved-query)
+                               :message      {:response (get response :body)
+                                              :error-source service}}})))
     (if (> (:status response 0) 299)
-      (throw (ex-info (str "Deps request error for " service) {:status (:status response)}))
+      (throw (ex-info (str "Deps request error for " service)
+                      {:error {:to-service   service
+                               :from-service service-name
+                               :service      service
+                               :query-id     (:query-id resolved-query)
+                               :status       (:status response)
+                               :message      (str "Response status:" (:status response))}}))
       (get-in response [:body :result]))))
 
 (defn resolve-local-dependency
@@ -81,7 +100,7 @@
                deps)
         dps-value (reduce
                    (fn [p [key req]]
-                     (log/info "Query for dependency" key)
+                     (log/info "Query for dependency" cmd-id key (:service req "locally"))
                      (let [dep-value
                            (try (if (:service req)
                                   (resolve-remote-dependency
