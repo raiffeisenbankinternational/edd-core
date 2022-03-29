@@ -334,7 +334,7 @@
                      :headers   {"Content-Type" "application/json"
                                  "X-Amz-Date"   "20200818T113334Z"},
                      :timeout   5000,
-                     :keepalive 300000,
+                     :keepalive -1,
                      :method    :post
                      :url       "https://vpc-mock.eu-central-1.es.amazonaws.com/glms_risk_taker_svc/_search"}
            :body    (util/to-json {:took      42,

@@ -17,6 +17,7 @@
   (let [attempt (- retry-count n)]
     (assoc
      req
+     :keepalive -1
      :connect-timeout (-> attempt
                           (* attempt)
                           (* connect-timeout-step)

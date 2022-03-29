@@ -99,7 +99,7 @@
            req-2 (if (:interaction-id %)
                    (assoc req-1 :interaction-id (:interaction-id %))
                    req-1)]
-       (-> {:post (cmd/calc-service-url (:service %))
+       (-> {:post (cmd/calc-service-query-url (:service %))
             :body (util/to-json {:result (:resp %)})
             :req  req-2})))
 
