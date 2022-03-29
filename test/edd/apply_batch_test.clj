@@ -117,7 +117,6 @@
                                              "Content-Type"         "application/json"
                                              "X-Amz-Date"           "20210322T232540Z"
                                              "X-Amz-Security-Token" ""}
-                           :keepalive       300000
                            :method          :post
                            :idle-timeout    20000
                            :connect-timeout 300
