@@ -22,46 +22,48 @@
 
 (deftest test-prepare-context-for-command-with-remote-query
   "Test if context if properly prepared for remote queries"
-  (let [meta {:realm :realm3}]
-    (mock/with-mock-dal
-      {:dps [{:service        :remote-svc
-              :request-id     request-id
-              :interaction-id interaction-id
-              :meta           meta
-              :query          {:param "Some Value"}
-              :resp           {:remote :response}}]}
-      (let [cmd {:cmd-id :test-cmd
-                 :id     cmd-id
-                 :value  "Some Value"}
-            ctx (-> {}
-                    (edd-ctx/put-cmd :cmd-id :test-cmd
-                                     :options {:deps
-                                               {:test-value
-                                                {:query   (fn [_ cmd]
-                                                            {:param (:value cmd)})
-                                                 :service :remote-svc}}})
-                    (assoc :meta meta
-                           :request-id request-id
-                           :interaction-id interaction-id)
-                    (event-store/register))
-            deps (cmd/fetch-dependencies-for-command
-                  ctx
-                  cmd)]
-        (is (= {:test-value
-                {:remote :response}}
-               deps))
+  (with-redefs [util/get-env (fn [v]
+                               (get {"PrivateHostedZoneName" "mock.com"} v))]
+    (let [meta {:realm :realm3}]
+      (mock/with-mock-dal
+        {:dps [{:service        :remote-svc
+                :request-id     request-id
+                :interaction-id interaction-id
+                :meta           meta
+                :query          {:param "Some Value"}
+                :resp           {:remote :response}}]}
+        (let [cmd {:cmd-id :test-cmd
+                   :id     cmd-id
+                   :value  "Some Value"}
+              ctx (-> {}
+                      (edd-ctx/put-cmd :cmd-id :test-cmd
+                                       :options {:deps
+                                                 {:test-value
+                                                  {:query   (fn [_ cmd]
+                                                              {:param (:value cmd)})
+                                                   :service :remote-svc}}})
+                      (assoc :meta meta
+                             :request-id request-id
+                             :interaction-id interaction-id)
+                      (event-store/register))
+              deps (cmd/fetch-dependencies-for-command
+                    ctx
+                    cmd)]
+          (is (= {:test-value
+                  {:remote :response}}
+                 deps))
 
-        (client/verify-traffic [{:body            (util/to-json
-                                                   {:query          {:param "Some Value"}
-                                                    :meta           meta
-                                                    :request-id     request-id
-                                                    :interaction-id interaction-id})
-                                 :headers         {"X-Authorization" "#mock-id-token"
-                                                   "Content-Type"    "application/json"}
-                                 :method          :post
-                                 :idle-timeout    10000
-                                 :connect-timeout 300
-                                 :url             "https://remote-svc./query"}])))))
+          (client/verify-traffic [{:body            (util/to-json
+                                                     {:query          {:param "Some Value"}
+                                                      :meta           meta
+                                                      :request-id     request-id
+                                                      :interaction-id interaction-id})
+                                   :headers         {"X-Authorization" "#mock-id-token"
+                                                     "Content-Type"    "application/json"}
+                                   :method          :post
+                                   :idle-timeout    10000
+                                   :connect-timeout 300
+                                   :url             (cmd/calc-service-query-url "remote-svc")}]))))))
 
 (deftest test-remote-dependency
   (let [meta {:realm :realm4}
@@ -73,7 +75,7 @@
                   util/get-env (fn [v]
                                  (get {"PrivateHostedZoneName" "mock.com"} v))]
       (client/mock-http
-       [{:post "https://some-remote-service.mock.com/query"
+       [{:post (cmd/calc-service-query-url "some-remote-service")
          :body (util/to-json {:result {:a :b}})}]
        (is (= {:a :b}
               (cmd/resolve-remote-dependency
@@ -92,7 +94,7 @@
                                 :method          :post
                                 :idle-timeout    10000
                                 :connect-timeout 300
-                                :url             "https://some-remote-service.mock.com/query"}])))))
+                                :url             (cmd/calc-service-query-url "some-remote-service")}])))))
 
 (deftest test-when-dependency-in-context-should-override
 
@@ -286,44 +288,46 @@
 
 (deftest test-dependencies-vector
   "Test if context if properly prepared for remote queries"
-  (mock/with-mock-dal
-    {:dps [{:service        :remote-svc
-            :request-id     request-id
-            :interaction-id interaction-id
-            :query          {:param "Some Value"}
-            :resp           {:remote :response}}]}
-    (let [meta {:realm :realm5}
-          ctx (-> {:meta           meta
-                   :request-id     request-id
-                   :interaction-id interaction-id}
-                  (edd/reg-cmd :test-cmd (fn [ctx cmd]
-                                           {:event-id :event-1
-                                            :value    (:value cmd)})
-                               :deps [:test-value {:query   (fn [_ cmd]
-                                                              {:param (:value cmd)})
-                                                   :service :remote-svc}]
-                               :id-fn (fn [ctx cmd]
-                                        (get-in ctx [:c1 :id]))))
-          ctx (cmd/fetch-dependencies-for-command
-               ctx
-               {:cmd-id :test-cmd
-                :id     cmd-id
-                :value  "Some Value"})]
-      (is (= {:test-value
-              {:remote :response}}
-             (dissoc ctx :dps)))
+  (with-redefs [util/get-env (fn [v]
+                               (get {"PrivateHostedZoneName" "mock.com"} v))]
+    (mock/with-mock-dal
+      {:dps [{:service        :remote-svc
+              :request-id     request-id
+              :interaction-id interaction-id
+              :query          {:param "Some Value"}
+              :resp           {:remote :response}}]}
+      (let [meta {:realm :realm5}
+            ctx (-> {:meta           meta
+                     :request-id     request-id
+                     :interaction-id interaction-id}
+                    (edd/reg-cmd :test-cmd (fn [ctx cmd]
+                                             {:event-id :event-1
+                                              :value    (:value cmd)})
+                                 :deps [:test-value {:query   (fn [_ cmd]
+                                                                {:param (:value cmd)})
+                                                     :service :remote-svc}]
+                                 :id-fn (fn [ctx cmd]
+                                          (get-in ctx [:c1 :id]))))
+            ctx (cmd/fetch-dependencies-for-command
+                 ctx
+                 {:cmd-id :test-cmd
+                  :id     cmd-id
+                  :value  "Some Value"})]
+        (is (= {:test-value
+                {:remote :response}}
+               (dissoc ctx :dps)))
 
-      (client/verify-traffic [{:body            (util/to-json
-                                                 {:query          {:param "Some Value"}
-                                                  :meta           meta
-                                                  :request-id     request-id
-                                                  :interaction-id interaction-id})
-                               :headers         {"X-Authorization" "#mock-id-token"
-                                                 "Content-Type"    "application/json"}
-                               :method          :post
-                               :idle-timeout    10000
-                               :connect-timeout 300
-                               :url             "https://remote-svc./query"}]))))
+        (client/verify-traffic [{:body            (util/to-json
+                                                   {:query          {:param "Some Value"}
+                                                    :meta           meta
+                                                    :request-id     request-id
+                                                    :interaction-id interaction-id})
+                                 :headers         {"X-Authorization" "#mock-id-token"
+                                                   "Content-Type"    "application/json"}
+                                 :method          :post
+                                 :idle-timeout    10000
+                                 :connect-timeout 300
+                                 :url             (cmd/calc-service-query-url "remote-svc")}])))))
 
 (deftest dependant-deps
   (let [current-aggregate {:id      cmd-id-1
@@ -467,9 +471,9 @@
       {:aggregate-store [{:id      cmd-id-2
                           :v0      {"first-name" "Jack"}
                           :version 1}]}
-      (mock/apply-cmd ctx {:commands [{:cmd-id     :cmd-1
+      (mock/apply-cmd ctx {:commands [{:cmd-id      :cmd-1
                                        "first-name" "Edd-1"
-                                       :id         cmd-id-1}]})
+                                       :id          cmd-id-1}]})
       (mock/verify-state :aggregate-store [{:id      cmd-id-2
                                             :v0      {:first-name "Jack"}
                                             :version 1}

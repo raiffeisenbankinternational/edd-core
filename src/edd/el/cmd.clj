@@ -20,13 +20,12 @@
    [aws.aws :as aws])
   (:import (clojure.lang ExceptionInfo)))
 
-(defn calc-service-url
+(defn calc-service-query-url
   [service]
-  (str "https://"
-       (name
-        service)
-       "."
+  (str "https://api."
        (util/get-env "PrivateHostedZoneName")
+       "/legacy/"
+       (name service)
        "/query"))
 
 (defn call-query-fn
@@ -39,7 +38,7 @@
 
   (let [query-fn query
         service-name (:service-name ctx)
-        url (calc-service-url
+        url (calc-service-query-url
              service)
         token (aws/get-token ctx)
         resolved-query (call-query-fn ctx cmd query-fn deps)
@@ -70,7 +69,7 @@
                       {:error {:to-service   service
                                :from-service service-name
                                :query-id     (:query-id resolved-query)
-                               :message      {:response (get response :body)
+                               :message      {:response     (get response :body)
                                               :error-source service}}})))
     (if (> (:status response 0) 299)
       (throw (ex-info (str "Deps request error for " service)

@@ -18,14 +18,16 @@
 (defmacro verify-traffic-edn
   [y]
   `(is (= ~y
-          (mapv
-           map-body-to-edn
-           (:traffic @*world*)))))
+          (->> (:traffic @*world*)
+               (mapv map-body-to-edn)
+               (mapv #(dissoc % :keepalive))))))
 
 (defmacro verify-traffic
   [y]
   `(is (= ~y
-          (:traffic @*world*))))
+          (mapv
+           #(dissoc % :keepalive)
+           (:traffic @*world*)))))
 
 (defn traffic
   ([]
@@ -93,12 +95,12 @@
 
       (do
         (log/error {:error {:message "Mock not Found"
-                            :url url
-                            :method method
-                            :req req}})
+                            :url     url
+                            :method  method
+                            :req     req}})
         (ref
          {:status 200
-          :body (util/to-json {:result nil})})))))
+          :body   (util/to-json {:result nil})})))))
 
 (defmacro mock-http
   [responses & body]
