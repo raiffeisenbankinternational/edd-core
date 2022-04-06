@@ -106,7 +106,7 @@
         (get user :roles [])))
 
 (defn get-realm
-  [body {:keys [roles]} role]
+  [_ {:keys [roles]} _]
   (let [realm-prefix "realm-"
         realm (->> roles
                    (map name)
@@ -123,7 +123,31 @@
     #(= % :non-interactive)
     (:roles user))))
 
-(defn check-user-role
+(defn extract-m2m-user [authorizer]
+  (let [groups (-> authorizer :claims (str/split #" "))]
+    {:id (-> authorizer :user)
+     :roles groups
+     :role (first groups)
+     :email (-> authorizer :email)}))
+
+(defmulti check-user-role
+  (fn [ctx] (get-in (:req ctx) [:requestContext :authorizer :principalId])))
+
+(defmethod check-user-role "LMS" [ctx]
+  (let [user (extract-m2m-user (-> ctx :req :requestContext :authorizer))
+        role (or (-> ctx :body :user :selected-role)
+                 (non-interactive user)
+                 (first (remove #(or (= % :anonymous)
+                                     (str/starts-with? (name %) "realm-"))
+                                (:roles user))))
+        user (assoc user :role role)]
+    (assoc ctx :user user
+           :meta {:realm (get-realm nil user nil)
+                  :user (assoc user
+                               :department-code "000"
+                               :department "No Department")})))
+
+(defmethod check-user-role :default
   [{:keys [_ req] :as ctx}]
   (let [{:keys [user body]} (jwt/parse-token
                              ctx
