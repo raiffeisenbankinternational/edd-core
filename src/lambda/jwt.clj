@@ -68,8 +68,10 @@
                                       (mapv
                                        keyword
                                        (.asArray (.getClaim jwt "cognito:groups") String)))})
-                (assoc ctx
-                       :body {:error resp})))
+                (do
+                  (log/error "Token attributes validation failed" resp)
+                  (assoc ctx
+                         :body {:error resp}))))
 
             (catch SignatureVerificationException e
               (log/error "Unable to verify signature" e)
