@@ -17,19 +17,23 @@
 
   (let [request-id (uuid/gen)
         interaction-id (uuid/gen)
-        meta {:realm :realm11
-              :some-other-stuff :yes}
-        cmd {:request-id request-id,
+        meta {:realm            :realm12
+              :some-other-stuff :yes
+              :user             {:id    "admin@example.com"
+                                 :email "admin@example.com"
+                                 :roles [:admin :read-only]
+                                 :role  :admin}}
+        cmd {:request-id     request-id,
              :interaction-id interaction-id,
-             :meta meta
-             :query [{:query-id :get-by-id}]}]
+             :meta           meta
+             :query          [{:query-id :get-by-id}]}
+        user {:id             ""
+              :email          ""
+              :cognito:groups ["non-interactive" "realm-test"]}]
     (mock/with-mock-dal
       (with-redefs [realm-mock fl/get-realm
                     jwt/parse-token (fn [ctx _]
-                                      (assoc ctx
-                                             :user {:id ""
-                                                    :email ""
-                                                    :roles [:non-interactive :realm-test]}))
+                                      user)
                     sqs/sqs-publish (fn [{:keys [message]}]
                                       (is (= {:Records [{:key (str "response/"
                                                                    request-id
@@ -38,7 +42,11 @@
                     query/handle-query (fn [ctx body]
                                          (is (= cmd
                                                 body))
-                                         (is (= meta
+                                         (is (= (assoc meta
+                                                       :user {:id    "admin@example.com"
+                                                              :email "admin@example.com"
+                                                              :roles [:admin :read-only]
+                                                              :role  :admin})
                                                 (:meta ctx))))]
         (mock-core
          :invocations [(api-request cmd)]
@@ -54,20 +62,20 @@
   (let [request-id (uuid/gen)
         interaction-id (uuid/gen)
         realm :realm11
-        user {:id ""
-              :email ""
-              :roles [:anonymous :account-manager :realm-realm11]}
+        roles ["roles-account-manager" "realm-realm11"]
+        user {:id             ""
+              :email          ""
+              :cognito:groups roles}
         meta {:realm realm
-              :user user}
-        cmd {:request-id request-id,
+              :user  user}
+        cmd {:request-id     request-id,
              :interaction-id interaction-id,
-             :meta meta
-             :query [{:query-id :get-by-id}]}]
+             :meta           meta
+             :query          [{:query-id :get-by-id}]}]
     (mock/with-mock-dal
       (with-redefs [realm-mock fl/get-realm
                     jwt/parse-token (fn [ctx _]
-                                      (assoc ctx
-                                             :user user))
+                                      user)
                     sqs/sqs-publish (fn [{:keys [message]}]
                                       (is (= {:Records [{:key (str "response/"
                                                                    request-id
@@ -76,11 +84,10 @@
                     query/handle-query (fn [ctx body]
                                          (is (= cmd body))
                                          (is (= {:realm realm
-                                                 :user {:email ""
-                                                        :id ""
-                                                        :role :account-manager
-                                                        :department-code "000"
-                                                        :department "No Department"}}
+                                                 :user  {:email ""
+                                                         :id    ""
+                                                         :role  :account-manager
+                                                         :roles [:account-manager]}}
                                                 (:meta ctx))))]
         (mock-core
          :invocations [(api-request cmd)]

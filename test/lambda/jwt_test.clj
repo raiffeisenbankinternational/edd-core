@@ -15,30 +15,44 @@
 
 (def jwks-key {:keys
                [{:alg "RS256",
-                 :e "AQAB",
+                 :e   "AQAB",
                  :kid "S9cCq4yI/Mo7q8asn5fQmiQ/I9bIkQ29rkko/52fBeg=",
                  :kty "RSA",
                  :n
                  "zUo98BHmk5TO-XYflS_8r25nxxpPU6SyM4xba1CsBhfRF9OO9QEnPcaijz7XDNHuQmv0zcM-_uEDqN8OhuwCcXG2XtbONOO_qV4NArDd1t21z6HG0W9I6Ky89ajUWX2R48Y-lqQR-22qD_YHtFZ8TQTIj1ExWTzsWjYDbHRUIxU44Inhg2rJKwpDN937K02layjuiOZRIchPTb18cr9BCpzWHG4hQB3Pm-gvmZ_BEEoKF7iiwnV1RThF2DcLKG2hyoGF31gczdpySInjCVSDnLZomjCjWGyr5pEnygdq8dEIu39rCf9Wz2aLTSZAFZK95LwAIO0_K_UnSbSG5ldbXw",
                  :use "sig"}
                 {:alg "RS256",
-                 :e "AQAB",
+                 :e   "AQAB",
                  :kid "drv6h8K7Vh4axnnJcD2161kJpBgzDMIP0T3ERzzpM1A=",
                  :kty "RSA",
                  :n
                  "uRQ-pJAKYoH8-0UiPMlJ-KEsAB-TT4hDu2gsgadVxaAlXz6z3hTeTV0aTaEpj30P39kwReVC7Dt9JJodmH6MmkMIfPRVwJh9dpwtUjrI3CG4-Ax2gKREibEMZPJez9dBaiz1cKaKVWHj-EU6f6K1rMvDKrVC3VSahEt50ZKii8dJPi1BoBandVfuisfejhOcLEbCuFV1MTBVz-jdV6q1rr4J-EeK7d41JIfRLAY9Dtv-jW_p1I6EpwCxQDMC8Px7GySW5TLhnSVo-Ff_9helWdXWYfAH8gEcdUFT8sW2wkoP5QXK19iLoGphrGCsg4nmmM_sAhYoYVj-7wjM5-vYAQ",
+                 :use "sig"}
+                {:alg "RS256",
+                 :e   "AQAB",
+                 :kid "X5qJ3vydBGx+hORooXC9YkmjqC58iE7K5JVpPYg+9jo=",
+                 :kty "RSA",
+                 :n
+                 "oDrPRN5yInnjAvhwrUmrYiLx2v1SchQVlYH7rV2uYhIbagcwh2sxbjNZojSdBlKw8IxbEzpbwSYKqrOVwwlx_UKLQooPShZt1KDgY67ZJXDQtB3y6eIkbiPtaqRrNZZf7pAqYQhMwu_UWZeifMnWyr8aidwE4IJtWGTdNDo12vyEbmKd7fdvA-pUPaMmkdQKclle26UM62ecFFqU1iUukgcrFZGhuQt9-BcLVT2w1Jcvw_adQz6hMbw1KtmWpq-hFy_o3b0jg2TX6xGAgrzVX241kZoyca143l4cvjOYSLebLCMdgtNLxFYmYQn98UAdMA-xZ9JcAeffEo2yQbH9FQ",
+                 :use "sig"}
+                {:alg "RS256",
+                 :e   "AQAB",
+                 :kid "7Rq9iNJN4Q2fyKbQbVqpnxKRJIu4zpgeysI0tJig9wA=",
+                 :kty "RSA",
+                 :n
+                 "xCj-MBiyaFuuJBlyCgC1q7rq5DObFrZYkClJ4ZMgPpPMFJBrg9fQJ4KgyZwncCp9o7KnUN8QCnpNDcMJYmtkoU9QzyvLmjiYae39ujB6ImxesEAQwa9JXvkQHCCIYntM2s5x0cu7wdAbq1S4nMtDTX4_B2wfrJpAv1CVLtItIzN3HNsrWAAl42pnVAHl1S8RcKqeiBFV86d1BYDeMT6QtkC2Pki0PWZZ0nNh0ymyjrZ6TeY4KdOejcEJBdC4GN0UzJ05kINi6WBKSMBHgifpn199KUYmMP_YuRFEkntE7T65Zq8tZkjO23_dlVw4fYKAsDv8UV4AFZJI0Y11RWywKw",
                  :use "sig"}]})
 
 (def jwks-key-2 {:keys
                  [{:alg "RS256",
-                   :e "AQAB",
+                   :e   "AQAB",
                    :kid "HQqlwJIhr/K+aHFIdTVTq71yeJ50SknoLoK4dG/Hn9w=",
                    :kty "RSA",
                    :n
                    "pT6s1QhVtMdb_f_CTwtVTbYQuNXBVssn5vs9UIHurn7zE5_2iMMcHGCdzfcE1axj8N884XBr4NyKJ_LMedABg7rPqmVz-hfqXPkfA_32ikMU3VJtj6UYA75StBU6pkl2-OKAnctbQO05ElL4dRsAIPpKOpniX5-c5Gb_UgXOmxsAc2zQ61aQUhIJ10tTSjwU2DmXaPaFMJXQyZUZ0TiRUSrOSqJlCLmY9juWtIoranrIN4YqUfelXtLuxMc6PKBpM79nULedd_7FF720puUGasx54kupjGn_-XVqM1rgAR9EqU2TAITro6QljTAZT5L2h8HVkwbi0S_570drCkqcIw",
                    :use "sig"}
                   {:alg "RS256",
-                   :e "AQAB",
+                   :e   "AQAB",
                    :kid "J/fnjLTd4bmKqN2owX5o+B5+xa7vD7CyR7SnhokO1Qc=",
                    :kty "RSA",
                    :n
@@ -46,91 +60,95 @@
                    :use "sig"}]})
 
 (def jwks-key-3 {:keys [{:alg "RS256"
-                         :e "AQAB"
+                         :e   "AQAB"
                          :kid "TgiwQuGdZBRZWtpBsS8x49CXcuSDZrvtoOx893sB1LU="
                          :kty "RSA"
-                         :n "gUJYmaRYWlR5AcNH-pAwhTWArTBKTMW1DH2HbXE7sqCOy3XZt8T5X8TC-48I1Og05sdT-yoW2Amw8WmmHX8GB_U36RP3xA5wunQlJ-BLLJ77VA7Cy8AkDQZYmWwkfnNm0yKPOiADkcGQT0LEO_6BcGqV_h1Xc8FEsjhD4ovQIibr8JpQ86XNklItpquwzxP1nb48ZloI0gN4_K6tsH_E6cA_p8R0oohmeh1WIq2EWLFV1AOOg6qt17DLDfYDKthOtNceZTUYM25FkAqnsb-fB_Yz_nSsQt4-v6_k8WSA2fdevobz3j6u8yQ9R-712Q_xCvsuD4ZcKAzr4W6QEUdYjw"
+                         :n   "gUJYmaRYWlR5AcNH-pAwhTWArTBKTMW1DH2HbXE7sqCOy3XZt8T5X8TC-48I1Og05sdT-yoW2Amw8WmmHX8GB_U36RP3xA5wunQlJ-BLLJ77VA7Cy8AkDQZYmWwkfnNm0yKPOiADkcGQT0LEO_6BcGqV_h1Xc8FEsjhD4ovQIibr8JpQ86XNklItpquwzxP1nb48ZloI0gN4_K6tsH_E6cA_p8R0oohmeh1WIq2EWLFV1AOOg6qt17DLDfYDKthOtNceZTUYM25FkAqnsb-fB_Yz_nSsQt4-v6_k8WSA2fdevobz3j6u8yQ9R-712Q_xCvsuD4ZcKAzr4W6QEUdYjw"
                          :use "sig"}
                         {:alg "RS256"
-                         :e "AQAB"
+                         :e   "AQAB"
                          :kid "O5vEjcKWd4C94owJMyOKSOvAVX2pKjrevAg4rYbiaJc="
                          :kty "RSA"
-                         :n "1v-98Xxku7kr-6EKviAkWiA8yKw8ZBSKB20LXWXX3W9VnC0lmBouTNqttRIiAFn0hEq4n9yj4yuhqwIH-oDwzL1O3ssR8liC5EzyLY_6ZNawg1377WWoO3A7-o72WnidZhCj-QM1VyBkxEa7yQyYf6pEpTagxlxaaonRw77r-vo8v6IqZZCf0HCkEXGh1B_1Umdn6agVAYQOva1GDtnAmGFqrBXDinDLqsuw3GJdSO6U-vJxpI6p4ftdDNy7lHEq3nAgvIQ8O7xHoqPAxpzVeoVAWNmrvQGVqzCr6ExFJnnH1gpBKkIUPPrgKjFL9YDXzdCB0HRjG4iq2ksPBbKWGQ"
+                         :n   "1v-98Xxku7kr-6EKviAkWiA8yKw8ZBSKB20LXWXX3W9VnC0lmBouTNqttRIiAFn0hEq4n9yj4yuhqwIH-oDwzL1O3ssR8liC5EzyLY_6ZNawg1377WWoO3A7-o72WnidZhCj-QM1VyBkxEa7yQyYf6pEpTagxlxaaonRw77r-vo8v6IqZZCf0HCkEXGh1B_1Umdn6agVAYQOva1GDtnAmGFqrBXDinDLqsuw3GJdSO6U-vJxpI6p4ftdDNy7lHEq3nAgvIQ8O7xHoqPAxpzVeoVAWNmrvQGVqzCr6ExFJnnH1gpBKkIUPPrgKjFL9YDXzdCB0HRjG4iq2ksPBbKWGQ"
                          :use "sig"}]})
 
 (def region "eu-central-1")
 
 (defn ctx [jwks-all]
   {:jwks-all (:keys jwks-all)
-   :env {:region region}
-   :auth {:user-pool-id util-test/user-pool-id
-          :client-id util-test/user-pool-client-id
-          :client-secret util-test/user-pool-client-secret}})
+   :env      {:region region}
+   :auth     {:user-pool-id  util-test/user-pool-id
+              :client-id     util-test/user-pool-client-id
+              :client-secret util-test/user-pool-client-secret}})
 
 (deftest parse-token-test-expired-test
   (let [ctx (ctx jwks-key)]
     (with-redefs [util/get-current-time-ms (fn [] 1682668081782)]
-      (is (= (assoc ctx
-                    :body {:error {:aud :valid
-                                   :exp :invalid
-                                   :iss :valid
-                                   :jwk :valid
-                                   :signature :valid}})
+      (is (= {:error {:aud       :valid
+                      :exp       :invalid
+                      :iss       :valid
+                      :jwk       :valid
+                      :signature :valid}}
              (jwt/parse-token ctx token))))))
 
 (deftest parse-token-test
   (with-redefs [util/get-current-time-ms (fn [] 1602668081782)]
     (let [ctx {:jwks-all (:keys jwks-key-3)
-               :env {:region region}
-               :auth {:user-pool-id "eu-central-1_RsHDV8c8n"
-                      :client-id "1unj1klo6859lam8vmbkuhk3r3"
-                      :client-secret util-test/user-pool-client-secret}}]
-      (is (= (merge ctx
-                    {:user {:id "john.smith@rbinternational.com"
-                            :email "john.smith@rbinternational.com"
-                            :roles [:anonymous
-                                    :lime-risk-managers
-                                    :lime-account-managers
-                                    :lime-limit-managers
-                                    :realm-test]
-                            :department "No Department"
-                            :department-code "000"}})
+               :env      {:region region}
+               :auth     {:user-pool-id  "eu-central-1_RsHDV8c8n"
+                          :client-id     "1unj1klo6859lam8vmbkuhk3r3"
+                          :client-secret util-test/user-pool-client-secret}}]
+      (is (= {:at_hash          "Uivh_GqvLz8ud5kvbQpOyA"
+              :aud              "1unj1klo6859lam8vmbkuhk3r3"
+              :auth_time        1646647402
+              :cognito:groups   ["lime-risk-managers"
+                                 "lime-account-managers"
+                                 "lime-limit-managers"
+                                 "realm-test"]
+              :cognito:username "john.smith@rbinternational.com"
+              :department       "No Department"
+              :department_code  "000"
+              :email            "john.smith@rbinternational.com"
+              :email_verified   false
+              :event_id         "43909f02-af54-4ef1-9b8f-122f7d94a490"
+              :exp              1647513070
+              :family_name      "Smith"
+              :given_name       "John"
+              :iat              1647469870
+              :iss              "https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_RsHDV8c8n"
+              :sub              "000d0c9d-d5f1-4cbd-adb2-fa9480be2346"
+              :token_use        "id"}
              (jwt/parse-token ctx token-with-department))))))
 
 (deftest toke-expired-test
   (let [ctx (ctx jwks-key)]
-    (is (= (assoc ctx
-                  :body {:error {:jwk :invalid}})
+    (is (= {:error {:jwk :invalid}}
            (jwt/parse-token ctx token-user-pool-2)))))
 
 (deftest parse-invalid-signature-token-test
   (let [ctx (ctx jwks-key)]
-    (is (= (assoc ctx
-                  :body {:error {:jwk :valid
-                                 :signature :invalid}})
+    (is (= {:error {:jwk       :valid
+                    :signature :invalid}}
            (jwt/parse-token ctx token-invalid-signature)))))
 
 (deftest parse-valid-jwt-but-from-different-userpool-test
   (let [ctx (ctx jwks-key-2)]
     (with-redefs [util/get-current-time-ms (fn [] 1682668081782)]
-      (is (= (assoc ctx
-                    :body {:error {:aud :invalid
-                                   :exp :invalid
-                                   :iss :invalid
-                                   :jwk :valid
-                                   :signature :valid}})
+      (is (= {:error {:aud       :invalid
+                      :exp       :invalid
+                      :iss       :invalid
+                      :jwk       :valid
+                      :signature :valid}}
              (jwt/parse-token ctx token-user-pool-2))))))
 
 (deftest token-missing-test
   (let [ctx (ctx jwks-key)]
-    (is (= (assoc ctx
-                  :body {:error {:jwt :invalid}})
+    (is (= {:error {:jwt :invalid}}
            (jwt/parse-token ctx nil)))))
 
 (deftest token-not-valid-string-test
   (let [ctx (ctx jwks-key)]
-    (is (= (assoc ctx
-                  :body {:error {:jwt :invalid}})
+    (is (= {:error {:jwt :invalid}}
            (jwt/parse-token ctx "invalit-token-here")))))
 
 (def env {"Region" region})
@@ -139,6 +157,6 @@
   (with-redefs [util/get-env (fn [e]
                                (get env e))]
     (is (= {:something :here
-            :jwks-all (:keys jwks-key)
-            :env {:region region}}
+            :jwks-all  (:keys jwks-key)
+            :env       {:region region}}
            (jwt/fetch-jwks-keys {:something :here})))))

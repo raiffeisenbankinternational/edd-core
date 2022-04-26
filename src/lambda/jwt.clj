@@ -58,29 +58,27 @@
                                (.getExpiresAt jwt))})
                   [invalid] (filter (fn [[_ v]] (= v :invalid)) resp)]
               (if-not invalid
-                (assoc ctx
-                       :user {:id    (.asString (.getClaim jwt "email"))
-                              :email (.asString (.getClaim jwt "email"))
-                              :department (.asString (.getClaim jwt "department"))
-                              :department-code (.asString (.getClaim jwt "department_code"))
-                              :roles (cons
-                                      :anonymous
-                                      (mapv
-                                       keyword
-                                       (.asArray (.getClaim jwt "cognito:groups") String)))})
+                (->> (into {} (.getClaims jwt))
+                     (reduce
+                      (fn [p [k v]]
+                        (let [values [(.asInt v)
+                                      (.asString v)
+                                      (.asBoolean v)
+                                      (vec (.asArray v (.getClass "")))]
+                              value (first
+                                     (remove nil? values))]
+                          (assoc p
+                                 (keyword k) value)))
+                      {}))
                 (do
                   (log/error "Token attributes validation failed" resp)
-                  (assoc ctx
-                         :body {:error resp}))))
+                  {:error resp})))
 
             (catch SignatureVerificationException e
               (log/error "Unable to verify signature" e)
-              (assoc ctx
-                     :body {:error {:jwk       :valid
-                                    :signature :invalid}}))))
-        (assoc ctx
-               :body {:error {:jwk :invalid}})))
+              {:error {:jwk       :valid
+                       :signature :invalid}})))
+        {:error {:jwk :invalid}}))
     (catch Exception e
       (log/error "Unable to parse token" e)
-      (assoc ctx
-             :body {:error {:jwt :invalid}}))))
+      {:error {:jwt :invalid}})))
