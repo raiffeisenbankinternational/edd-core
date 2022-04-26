@@ -106,15 +106,16 @@
         (get user :roles [])))
 
 (defn get-realm
-  [_ {:keys [roles]} _]
-  (let [realm-prefix "realm-"
-        realm (->> roles
-                   (map name)
-                   (filter #(str/starts-with? % realm-prefix))
-                   (first))]
+  [ctx {:keys [realm roles]} _]
+  (let [default-realm (get-in ctx [:auth :default-realm])
+        realm (or realm
+                  default-realm)]
     (when-not realm
-      (throw (ex-info (str "Realm: " realm) {:error "Missing realm in request token"})))
-    (keyword (subs realm (count realm-prefix)))))
+      (throw (ex-info (str "Realm: " realm) {:error         "Missing realm in request token"
+                                             :realm         realm
+                                             :roles         roles
+                                             :default-realm default-realm})))
+    realm))
 
 (defn non-interactive
   [user]
@@ -123,75 +124,115 @@
     #(= % :non-interactive)
     (:roles user))))
 
-(defn extract-m2m-user [authorizer]
-  (let [groups (-> authorizer
-                   :claims
-                   :cognito:groups
-                   (str/split #","))
-        groups (map keyword groups)]
-    {:id    (-> authorizer :claims :email)
-     :roles groups
-     :role  (first groups)
-     :email (-> authorizer :claims :email)}))
+(defn extract-user
+  [ctx claims]
+  (let [groups (:cognito:groups claims)
+        groups (cond
+                 (vector? groups) groups
+                 groups (-> groups
+                            (str/split #","))
+                 :else [])
+        groups (filter #(str/includes? % "-") groups)
+        id-claim (keyword (get-in ctx [:auth :mapping :id] :email))
+        id (get claims id-claim)]
+    (reduce
+     (fn [user group]
+       (let [group (name group)
+             [prefix value] (-> group
+                                (str/split #"-" 2))
+             [prefix value] (if (= prefix "lime")
+                              ["roles" group]
+                              [prefix value])
+             [prefix value] (if (= group "non-interactive")
+                              ["roles" group]
+                              [prefix value])]
+         (if (= prefix "realm")
+           (assoc user :realm (keyword value))
+           (update user (keyword prefix) conj (keyword value)))))
+     {:id    id
+      :roles '()
+      :email (:email claims)}
+     groups)))
 
 (defmulti check-user-role
   (fn [ctx]
     (get-in (:req ctx) [:requestContext :authorizer :claims :token_use]
             (get-in (:req ctx) [:requestContext :authorizer :token_use]))))
 
-(defn parse-authorizer-user
-  [ctx]
-  (let [user (extract-m2m-user (-> ctx :req :requestContext :authorizer))
-        role (or (-> ctx :body :user :selected-role)
-                 (non-interactive user)
-                 (first (remove #(or (= % :anonymous)
-                                     (str/starts-with? (name %) "realm-"))
-                                (:roles user))))
-        user (assoc user :role role)]
-    (assoc ctx :user user
-           :meta {:realm (get-realm nil user nil)
-                  :user  (assoc user
-                                :department-code "000"
-                                :department "No Department")})))
-
 (defmethod check-user-role "id" [ctx]
-  (parse-authorizer-user ctx))
+  (get-in ctx [:req :requestContext :authorizer :claims]))
 
 (defmethod check-user-role "m2m" [ctx]
-  (let [ctx (assoc-in ctx [:req :requestContext :authorizer :claims]
-                      (get-in ctx [:req :requestContext :authorizer]))]
-    (parse-authorizer-user ctx)))
+  (get-in ctx [:req :requestContext :authorizer]))
 
 (defmethod check-user-role :default
-  [{:keys [_ req] :as ctx}]
-  (let [{:keys [user body]} (jwt/parse-token
-                             ctx
-                             (or (get-in req [:headers :x-authorization])
-                                 (get-in req [:headers :X-Authorization])))
-        role (or (-> body :user :selected-role)
+  [{:keys [req] :as ctx}]
+  (jwt/parse-token
+   ctx
+   (or (get-in req [:headers :x-authorization])
+       (get-in req [:headers :X-Authorization]))))
+
+(defn extract-attrs
+  [user-claims]
+  (reduce
+   (fn [p [k v]]
+     (let [key (name k)
+           key (cond
+                 (= key "department") key
+                 (= key "department-code") key
+                 (str/starts-with? key "x-") (subs key 2)
+                 (str/starts-with? key "custom:x-") (subs key 9)
+                 :else nil)]
+       (if key
+         (assoc p (keyword key) v)
+         p)))
+   {}
+   user-claims))
+
+(defn parse-authorizer-user
+  [{:keys [body] :as ctx} user-claims]
+  (let [{:keys [roles realm] :as user} (extract-user ctx user-claims)
+        attrs (extract-attrs user-claims)
+        selected-role (-> body :user :selected-role)
+        role (if (and selected-role
+                      (not-any? #(= % selected-role)
+                                roles))
+               (throw (ex-info "Selecting non-existing role"
+                               {:message       "Selecting non-existing role"
+                                :selected-role selected-role
+                                :roles         roles}))
+               selected-role)
+        role (or role
                  (non-interactive user)
                  (first (remove
                          #(or (= % :anonymous)
                               (str/starts-with? (name %)
                                                 "realm-"))
-                         (:roles user))))]
+                         roles)))
+        role (or role :anonymous)
+        user (cond-> {:id    (:id user)
+                      :roles roles
+                      :role  role
+                      :email (:email user)}
+               realm (assoc :realm realm))]
+    (if (empty? attrs)
+      user
+      (assoc user :attrs attrs))))
 
-    (cond
-      (:error body) (assoc ctx :body body)
-      (= role :non-interactive) (assoc ctx :meta (:meta body))
-      (has-role? user role) (assoc ctx :user {:id    (:id user)
-                                              :email (:email user)
-                                              :role  role
-                                              :roles (:roles user [])}
-                                   :meta {:realm (get-realm body user role)
-                                          :user  {:id              (:id user)
-                                                  :email           (:email user)
-                                                  :role            role
-                                                  :department-code (:department-code user "000")
-                                                  :department      (:department user "No Department")}})
-      :else (assoc ctx :user {:id    "anonymous"
-                              :email "anonymous"
-                              :role  :anonymous}))))
+(defn assign-metadata
+  [{:keys [body] :as ctx}]
+  (let [{:keys [meta] :or {}} body
+        {:keys [error] :as user-claims} (check-user-role ctx)
+        user-claims (if error
+                      (throw (ex-info "User authentication error" error))
+                      user-claims)
+        {:keys [role] :as user} (parse-authorizer-user ctx user-claims)]
+    (if (= :non-interactive
+           role)
+      (assoc ctx :meta meta)
+      (assoc ctx :meta (assoc meta
+                              :realm (get-realm ctx user {})
+                              :user (dissoc user :realm))))))
 
 (def from-api
   {:init jwt/fetch-jwks-keys
@@ -209,7 +250,7 @@
 
                :else (-> ctx
                          (assoc :body (util/to-edn (:body body)))
-                         (check-user-role)))))})
+                         (assign-metadata)))))})
 
 (defn to-api
   [{:keys [resp resp-content-type resp-serializer-fn]

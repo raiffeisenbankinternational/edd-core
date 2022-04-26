@@ -246,6 +246,7 @@
                                                                  "/0/local-test.json")}]}
                                            (util/to-edn message))))]
       (mock-core
+       :env {"Region" "eu-west-1"}
        :invocations [(api/api-request
                       {:commands       [{:cmd-id :dummy-cmd,
                                          :bla    "ble",
@@ -295,6 +296,7 @@
                                                                  "/0/local-test.json")}]}
                                            (util/to-edn message))))]
       (mock-core
+       :env {"Region" "eu-west-1"}
        :invocations [(api/api-request
                       {:command        {:cmd-id :dummy-cmd,
                                         :bla    "ble",

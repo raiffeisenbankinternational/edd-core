@@ -16,8 +16,10 @@
                :cmd-id :dummy-cmd}]
    :user     {:selected-role :group-2}})
 
+(def token-with-groups "eyJraWQiOiJYNXFKM3Z5ZEJHeCtoT1Jvb1hDOVlrbWpxQzU4aUU3SzVKVnBQWWcrOWpvPSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiI4OTljMGM1Ny02NDZlLTQyOWQtYTVhNi1iZjhkZWM3YzRhODYiLCJhdWQiOiIxZW4xdmJjNnMxazBjcHZoaDBydGc1ZzFkOCIsImNvZ25pdG86Z3JvdXBzIjpbInJvbGVzLWdyb3VwLTIiLCJyb2xlcy1ncm91cC0zIiwicmVhbG0tcHJvZCIsInJvbGVzLWdyb3VwLTEiXSwiZW1haWxfdmVyaWZpZWQiOnRydWUsImV2ZW50X2lkIjoiZTNlYjIxMjEtOGIwYy00MWQ4LWI3ZWYtZjAyMTJjOWRkNDI1IiwidG9rZW5fdXNlIjoiaWQiLCJhdXRoX3RpbWUiOjE2NTA5ODkxNTUsImlzcyI6Imh0dHBzOlwvXC9jb2duaXRvLWlkcC5ldS13ZXN0LTEuYW1hem9uYXdzLmNvbVwvZXUtd2VzdC0xX3h3QVpFbGc2UCIsImNvZ25pdG86dXNlcm5hbWUiOiJqb2huLnNtaXRoQGV4YW1wbGUuY29tIiwiZXhwIjoxNjUwOTkyNzU1LCJpYXQiOjE2NTA5ODkxNTUsImVtYWlsIjoiam9obi5zbWl0aEBleGFtcGxlLmNvbSJ9.C8rek8gX1PvYR-wnSDCGx6s15ucS5mD-7J1mQMcNS5ZhMaBDwMFqHVNORGhlgrPolnAl1u76ytSoORmtgAfBR9mf9NwqpTVj3eAMskl_aoFR603WNa2w8SFtcPVLexgOp_kQADVBrGhdPOoftASNsCobf6EpdlyiidUsu7BMal9WhyRI1yPt_Ou4WGxusy-Ojuif_Ef6C_fGv3g6ySDjTV7A_cTA-VMietwIQ6e2N2I6l9uhg4lQxWMrZlN19YTLJF6aI6BRGzjur-CLN0SosmMB7DEZAUD6lQVUwdVLRnUeOp2xVJWW7crLan5VoB9TzHMEjhppiTRwEVnfvRguyA")
+
 (defn base64request
-  [body & {:keys [token path http-method] :or {token jwt-test/token}}]
+  [body & {:keys [token path http-method] :or {token token-with-groups}}]
   {:path                  (or path "/path/to/resource"),
    :queryStringParameters {:foo "bar"},
    :pathParameters        {:proxy "/path/to/resource"},
@@ -102,7 +104,7 @@
     :User-Agent                   ["Custom User Agent String"]}})
 
 (defn request
-  [body & {:keys [token path http-method] :or {token jwt-test/token}}]
+  [body & {:keys [token path http-method] :or {token token-with-groups}}]
   {:path                  (or path "/path/to/resource"),
    :queryStringParameters {:foo "bar"},
    :pathParameters        {:proxy "/path/to/resource"},
@@ -241,7 +243,7 @@
     :requestId         "7e42b0a7-465e-4f43-aaf0-95e049fcf05b",
     :domainName        "api.lime-dev12.internal.rbigroup.cloud",
     :authorizer
-    {:cognito:groups     "realm-test,users",
+    {:cognito:groups     "realm-test,roles-users",
      :user               "rbi-glms-m2m-prod"
      :token_use          "m2m"
      :email              "rbi-glms-m2m-prod@rbi.cloud"
@@ -327,7 +329,7 @@
     :requestTime       "05/Apr/2022:13:38:09 +0000",
     :requestId         "7e42b0a7-465e-4f43-aaf0-95e049fcf05b",
     :domainName        "api.lime-dev12.internal.rbigroup.cloud",
-    :authorizer        {:claims {:cognito:groups     "realm-test,users",
+    :authorizer        {:claims {:cognito:groups     "realm-test,roles-users",
                                  :user               "rbi-glms-m2m-prod"
                                  :token_use          "id"
                                  :email              "rbi-glms-m2m-prod@rbi.cloud"
@@ -381,12 +383,14 @@
 
 (deftest test-m2m-authentication
   (mock-core
-   :invocations [(api-request-m2m dummy-cmd)]
+   :env {"Region" "eu-west-1"}
+   :invocations [(api-request-m2m (assoc dummy-cmd
+                                         :user {:selected-role :users}))]
    (core/start
     {}
     (fn [ctx body]
       {:source body
-       :user   (:user ctx)})
+       :user   (get-in ctx [:meta :user])})
     :filters [fl/from-api]
     :post-filter fl/to-api)
    (verify-traffic-edn
@@ -405,10 +409,10 @@
           [{:id     #uuid "c5c4d4df-0570-43c9-a0c5-2df32f3be124"
             :cmd-id :dummy-cmd}]
           :user
-          {:selected-role :group-2}}
+          {:selected-role :users}}
          :user {:id    "rbi-glms-m2m-prod@rbi.cloud"
-                :roles [:realm-test :users]
-                :role  :group-2
+                :roles [:users]
+                :role  :users
                 :email "rbi-glms-m2m-prod@rbi.cloud"}})
        :statusCode      200}
       :method :post
@@ -419,12 +423,14 @@
 
 (deftest test-cognito-authorizer
   (mock-core
-   :invocations [(api-request-cognito dummy-cmd)]
+   :env {"Region" "eu-west-1"}
+   :invocations [(api-request-cognito (assoc dummy-cmd
+                                             :user {:selected-role :users}))]
    (core/start
     {}
     (fn [ctx body]
       {:source body
-       :user   (:user ctx)})
+       :user   (get-in ctx [:meta :user])})
     :filters [fl/from-api]
     :post-filter fl/to-api)
    (verify-traffic-edn
@@ -443,10 +449,10 @@
           [{:id     #uuid "c5c4d4df-0570-43c9-a0c5-2df32f3be124"
             :cmd-id :dummy-cmd}]
           :user
-          {:selected-role :group-2}}
+          {:selected-role :users}}
          :user {:id    "rbi-glms-m2m-prod@rbi.cloud"
-                :roles [:realm-test :users]
-                :role  :group-2
+                :roles [:users]
+                :role  :users
                 :email "rbi-glms-m2m-prod@rbi.cloud"}})
        :statusCode      200}
       :method :post
@@ -457,21 +463,24 @@
 
 (deftest api-handler-test
   (mock-core
+   :env {"Region" "eu-west-1"}
    :invocations [(api-request dummy-cmd)]
    (core/start
     {}
     (fn [ctx body]
       {:source body
-       :user   (:user ctx)})
+       :user   (get-in ctx [:meta :user])
+       :realm  (get-in ctx [:meta :realm])})
     :filters [fl/from-api]
     :post-filter fl/to-api)
    (verify-traffic-edn
     [{:body   {:body            (util/to-json
                                  {:source dummy-cmd
                                   :user   {:id    "john.smith@example.com"
-                                           :email "john.smith@example.com",
+                                           :roles [:group-1 :group-3 :group-2]
                                            :role  :group-2
-                                           :roles [:anonymous :group-3 :group-2 :group-1]}})
+                                           :email "john.smith@example.com"}
+                                  :realm  :test})
                :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
                                  :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
                                  :Access-Control-Allow-Origin   "*"
@@ -487,12 +496,13 @@
 
 (deftest api-handler-test-base64
   (mock-core
+   :env {"Region" "eu-west-1"}
    :invocations [(api-request-base64 dummy-cmd)]
    (core/start
     {}
     (fn [ctx body]
       {:source body
-       :user   (:user ctx)})
+       :user   (get-in ctx [:meta :user])})
     :filters [fl/from-api]
     :post-filter fl/to-api)
    (do
@@ -500,9 +510,9 @@
       [{:body   {:body            (util/to-json
                                    {:source dummy-cmd
                                     :user   {:id    "john.smith@example.com"
-                                             :email "john.smith@example.com",
+                                             :roles [:group-1 :group-3 :group-2]
                                              :role  :group-2
-                                             :roles [:anonymous :group-3 :group-2 :group-1]}})
+                                             :email "john.smith@example.com"}})
                  :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
                                    :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
                                    :Access-Control-Allow-Origin   "*"
@@ -544,6 +554,7 @@
 
 (deftest test-error-result
   (mock-core
+   :env {"Region" "eu-west-1"}
    :invocations [(api-request dummy-cmd)]
    (core/start
     {}
@@ -570,6 +581,7 @@
 (deftest test-handler-exception
   (mock-core
    :invocations [(api-request dummy-cmd)]
+   :env {"Region" "eu-west-1"}
    (core/start
     {}
     (fn [ctx body]
@@ -686,9 +698,3 @@
       {:source body
        :user   (:user ctx)}))
    (do)))
-
-(deftest test-realm-filter
-  (is (= :test
-         (fl/get-realm {} {:roles [:some-role :realm-test]} :some-role)))
-  (is (thrown? ExceptionInfo
-               (fl/get-realm {} {:roles [:some-role]} :some-role))))

@@ -5,7 +5,7 @@
             [aws.lambda :as core]
             [lambda.filters :as filters]))
 
-(def filter
+(def ctx-filter
   {:init (fn [ctx]
            (assoc ctx :init-value "bla"))
    :cond (fn [{:keys [body]}]
@@ -14,7 +14,7 @@
            (assoc ctx
                   :body {:resp "Bla"}))})
 
-(def ctx {:filters [filter]})
+(def ctx {:filters [ctx-filter]})
 
 (def user
   {:id "anon"
@@ -31,7 +31,7 @@
 
 (deftest test-init-filter
   (let [ctx (core/init-filters {:some-value "true"
-                                :filters [filter
+                                :filters [ctx-filter
                                           filters/to-api
                                           filters/from-api]})]
     (is (= "true"
