@@ -176,6 +176,12 @@
             (Base64/getDecoder)
             to-decode) "UTF-8"))
 
+(defn base64URLdecode
+  [^String to-decode]
+  (String. (.decode
+            (Base64/getUrlDecoder)
+            to-decode) "UTF-8"))
+
 (def ^:dynamic *cache*)
 
 (defn hmac-sha256
