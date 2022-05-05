@@ -1,7 +1,8 @@
 (ns lambda.jwt
   (:require [lambda.util :as util]
             [clojure.walk :as walk]
-            [clojure.tools.logging :as log])
+            [clojure.tools.logging :as log]
+            [clojure.string :as str])
 
   (:import (com.auth0.jwt.algorithms Algorithm)
            (com.auth0.jwt JWT)
@@ -44,6 +45,11 @@
   (try
     (let [jwt (JWT/decode token)
           token-kid (.getKeyId jwt)
+          claims (-> token
+                     (str/split #"\.")
+                     second
+                     (util/base64URLdecode)
+                     (util/to-edn))
           [jwks] (filter #(= (:kid %) token-kid) jwks-all)]
 
       (if jwks
@@ -58,18 +64,7 @@
                                (.getExpiresAt jwt))})
                   [invalid] (filter (fn [[_ v]] (= v :invalid)) resp)]
               (if-not invalid
-                (->> (into {} (.getClaims jwt))
-                     (reduce
-                      (fn [p [k v]]
-                        (let [values [(.asInt v)
-                                      (.asString v)
-                                      (.asBoolean v)
-                                      (vec (.asArray v (.getClass "")))]
-                              value (first
-                                     (remove nil? values))]
-                          (assoc p
-                                 (keyword k) value)))
-                      {}))
+                claims
                 (do
                   (log/error "Token attributes validation failed" resp)
                   {:error resp})))
