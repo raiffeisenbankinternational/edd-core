@@ -412,8 +412,8 @@
           {:selected-role :users}}
          :user {:id    "rbi-glms-m2m-prod@rbi.cloud"
                 :roles [:users]
-                :role  :users
-                :email "rbi-glms-m2m-prod@rbi.cloud"}})
+                :email "rbi-glms-m2m-prod@rbi.cloud"
+                :role  :users}})
        :statusCode      200}
       :method :post
       :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
@@ -452,8 +452,8 @@
           {:selected-role :users}}
          :user {:id    "rbi-glms-m2m-prod@rbi.cloud"
                 :roles [:users]
-                :role  :users
-                :email "rbi-glms-m2m-prod@rbi.cloud"}})
+                :email "rbi-glms-m2m-prod@rbi.cloud"
+                :role  :users}})
        :statusCode      200}
       :method :post
       :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
@@ -478,8 +478,8 @@
                                  {:source dummy-cmd
                                   :user   {:id    "john.smith@example.com"
                                            :roles [:group-1 :group-3 :group-2]
-                                           :role  :group-2
-                                           :email "john.smith@example.com"}
+                                           :email "john.smith@example.com"
+                                           :role  :group-2}
                                   :realm  :test})
                :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
                                  :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
@@ -511,8 +511,8 @@
                                    {:source dummy-cmd
                                     :user   {:id    "john.smith@example.com"
                                              :roles [:group-1 :group-3 :group-2]
-                                             :role  :group-2
-                                             :email "john.smith@example.com"}})
+                                             :email "john.smith@example.com"
+                                             :role  :group-2}})
                  :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
                                    :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
                                    :Access-Control-Allow-Origin   "*"

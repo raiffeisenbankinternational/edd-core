@@ -210,10 +210,7 @@
                                                 "realm-"))
                          roles)))
         role (or role :anonymous)
-        user (cond-> {:id    (:id user)
-                      :roles roles
-                      :role  role
-                      :email (:email user)}
+        user (cond-> (merge user {:role role})
                realm (assoc :realm realm))]
     (if (empty? attrs)
       user

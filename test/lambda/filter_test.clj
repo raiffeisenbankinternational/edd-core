@@ -1,9 +1,21 @@
 (ns lambda.filter-test
   (:require [clojure.test :refer :all]
             [lambda.filters :as lambda-filter]
-            [lambda.api-test :as api-test]
-            [lambda.jwt :as jwt]
             [lambda.jwt-test :as jwt-test]))
+
+(def claims
+  {:cognito:groups ["lime-risk-managers"
+                    "lime-account-managers"
+                    "lime-limit-managers"
+                    "roles-admin"
+                    "realm-test"
+                    "units-rbhu"
+                    "units-ho"
+                    "roles-verifiers"]
+   :email          "john.smith@rbinternational.com"
+   :exp            1647513070
+   :sub            "000d0c9d-d5f1-4cbd-adb2-fa9480be2346"
+   :token_use      "id"})
 
 (deftest test-extract-attrs
   (is (= {:department      "DEV1"
@@ -14,28 +26,30 @@
                                        :custom:x-department-code "dep-code"}))))
 
 (deftest extract-user-test
-  (let [claims {:cognito:groups ["lime-risk-managers"
-                                 "lime-account-managers"
-                                 "lime-limit-managers"
-                                 "roles-admin"
-                                 "realm-test"
-                                 "units-rbhu"
-                                 "units-ho"
-                                 "roles-verifiers"]
-                :email          "john.smith@rbinternational.com"
-                :exp            1647513070
-                :sub            "000d0c9d-d5f1-4cbd-adb2-fa9480be2346"
-                :token_use      "id"}]
-    (is (= {:email "john.smith@rbinternational.com"
-            :id    "john.smith@rbinternational.com"
-            :realm :test
-            :units [:ho :rbhu]
-            :roles [:verifiers
-                    :admin
-                    :lime-limit-managers
-                    :lime-account-managers
-                    :lime-risk-managers]}
-           (lambda-filter/extract-user {} claims)))))
+  (is (= {:email "john.smith@rbinternational.com"
+          :id "john.smith@rbinternational.com"
+          :realm :test
+          :units [:ho :rbhu]
+          :roles [:verifiers
+                  :admin
+                  :lime-limit-managers
+                  :lime-account-managers
+                  :lime-risk-managers]}
+         (lambda-filter/extract-user {} claims))))
+
+(deftest parse-authorizer-user-test
+  (is (= {:email "john.smith@rbinternational.com"
+          :id "john.smith@rbinternational.com"
+          :realm :test
+          :role :verifiers
+          :roles '(:verifiers
+                   :admin
+                   :lime-limit-managers
+                   :lime-account-managers
+                   :lime-risk-managers)
+          :units '(:ho
+                   :rbhu)}
+         (lambda-filter/parse-authorizer-user {} claims))))
 
 (deftest extract-user-test-2
   (let [claims {:id             ""
