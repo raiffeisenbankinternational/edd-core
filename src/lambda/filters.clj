@@ -176,7 +176,7 @@
   [user-claims]
   (reduce
    (fn [p [k v]]
-     (let [key (name k)
+     (let [key (str/replace (name k) #"department_code" "department-code")
            key (cond
                  (= key "department") key
                  (= key "department-code") key
