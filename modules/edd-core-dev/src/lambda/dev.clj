@@ -59,7 +59,7 @@
   (assoc ctx :user {:id "email"
                     :email "email"
                     :roles [:realm-test :role]
-                    :department-code "000"
+                    :department_code "000"
                     :department "No Department"}))
 
 (defn- send-response-redef
