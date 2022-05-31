@@ -23,7 +23,7 @@
          (lambda-filter/extract-attrs {:id                       "za"
                                        :groups                   [:g]
                                        :x-department             "DEV1"
-                                       :custom:x-department-code "dep-code"}))))
+                                       :custom:x-department_code "dep-code"}))))
 
 (deftest extract-user-test
   (is (= {:email "john.smith@rbinternational.com"
@@ -62,10 +62,12 @@
            (lambda-filter/extract-user {} claims)))))
 
 (deftest extract-user-with-department
-  (let [ctx (jwt-test/ctx jwt-test/jwks-key)
-        claims {:department      "dep"
+  (let [claims {:department      "dep"
                 :department-code "dcode"
                 :email           "john@example.com"}]
     (is (= {:department      "dep"
             :department-code "dcode"}
-           (lambda-filter/extract-attrs claims)))))
+           (lambda-filter/extract-attrs claims)))
+
+    (is (= {:department-code "dcode"}
+           (lambda-filter/extract-attrs {:department_code "dcode"})))))
