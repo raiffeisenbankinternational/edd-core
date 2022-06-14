@@ -196,7 +196,8 @@
         selected-role (-> body :user :selected-role)
         role (if (and selected-role
                       (not-any? #(= % selected-role)
-                                roles))
+                                roles)
+                      (not (non-interactive user)))
                (throw (ex-info "Selecting non-existing role"
                                {:message       "Selecting non-existing role"
                                 :selected-role selected-role
@@ -210,6 +211,7 @@
                                                 "realm-"))
                          roles)))
         role (or role :anonymous)
+
         user (cond-> (merge user {:role role})
                realm (assoc :realm realm))]
     (if (empty? attrs)
