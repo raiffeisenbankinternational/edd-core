@@ -49,7 +49,9 @@
                    :lime-risk-managers)
           :units '(:ho
                    :rbhu)}
-         (lambda-filter/parse-authorizer-user {} claims))))
+         (lambda-filter/parse-authorizer-user {} claims)))
+  (is (thrown? Exception
+               (lambda-filter/parse-authorizer-user {:body {:user {:selected-role :non-existing-role}}} claims))))
 
 (deftest extract-user-test-2
   (let [claims {:id             ""
@@ -59,7 +61,13 @@
             :id    ""
             :realm :test
             :roles [:non-interactive]}
-           (lambda-filter/extract-user {} claims)))))
+           (lambda-filter/extract-user {} claims)))
+    (is (= {:email ""
+            :id    ""
+            :realm :test
+            :role :non-existing-role
+            :roles [:non-interactive]}
+           (lambda-filter/parse-authorizer-user {:body {:user {:selected-role :non-existing-role}}} claims)))))
 
 (deftest extract-user-with-department
   (let [claims {:department      "dep"
