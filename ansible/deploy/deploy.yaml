@@ -1,0 +1,16 @@
+- hosts: localhost
+  connection: local
+  tasks: 
+    - debug: 
+        msg: 'Creating stuff needed for IT'
+    - name: 'Create it test bucket'
+      amazon.aws.s3_bucket:
+        name: '{{ lookup("env", "AccountId") }}-{{ lookup("env", "EnvironmentNameLower") }}-it'
+        state: present
+        encryption: "AES256"
+        public_access:
+          block_public_acls: true
+          ignore_public_acls: true
+          block_public_policy: true
+          restrict_public_buckets: true
+
