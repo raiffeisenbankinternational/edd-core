@@ -57,19 +57,20 @@
              :access-key (:aws-access-key-id aws)
              :secret-key (:aws-secret-access-key aws)}
         common (common/authorize req)
-        response (client/retry-n #(util/http-put
-                                   (str "https://"
-                                        (get (:headers req) "Host")
-                                        (:uri req))
-                                   (client/request->with-timeouts
-                                    %
-                                    {:as      :stream
-                                     :headers (-> (:headers req)
-                                                  (dissoc "Host")
-                                                  (assoc "Authorization" common))
-                                     :body    (get-in object [:s3 :object :content])})
-                                   :raw true))
-        {:keys [error] :as response} (parse-response response object)]
+        response (client/retry-n #(-> (util/http-put
+                                       (str "https://"
+                                            (get (:headers req) "Host")
+                                            (:uri req))
+                                       (client/request->with-timeouts
+                                        %
+                                        {:as      :stream
+                                         :headers (-> (:headers req)
+                                                      (dissoc "Host")
+                                                      (assoc "Authorization" common))
+                                         :body    (get-in object [:s3 :object :content])})
+                                       :raw true)
+                                      (parse-response object)))
+        {:keys [error] :as response} response]
     (if error
       response
       (io/reader (:body response) :encoding "UTF-8"))))
@@ -90,18 +91,19 @@
              :access-key (:aws-access-key-id aws)
              :secret-key (:aws-secret-access-key aws)}
         common (common/authorize req)
-        response (client/retry-n #(util/http-get
-                                   (str "https://"
-                                        (get (:headers req) "Host")
-                                        (:uri req))
-                                   (client/request->with-timeouts
-                                    %
-                                    {:as      :stream
-                                     :headers (-> (:headers req)
-                                                  (dissoc "Host")
-                                                  (assoc "Authorization" common))})
-                                   :raw true))
-        {:keys [error] :as response} (parse-response response object)]
+        response (client/retry-n #(-> (util/http-get
+                                       (str "https://"
+                                            (get (:headers req) "Host")
+                                            (:uri req))
+                                       (client/request->with-timeouts
+                                        %
+                                        {:as      :stream
+                                         :headers (-> (:headers req)
+                                                      (dissoc "Host")
+                                                      (assoc "Authorization" common))})
+                                       :raw true)
+                                      (parse-response  object)))
+        {:keys [error] :as response} response]
     (if error
       response
       (io/reader (:body response) :encoding "UTF-8"))))
@@ -122,21 +124,20 @@
              :access-key (:aws-access-key-id aws)
              :secret-key (:aws-secret-access-key aws)}
         common (common/authorize req)
-        response (client/retry-n #(util/http-delete
-                                   (str "https://"
-                                        (get (:headers req) "Host")
-                                        (:uri req))
-                                   (client/request->with-timeouts
-                                    %
-                                    {:as      :stream
-                                     :headers (-> (:headers req)
-                                                  (dissoc "host")
-                                                  (assoc "Authorization" common))})
-                                   :raw true))]
-    (when (contains? response :error)
-      (log/error "Failed to fetch object" response))
-    (if (> (:status response) 299)
-      {:error (:body response)}
+        response (client/retry-n #(-> (util/http-delete
+                                       (str "https://"
+                                            (get (:headers req) "Host")
+                                            (:uri req))
+                                       (client/request->with-timeouts
+                                        %
+                                        {:as      :stream
+                                         :headers (-> (:headers req)
+                                                      (dissoc "host")
+                                                      (assoc "Authorization" common))})
+                                       :raw true)
+                                      (parse-response object)))]
+    (if (:error response)
+      response
       {:body    (io/reader (:body response) :encoding "UTF-8")
        :headers (:headers response)})))
 
@@ -161,22 +162,21 @@
              :secret-key (:aws-secret-access-key aws)}
         common (common/authorize req)]
 
-    (let [response (client/retry-n #(util/http-get
-                                     (str "https://"
-                                          (get (:headers req) "Host")
-                                          (:uri req))
-                                     (client/request->with-timeouts
-                                      %
-                                      {:query-params (convert-query-params (:query req))
-                                       :headers      (-> (:headers req)
-                                                         (dissoc "host")
-                                                         (assoc "Authorization" common))})
-                                     :raw true))]
-      (when (contains? response :error)
-        (log/error "Failed to fetch object tagging" response))
-      (if (or (:error response)
-              (> (:status response) 299))
-        {:error (:body response)}
+    (let [response (client/retry-n #(-> (util/http-get
+                                         (str "https://"
+                                              (get (:headers req) "Host")
+                                              (:uri req))
+                                         (client/request->with-timeouts
+                                          %
+                                          {:as      :stream
+                                           :query-params (convert-query-params (:query req))
+                                           :headers      (-> (:headers req)
+                                                             (dissoc "host")
+                                                             (assoc "Authorization" common))})
+                                         :raw true)
+                                        (parse-response object)))]
+      (if (:error response)
+        response
         (->> (xml/parse (:body response))
              (:content)
              (first)
@@ -236,21 +236,20 @@
              :access-key (:aws-access-key-id aws)
              :secret-key (:aws-secret-access-key aws)}
         common (common/authorize req)]
-    (let [response (client/retry-n #(util/http-put
-                                     (str "https://"
-                                          (get (:headers req) "Host")
-                                          (:uri req))
-                                     (client/request->with-timeouts
-                                      %
-                                      {:query-params (convert-query-params (:query req))
-                                       :body         (:payload req)
-                                       :headers      (-> (:headers req)
-                                                         (dissoc "host")
-                                                         (assoc "Authorization" common))})
-                                     :raw true))]
-      (when (contains? response :error)
-        (log/error "Failed to fetch object" response))
-      (if (or (:error response)
-              (> (:status response) 299))
-        {:error (:body response)}
+    (let [response (client/retry-n #(-> (util/http-put
+                                         (str "https://"
+                                              (get (:headers req) "Host")
+                                              (:uri req))
+                                         (client/request->with-timeouts
+                                          %
+                                          {:as      :stream
+                                           :query-params (convert-query-params (:query req))
+                                           :body         (:payload req)
+                                           :headers      (-> (:headers req)
+                                                             (dissoc "host")
+                                                             (assoc "Authorization" common))})
+                                         :raw true)
+                                        (parse-response object)))]
+      (if (:error response)
+        response
         {:version (get-in response [:headers :x-amz-version-id])}))))
