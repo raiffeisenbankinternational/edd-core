@@ -18,10 +18,22 @@ COPY --chown=build:build modules modules
 COPY --chown=build:build deps.edn deps.edn
 COPY --chown=build:build tests.edn tests.edn
 COPY --chown=build:build format.sh format.sh
+COPY --chown=build:build ansible ansible
 
 RUN ./format.sh check
 
 COPY --chown=build:build sql sql
+
+USER root
+
+
+RUN mkdir -p /home/jenkins
+RUN chown build:build /home/build -R &&\
+    chown build:build /home/jenkins -R &&\
+    chown build:build /dist -R 
+
+
+USER build
 
 ARG BUILD_ID
 
@@ -29,6 +41,7 @@ RUN set -e &&\
     echo "Org: ${ARTIFACT_ORG}" &&\
     clj -M:test:unit &&\
     export AWS_DEFAULT_REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region) &&\
+    export AWS_REGION=$AWS_DEFAULT_REGION &&\
     TARGET_ACCOUNT_ID="$(aws sts get-caller-identity | jq -r '.Account')" &&\
     cred=$(aws sts assume-role \
                 --role-arn arn:aws:iam::${TARGET_ACCOUNT_ID}:role/PipelineRole \
@@ -64,6 +77,8 @@ RUN set -e &&\
             -schemas=prod \
             -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
             -locations="filesystem:${PWD}/sql/files/edd" migrate &&\
+    echo "Run ansible stuff" &&\
+    ansible-playbook ansible/deploy/deploy.yaml &&\
     echo "Building b${BUILD_ID}" &&\
     clj -M:jar  \
        --app-group-id ${ARTIFACT_ORG} \
