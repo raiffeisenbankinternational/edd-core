@@ -35,6 +35,15 @@
         resp))
     (log/warn "Id is nil")))
 
+(defn fetch-by-id
+  [ctx & [query]]
+  {:pre [(or (:query ctx)
+             query)]}
+  (if-let [id (or (-> ctx :query :id)
+                  (:id query))]
+    (search/get-snapshot ctx id)
+    (log/warn "Fetch-by-id -> Id is nil")))
+
 (defn get-sequence-number-for-id
   [ctx & [query]]
   {:pre [(or (:id ctx)
