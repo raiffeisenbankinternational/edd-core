@@ -64,7 +64,6 @@
 
 (defn fetch-snapshot
   [{:keys [id] :as ctx}]
-
   (if-let [snapshot (search/get-snapshot ctx id)]
     (do
       (when snapshot

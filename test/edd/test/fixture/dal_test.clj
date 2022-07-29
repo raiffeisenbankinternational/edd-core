@@ -541,7 +541,7 @@
                          :id       (uuid/gen)
                          :external "ext-1"})))))
 
-(deftest storing-same-event-twice-shoulf-faile
+(deftest storing-same-event-twice-should-fail
   (with-mock-dal
     (dal/store-event {:id        2
                       :info      "info"

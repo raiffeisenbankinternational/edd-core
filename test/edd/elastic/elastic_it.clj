@@ -1,6 +1,7 @@
 (ns edd.elastic.elastic-it
   (:require [clojure.test :refer :all]
             [edd.core :as edd]
+            [edd.common :as common]
             [edd.elastic.view-store :as elastic-view-store]
             [edd.memory.event-store :as memory-event-store]
             [edd.test.fixture.dal :as mock]
@@ -84,4 +85,46 @@
             :version 1
             :attrs   {:my :special}}
            (search/get-snapshot ctx agg-id)))
-    #_(cleanup-index ctx)))
+    (cleanup-index ctx)))
+
+(deftest test-snapshot-diff-from-get-by-id-when-event-not-applied
+  (let [agg-id (uuid/gen)
+        ctx (-> (get-ctx)
+                (assoc :service-name (create-service-name)
+                       :meta {:realm :test})
+                (create-service-index)
+                (response-cache/register-default)
+                (memory-event-store/register)
+                (elastic-view-store/register)
+                (edd/reg-cmd :cmd-1 (fn [_ cmd]
+                                      [{:event-id :event-1
+                                        :attrs    (:attrs cmd)}]))
+                (edd/reg-event :event-1 (fn [agg event]
+                                          (assoc agg :attrs
+                                                 (:attrs event)))))]
+
+    (mock/apply-cmd ctx
+                    {:commands [{:cmd-id :cmd-1
+                                 :id     agg-id
+                                 :attrs  {:my :special}}]})
+
+    (is (= {:id      agg-id
+            :version 1
+            :attrs   {:my :special}}
+           (search/get-snapshot ctx agg-id)))
+
+    (mock/handle-cmd ctx
+                     {:commands [{:cmd-id :cmd-1
+                                  :id     agg-id
+                                  :attrs  {:my :prop}}]})
+
+    (is (= {:id      agg-id
+            :version 1
+            :attrs   {:my :special}}
+           (search/get-snapshot ctx agg-id)))
+
+    (is (= {:id      agg-id
+            :version 2
+            :attrs   {:my :prop}}
+           (common/get-by-id ctx agg-id)))
+    (cleanup-index ctx)))
