@@ -42,22 +42,26 @@
              service)
         token (aws/get-token ctx)
         resolved-query (call-query-fn ctx cmd query-fn deps)
-        response (http-client/retry-n
-                  #(util/http-post
-                    url
-                    (http-client/request->with-timeouts
-                     %
-                     {:body    (util/to-json
-                                {:query          resolved-query
-                                 :meta           (:meta ctx)
-                                 :request-id     (:request-id ctx)
-                                 :interaction-id (:interaction-id ctx)})
-                      :headers {"Content-Type"    "application/json"
-                                "X-Authorization" token}}
-                     :idle-timeout 10000))
-                  :meta {:to-service   service
-                         :from-service service-name
-                         :query-id     (:query-id resolved-query)})]
+        response (when (:query-id resolved-query)
+                   (http-client/retry-n
+                    #(util/http-post
+                      url
+                      (http-client/request->with-timeouts
+                       %
+                       {:body    (util/to-json
+                                  {:query          resolved-query
+                                   :meta           (:meta ctx)
+                                   :request-id     (:request-id ctx)
+                                   :interaction-id (:interaction-id ctx)})
+                        :headers {"Content-Type"    "application/json"
+                                  "X-Authorization" token}}
+                       :idle-timeout 10000))
+                    :meta {:to-service   service
+                           :from-service service-name
+                           :query-id     (:query-id resolved-query)}))]
+    (when (nil? (:query-id resolved-query))
+      (log/info "Skiping resolving remote dependency because query-id is nil")
+      nil)
     (when (:error response)
       (throw (ex-info (str "Error fetching dependency" service)
                       {:error {:to-service   service
