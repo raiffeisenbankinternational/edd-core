@@ -30,7 +30,8 @@
                 :request-id     request-id
                 :interaction-id interaction-id
                 :meta           meta
-                :query          {:param "Some Value"}
+                :query          {:param "Some Value"
+                                 :query-id :some-query-id}
                 :resp           {:remote :response}}]}
         (let [cmd {:cmd-id :test-cmd
                    :id     cmd-id
@@ -40,7 +41,8 @@
                                        :options {:deps
                                                  {:test-value
                                                   {:query   (fn [_ cmd]
-                                                              {:param (:value cmd)})
+                                                              {:param (:value cmd)
+                                                               :query-id :some-query-id})
                                                    :service :remote-svc}}})
                       (assoc :meta meta
                              :request-id request-id
@@ -54,7 +56,8 @@
                  deps))
 
           (client/verify-traffic [{:body            (util/to-json
-                                                     {:query          {:param "Some Value"}
+                                                     {:query          {:param "Some Value"
+                                                                       :query-id :some-query-id}
                                                       :meta           meta
                                                       :request-id     request-id
                                                       :interaction-id interaction-id})
@@ -81,11 +84,13 @@
               (cmd/resolve-remote-dependency
                ctx
                {}
-               {:query   (fn [_ cmd] {:a :b})
+               {:query   (fn [_ cmd] {:a :b
+                                      :query-id :some-query-id})
                 :service :some-remote-service}
                {})))
        (client/verify-traffic [{:body            (util/to-json
-                                                  {:query          {:a :b}
+                                                  {:query          {:a :b
+                                                                    :query-id :some-query-id}
                                                    :meta           meta
                                                    :request-id     request-id
                                                    :interaction-id interaction-id})
@@ -96,10 +101,47 @@
                                 :connect-timeout 300
                                 :url             (cmd/calc-service-query-url "some-remote-service")}])))))
 
-(deftest test-when-dependency-in-context-should-override
+(deftest test-remote-dep-when-query-id-is-not-set
+  (testing "If deps fn does not return a map with query-id we are skipping dependency resolution
+and return nil to enable query-fn to have when conditions based on previously resolved deps"
+    (let [meta {:realm :realm4}
+          ctx {:request-id     request-id
+               :interaction-id interaction-id
+               :meta           meta}]
+      (with-redefs [aws/get-token (fn [ctx] "#id-token")
+                    dal/log-dps (fn [ctx] ctx)
+                    util/get-env (fn [v]
+                                   (get {"PrivateHostedZoneName" "mock.com"} v))]
+        (client/mock-http
+         [{:post (cmd/calc-service-query-url "some-remote-service")
+           :body (util/to-json {:result {:a :b}})}]
+         (is (= nil
+                (cmd/resolve-remote-dependency
+                 ctx
+                 {}
+                 {:query   (fn [_ cmd] nil)
+                  :service :some-remote-service}
+                 {})))
+         (client/verify-traffic []))))))
 
+(deftest test-local-dep-when-query-id-is-not-set
+  (testing "If deps fn does not return a map with query-id we are skipping dependency resolution
+and return nil to enable query-fn to have when conditions based on previously resolved deps"
+    (let [meta {:realm :realm4}
+          ctx {:request-id     request-id
+               :interaction-id interaction-id
+               :meta           meta}]
+      (is (= nil
+             (cmd/resolve-local-dependency
+              ctx
+              {}
+              (fn [deps _] (when (seq (-> deps :previous-dep :hits))
+                             {:query-id :some-query-id}))
+              {:previous-dep {:hits []}}))))))
+
+(deftest test-when-dependency-in-context-should-override
   (testing
-   "If depdency is in context (i.e. for tests) resolution should not override it"
+   "If dependency is in context (i.e. for tests) resolution should not override it"
     (let [cmd-id-1 #uuid "11111eeb-e677-4d73-a10a-1d08b45fe4dd"
           meta {:realm :realm4}
           ctx (assoc mock/ctx
@@ -287,14 +329,15 @@
                                              :version 6}]})))))))
 
 (deftest test-dependencies-vector
-  "Test if context if properly prepared for remote queries"
+  "Test if context is properly prepared for remote queries"
   (with-redefs [util/get-env (fn [v]
                                (get {"PrivateHostedZoneName" "mock.com"} v))]
     (mock/with-mock-dal
       {:dps [{:service        :remote-svc
               :request-id     request-id
               :interaction-id interaction-id
-              :query          {:param "Some Value"}
+              :query          {:param "Some Value"
+                               :query-id :some-query-id}
               :resp           {:remote :response}}]}
       (let [meta {:realm :realm5}
             ctx (-> {:meta           meta
@@ -304,7 +347,8 @@
                                              {:event-id :event-1
                                               :value    (:value cmd)})
                                  :deps [:test-value {:query   (fn [_ cmd]
-                                                                {:param (:value cmd)})
+                                                                {:param (:value cmd)
+                                                                 :query-id :some-query-id})
                                                      :service :remote-svc}]
                                  :id-fn (fn [ctx cmd]
                                           (get-in ctx [:c1 :id]))))
@@ -318,7 +362,8 @@
                (dissoc ctx :dps)))
 
         (client/verify-traffic [{:body            (util/to-json
-                                                   {:query          {:param "Some Value"}
+                                                   {:query          {:param "Some Value"
+                                                                     :query-id :some-query-id}
                                                     :meta           meta
                                                     :request-id     request-id
                                                     :interaction-id interaction-id})
