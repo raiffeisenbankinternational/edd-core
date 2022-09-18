@@ -12,3 +12,5 @@ lambda-apigw-lib.iml
 .lsp
 .calva
 .clj-kondo
+.#*
+\#*\#

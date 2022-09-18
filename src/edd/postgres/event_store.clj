@@ -71,7 +71,7 @@
   [ctx event]
   (log/debug "Storing event" event)
   (when event
-    (jdbc/execute! (:con ctx)
+    (jdbc/execute! @(:con ctx)
                    [(str "INSERT INTO " (->table ctx :event_store) " (id,
                                                   service_name,
                                                   invocation_id,
@@ -100,7 +100,7 @@
                     (:commands)
                     (count))
                 0))
-    (jdbc/execute! (:con ctx)
+    (jdbc/execute! @(:con ctx)
                    [(str "INSERT INTO " (->table ctx :command_store) " (id,
                                                     invocation_id,
                                                     request_id,
@@ -130,7 +130,7 @@
   (log/debug "Storing request" (:commands body))
   (let [receive-count (or (-> ctx :req :attributes :ApproximateReceiveCount) "1")
         receive-count-int (Integer/parseInt receive-count)]
-    (let [ps (jdbc/prepare (:con ctx)
+    (let [ps (jdbc/prepare @(:con ctx)
                            [(str "INSERT INTO " (->table ctx :command_request_log) " (
                                                          invocation_id,
                                                          request_id,
@@ -159,7 +159,7 @@
 (defn- update-request
   [{:keys [invocation-id request-id interaction-id service-name] :as ctx} body field data]
   (when (contains? updateable-fields field)
-    (let [ps (jdbc/prepare (:con ctx)
+    (let [ps (jdbc/prepare @(:con ctx)
                            [(str "UPDATE " (->table ctx :command_request_log)
                                  "SET " field " = ?
                                WHERE request_id = ?
@@ -185,7 +185,7 @@
   [{:keys [invocation-id request-id interaction-id service-name] :as ctx} summary]
   (log/debug "Storing response" summary)
   (when summary
-    (jdbc/execute! (:con ctx)
+    (jdbc/execute! @(:con ctx)
                    [(str "INSERT INTO " (->table ctx :command_response_log) " (invocation_id,
                                                            request_id,
                                                            interaction_id,
@@ -211,7 +211,7 @@
 (defn store-identity
   [ctx identity]
   (log/debug "Storing identity" identity)
-  (jdbc/execute! (:con ctx)
+  (jdbc/execute! @(:con ctx)
                  [(str "INSERT INTO " (->table ctx :identity_store) " (id,
                                                    invocation_id,
                                                    request_id,
@@ -234,7 +234,7 @@
   (log/info "Update sequence" (:service-name ctx) sequence)
   (let [service-name (:service-name ctx)
         aggregate-id (:id sequence)]
-    (jdbc/execute! (:con ctx)
+    (jdbc/execute! @(:con ctx)
                    [(str "BEGIN WORK;
                        LOCK TABLE " (->table ctx :sequence_lastval) " IN ROW EXCLUSIVE MODE;
                        INSERT INTO " (->table ctx :sequence_lastval) " AS t
@@ -259,7 +259,7 @@
   (log/info "Prepare sequence" (:service-name ctx) sequence)
   (let [service-name (:service-name ctx)
         aggregate-id (:id sequence)]
-    (jdbc/execute! (:con ctx)
+    (jdbc/execute! @(:con ctx)
                    [(str "INSERT INTO " (->table ctx :sequence_store) " (invocation_id,
                                                       request_id,
                                                       interaction_id,
@@ -280,7 +280,7 @@
   [{:keys [request-id breadcrumbs] :as ctx}]
   {:pre [(and request-id breadcrumbs)]}
   (let [result (jdbc/execute-one!
-                (:con ctx)
+                @(:con ctx)
                 [(str "SELECT invocation_id,
                          interaction_id,
                          cmd_index,
@@ -300,7 +300,7 @@
   {:pre [id]}
   (let [service-name (:service-name ctx)
         value-fn #(-> (jdbc/execute-one!
-                       (:con ctx)
+                       @(:con ctx)
                        [(str "SELECT value
                                FROM " (->table ctx :sequence_store) "
                               WHERE aggregate_id = ?
@@ -327,7 +327,7 @@
   {:pre [sequence]}
   (let [service-name (:service-name ctx)
         result (jdbc/execute-one!
-                (:con ctx)
+                @(:con ctx)
                 [(str "SELECT aggregate_id
                      FROM " (->table ctx :sequence_store) "
                     WHERE value = ?
@@ -348,7 +348,7 @@
                       params)
         result (if (empty? params)
                  []
-                 (jdbc/execute! (:con ctx)
+                 (jdbc/execute! @(:con ctx)
                                 (concat
                                  [(str "SELECT id, aggregate_id FROM " (->table ctx :identity_store) "
                                            WHERE id IN (" (str/join ", "
@@ -377,7 +377,7 @@
   {:pre [id service-name]}
   (log/info "Fetching events for aggregate" id)
   (let [data (try-to-data
-              #(jdbc/execute! (:con ctx)
+              #(jdbc/execute! @(:con ctx)
                               [(str "SELECT data
                                 FROM " (->table ctx :event_store) "
                                 WHERE aggregate_id=?
@@ -396,7 +396,7 @@
   [{:keys [id] :as ctx}]
   (log/debug "Fetching max event-seq for aggregate" id)
   (:max
-   (jdbc/execute-one! (:con ctx)
+   (jdbc/execute-one! @(:con ctx)
                       [(str "SELECT COALESCE(MAX(event_seq), 0) AS max
                          FROM " (->table ctx :event_store) "
                          WHERE aggregate_id=?
@@ -436,23 +436,35 @@
   (try-to-data
    #(do
       (jdbc/with-transaction
-        [tx (:con ctx)]
+        [tx @(:con ctx)]
         (store-results-impl
-         (assoc ctx :con tx))
+         (assoc ctx :con (delay tx)))
         (doseq [i (:sequences resp)]
           (prepare-store-sequence ctx i)))
       (doseq [i (:sequences resp)]
         (update-sequence ctx i))
       ctx)))
 
+(defn create-pool
+  ^HikariDataSource [ds-spec]
+  (let [^HikariDataSource ds (jdbc-conn/->pool HikariDataSource ds-spec)]
+    ds))
+
+(def memoized-create-pool (memoize create-pool))
+
 (defmethod with-init
   :postgres
   [ctx body-fn]
-  (let [ds-spec (db/init ctx)]
-    (with-open [^HikariDataSource ds (jdbc-conn/->pool HikariDataSource ds-spec)]
-      ;; this code initializes the pool and performs a validation check:
-      (.close (jdbc/get-connection ds))
-      (body-fn (assoc ctx :con (jdbc/get-connection ds))))))
+  (let [connection (delay (jdbc/get-connection
+                           (memoized-create-pool (db/init ctx))))]
+    (try
+      (body-fn (assoc ctx :con connection))
+      (catch Exception e
+        (throw e))
+      (finally
+        (when (realized? connection)
+          (-> @connection
+              (.close)))))))
 
 (defn register
   [ctx]
@@ -463,7 +475,7 @@
   (log/info "Fetching response" invocation-id)
   (mapv
    first
-   (-> (jdbc/execute! (:con ctx)
+   (-> (jdbc/execute! @(:con ctx)
                       [(str "SELECT data
                                 FROM " (->table ctx :command_response_log) "
                                 WHERE invocation_id=?") invocation-id]
@@ -477,7 +489,7 @@
                     FROM " (->table ctx :command_request_log) "
                     WHERE request_id=?
                      AND breadcrumbs=?")]
-    (-> (jdbc/execute! (:con ctx)
+    (-> (jdbc/execute! @(:con ctx)
                        [query
                         request-id
                         breadcrumbs]
@@ -491,7 +503,7 @@
                     ORDER BY event_seq")
          result# (edd/with-stores
                    ~ctx
-                   #(-> (jdbc/execute! (:con %)
+                   #(-> (jdbc/execute! @(:con %)
                                        [query#
                                         ~interaction-id]
                                        {:builder-fn rs/as-unqualified-kebab-maps})))
