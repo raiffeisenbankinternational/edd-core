@@ -20,10 +20,9 @@
                              log-response
                              store-results]]
             [next.jdbc.prepare :as p]
-            [edd.db :as db]
-            [lambda.util :as util])
+            [edd.db :as db])
   (:import [com.zaxxer.hikari HikariDataSource]
-           [com.zaxxer.hikari HikariConfig]))
+           [com.zaxxer.hikari.pool HikariProxyConnection]))
 
 (def errors
   {:concurrent-modification ["pkey" "duplicate key value violates unique constraint"]})
@@ -463,8 +462,8 @@
         (throw e))
       (finally
         (when (realized? connection)
-          (-> @connection
-              (.close)))))))
+          (let [^HikariProxyConnection conn @connection]
+            (.close conn)))))))
 
 (defn register
   [ctx]
