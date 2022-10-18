@@ -49,7 +49,7 @@
              :headers    (merge {"Host"                 (get-host ctx)
                                  "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
                                  "x-amz-date"           (common/create-date)
-                                 "x-amz-security-token" (get :aws-session-token aws
+                                 "x-amz-security-token" (get aws :aws-session-token
                                                              (System/getenv "AWS_SESSION_TOKEN"))}
                                 (get-in object [:s3 :headers]))
              :service    "s3"
