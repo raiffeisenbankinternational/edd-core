@@ -38,24 +38,34 @@
                                               :bucket  (get-in object [:s3 :bucket :name])}})
     :else response))
 
+(defn get-aws-token [{:keys [aws]}]
+  (let [token (:aws-session-token aws)]
+    (if (empty? token)
+      (System/getenv "AWS_SESSION_TOKEN")
+      token)))
+
+(defn s3-request-helper [{:keys [aws] :as ctx} object]
+  {:headers    (merge {"Host"                 (get-host ctx)
+                       "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                       "x-amz-date"           (common/create-date)
+                       "x-amz-security-token" (get-aws-token ctx)}
+                      (get-in object [:s3 :headers]))
+   :service    "s3"
+   :region     (:region aws)
+   :access-key (:aws-access-key-id aws)
+   :secret-key (:aws-secret-access-key aws)})
+
 (defn put-object
   "puts object.content (should be plain string) into object.s3.bucket.name under object.s3.bucket.key"
   [{:keys [aws] :as ctx} object]
-  (let [req {:method     "PUT"
-             :uri        (str "/"
-                              (get-in object [:s3 :bucket :name])
-                              "/"
-                              (get-in object [:s3 :object :key]))
-             :headers    (merge {"Host"                 (get-host ctx)
-                                 "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                                 "x-amz-date"           (common/create-date)
-                                 "x-amz-security-token" (get aws :aws-session-token
-                                                             (System/getenv "AWS_SESSION_TOKEN"))}
-                                (get-in object [:s3 :headers]))
-             :service    "s3"
-             :region     (:region aws)
-             :access-key (:aws-access-key-id aws)
-             :secret-key (:aws-secret-access-key aws)}
+  (let [req
+
+        (merge (s3-request-helper ctx object)
+               {:method     "PUT"
+                :uri        (str "/"
+                                 (get-in object [:s3 :bucket :name])
+                                 "/"
+                                 (get-in object [:s3 :object :key]))})
         common (common/authorize req)
         response (client/retry-n #(-> (util/http-put
                                        (str "https://"
@@ -77,19 +87,13 @@
 
 (defn get-object
   [{:keys [aws] :as ctx} object]
-  (let [req {:method     "GET"
-             :uri        (str "/"
-                              (get-in object [:s3 :bucket :name])
-                              "/"
-                              (get-in object [:s3 :object :key]))
-             :headers    {"Host"                 (get-host ctx)
-                          "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                          "x-amz-date"           (common/create-date)
-                          "x-amz-security-token" (System/getenv "AWS_SESSION_TOKEN")}
-             :service    "s3"
-             :region     (:region aws)
-             :access-key (:aws-access-key-id aws)
-             :secret-key (:aws-secret-access-key aws)}
+  (let [req
+        (merge (s3-request-helper ctx object)
+               {:method     "GET"
+                :uri        (str "/"
+                                 (get-in object [:s3 :bucket :name])
+                                 "/"
+                                 (get-in object [:s3 :object :key]))})
         common (common/authorize req)
         response (client/retry-n #(-> (util/http-get
                                        (str "https://"
@@ -110,19 +114,14 @@
 
 (defn delete-object
   [{:keys [aws] :as ctx} object]
-  (let [req {:method     "DELETE"
-             :uri        (str "/"
-                              (get-in object [:s3 :bucket :name])
-                              "/"
-                              (get-in object [:s3 :object :key]))
-             :headers    {"Host"                 (get-host ctx)
-                          "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                          "x-amz-date"           (common/create-date)
-                          "x-amz-security-token" (System/getenv "AWS_SESSION_TOKEN")}
-             :service    "s3"
-             :region     (:region aws)
-             :access-key (:aws-access-key-id aws)
-             :secret-key (:aws-secret-access-key aws)}
+  (let [req
+        (merge (s3-request-helper ctx object)
+               {:method     "DELETE"
+                :uri        (str "/"
+                                 (get-in object [:s3 :bucket :name])
+                                 "/"
+                                 (get-in object [:s3 :object :key]))})
+
         common (common/authorize req)
         response (client/retry-n #(-> (util/http-delete
                                        (str "https://"
@@ -142,7 +141,7 @@
        :headers (:headers response)})))
 
 (defn get-object-tagging
-  [{:keys [aws]} object]
+  [{:keys [aws] :as ctx} object]
   (let [req {:method     "GET"
              :uri        (str "/" (get-in object [:s3 :object :key]))
              :query      [["tagging" "True"]]
@@ -155,7 +154,7 @@
                           "Accept"               "application/json"
                           "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
                           "x-amz-date"           (common/create-date)
-                          "x-amz-security-token" (util/get-env "AWS_SESSION_TOKEN")}
+                          "x-amz-security-token" (get-aws-token ctx)}
              :service    "s3"
              :region     (:region aws)
              :access-key (:aws-access-key-id aws)
@@ -205,7 +204,7 @@
                        (first)))))))))))
 
 (defn put-object-tagging
-  [{:keys [aws]} {:keys [object tags]}]
+  [{:keys [aws] :as ctx} {:keys [object tags]}]
   (let [tags (xml/emit-str
               {:tag     "Tagging"
                :content [{:tag     "TagSet"
@@ -229,7 +228,7 @@
                           "Accept"               "application/json"
                           "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
                           "x-amz-date"           (common/create-date)
-                          "x-amz-security-token" (util/get-env "AWS_SESSION_TOKEN")}
+                          "x-amz-security-token" (get-aws-token ctx)}
              :service    "s3"
              :region     (:region aws)
              :payload    tags
