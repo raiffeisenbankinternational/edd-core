@@ -86,31 +86,36 @@
       (io/reader (:body response) :encoding "UTF-8"))))
 
 (defn get-object
-  [{:keys [aws] :as ctx} object]
-  (let [req
-        (merge (s3-request-helper ctx object)
-               {:method     "GET"
-                :uri        (str "/"
-                                 (get-in object [:s3 :bucket :name])
-                                 "/"
-                                 (get-in object [:s3 :object :key]))})
-        common (common/authorize req)
-        response (client/retry-n #(-> (util/http-get
-                                       (str "https://"
-                                            (get (:headers req) "Host")
-                                            (:uri req))
-                                       (client/request->with-timeouts
-                                        %
-                                        {:as      :stream
-                                         :headers (-> (:headers req)
-                                                      (dissoc "Host")
-                                                      (assoc "Authorization" common))})
-                                       :raw true)
-                                      (parse-response  object)))
-        {:keys [error] :as response} response]
-    (if error
-      response
-      (io/reader (:body response) :encoding "UTF-8"))))
+  ([ctx object]
+   (get-object ctx object {:retries client/retry-count}))
+  ([{:keys [_aws] :as ctx}
+    object
+    {:keys [retries] :as _params}]
+   (let [req
+         (merge (s3-request-helper ctx object)
+                {:method     "GET"
+                 :uri        (str "/"
+                                  (get-in object [:s3 :bucket :name])
+                                  "/"
+                                  (get-in object [:s3 :object :key]))})
+         common (common/authorize req)
+         response (client/retry-n #(-> (util/http-get
+                                        (str "https://"
+                                             (get (:headers req) "Host")
+                                             (:uri req))
+                                        (client/request->with-timeouts
+                                         %
+                                         {:as      :stream
+                                          :headers (-> (:headers req)
+                                                       (dissoc "Host")
+                                                       (assoc "Authorization" common))})
+                                        :raw true)
+                                       (parse-response  object))
+                                  :retries retries)
+         {:keys [error] :as response} response]
+     (if error
+       response
+       (io/reader (:body response) :encoding "UTF-8")))))
 
 (defn delete-object
   [{:keys [aws] :as ctx} object]
