@@ -70,10 +70,9 @@
                   :query-id :some-random-query}
                  (ex-data ex)))))))
 
-  (testing "It is possible to register custom schema
-            using :consumes keyword. Invalid request
-            also reaises ex-info"
-    (let [response {:first-name "John"}
+  (testing "It is possible to register custom schemas using :consumes
+            and :produces keywords"
+    (let [response (atom {:result {:id 1}})
           request {:query {:query-id   :get-by-first-name
                            :first-name "John"}}
           invalid-request {:query {:query-id  :get-by-first-name
@@ -84,15 +83,39 @@
                                                       (is (= query
                                                              (:query request)))
                                                       ; We return some value as response
-                                                      response)
+                                                      @response)
                                  :consumes [:map
-                                            [:first-name :string]]))]
-      (is (= response
-             (edd-query/handle-query ctx request)))
-      (is (thrown? ExceptionInfo
-                   (edd-query/handle-query ctx invalid-request)))
-      (try
-        (edd-query/handle-query ctx invalid-request)
-        (catch ExceptionInfo ex
-          (is (= {:error {:first-name ["missing required key"]}}
-                 (ex-data ex))))))))
+                                            [:first-name :string]]
+                                 :produces [:map
+                                            [:id :int]]))]
+
+      (testing "Invalid request"
+        (is (thrown? ExceptionInfo
+                     (edd-query/handle-query ctx invalid-request)))
+        (try
+          (edd-query/handle-query ctx invalid-request)
+          (catch ExceptionInfo ex
+            (is (= {:error {:first-name ["missing required key"]}}
+                   (ex-data ex))))))
+
+      (testing "Valid request, valid response"
+        (is (= @response
+               (edd-query/handle-query ctx request))))
+
+      (testing "Valid request, invalid respnse"
+        (reset! response {:result {:id "5"}})
+
+        (testing "No error when validate-response-schema? is unset"
+          (is (= @response
+                 (edd-query/handle-query ctx request))))
+
+        (testing "Exception when validate-response-schema? is set"
+          (let [query-fn #(-> ctx
+                              (assoc :validate-response-schema? true)
+                              (edd-query/handle-query request))]
+            (is (thrown? ExceptionInfo (query-fn)))
+            (try
+              (query-fn)
+              (catch ExceptionInfo ex
+                (is (= {:error {:result {:id ["should be an integer"]}}}
+                       (ex-data ex)))))))))))
