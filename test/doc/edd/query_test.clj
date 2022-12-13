@@ -72,7 +72,7 @@
 
   (testing "It is possible to register custom schemas using :consumes
             and :produces keywords"
-    (let [response (atom {:result {:id 1}})
+    (let [response (atom {:id 1})
           request {:query {:query-id   :get-by-first-name
                            :first-name "John"}}
           invalid-request {:query {:query-id  :get-by-first-name
@@ -103,7 +103,7 @@
                (edd-query/handle-query ctx request))))
 
       (testing "Valid request, invalid respnse"
-        (reset! response {:result {:id "5"}})
+        (reset! response {:id "5"})
 
         (testing "No error when validate-response-schema? is unset"
           (is (= @response

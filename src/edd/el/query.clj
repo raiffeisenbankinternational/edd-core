@@ -5,12 +5,12 @@
             [lambda.util :as util]))
 
 (defn- maybe-validate-response [ctx produces response]
-  (when (and (:validate-response-schema? ctx)
-             ;; Do not validate error responses.
-             (some? (:result response))
-             (not (m/validate produces response)))
-    (throw (ex-info "Invalid response"
-                    {:error (schema/explain-error produces response)}))))
+  (when (and response
+             (:validate-response-schema? ctx))
+    (let [wrapped {:result response}]
+      (when-not (m/validate produces wrapped)
+        (throw (ex-info "Invalid response"
+                        {:error (schema/explain-error produces wrapped)}))))))
 
 (defn handle-query
   [ctx body]

@@ -394,7 +394,8 @@
     (verify-state :identity-store [{:id "id1" :identity 1}
                                    {:id "id1" :identity 2}])
 
-    (let [ctx (edd/reg-query ctx :get-by-identities common/get-aggregate-id-by-identity)]
+    (let [ctx (edd/reg-query ctx :get-by-identities common/get-aggregate-id-by-identity
+                             :produces :any)]
       (is (= {1 "id1"
               2 "id1"}
              (mock/query ctx {:query-id :get-by-identities
