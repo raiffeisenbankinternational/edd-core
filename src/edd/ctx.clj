@@ -23,3 +23,7 @@
   [ctx & {:keys [cmd-id
                  options]}]
   (assoc-in ctx [:edd-core :commands cmd-id] options))
+
+(defn get-query
+  [ctx query-id]
+  (get-in ctx [:edd-core :queries query-id]))
