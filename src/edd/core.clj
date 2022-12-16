@@ -114,6 +114,11 @@
         options (update options
                         :consumes
                         #(s/merge-query-consumes-schema % query-id))
+        options (-> options
+                    (dissoc :dps)
+                    (assoc :deps (if (:dps options)
+                                   (dps->deps (:dps options))
+                                   (:deps options {}))))
         options (update options
                         :produces
                         #(s/merge-query-produces-schema %))

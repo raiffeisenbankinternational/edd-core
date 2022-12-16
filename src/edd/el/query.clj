@@ -1,8 +1,79 @@
 (ns edd.el.query
-  (:require [clojure.tools.logging :as log]
-            [edd.schema :as schema]
+  (:require [lambda.util :as util]
+            [clojure.tools.logging :as log]
+            [aws.aws :as aws]
             [malli.core :as m]
-            [lambda.util :as util]))
+            [edd.ctx :as edd-ctx]
+            [edd.schema :as schema]
+            [lambda.http-client :as http-client]))
+
+(defn calc-service-query-url
+  [service]
+  (str "https://api."
+       (util/get-env "PrivateHostedZoneName")
+       "/legacy/"
+       (name service)
+       "/query"))
+
+(defn call-query-fn
+  [_ cmd query-fn deps]
+  (if (fn? query-fn)
+    (query-fn deps cmd)
+    query-fn))
+
+(defn resolve-remote-dependency
+  [ctx cmd {:keys [service query]} deps]
+  (log/info "Resolving remote dependency: " service (or (:cmd-id cmd)
+                                                        (:cmd-id cmd)))
+
+  (let [query-fn query
+        service-name (:service-name ctx)
+        url (calc-service-query-url
+             service)
+        token (aws/get-token ctx)
+        resolved-query (call-query-fn ctx cmd query-fn deps)
+        response (when (:query-id resolved-query)
+                   (http-client/retry-n
+                    #(util/http-post
+                      url
+                      (http-client/request->with-timeouts
+                       %
+                       {:body    (util/to-json
+                                  {:query          resolved-query
+                                   :meta           (:meta ctx)
+                                   :request-id     (:request-id ctx)
+                                   :interaction-id (:interaction-id ctx)})
+                        :headers {"Content-Type"    "application/json"
+                                  "X-Authorization" token}}
+                       :idle-timeout 10000))
+                    :meta {:to-service   service
+                           :from-service service-name
+                           :query-id     (:query-id resolved-query)}))]
+    (when (nil? (:query-id resolved-query))
+      (log/info "Skiping resolving remote dependency because query-id is nil")
+      nil)
+    (when (:error response)
+      (throw (ex-info (str "Error fetching dependency" service)
+                      {:error {:to-service   service
+                               :from-service service-name
+                               :query-id     (:query-id resolved-query)
+                               :message      (:error response)}})))
+    (when (:error (get response :body))
+      (throw (ex-info (str "Error response from service " service)
+                      {:error {:to-service   service
+                               :from-service service-name
+                               :query-id     (:query-id resolved-query)
+                               :message      {:response     (get response :body)
+                                              :error-source service}}})))
+    (if (> (:status response 0) 299)
+      (throw (ex-info (str "Deps request error for " service)
+                      {:error {:to-service   service
+                               :from-service service-name
+                               :service      service
+                               :query-id     (:query-id resolved-query)
+                               :status       (:status response)
+                               :message      (str "Response status:" (:status response))}}))
+      (get-in response [:body :result]))))
 
 (defn- validate-response-schema-setting [ctx]
   (let [setting (or (:response-schema-validation ctx)
@@ -26,6 +97,48 @@
             :log-on-error
             (log/warnf "Invalid response %s" (pr-str {:error error}))))))))
 
+(declare handle-query)
+
+(defn resolve-local-dependency
+  [ctx cmd query-fn deps]
+  (log/debug "Resolving local dependency")
+  (let [query (call-query-fn ctx cmd query-fn deps)]
+    (when query
+      (let [resp (handle-query ctx {:query query})]
+        (if (:error resp)
+          (throw (ex-info "Failed to resolve local deps" {:error resp}))
+          resp)))))
+
+(defn fetch-dependencies-for-deps
+  [ctx deps request]
+  (let [deps (if (vector? deps)
+               (partition 2 deps)
+               deps)
+        dps-value (reduce
+                   (fn [p [key req]]
+                     (log/info "Query for dependency" key (:service req "locally"))
+                     (let [dep-value
+                           (try (if (:service req)
+                                  (resolve-remote-dependency
+                                   ctx
+                                   request
+                                   req
+                                   p)
+                                  (resolve-local-dependency
+                                   ctx
+                                   request
+                                   req
+                                   p))
+                                (catch AssertionError e
+                                  (log/warn "Assertion error for deps " key)
+                                  nil))]
+                       (if dep-value
+                         (assoc p key dep-value)
+                         p)))
+                   {}
+                   deps)]
+    dps-value))
+
 (defn handle-query
   [ctx body]
   (let [query (:query body)
@@ -42,7 +155,10 @@
     (when-not (m/validate consumes query)
       (throw (ex-info "Invalid request"
                       {:error (schema/explain-error consumes query)})))
-    (let [resp (util/d-time
+    (let [{:keys [deps]} (edd-ctx/get-query ctx query-id)
+          deps-value (fetch-dependencies-for-deps ctx deps query)
+          ctx (merge ctx deps-value)
+          resp (util/d-time
                 (str "handling-query: " query-id)
                 (handler ctx query))]
       (log/debug "Query response" resp)

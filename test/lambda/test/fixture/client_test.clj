@@ -32,6 +32,23 @@
      {:method :get
       :url    "http://google.com"}])))
 
+(deftest test-mock-multiple-calls-non-removable
+  (client/mock-http
+   {:responses [{:get  "http://google.com"
+                 :body (util/to-json {:a :b})}]
+    :config {:reuse-responses true}}
+   (is (= {:body {:a :b}}
+          (util/http-get "http://google.com" {})))
+
+   (is (= {:body {:a :b}}
+          (util/http-get "http://google.com" {})))
+
+   (client/verify-traffic
+    [{:method :get
+      :url    "http://google.com"}
+     {:method :get
+      :url    "http://google.com"}])))
+
 (deftest find-first-test
   (is (= 1
          (client/find-first ["a" "b" "c"]

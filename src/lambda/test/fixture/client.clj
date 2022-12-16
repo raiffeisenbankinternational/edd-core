@@ -85,14 +85,14 @@
              (partial is-match req))
         resp (get all idx)]
     (if idx
-      (do
-        (swap! *world*
-               update-in [:responses]
-               #(remove-at % idx))
-
+      (let [{:keys [reuse-responses]
+             :or {reuse-responses false}} (:config @*world*)]
+        (when-not reuse-responses
+          (swap! *world*
+                 update-in [:responses]
+                 #(remove-at % idx)))
         (ref
          (dissoc resp method :req :keep)))
-
       (do
         (log/error {:error {:message "Mock not Found"
                             :url     url
@@ -104,6 +104,14 @@
 
 (defmacro mock-http
   [responses & body]
-  `(binding [*world* (atom {:responses ~responses})]
-     (with-redefs [http/request handle-request]
-       (do ~@body))))
+  `(let [responses# ~responses
+         config# (if (map? responses#)
+                   (:config responses#)
+                   {})
+         responses# (if (map? responses#)
+                      (:responses responses#)
+                      responses#)]
+     (binding [*world* (atom {:config config#
+                              :responses responses#})]
+       (with-redefs [http/request handle-request]
+         (do ~@body)))))

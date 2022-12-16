@@ -538,3 +538,17 @@ and return nil to enable query-fn to have when conditions based on previously re
       (mock/apply-cmd ctx {:commands [{:cmd-id     :cmd-2
                                        :first-name "Edd-2"
                                        :id         cmd-id-1}]}))))
+
+(deftest test-query-deps
+  (let [query-2-resp {:response :query-2}
+        ctx (-> mock/ctx
+                (edd/reg-query :query-2 (fn [_ctx _query]
+                                          query-2-resp))
+                (edd/reg-query :query-3 (fn [ctx _query]
+                                          (is (= query-2-resp
+                                                 (:uno ctx)))
+                                          {:status :success})
+                               :deps {:uno {:query-id :query-2}}))]
+    (mock/with-mock-dal
+      (is (= {:status :success}
+             (mock/query ctx {:query-id :query-3}))))))
