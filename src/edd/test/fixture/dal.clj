@@ -32,9 +32,7 @@
             [edd.el.query :as query]
             [aws.aws :as aws]))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Data Access Layer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 
 (defn- like-cond
   "Returns function which checks if map contains key value pair
@@ -68,13 +66,7 @@
     (:search condition) (full-search-cond (:search condition))
     :else (fn [_] false)))
 
-
-
-
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;   Test Fixtures   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 
 (def default-db
   {:event-store     []
@@ -103,7 +95,8 @@
             :body (util/to-json {:result (:resp %)})
             :req  req-2})))
 
-   (get @*dal-state* :dps [])))
+   (get @*dal-state* :dps
+        (get @*dal-state* :deps []))))
 
 (defn aws-get-token
   [ctx]
@@ -136,8 +129,9 @@
                 request/*request* (atom {})]
         %
         (client/mock-http
-         (vec (concat (prepare-dps-calls)
-                      (get @*dal-state* :responses [])))
+         {:responses (vec (concat (prepare-dps-calls)
+                                  (get @*dal-state* :responses [])))
+          :config {:reuse-responses true}}
          (with-redefs
           [aws/get-token aws-get-token
            common/create-identity create-identity]
