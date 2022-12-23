@@ -4,13 +4,27 @@
             [malli.core :as m]
             [lambda.util :as util]))
 
+(defn- validate-response-schema-setting [ctx]
+  (let [setting (or (:response-schema-validation ctx)
+                    (:response-schema-validation (:meta ctx)))]
+    (assert #{nil :log-on-error :throw-on-error} setting)
+    setting))
+
+(defn- validate-response-schema? [ctx]
+  (contains? #{:log-on-error :throw-on-error}
+             (validate-response-schema-setting ctx)))
+
 (defn- maybe-validate-response [ctx produces response]
   (when (and response
-             (:validate-response-schema? ctx))
+             (validate-response-schema? ctx))
     (let [wrapped {:result response}]
       (when-not (m/validate produces wrapped)
-        (throw (ex-info "Invalid response"
-                        {:error (schema/explain-error produces wrapped)}))))))
+        (let [error (schema/explain-error produces wrapped)]
+          (condp = (validate-response-schema-setting ctx)
+            :throw-on-error
+            (throw (ex-info "Invalid response" {:error error}))
+            :log-on-error
+            (log/warnf "Invalid response %s" (pr-str {:error error}))))))))
 
 (defn handle-query
   [ctx body]
