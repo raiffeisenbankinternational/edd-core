@@ -110,7 +110,7 @@
   "#mock-id-token")
 
 (def ctx
-  (-> {:validate-response-schema? true}
+  (-> {:response-schema-validation :throw-on-error}
       (response-cache/register-default)
       (view-store/register)
       (event-store/register)))
