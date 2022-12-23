@@ -1,5 +1,6 @@
 (ns doc.edd.query-test
   (:require [clojure.test :refer :all]
+            [clojure.tools.logging :as log]
             [edd.core :as edd]
             [edd.el.query :as edd-query]
             [doc.edd.ctx :refer [init-ctx]])
@@ -102,20 +103,51 @@
         (is (= @response
                (edd-query/handle-query ctx request))))
 
-      (testing "Valid request, invalid respnse"
+      (testing "Valid request, invalid response"
         (reset! response {:id "5"})
 
-        (testing "No error when validate-response-schema? is unset"
+        (testing "No error when response-schema-validation is unset"
           (is (= @response
                  (edd-query/handle-query ctx request))))
 
-        (testing "Exception when validate-response-schema? is set"
+        (testing "Exception when response-schema-validation is set on context"
           (let [query-fn #(-> ctx
-                              (assoc :validate-response-schema? true)
+                              (assoc :response-schema-validation :throw-on-error)
                               (edd-query/handle-query request))]
             (is (thrown? ExceptionInfo (query-fn)))
             (try
               (query-fn)
               (catch ExceptionInfo ex
                 (is (= {:error {:result {:id ["should be an integer"]}}}
-                       (ex-data ex)))))))))))
+                       (ex-data ex)))))))
+
+        (testing "Exception when response-schema-validation is set in meta"
+          (let [query-fn #(-> ctx
+                              (assoc-in [:meta :response-schema-validation] :throw-on-error)
+                              (edd-query/handle-query request))]
+            (is (thrown? ExceptionInfo (query-fn)))
+            (try
+              (query-fn)
+              (catch ExceptionInfo ex
+                (is (= {:error {:result {:id ["should be an integer"]}}}
+                       (ex-data ex)))))))
+
+        (testing "Log warning when response-schema-validation is set on context"
+          (let [warning (atom nil)]
+            (with-redefs [log/log* (fn [_ level _ message]
+                                     (when (= :warn level)
+                                       (reset! warning message)))]
+              (-> ctx
+                  (assoc :response-schema-validation :log-on-error)
+                  (edd-query/handle-query request)))
+            (is (re-matches #".*should be an integer.*" @warning))))
+
+        (testing "Log warning when response-schema-validation is set on meta"
+          (let [warning (atom nil)]
+            (with-redefs [log/log* (fn [_ level _ message]
+                                     (when (= :warn level)
+                                       (reset! warning message)))]
+              (-> ctx
+                  (assoc-in [:meta :response-schema-validation] :log-on-error)
+                  (edd-query/handle-query request)))
+            (is (re-matches #".*should be an integer.*" @warning))))))))
