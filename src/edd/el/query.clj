@@ -1,5 +1,6 @@
 (ns edd.el.query
   (:require [lambda.util :as util]
+            [lambda.request :as req]
             [clojure.tools.logging :as log]
             [aws.aws :as aws]
             [malli.core :as m]
@@ -21,34 +22,58 @@
     (query-fn deps cmd)
     query-fn))
 
-(defn resolve-remote-dependency
-  [ctx cmd {:keys [service query]} deps]
-  (log/info "Resolving remote dependency: " service (or (:cmd-id cmd)
-                                                        (:cmd-id cmd)))
-
-  (let [query-fn query
+(defn -http-call
+  [ctx {:keys [service query]}]
+  (let [token (aws/get-token ctx)
         service-name (:service-name ctx)
         url (calc-service-query-url
-             service)
-        token (aws/get-token ctx)
+             service)]
+    (when (:query-id query)
+      (http-client/retry-n
+       #(util/http-post
+         url
+         (http-client/request->with-timeouts
+          %
+          {:body    (util/to-json
+                     {:query          query
+                      :meta           (:meta ctx)
+                      :request-id     (:request-id ctx)
+                      :interaction-id (:interaction-id ctx)})
+           :headers {"Content-Type"    "application/json"
+                     "X-Authorization" token}}
+          :idle-timeout 10000))
+       :meta {:to-service   service
+              :from-service service-name
+              :query-id     (:query-id query)}))))
+
+(defn with-cache
+  [request f]
+  (if (req/is-scoped)
+    (if-let [hint
+             (get-in
+              @req/*request*
+              [:edd-core :http-cache request])]
+      hint
+      (swap! req/*request*
+             #(assoc-in % [:edd-core
+                           :http-cache
+                           request] (f request))))
+    (f request)))
+
+(defn resolve-remote-dependency
+  [ctx cmd {:keys [service query]} deps]
+  (log/info "Resolving remote dependency: "
+            service
+            (or (:cmd-id cmd)
+                (:cmd-id cmd)))
+  (let [query-fn query
+        service-name (:service-name ctx)
         resolved-query (call-query-fn ctx cmd query-fn deps)
-        response (when (:query-id resolved-query)
-                   (http-client/retry-n
-                    #(util/http-post
-                      url
-                      (http-client/request->with-timeouts
-                       %
-                       {:body    (util/to-json
-                                  {:query          resolved-query
-                                   :meta           (:meta ctx)
-                                   :request-id     (:request-id ctx)
-                                   :interaction-id (:interaction-id ctx)})
-                        :headers {"Content-Type"    "application/json"
-                                  "X-Authorization" token}}
-                       :idle-timeout 10000))
-                    :meta {:to-service   service
-                           :from-service service-name
-                           :query-id     (:query-id resolved-query)}))]
+        request
+        {:service service
+         :query resolved-query}
+        response (with-cache request (partial -http-call ctx))]
+
     (when (nil? (:query-id resolved-query))
       (log/info "Skiping resolving remote dependency because query-id is nil")
       nil)

@@ -21,7 +21,7 @@
                                       nil)))
 
 (defn update-aggregate
-  "Here is very important to keywordize kex. See more details on
+  "Here is very important to keywordize key. See more details on
   lambda.util/fix-keys"
   [ctx {:keys [id] :as aggregate}]
   (swap! request/*request*
