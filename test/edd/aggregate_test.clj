@@ -1,21 +1,12 @@
 (ns edd.aggregate-test
   (:require [edd.core :as edd]
             [edd.dal :as dal]
-            [edd.search :as search]
+            [clojure.tools.logging :as log]
             [edd.el.event :as event]
-            [clojure.test :refer :all]
+            [clojure.test :refer [deftest testing is]]
             [lambda.util :as util]
-            [lambda.util :as util]
-            [lambda.test.fixture.core :refer [mock-core]]
-            [lambda.test.fixture.client :refer [verify-traffic-edn]]
-
-            [edd.postgres.event-store :as postgres-event-store]
-            [edd.memory.view-store :as view-store]
-            [edd.memory.event-store :as event-store]
             [edd.elastic.view-store :as elastic-view-store]
             [edd.test.fixture.dal :as mock]
-            [edd.el.query :as query]
-            [lambda.s3-test :as s3]
             [lambda.uuid :as uuid]))
 
 (def cmd-id (uuid/parse "111111-1111-1111-1111-111111111111"))
@@ -99,8 +90,10 @@
                                   {:event-id :event-2
                                    :id       cmd-id
                                    :k2       "b"}])
-                util/http-get (fn [url request & {:keys [raw]}]
+                util/http-get (fn [_url _request & {:keys [raw]}]
                                 {:status 404})
+                elastic-view-store/store-to-s3 (fn [_ctx]
+                                                 nil)
                 util/http-post (fn [url request & {:keys [raw]}]
                                  {:status 303
                                   :body   "Sorry"})]
@@ -110,6 +103,10 @@
                               (assoc
                                :apply {:aggregate-id cmd-id})))
       (catch Exception e
-        (is (= {:error {:status  303
-                        :message "Sorry"}}
-               (ex-data e)))))))
+        (let [expected {:error {:status  303
+                                :message "Sorry"}}]
+          (is (= expected
+                 (ex-data e)))
+          (when (not= expected
+                      (ex-data e))
+            (log/info "Unexpected test exception" e)))))))

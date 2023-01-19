@@ -65,65 +65,85 @@
                        (throw (ex-info "Sory" {:something "happened"}))))))
 
 (deftest apply-when-two-events-1
-  (with-redefs [common/create-date (fn [] "20210322T232540Z")
-                event/get-by-id (fn [ctx]
-                                  (assoc ctx
-                                         :aggregate {:id agg-id}))]
-    (mock-core
-     :invocations [(util/to-json (req
-                                  [{:apply          {:service      "glms-booking-company-svc",
-                                                     :aggregate-id agg-id}
-                                    :meta           {:realm :test}
-                                    :request-id     req-id1
-                                    :interaction-id int-id}
-                                   {:apply          {:service      "glms-booking-company-svc",
-                                                     :aggregate-id agg-id}
+  (testing "Ensure that wee only udpate aggregate once for same aggregate id"
+    (with-redefs [common/create-date (fn [] "20210322T232540Z")
+                  event/get-by-id (fn [ctx]
+                                    (assoc ctx
+                                           :aggregate {:id agg-id}))]
+      (mock-core
+       :invocations [(util/to-json (req
+                                    [{:apply          {:service      "glms-booking-company-svc",
+                                                       :aggregate-id agg-id}
+                                      :meta           {:realm :test}
+                                      :request-id     req-id1
+                                      :interaction-id int-id}
+                                     {:apply          {:service      "glms-booking-company-svc",
+                                                       :aggregate-id agg-id}
 
-                                    :meta           {:realm :test}
-                                    :request-id     req-id2
-                                    :interaction-id int-id}
-                                   {:apply          {:service      "glms-booking-company-svc",
-                                                     :aggregate-id agg-id}
-                                    :request-id     req-id3
-                                    :meta           {:realm :test}
-                                    :interaction-id int-id}]))]
+                                      :meta           {:realm :test}
+                                      :request-id     req-id2
+                                      :interaction-id int-id}
+                                     {:apply          {:service      "glms-booking-company-svc",
+                                                       :aggregate-id agg-id}
+                                      :request-id     req-id3
+                                      :meta           {:realm :test}
+                                      :interaction-id int-id}]))]
 
-     :requests [{:post "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"}
-                {:post   (str "https:///test_local_test/_doc/" agg-id)
-                 :status 200}
-                {:post   (str "https:///test_local_test/_doc/" agg-id)
-                 :status 200}
-                {:post   (str "https:///test_local_test/_doc/" agg-id)
-                 :status 200}]
-     (core/start
-      ctx
-      edd/handler)
-     (verify-traffic-edn [{:body   [{:result         {:apply true}
-                                     :invocation-id  0
-                                     :request-id     req-id1,
-                                     :interaction-id int-id}
-                                    {:result         {:apply true}
-                                     :invocation-id  0
-                                     :request-id     req-id2,
-                                     :interaction-id int-id}
-                                    {:result         {:apply true}
-                                     :invocation-id  0
-                                     :request-id     req-id3,
-                                     :interaction-id int-id}]
-                           :method :post
-                           :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-                          {:body            {:id agg-id}
-                           :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/es/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=8b2d9b4b2390562f95edc1b2dc52223e9cac7eb1b50b460156d53183ef2346e3"
-                                             "Content-Type"         "application/json"
-                                             "X-Amz-Date"           "20210322T232540Z"
-                                             "X-Amz-Security-Token" ""}
-                           :method          :post
-                           :idle-timeout    20000
-                           :connect-timeout 300
-                           :url             "https:///test_local_test/_doc/05120289-90f3-423c-ad9f-c46f9927a53e"}
-                          {:method  :get
-                           :timeout 90000000
-                           :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
+       :requests [{:post "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"}
+                  {:post   (str "https:///test_local_test/_doc/" agg-id)
+                   :status 200}
+                  {:post   (str "https:///test_local_test/_doc/" agg-id)
+                   :status 200}
+                  {:post   (str "https:///test_local_test/_doc/" agg-id)
+                   :status 200}
+                  {:put (str "https://s3.eu-central-1.amazonaws.com/--aggregates/aggregates/test/0000/local-test/latest/"
+                             agg-id)
+                   :status 200
+                   :body (char-array "OK")}]
+       (core/start
+        ctx
+        edd/handler)
+       (verify-traffic-edn [{:body   [{:result         {:apply true}
+                                       :invocation-id  0
+                                       :request-id     req-id1,
+                                       :interaction-id int-id}
+                                      {:result         {:apply true}
+                                       :invocation-id  0
+                                       :request-id     req-id2,
+                                       :interaction-id int-id}
+                                      {:result         {:apply true}
+                                       :invocation-id  0
+                                       :request-id     req-id3,
+                                       :interaction-id int-id}]
+                             :method :post
+                             :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
+                            {:body            {:id agg-id}
+                             :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/es/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=8b2d9b4b2390562f95edc1b2dc52223e9cac7eb1b50b460156d53183ef2346e3"
+                                               "Content-Type"         "application/json"
+                                               "X-Amz-Date"           "20210322T232540Z"
+                                               "X-Amz-Security-Token" ""}
+                             :method          :post
+                             :idle-timeout    20000
+                             :connect-timeout 300
+                             :url             "https:///test_local_test/_doc/05120289-90f3-423c-ad9f-c46f9927a53e"}
+                            {:url
+                             (str "https://s3.eu-central-1.amazonaws.com/--aggregates/"
+                                  "aggregates/test/0000/local-test/latest/"
+                                  agg-id)
+                             :idle-timeout 5000,
+                             :connect-timeout 300
+                             :method :put,
+                             :body {:id #uuid "05120289-90f3-423c-ad9f-c46f9927a53e"}
+                             :headers
+                             {"Authorization"
+                              "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=cfd279afb834b9c8a23918aa8c2f3d81e95ae88971994862110b67c78a17b1b2",
+                              "x-amz-security-token" nil,
+                              "x-amz-date" "20210322T232540Z",
+                              "x-amz-content-sha256" "UNSIGNED-PAYLOAD"},
+                             :as :stream}
+                            {:method  :get
+                             :timeout 90000000
+                             :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
 
 (deftest apply-when-error-all-failed
   (with-redefs [common/create-date (fn [] "20210322T232540Z")
