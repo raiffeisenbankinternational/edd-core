@@ -5,7 +5,7 @@
             [clojure.data.xml :as xml]
             [clojure.tools.logging :as log]
             [clojure.java.io :as io]
-            [clojure.string :as str]))
+            [clojure.string :as string]))
 
 (defn get-host
   [ctx]
@@ -21,6 +21,28 @@
    {}
    params))
 
+(defn- check-what-is-missing
+  [{:keys [body]}]
+  (when body
+    (let [body (xml/parse body)
+          body {(:tag body) (:content body)}
+          error (:Error body)
+          error (reduce
+                 (fn [p {:keys [tag content]}]
+                   (assoc p
+                          (-> tag
+                              name
+                              string/lower-case
+                              keyword)
+                          (first content)))
+                 {}
+                 error)]
+      (if (= (:code error)
+             "NoSuchKey")
+        nil
+        (throw (ex-info "Missing bucket"
+                        error))))))
+
 (defn- parse-response
   [response object]
   (log/debug "Auth response" response)
@@ -28,6 +50,7 @@
     (contains? response :error) (do
                                   (log/error "Failed update" response)
                                   {:error (:error response)})
+    (= (:status response 199) 404) (check-what-is-missing response)
     (> (:status response 199) 299) (do
                                      (log/error "S3 Response failed"
                                                 (:status response)
@@ -59,7 +82,6 @@
   "puts object.content (should be plain string) into object.s3.bucket.name under object.s3.bucket.key"
   [{:keys [aws] :as ctx} object]
   (let [req
-
         (merge (s3-request-helper ctx object)
                {:method     "PUT"
                 :uri        (str "/"
@@ -115,7 +137,8 @@
          {:keys [error] :as response} response]
      (if error
        response
-       (io/reader (:body response) :encoding "UTF-8")))))
+       (when (:body response)
+         (io/reader (:body response) :encoding "UTF-8"))))))
 
 (defn delete-object
   [{:keys [aws] :as ctx} object]
@@ -179,7 +202,8 @@
                                                              (assoc "Authorization" common))})
                                          :raw true)
                                         (parse-response object)))]
-      (if (:error response)
+      (if (or (nil? response)
+              (:error response))
         response
         (->> (xml/parse (:body response))
              (:content)
@@ -194,7 +218,7 @@
                    (-> key
                        (:tag)
                        (name)
-                       (str/lower-case)
+                       (string/lower-case)
                        (keyword))
                    (-> key
                        (:content)
@@ -202,7 +226,7 @@
                    (-> val
                        (:tag)
                        (name)
-                       (str/lower-case)
+                       (string/lower-case)
                        (keyword))
                    (-> val
                        (:content)

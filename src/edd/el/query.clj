@@ -54,10 +54,14 @@
               @req/*request*
               [:edd-core :http-cache request])]
       hint
-      (swap! req/*request*
-             #(assoc-in % [:edd-core
-                           :http-cache
-                           request] (f request))))
+      (do
+        (swap! req/*request*
+               #(assoc-in % [:edd-core
+                             :http-cache
+                             request] (f request)))
+        (get-in
+         @req/*request*
+         [:edd-core :http-cache request])))
     (f request)))
 
 (defn resolve-remote-dependency
