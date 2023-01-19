@@ -1,4 +1,5 @@
 (ns lambda.http-client-test
+
   (:require [clojure.test :refer :all]
             [lambda.http-client :as http-client]
             [edd.util :as edd-util]))

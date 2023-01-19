@@ -9,6 +9,7 @@
             [lambda.test.fixture.client :as client]
             [edd.memory.event-store :as event-store]
             [edd.test.fixture.dal :as mock]
+            [lambda.request :as request]
             [edd.ctx :as edd-ctx]
             [lambda.uuid :as uuid]
             [aws.aws :as aws])
@@ -73,33 +74,42 @@
         ctx {:request-id     request-id
              :interaction-id interaction-id
              :meta           meta}]
-    (with-redefs [aws/get-token (fn [ctx] "#id-token")
-                  dal/log-dps (fn [ctx] ctx)
-                  util/get-env (fn [v]
-                                 (get {"PrivateHostedZoneName" "mock.com"} v))]
-      (client/mock-http
-       [{:post (cmd/calc-service-query-url "some-remote-service")
-         :body (util/to-json {:result {:a :b}})}]
-       (is (= {:a :b}
-              (cmd/resolve-remote-dependency
-               ctx
-               {}
-               {:query   (fn [_ cmd] {:a :b
-                                      :query-id :some-query-id})
-                :service :some-remote-service}
-               {})))
-       (client/verify-traffic [{:body            (util/to-json
-                                                  {:query          {:a :b
-                                                                    :query-id :some-query-id}
-                                                   :meta           meta
-                                                   :request-id     request-id
-                                                   :interaction-id interaction-id})
-                                :headers         {"X-Authorization" "#id-token"
-                                                  "Content-Type"    "application/json"}
-                                :method          :post
-                                :idle-timeout    10000
-                                :connect-timeout 300
-                                :url             (cmd/calc-service-query-url "some-remote-service")}])))))
+    (binding [request/*request* (atom {:scoped true})]
+      (with-redefs [aws/get-token (fn [ctx] "#id-token")
+                    dal/log-dps (fn [ctx] ctx)
+                    util/get-env (fn [v]
+                                   (get {"PrivateHostedZoneName" "mock.com"} v))]
+        (client/mock-http
+         [{:post (cmd/calc-service-query-url "some-remote-service")
+           :body (util/to-json {:result {:a :b}})}]
+         (is (= {:a :b}
+                (cmd/resolve-remote-dependency
+                 ctx
+                 {}
+                 {:query   (fn [_ cmd] {:a :b
+                                        :query-id :some-query-id})
+                  :service :some-remote-service}
+                 {})))
+         (is (= {:a :b}
+                (cmd/resolve-remote-dependency
+                 ctx
+                 {}
+                 {:query   (fn [_ cmd] {:a :b
+                                        :query-id :some-query-id})
+                  :service :some-remote-service}
+                 {})))
+         (client/verify-traffic [{:body            (util/to-json
+                                                    {:query          {:a :b
+                                                                      :query-id :some-query-id}
+                                                     :meta           meta
+                                                     :request-id     request-id
+                                                     :interaction-id interaction-id})
+                                  :headers         {"X-Authorization" "#id-token"
+                                                    "Content-Type"    "application/json"}
+                                  :method          :post
+                                  :idle-timeout    10000
+                                  :connect-timeout 300
+                                  :url             (cmd/calc-service-query-url "some-remote-service")}]))))))
 
 (deftest test-remote-dep-when-query-id-is-not-set
   (testing "If deps fn does not return a map with query-id we are skipping dependency resolution

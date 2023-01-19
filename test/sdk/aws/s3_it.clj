@@ -56,12 +56,8 @@
     (testing "Delete getting missing object"
       (let [key (gen-key)
             object (for-object key)]
-        (is (= 404
-               (try
-                 (s3/get-object ctx object)
-                 (catch Exception e
-                   (-> (ex-data e)
-                       (get-in [:error :error :status]))))))))
+        (is (= nil
+               (s3/get-object ctx object)))))
 
     (testing "Testing when there is error putting object to s3"
       (let [key (gen-key)
@@ -127,12 +123,8 @@
     (testing "Delete getting missing tagged"
       (let [key (gen-key)
             object (for-object key)]
-        (is (= 404
-               (try
-                 (s3/get-object-tagging ctx object)
-                 (catch Exception e
-                   (-> (ex-data e)
-                       (get-in [:error :error :status]))))))))
+        (is (= nil
+               (s3/get-object-tagging ctx object)))))
 
     (testing "Testing when there is error putting tags"
       (let [key (gen-key)
@@ -203,22 +195,14 @@
         (is (= data
                (slurp (s3/get-object ctx object))))
         (s3/delete-object ctx object)
-        (is (= 404
-               (try
-                 (s3/get-object ctx object)
-                 (catch Exception e
-                   (-> (ex-data e)
-                       (get-in [:error :error :status]))))))))
+        (is (= nil
+               (s3/get-object ctx object)))))
 
     (testing "Delete missing object"
       (let [key (gen-key)
             object (for-object key)]
-        (is (= 404
-               (try
-                 (s3/get-object ctx object)
-                 (catch Exception e
-                   (-> (ex-data e)
-                       (get-in [:error :error :status]))))))))
+        (is (= nil
+               (s3/get-object ctx object)))))
 
     (testing "Testing when there is error deleteing"
       (let [key (gen-key)
@@ -240,10 +224,68 @@
           (s3/delete-object ctx object)
           (is (= 2
                  @atempt))
-          (is (= 404
-                 (try
-                   (s3/get-object ctx object)
-                   (catch Exception e
-                     (-> (ex-data e)
-                         (get-in [:error :error :status])))))))))))
+          (is (= nil
+                 (s3/get-object ctx object))))))))
+
+(deftest test-s3-missing-things
+  (let [ctx    {:aws (lambda/fetch-aws-config)
+                :service-name (keyword (util/get-env
+                                        "ServiceName"
+                                        "local-test"))
+                :hosted-zone-name (util/get-env
+                                   "PublicHostedZoneNetme"
+                                   "example.com")
+                :environment-name-lower (util/get-env
+                                         "EnvironmentNameLower")}
+        gen-bucket (fn []
+                     (str
+                      (util/get-env
+                       "AccountId")
+                      "-"
+                      (util/get-env
+                       "EnvironmentNameLower")
+                      "-"
+                      (uuid/gen)))
+        gen-object (fn [bucket]
+                     {:s3 {:bucket {:name bucket}
+                           :object {:key (->> (uuid/gen)
+                                              (str "prefix/"))}}})]
+
+    (let [bucket (gen-bucket)
+          object (gen-object bucket)]
+      (try
+        (s3/delete-object ctx  object)
+        (throw (ex-info "Should not come here"
+                        {:expected "Exception"}))
+        (catch Exception e
+          (is (= {:code "NoSuchBucket",
+                  :message "The specified bucket does not exist",
+                  :bucketname bucket}
+                 (-> (ex-data e)
+                     (select-keys [:code :message :bucketname])))))))
+    (let [bucket (gen-bucket)
+          object (assoc-in (gen-object bucket)
+                           [:s3 :object :content] "Test")]
+      (try
+        (s3/put-object ctx  object)
+        (throw (ex-info "Should not come here"
+                        {:expected "Exception"}))
+        (catch Exception e
+          (is (= {:code "NoSuchBucket",
+                  :message "The specified bucket does not exist",
+                  :bucketname bucket}
+                 (-> (ex-data e)
+                     (select-keys [:code :message :bucketname])))))))
+    (let [bucket (gen-bucket)
+          object (gen-object bucket)]
+      (try
+        (s3/get-object ctx  object)
+        (throw (ex-info "Should not come here"
+                        {:expected "Exception"}))
+        (catch Exception e
+          (is (= {:code "NoSuchBucket",
+                  :message "The specified bucket does not exist",
+                  :bucketname bucket}
+                 (-> (ex-data e)
+                     (select-keys [:code :message :bucketname])))))))))
 

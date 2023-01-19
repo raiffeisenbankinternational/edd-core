@@ -10,8 +10,9 @@
                                 get-snapshot]]
             [lambda.util :as util]
             [lambda.elastic :as elastic]
+            [sdk.aws.s3 :as s3]
             [clojure.tools.logging :as log]
-            [clojure.string :as str]
+            [clojure.string :as string]
             [edd.search :refer [parse]]))
 
 (defn realm
@@ -20,7 +21,7 @@
 
 (defn- make-index-name
   [realm-name service-name]
-  (str realm-name "_" (str/replace (name service-name) "-" "_")))
+  (str realm-name "_" (string/replace (name service-name) "-" "_")))
 
 (defn- field+keyword
   [field]
@@ -28,7 +29,7 @@
 
 (defn ->trim [v]
   (if (string? v)
-    (str/trim v)
+    (string/trim v)
     v))
 
 (def op->filter-builder
@@ -155,7 +156,7 @@
                  (flatten-paths v separator (conj path k))
                  [(->> (conj path k)
                        (map name)
-                       (str/join separator)
+                       (string/join separator)
                        keyword) v]))
              m)
         (into {}))))
@@ -191,23 +192,94 @@
 
 (defn store-to-elastic
   [{:keys [aggregate] :as ctx}]
-  (log/debug "Updating aggregate" (realm ctx) aggregate)
-  (let [index-name (make-index-name (realm ctx) (:service-name ctx))
-        {:keys [error]} (elastic/query
-                         {:method         "POST"
-                          :path           (str "/" index-name "/_doc/" (:id aggregate))
-                          :body           (util/to-json aggregate)
-                          :elastic-search (:elastic-search ctx)
-                          :aws            (:aws ctx)})]
-    (if error
-      (throw (ex-info "Could not store aggregate" {:error error}))
-      ctx)))
+  (loop [count 0]
+    (let [index-name (make-index-name (realm ctx) (:service-name ctx))
+          {:keys [error]} (elastic/query
+                           {:method         "POST"
+                            :path           (str "/" index-name "/_doc/" (:id aggregate))
+                            :body           (util/to-json aggregate)
+                            :elastic-search (:elastic-search ctx)
+                            :aws            (:aws ctx)})]
+      (if error
+        (throw (ex-info "Could not store aggregate" {:error error}))))))
+
+(defn store-to-s3
+  [{:keys [aggregate
+           service-name] :as ctx}]
+  (let [id (str (:id aggregate))
+        partition-prefix (-> (subs id 0 1)
+                             util/hex-str-to-bit-str)
+        r (realm ctx)
+        bucket (str
+                (util/get-env
+                 "AccountId")
+                "-"
+                (util/get-env
+                 "EnvironmentNameLower")
+                "-aggregates")
+        key (str "aggregates/"
+                 r
+                 "/"
+                 partition-prefix
+                 "/"
+                 (name service-name)
+                 "/latest/"
+                 id)
+        {:keys  [error]
+         :as resp} (s3/put-object ctx
+                                  {:s3 {:bucket {:name bucket}
+                                        :object {:key key
+                                                 :content (util/to-json aggregate)}}})]
+    (when error
+      (throw (ex-info "Could not store aggregate" {:error error})))
+    resp))
+
+(defn get-from-s3
+  [{:keys [service-name] :as ctx} id]
+  (let [id (str id)
+        partition-prefix (-> (subs id 0 1)
+                             util/hex-str-to-bit-str)
+        r (realm ctx)
+        bucket (str
+                (util/get-env
+                 "AccountId")
+                "-"
+                (util/get-env
+                 "EnvironmentNameLower")
+                "-aggregates")
+        key (str "aggregates/"
+                 r
+                 "/"
+                 partition-prefix
+                 "/"
+                 service-name
+                 "/latest/"
+                 id)
+        {:keys [error]
+         :as resp} (s3/get-object ctx
+                                  {:s3 {:bucket {:name bucket}
+                                        :object {:key key}}})]
+    (when (and error
+               (not= (:status error)
+                     404))
+      (throw (ex-info "Could not store aggregate" {:error error})))
+    (if (or
+         (nil? resp)
+         (= (:status error) 404))
+      nil
+      (-> resp
+          slurp
+          util/to-edn))))
 
 (defmethod update-aggregate
   :elastic
   [{:keys [aggregate] :as ctx}]
-  (log/info "Updating aggregate " (realm ctx) (:id aggregate) (:version aggregate))
-  (store-to-elastic ctx))
+  (util/d-time
+   (str "Updating aggregate s3: " (realm ctx) (:id aggregate) (:version aggregate))
+   (store-to-s3 ctx))
+  (util/d-time
+   (str "Updating aggregate elastic: " (realm ctx) (:id aggregate) (:version aggregate))
+   (store-to-elastic ctx)))
 
 (defmethod with-init
   :elastic
@@ -225,14 +297,6 @@
 (defmethod get-snapshot
   :elastic
   [ctx id]
-  (log/info "Fetching snapshot aggregate" (realm ctx) id)
-  (let [index-name (make-index-name (realm ctx) (:service-name ctx))
-        {:keys [error] :as body} (elastic/query
-                                  {:method         "GET"
-                                   :path           (str "/" index-name "/_doc/" id)
-                                   :elastic-search (:elastic-search ctx)
-                                   :aws            (:aws ctx)}
-                                  :ignored-status 404)]
-    (if error
-      (throw (ex-info "Failed to fetch snapshot" error))
-      (:_source body))))
+  (util/d-time
+   (str "Fetching snapshot aggregate: " (realm ctx) " " id)
+   (get-from-s3 ctx id)))

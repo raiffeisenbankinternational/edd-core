@@ -73,7 +73,7 @@
 (defmethod get-snapshot
   :memory
   [ctx id]
-  (log/info "Fetching snapshot aggregate" id)
+  (log/info "Fetching snapshot aggregate: " id)
   (->> @*dal-state*
        (:aggregate-store)
        (filter

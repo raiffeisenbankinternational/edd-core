@@ -38,10 +38,17 @@
     (let [response (try
                      (apply f [attempt])
                      (catch Exception e
+                       (when (= attempt 1)
+                         (throw
+                          (ex-info "All retries exhosted"
+                                   (merge {:message "All retries exhosted"
+                                           :total-attempts total}
+                                          (ex-data e))
+                                   e)))
                        (edd-util/try-parse-exception-data e)))]
       (if (:error response)
         (do
-          (log/warn (str "Retrying " (- total attempt) "/" total) (:error response))
+          (log/warn (str "Retrying " (- total attempt) "/" total) (:message response))
           (when (not= attempt total)
             ;sleep only when second attempt
             (Thread/sleep (+ 1000 (rand-int 1000))))
