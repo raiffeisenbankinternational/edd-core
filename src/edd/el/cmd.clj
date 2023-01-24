@@ -186,8 +186,8 @@
                   :sequences  []}]
     (if (some :error events)
       (assoc response
-             :error [(first
-                      (filter :error events))])
+             :error (vec
+                     (filter :error events)))
       (reduce
        (fn [p event]
          (cond-> p
@@ -196,56 +196,6 @@
            (contains? event :event-id) (update :events conj event)))
        response
        events))))
-
-(defn handle-command
-  [ctx {:keys [cmd-id] :as cmd}]
-  (log/info (:meta ctx))
-  (util/d-time
-   (str "handling-command-" cmd-id)
-   (let [{:keys [handler]} (edd-ctx/get-cmd ctx cmd-id)
-         dependencies (fetch-dependencies-for-command ctx cmd)
-         ctx (merge dependencies ctx)
-         {:keys [id] :as cmd} (resolve-command-id-with-id-fn ctx cmd)]
-     (when-not handler
-       (throw (ex-info "Missing command handler"
-                       {:cmd-id (:cmd-id cmd)})))
-     (let [aggregate (common/get-by-id ctx {:id id})
-           ctx (el-ctx/put-aggregate ctx aggregate)
-           resp (->> (get-response-from-command-handler
-                      ctx
-                      :cmd cmd
-                      :command-handler handler)
-                     (resp->add-user-to-events ctx)
-                     (resp->assign-event-seq ctx))
-           resp (assoc resp :meta [{cmd-id {:id id}}])
-           aggregate-schema (edd-ctx/get-service-schema ctx)
-           aggregate (-> ctx
-                         (assoc :id id
-                                :events (:events resp [])
-                                :snapshot aggregate)
-                         (event/get-current-state)
-                         (:aggregate)
-                         (or {}))]
-
-       (when-not (m/validate aggregate-schema aggregate)
-         (throw (ex-info "Invalid aggregate state"
-                         {:error (me/humanize
-                                  (m/explain aggregate-schema aggregate))})))
-
-       (let [resp (handle-effects ctx
-                                  :resp resp
-                                  :aggregate aggregate)
-
-             resp (resp->add-meta-to-events ctx resp)]
-         (request-cache/update-aggregate ctx aggregate)
-         resp)))))
-
-(def initial-response
-  {:meta       []
-   :events     []
-   :effects    []
-   :sequences  []
-   :identities []})
 
 (defn validate-single-command
   [ctx {:keys [cmd-id] :as cmd}]
@@ -265,18 +215,66 @@
 
       :else true)))
 
+(defn handle-command
+  [ctx {:keys [cmd-id] :as cmd}]
+  (log/info (:meta ctx))
+  (util/d-time
+   (str "handling-command-" cmd-id)
+   (let [{:keys [handler]} (edd-ctx/get-cmd ctx cmd-id)
+         dependencies (fetch-dependencies-for-command ctx cmd)
+         ctx (merge dependencies ctx)
+         {:keys [id] :as cmd} (resolve-command-id-with-id-fn ctx cmd)
+         {:keys [error]
+          :as validation} (validate-single-command ctx cmd)]
+     (when-not handler
+       (throw (ex-info "Missing command handler"
+                       {:cmd-id (:cmd-id cmd)})))
+     (if error
+       validation
+       (let [aggregate (common/get-by-id ctx {:id id})
+             ctx (el-ctx/put-aggregate ctx aggregate)
+             resp (->> (get-response-from-command-handler
+                        ctx
+                        :cmd cmd
+                        :command-handler handler)
+                       (resp->add-user-to-events ctx)
+                       (resp->assign-event-seq ctx))
+             resp (assoc resp :meta [{cmd-id {:id id}}])
+             aggregate-schema (edd-ctx/get-service-schema ctx)
+             aggregate (-> ctx
+                           (assoc :id id
+                                  :events (:events resp [])
+                                  :snapshot aggregate)
+                           (event/get-current-state)
+                           (:aggregate)
+                           (or {}))]
+
+         (when-not (m/validate aggregate-schema aggregate)
+           (throw (ex-info "Invalid aggregate state"
+                           {:error (me/humanize
+                                    (m/explain aggregate-schema aggregate))})))
+
+         (let [resp (handle-effects ctx
+                                    :resp resp
+                                    :aggregate aggregate)
+
+               resp (resp->add-meta-to-events ctx resp)]
+           (request-cache/update-aggregate ctx aggregate)
+           resp))))))
+
+(def initial-response
+  {:meta       []
+   :events     []
+   :effects    []
+   :sequences  []
+   :identities []})
+
 (defn validate-commands
   "Validate if commands match spec and if they are valid commands"
-  [ctx commands]
+  [_ commands]
   (when (empty? commands)
     (throw (ex-info "No commands present"
-                    {:error "No commands present in request"})))
-  (let [validations (mapv
-                     (partial validate-single-command ctx)
-                     commands)]
-    (when (some :error validations)
-      (throw (ex-info "Command schema validation failed"
-                      {:error (mapv #(get % :error :valid) validations)})))))
+                    {:error "No commands present in request"}))))
 
 (defn resp->response-summary
   [{:keys [no-summary]} resp]
@@ -344,7 +342,8 @@
   (let [cache-result (resp->cache-partitioned ctx resp)]
     (when (:error cache-result)
       (throw (ex-info "Error caching result" (:error cache-result))))
-    (dal/store-results (assoc ctx :resp
+    (dal/store-results (assoc ctx
+                              :resp
                               (assoc-in resp
                                         [:summary :cache-result]
                                         cache-result)))
@@ -375,13 +374,18 @@
         (dissoc resp :cache-result))
       (do
         (validate-commands ctx commands)
-        (let [resp (map
-                    #(handle-command ctx %)
-                    commands)
-              resp (reduce
-                    #(merge-with concat %1 %2)
-                    initial-response
-                    resp)
+        (let [resp (loop [queue commands
+                          resp initial-response]
+                     (let [c (first queue)
+                           r (handle-command ctx c)
+                           resp (merge-with concat resp r)]
+                       (cond
+                         (:error r) (assoc initial-response
+                                           :error (:error r))
+                         (seq
+                          (rest queue)) (recur (rest queue)
+                                               resp)
+                         :else resp)))
               resp (with-breadcrumbs ctx resp)
               resp (assoc resp
                           :summary (resp->response-summary ctx resp))

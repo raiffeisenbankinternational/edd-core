@@ -24,43 +24,49 @@
   (assoc-in ctx [:meta :realm] :test))
 
 (defn get-ctx
-  [invocation-id]
-  (-> {}
-      (assoc :service-name "local-test")
-      (assoc :invocation-id invocation-id)
-      (assoc :response-cache :default)
-      (assoc :environment-name-lower (util/get-env "EnvironmentNameLower"))
-      (assoc :aws {:region                (util/get-env "AWS_DEFAULT_REGION")
-                   :account-id            (util/get-env "AccountId")
-                   :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID")
-                   :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY")
-                   :aws-session-token     (util/get-env "AWS_SESSION_TOKEN")})
-      (event-store/register)
-      (view-store/register)
-      (edd/reg-cmd :cmd-1 (fn [ctx cmd]
-                            [{:identity (:id cmd)}
-                             {:sequence (:id cmd)}
-                             {:id       (:id cmd)
-                              :event-id :event-1
-                              :name     (:name cmd)}
-                             {:id       (:id cmd)
-                              :event-id :event-2
-                              :name     (:name cmd)}]))
-      (edd/reg-event :event-1
-                     (fn [agg event]
-                       (merge agg
-                              {:value "1"})))
-      (edd/reg-fx (fn [ctx events]
-                    [{:commands [{:cmd-id :vmd-2
-                                  :id     fx-id}]
-                      :service  :s2}
-                     {:commands [{:cmd-id :vmd-2
-                                  :id     fx-id}]
-                      :service  :s2}]))
-      (edd/reg-event :event-2
-                     (fn [agg event]
-                       (merge agg
-                              {:value "2"})))))
+  ([] (-> {}
+          (assoc :service-name "local-test")
+          (assoc :response-cache :default)
+          (assoc :environment-name-lower (util/get-env "EnvironmentNameLower"))
+          (assoc :aws {:region                (util/get-env "AWS_DEFAULT_REGION")
+                       :account-id            (util/get-env "AccountId")
+                       :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID")
+                       :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY")
+                       :aws-session-token     (util/get-env "AWS_SESSION_TOKEN")})
+          (event-store/register)
+          (view-store/register)
+          (edd/reg-cmd :cmd-1 (fn [ctx cmd]
+                                [{:identity (:id cmd)}
+                                 {:sequence (:id cmd)}
+                                 {:id       (:id cmd)
+                                  :event-id :event-1
+                                  :name     (:name cmd)}
+                                 {:id       (:id cmd)
+                                  :event-id :event-2
+                                  :name     (:name cmd)}])
+                       :consumes [:map
+                                  [:id uuid?]])
+          (edd/reg-cmd :vmd-2 (fn [_ctx cmd]
+                                [{:id       (:id cmd)
+                                  :event-id :fx-event-1
+                                  :name     (:name cmd)}]))
+          (edd/reg-event :event-1
+                         (fn [agg event]
+                           (merge agg
+                                  {:value "1"})))
+          (edd/reg-fx (fn [ctx events]
+                        [{:commands [{:cmd-id :vmd-2
+                                      :id     fx-id}]
+                          :service  :s2}
+                         {:commands [{:cmd-id :vmd-2
+                                      :id     fx-id}]
+                          :service  :s2}]))
+          (edd/reg-event :event-2
+                         (fn [agg event]
+                           (merge agg
+                                  {:value "2"})))))
+  ([invocation-id] (-> (get-ctx)
+                       (assoc :invocation-id invocation-id))))
 
 (deftest apply-when-two-events
   (binding [*dal-state* (atom {})]
@@ -101,9 +107,290 @@
               :request-id     request-id}
              resp)))))
 
+(defn make-request
+  [ctx cmds & [{:keys [invocation-id
+                       request-id
+                       interaction-id]
+                :or {invocation-id (uuid/gen)
+                     request-id (uuid/gen)
+                     interaction-id (uuid/gen)}}]]
+  (let [ctx (assoc ctx :invocation-id invocation-id)
+        req {:request-id     request-id
+             :interaction-id interaction-id
+             :meta           {:realm :test}
+             :commands       cmds}
+        resp (edd/handler (assoc ctx :no-summary true)
+                          (assoc req :log-level :debug))]
+    {:invocation-id invocation-id
+     :request-id request-id
+     :interaction-id interaction-id
+     :response resp}))
+
+(deftest testr-request-log
+  (let [ctx (get-ctx)
+        ctx (-> ctx
+                (edd/reg-cmd :schema-cmd (fn [_ctx _cmd]
+                                           {})
+                             :consumes [:map
+                                        [:first-name [:string]]])
+                (edd/reg-cmd :error-cmd (fn [_ctx _cmd]
+                                          {:error "Dont want to handle this"}))
+                (edd/reg-cmd :mix-error-cmd (fn [_ctx _cmd]
+                                              [{:event-id :som-event}
+                                               {:error "Dont want to handle this"}
+                                               {:event-is :some-other-event}]))
+                (edd/reg-cmd :exception-cmd (fn [_ctx _cmd]
+                                              (throw (ex-info "Exception"
+                                                              {:info "Dont know how to handle this"})))))]
+    (binding [*dal-state* (atom {})]
+
+      (testing "We should have first breadcrumnt stored as 0"
+        (let [agg-id (uuid/gen)
+              cmd  {:cmd-id :cmd-1
+                    :id     agg-id}
+              {:keys [invocation-id
+                      interaction-id
+                      request-id]} (make-request
+                                    ctx
+                                    [cmd])]
+          (edd/with-stores
+            ctx
+            (fn [ctx]
+              (let [fx-cmd  {:meta {:realm :test},
+                             :commands
+                             [{:id fx-id,
+                               :cmd-id :vmd-2}],
+                             :request-id request-id,
+                             :interaction-id interaction-id,
+                             :breadcrumbs [0 0]}
+                    cmd-store [{:data
+                                (assoc fx-cmd
+                                       :service :s2)
+                                :breadcrumbs "0"}
+                               {:data
+                                {:service :s2,
+                                 :meta {:realm :test},
+                                 :commands
+                                 [{:id fx-id,
+                                   :cmd-id :vmd-2}],
+                                 :request-id request-id,
+                                 :interaction-id interaction-id,
+                                 :breadcrumbs [0 1]},
+                                :breadcrumbs "0"}]]
+                (is (= {:request-id request-id
+                        :interaction-id interaction-id
+                        :commands [cmd]
+                        :breadcrumbs [0]
+                        :log-level :debug,
+                        :meta {:realm :test}}
+                       (-> (event-store/get-request-log (with-realm ctx)
+                                                        {:invocation-id invocation-id})
+                           first
+                           :data)))
+                (is (= "0"
+                       (-> (event-store/get-request-log (with-realm ctx)
+                                                        {:invocation-id invocation-id})
+                           first
+                           :breadcrumbs)))
+                (is (= "0"
+                       (-> (event-store/get-request-log (with-realm ctx)
+                                                        {:request-id request-id})
+                           first
+                           :breadcrumbs)))
+                (is (= "0"
+                       (-> (event-store/get-request-log (with-realm ctx)
+                                                        {:interaction-id interaction-id})
+                           first
+                           :breadcrumbs)))
+
+                (is (= "0"
+                       (-> (event-store/get-response-log (with-realm ctx)
+                                                         {:invocation-id invocation-id})
+                           first
+                           :breadcrumbs)))
+                (is (= "0"
+                       (-> (event-store/get-response-log (with-realm ctx)
+                                                         {:request-id request-id})
+                           first
+                           :breadcrumbs)))
+                (is (= "0"
+                       (-> (event-store/get-response-log (with-realm ctx)
+                                                         {:interaction-id interaction-id})
+                           first
+                           :breadcrumbs)))
+
+                (is (= cmd-store
+                       (->> (event-store/get-command-store (with-realm ctx)
+                                                           {:invocation-id invocation-id})
+                            (mapv #(select-keys % [:data :breadcrumbs])))))
+                (is (= cmd-store
+                       (->> (event-store/get-command-store (with-realm ctx)
+                                                           {:request-id request-id})
+                            (mapv #(select-keys % [:data :breadcrumbs])))))
+                (is (= cmd-store
+                       (->> (event-store/get-command-store (with-realm ctx)
+                                                           {:request-id request-id
+                                                            :breadcrumbs [0]})
+                            (mapv #(select-keys % [:data :breadcrumbs])))))
+                (is (= cmd-store
+                       (->> (event-store/get-command-store (with-realm ctx)
+                                                           {:interaction-id interaction-id
+                                                            :breadcrumbs [0]})
+                            (mapv #(select-keys % [:data :breadcrumbs])))))
+                (testing "Wre execute fx-command. We expect that 
+                          we will not store full request in request-log 
+                          because it is already stored in command-store"
+                  (let [invocation-id-fx (uuid/gen)]
+                    (edd/handler (assoc ctx
+                                        :invocation-id invocation-id-fx)
+                                 fx-cmd)
+                    (is (= "0:0"
+                           (-> (event-store/get-request-log (with-realm ctx)
+                                                            {:invocation-id invocation-id-fx})
+                               first
+                               :breadcrumbs)))
+                    (is (= "0:0"
+                           (-> (event-store/get-request-log (with-realm ctx)
+                                                            {:request-id request-id
+                                                             :breadcrumbs [0 0]})
+                               first
+                               :breadcrumbs)))
+                    (is (= ["0:0"]
+                           (-> (map :breadcrumbs
+                                    (event-store/get-request-log (with-realm ctx)
+                                                                 {:interaction-id interaction-id
+                                                                  :breadcrumbs [0 0]})))))
+                    (is (= {:ref [0]}
+                           (-> (event-store/get-request-log (with-realm ctx)
+                                                            {:request-id request-id
+                                                             :breadcrumbs [0 0]})
+                               first
+                               :data))))))))))
+
+      (testing "When we have schema validation 
+               or command handler error we should see 
+               in command-response-log"
+        (let [agg-id (uuid/gen)
+              {:keys [invocation-id]} (make-request
+                                       ctx
+                                       [{:cmd-id :schema-cmd
+                                         :id     agg-id
+                                         :first-name :invalit-type}])]
+          (edd/with-stores
+            ctx
+            (fn [ctx]
+              (let [r (event-store/get-request-log (with-realm ctx)
+                                                   {:invocation-id invocation-id})]
+                (is (= nil
+                       (-> r
+                           first
+                           :error))))
+              (let [r (event-store/get-response-log (with-realm ctx)
+                                                    {:invocation-id invocation-id})]
+                (is (= {:first-name ["should be a string"]}
+                       (-> r
+                           first
+                           :data
+                           :error))))))))
+
+      (testing "Test command returningn error"
+        (let [agg-id (uuid/gen)
+              {:keys [invocation-id]} (make-request
+                                       ctx
+                                       [{:cmd-id :error-cmd
+                                         :id     agg-id
+                                         :first-name :invalit-type}])]
+          (edd/with-stores
+            ctx
+            (fn [ctx]
+              (is (= nil
+                     (-> (event-store/get-request-log (with-realm ctx)
+                                                      {:invocation-id invocation-id})
+                         first
+                         :error)))
+              (is (= [{:id     agg-id
+                       :error "Dont want to handle this"}]
+                     (-> (event-store/get-response-log (with-realm ctx)
+                                                       {:invocation-id invocation-id})
+                         first
+                         :data
+                         :error)))))))
+
+      (testing "Test command returningn mix of error and events"
+        (let [agg-id (uuid/gen)
+              {:keys [invocation-id
+                      resp]} (make-request
+                              ctx
+                              [{:cmd-id :mix-error-cmd
+                                :id     agg-id
+                                :first-name :invalit-type}])]
+          (edd/with-stores
+            ctx
+            (fn [ctx]
+              (is (= nil
+                     (-> (event-store/get-request-log (with-realm ctx)
+                                                      {:invocation-id invocation-id})
+                         first
+                         :error)))
+              (is (= [{:id     agg-id
+                       :error "Dont want to handle this"}]
+                     (-> (event-store/get-response-log (with-realm ctx)
+                                                       {:invocation-id invocation-id})
+                         first
+                         :data
+                         :error)))))))
+
+      (testing "Test multiple commands where one of them returns error"
+        (let [agg-id (uuid/gen)
+              {:keys [invocation-id]} (make-request
+                                       ctx
+                                       [{:cmd-id :cmd-1
+                                         :id     agg-id}
+                                        {:cmd-id :mix-error-cmd
+                                         :id     agg-id
+                                         :first-name :invalit-type}
+                                        {:cmd-id :cmd-1
+                                         :id     agg-id}])]
+          (edd/with-stores
+            ctx
+            (fn [ctx]
+              (is (= nil
+                     (-> (event-store/get-request-log (with-realm ctx)
+                                                      {:invocation-id invocation-id})
+                         first
+                         :error)))
+              (is (= [{:id     agg-id
+                       :error "Dont want to handle this"}]
+                     (-> (event-store/get-response-log (with-realm ctx)
+                                                       {:invocation-id invocation-id})
+                         first
+                         :data
+                         :error)))))))
+      (testing "Test command raising exception"
+        (let [agg-id (uuid/gen)
+              {:keys [invocation-id]} (make-request
+                                       ctx
+                                       [{:cmd-id :exception-cmd
+                                         :id     agg-id
+                                         :first-name :invalit-type}])]
+          (edd/with-stores
+            ctx
+            (fn [ctx]
+              (is (= {:info "Dont know how to handle this"}
+                     (-> (event-store/get-request-log (with-realm ctx)
+                                                      {:invocation-id invocation-id})
+                         first
+                         :error)))
+              (is (= nil
+                     (-> (event-store/get-response-log (with-realm ctx)
+                                                       {:invocation-id invocation-id})
+                         first
+                         :data
+                         :error))))))))))
+
 (deftest test-transaction-when-saving
-  (with-redefs [event-store/store-cmd (fn [ctx cmd]
-                                        (throw (ex-info "CMD Store failure" {})))]
+  (with-redefs [event-store/store-effects (fn [_ctx  _resp]
+                                            (throw (ex-info "CMD Store failure" {})))]
     (binding [*dal-state* (atom {})]
       (let [invocation-id (uuid/gen)
             ctx (get-ctx invocation-id)
@@ -121,7 +408,9 @@
         (edd/with-stores
           ctx (fn [ctx]
                 (is (= []
-                       (event-store/get-response-log (with-realm ctx) invocation-id)))))
+                       (event-store/get-response-log
+                        (with-realm ctx)
+                        {:invocation-id invocation-id})))))
 
         (is (= {:exception      "CMD Store failure"
                 :invocation-id  invocation-id
@@ -166,7 +455,9 @@
       (edd/with-stores
         ctx (fn [ctx]
               (is (not= []
-                        (event-store/get-response-log (with-realm ctx) invocation-id)))
+                        (event-store/get-response-log
+                         (with-realm ctx)
+                         {:invocation-id invocation-id})))
               (let [seq (event-store/get-sequence-number-for-id-imp
                          (with-realm (assoc ctx :id agg-id)))]
                 (is (> seq
@@ -197,14 +488,17 @@
                                  :no-id  "schema should fail"}]}
           resp (edd/handler ctx
                             (assoc req :log-level :debug))
-          expected-error [{:id ["missing required key"]}]]
+          expected-error {:id ["missing required key"]}]
 
       (edd/with-stores
         ctx (fn [ctx]
-              (is (= [{:error expected-error}]
-                     (mapv :error (event-store/get-request-log (with-realm ctx) request-id ""))))))
+              (is (= [expected-error]
+                     (mapv #(get-in % [:data :error])
+                           (event-store/get-response-log (with-realm ctx)
+                                                         {:request-id request-id
+                                                          :breadcrumbs [0]}))))))
 
-      (is (= {:exception      expected-error
+      (is (= {:error      expected-error
               :invocation-id  invocation-id
               :interaction-id interaction-id
               :request-id     request-id}

@@ -15,6 +15,15 @@
            traffic))
     traffic))
 
+(defn map-body-to-edn-deep
+  [traffic]
+  (if (:body traffic)
+    (try (-> (update traffic :body util/to-edn)
+             (update-in [:body] map-body-to-edn-deep))
+         (catch Exception _e
+           traffic))
+    traffic))
+
 (defmacro verify-traffic-edn
   [y]
   `(is (= ~y
@@ -28,6 +37,12 @@
           (mapv
            #(dissoc % :keepalive)
            (:traffic @*world*)))))
+
+(defn traffic-edn
+  ([]
+   (mapv map-body-to-edn-deep (:traffic @*world*)))
+  ([n]
+   (nth (traffic-edn) n)))
 
 (defn traffic
   ([]

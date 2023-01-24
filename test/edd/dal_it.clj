@@ -1,5 +1,5 @@
 (ns edd.dal-it
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest testing is]]
             [clojure.tools.logging :as log]
             [lambda.util :as util]
             [lambda.uuid :as uuid]

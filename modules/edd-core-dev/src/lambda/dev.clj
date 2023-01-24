@@ -123,7 +123,7 @@
                                          lambda/send-response (send-response-redef response-handler message)
                                          util/get-env (get-env-redef config-load)
                                          aws/get-next-invocation (get-next-invocation-redef config-load cmd-id query-id message)
-                                         postgres/store-command store-command-redef]
+                                         postgres/store-effects store-command-redef]
                              ;; NOTE : usually `-main`
                              (entrypoint)))]
       (cond

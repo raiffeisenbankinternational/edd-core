@@ -11,7 +11,7 @@
 
 (defn import-handler
   [ctx body]
-  (with-redefs [postgres-event-store/store-cmd
+  (with-redefs [postgres-event-store/store-effects
                 (fn [_ctx _cmd]
                   ; Do nothing. We rely on events being stored in S3 bucket
                   )]
