@@ -2,7 +2,7 @@
   (:require [clojure.tools.logging :as log]))
 
 (defn try-parse-exception-data
-  [e]
+  [^Throwable e]
   (let [data (ex-data e)]
     (if data
       (if (:error data)

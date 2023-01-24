@@ -50,8 +50,8 @@
                                      (.writeString jg (str ":" (name v))))}}))
 
 (defn date-time
-  ([] (OffsetDateTime/now))
-  ([^String value] (OffsetDateTime/parse value)))
+  (^OffsetDateTime [] (OffsetDateTime/now))
+  (^OffsetDateTime [^String value] (OffsetDateTime/parse value)))
 
 (defn date->string
   ([] (.format (date-time) (DateTimeFormatter/ofPattern offset-date-time-format)))
@@ -132,7 +132,7 @@
   (str/replace value "\"" "\\\""))
 
 (defn decrypt
-  [body name]
+  [body ^String name]
   (log/debug "Decrypting")
   (let [context (get-env "ConfigurationContext")]
     (if (and context

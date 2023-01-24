@@ -13,5 +13,5 @@
       (UUID/fromString id))))
 
 (defn named
-  [name]
+  [^String name]
   (UUID/nameUUIDFromBytes (.getBytes name)))
