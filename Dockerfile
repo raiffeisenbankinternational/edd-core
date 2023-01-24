@@ -81,6 +81,7 @@ RUN set -e &&\
     ansible-playbook ansible/deploy/deploy.yaml &&\
     echo "Building b${BUILD_ID}" &&\
     clj -M:jar  \
+       --aot "clojure.java.io" \
        --app-group-id ${ARTIFACT_ORG} \
        --app-artifact-id ${PROJECT_NAME} \
        --app-version "1.${BUILD_ID}" &&\
@@ -124,6 +125,7 @@ RUN set -e &&\
        clj -M:test:it &&\
        clj -M:test:unit &&\
        clj -M:jar  \
+             --aot "clojure.java.io" \
              --app-group-id ${ARTIFACT_ORG} \
              --app-artifact-id ${i} \
              --app-version "1.${BUILD_ID}" &&\

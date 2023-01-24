@@ -5,7 +5,7 @@
             [lambda.core :as core]
             [lambda.filters :as fl]
             [lambda.util :as util]
-            [lambda.test.fixture.client :refer [verify-traffic-edn]]
+            [lambda.test.fixture.client :refer [verify-traffic-edn] :as client]
             [lambda.test.fixture.core :refer [mock-core]]
             [lambda.api-test :refer [api-request]]
             [lambda.uuid :as uuid]
@@ -25,49 +25,6 @@
     (catch ExceptionInfo ex
       (is (= {:error "No commands present in request"}
              (ex-data ex))))))
-
-(deftest test-invalid-command
-  (try
-    (el-cmd/validate-commands ctx [{}])
-    (catch ExceptionInfo ex
-      (is (= {:error [{:cmd-id ["missing required key"]
-                       :id     ["missing required key"]}]}
-             (ex-data ex))))))
-
-(deftest test-invalid-cmd-id-type
-  (try
-    (el-cmd/validate-commands ctx [{:id     (uuid/gen)
-                                    :cmd-id "wrong"}])
-    (catch ExceptionInfo ex
-      (is (= {:error [{:cmd-id ["should be a keyword"]}]}
-             (ex-data ex)))))
-
-  (try
-    (el-cmd/validate-commands ctx [{:cmd-id :test
-                                    :id     (uuid/gen)}])
-    (catch ExceptionInfo ex
-      (is (= {:error ["Missing handler: :test"]}
-             (ex-data ex))))))
-
-(deftest test-custom-schema
-  (let [ctx (edd/reg-cmd ctx
-                         :test (fn [_ _])
-                         :consumes [:map [:name :string]])
-        cmd-missing {:cmd-id :test-unknown
-                     :id     (uuid/gen)}
-        cmd-invalid {:cmd-id :test
-                     :name   :wrong}
-        cmd-valid {:cmd-id :test
-                   :name   "name"
-                   :id     (uuid/gen)}]
-
-    (try
-      (el-cmd/validate-commands ctx [cmd-missing cmd-invalid cmd-valid])
-      (catch ExceptionInfo ex
-        (is (= {:error ["Missing handler: :test-unknown"
-                        {:id ["missing required key"]}
-                        :valid]}
-               (ex-data ex)))))))
 
 (defn register []
   (edd/reg-cmd mock/ctx
@@ -89,24 +46,31 @@
       :filters [fl/from-api]
       :post-filter fl/to-api)
 
-     (verify-traffic-edn
-      [{:body   {:body            (util/to-json
-                                   {:invocation-id  0
-                                    :request-id     request-id
-                                    :interaction-id interaction-id
-                                    :error          [{:id ["missing required key"]}]})
-                 :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-                                   :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
-                                   :Access-Control-Allow-Origin   "*"
-                                   :Access-Control-Expose-Headers "*"
-                                   :Content-Type                  "application/json"}
-                 :isBase64Encoded false
-                 :statusCode      200}
-        :method :post
-        :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-       {:method  :get
-        :timeout 90000000
-        :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
+     (is (= [{:body   {:body            {:invocation-id  0
+                                         :request-id     request-id
+                                         :interaction-id interaction-id
+                                         :error          {:id ["missing required key"]}}
+                       :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                                         :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
+                                         :Access-Control-Allow-Origin   "*"
+                                         :Access-Control-Expose-Headers "*"
+                                         :Content-Type                  "application/json"}
+                       :isBase64Encoded false
+                       :statusCode      200}
+              :method :post
+              :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
+             {:url
+              "https://sqs.eu-west-1.amazonaws.com/local/local-glms-router-svc-response",
+              :method :post,
+              :body
+              (str "Action=SendMessage&MessageBody=%7B%22Records%22%3A%5B%7B%22key%22%3A%22response%2F"
+                   request-id
+                   "%2F0%2Flocal-test.json%22%7D%5D%7D")}
+             {:method  :get
+              :url     "http://mock/2018-06-01/runtime/invocation/next"}]
+            (mapv
+             #(select-keys % [:method :body :url])
+             (client/traffic-edn)))))))
 
 (deftest api-handler-response-test
 

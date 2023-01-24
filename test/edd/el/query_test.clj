@@ -26,6 +26,7 @@
         cmd {:request-id     request-id,
              :interaction-id interaction-id,
              :meta           meta
+             :breadcrumbs [0]
              :query          [{:query-id :get-by-id}]}
         user {:id             ""
               :email          ""
@@ -71,6 +72,7 @@
         cmd {:request-id     request-id,
              :interaction-id interaction-id,
              :meta           meta
+             :breadcrumbs [0]
              :query          [{:query-id :get-by-id}]}]
     (mock/with-mock-dal
       (with-redefs [realm-mock fl/get-realm
