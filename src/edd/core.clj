@@ -199,7 +199,10 @@
   [{:keys [item] :as ctx}]
   (log/debug "Dispatching" item)
   (update-mdc-for-request ctx item)
-  (let [ctx (assoc ctx :request-id (:request-id item)
+  (let [item (update item :breadcrumbs #(or % [0]))
+        ctx (assoc ctx
+                   :request-id (:request-id item)
+                   :breadcrumbs (:breadcrumbs item)
                    :interaction-id (:interaction-id item))]
     (try
       (let [item (if (contains? item :command)
@@ -207,6 +210,7 @@
                        (assoc :commands [(:command item)])
                        (dissoc :command))
                    item)
+
             resp (cond
                    (contains? item :apply) (event/handle-event (-> ctx
                                                                    (assoc :apply (assoc
