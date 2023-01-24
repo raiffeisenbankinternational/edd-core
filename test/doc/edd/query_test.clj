@@ -118,7 +118,8 @@
             (try
               (query-fn)
               (catch ExceptionInfo ex
-                (is (= {:error {:result {:id ["should be an integer"]}}}
+                (is (= {:error    {:result {:id ["should be an integer"]}}
+                        :response {:result {:id "5"}}}
                        (ex-data ex)))))))
 
         (testing "Exception when response-schema-validation is set in meta"
@@ -129,7 +130,8 @@
             (try
               (query-fn)
               (catch ExceptionInfo ex
-                (is (= {:error {:result {:id ["should be an integer"]}}}
+                (is (= {:error    {:result {:id ["should be an integer"]}}
+                        :response {:result {:id "5"}}}
                        (ex-data ex)))))))
 
         (testing "Log warning when response-schema-validation is set on context"
@@ -150,4 +152,39 @@
               (-> ctx
                   (assoc-in [:meta :response-schema-validation] :log-on-error)
                   (edd-query/handle-query request)))
-            (is (re-matches #".*should be an integer.*" @warning))))))))
+            (is (re-matches #".*should be an integer.*" @warning)))))
+
+      (let [helper (fn [produces response]
+                     (try
+                       (-> init-ctx
+                           (assoc :response-schema-validation :throw-on-error)
+                           (edd/reg-query :test-query (constantly response)
+                                          :produces produces)
+                           (edd-query/handle-query {:query {:query-id :test-query}}))
+                       :no-error
+                       (catch ExceptionInfo _e
+                         :error)))]
+
+        (testing "Allows any return value in case query doesn't have explicit :produces"
+          (are
+           [produces response error-status] (= error-status (helper produces response))
+            nil      nil      :no-error
+            nil      5        :no-error
+            nil      [1 2]    :no-error
+            nil      #{1 2}   :no-error
+            nil      {:a :b}  :no-error
+            nil      false    :no-error))
+
+        (testing "Validates non-map return values correctly"
+          (are
+           [produces response error-status] (= error-status (helper produces response))
+            :any               nil     :no-error
+            :any               5       :no-error
+            :any               [1 2]   :no-error
+            :any               #{1 2}  :no-error
+            :any               {:a :b} :no-error
+            :any               false   :no-error
+            :boolean           nil     :error
+            :boolean           true    :no-error
+            [:sequential :int] [1 2]   :no-error
+            [:sequential :map] [1 2]   :error))))))
