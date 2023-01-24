@@ -37,7 +37,7 @@
                                                     [:result schema]]
                                                    [:map
                                                     [:result
-                                                     [:map]]])))
+                                                     [:any]]])))
 
 (defn explain-error [schema entity]
   (->> entity

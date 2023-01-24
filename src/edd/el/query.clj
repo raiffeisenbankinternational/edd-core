@@ -115,16 +115,18 @@
              (validate-response-schema-setting ctx)))
 
 (defn- maybe-validate-response [ctx produces response]
-  (when (and response
+  (when (and produces
              (validate-response-schema? ctx))
     (let [wrapped {:result response}]
       (when-not (m/validate produces wrapped)
         (let [error (schema/explain-error produces wrapped)]
           (condp = (validate-response-schema-setting ctx)
             :throw-on-error
-            (throw (ex-info "Invalid response" {:error error}))
+            (throw (ex-info "Invalid response" {:error    error
+                                                :response wrapped}))
             :log-on-error
-            (log/warnf "Invalid response %s" (pr-str {:error error}))))))))
+            (log/warnf "Invalid response %s" (pr-str {:error error
+                                                      :response wrapped}))))))))
 
 (declare handle-query)
 

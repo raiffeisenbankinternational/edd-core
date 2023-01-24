@@ -189,7 +189,7 @@
                                           (add-log-level ctx item))))))
 
 (defn try-parse-exception
-  [e]
+  [^Throwable e]
   (try (.getMessage e)
        (catch IllegalArgumentException e
          (log/error e)
