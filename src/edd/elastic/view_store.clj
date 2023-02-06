@@ -203,13 +203,30 @@
       (if error
         (throw (ex-info "Could not store aggregate" {:error error}))))))
 
+(defn form-path
+  [realm
+   service-name
+   id]
+  (let [partition-prefix (-> (str id)
+                             last
+                             str
+                             util/hex-str-to-bit-str)]
+    (str "aggregates/"
+         (name realm)
+         "/latest/"
+         partition-prefix
+         "/"
+         (name service-name)
+         "/"
+         id
+         ".json")))
+
 (defn store-to-s3
   [{:keys [aggregate
            service-name] :as ctx}]
   (let [id (str (:id aggregate))
-        partition-prefix (-> (subs id 0 1)
-                             util/hex-str-to-bit-str)
-        r (realm ctx)
+
+        realm (realm ctx)
         bucket (str
                 (util/get-env
                  "AccountId")
@@ -217,15 +234,11 @@
                 (util/get-env
                  "EnvironmentNameLower")
                 "-aggregates")
-        key (str "aggregates/"
-                 r
-                 "/"
-                 partition-prefix
-                 "/"
-                 (name service-name)
-                 "/latest/"
-                 id)
-        {:keys  [error]
+        key (form-path
+             realm
+             service-name
+             id)
+        {:keys [error]
          :as resp} (s3/put-object ctx
                                   {:s3 {:bucket {:name bucket}
                                         :object {:key key
@@ -237,9 +250,7 @@
 (defn get-from-s3
   [{:keys [service-name] :as ctx} id]
   (let [id (str id)
-        partition-prefix (-> (subs id 0 1)
-                             util/hex-str-to-bit-str)
-        r (realm ctx)
+        realm (realm ctx)
         bucket (str
                 (util/get-env
                  "AccountId")
@@ -247,14 +258,10 @@
                 (util/get-env
                  "EnvironmentNameLower")
                 "-aggregates")
-        key (str "aggregates/"
-                 r
-                 "/"
-                 partition-prefix
-                 "/"
-                 service-name
-                 "/latest/"
-                 id)
+        key (form-path
+             realm
+             service-name
+             id)
         {:keys [error]
          :as resp} (s3/get-object ctx
                                   {:s3 {:bucket {:name bucket}

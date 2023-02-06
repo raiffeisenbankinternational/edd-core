@@ -1,5 +1,5 @@
 {:deps    {org.clojure/tools.logging         {:mvn/version "1.1.0"}
-           metosin/malli                     {:mvn/version "0.6.2"}
+           metosin/malli {:mvn/version "0.8.9"}
            edd-core/edd-core {:local/root "../../"}}
  :paths   ["src" "resources"],
  :aliases {:jar      {:extra-paths ["resources"]
