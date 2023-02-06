@@ -96,8 +96,9 @@
                    :status 200}
                   {:post   (str "https:///test_local_test/_doc/" agg-id)
                    :status 200}
-                  {:put (str "https://s3.eu-central-1.amazonaws.com/--aggregates/aggregates/test/0000/local-test/latest/"
-                             agg-id)
+                  {:put (str "https://s3.eu-central-1.amazonaws.com/--aggregates/aggregates/test/latest/1110/local-test/"
+                             agg-id
+                             ".json")
                    :status 200
                    :body (char-array "OK")}]
        (core/start
@@ -127,16 +128,16 @@
                              :connect-timeout 300
                              :url             "https:///test_local_test/_doc/05120289-90f3-423c-ad9f-c46f9927a53e"}
                             {:url
-                             (str "https://s3.eu-central-1.amazonaws.com/--aggregates/"
-                                  "aggregates/test/0000/local-test/latest/"
-                                  agg-id)
+                             (str "https://s3.eu-central-1.amazonaws.com/--aggregates/aggregates/test/latest/1110/local-test/"
+                                  agg-id
+                                  ".json")
                              :idle-timeout 5000,
                              :connect-timeout 300
                              :method :put,
                              :body {:id #uuid "05120289-90f3-423c-ad9f-c46f9927a53e"}
                              :headers
                              {"Authorization"
-                              "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=cfd279afb834b9c8a23918aa8c2f3d81e95ae88971994862110b67c78a17b1b2",
+                              "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=d38163bbcea7e4368c40aa1ee529e560e0144ac0500930d573e65ac82f9b1951",
                               "x-amz-security-token" nil,
                               "x-amz-date" "20210322T232540Z",
                               "x-amz-content-sha256" "UNSIGNED-PAYLOAD"},
