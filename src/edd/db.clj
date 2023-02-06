@@ -65,6 +65,9 @@
               :dbname                    "postgres"
               :initializationFailTimeout 0
               :reWriteBatchedInserts     true
+              :minimumIdle 1
+              :validationTimeout 1000
+              :maximumPoolSize 10
               :password                  (get-in ctx [:db :password]
                                                  (util/get-env "DatabasePassword"
                                                                "no-secret"))
