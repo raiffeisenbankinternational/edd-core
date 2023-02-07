@@ -58,7 +58,8 @@
   [ctx effects]
   (->> effects
        (remove nil?)
-       (wrap-commands ctx)))
+       (wrap-commands ctx)
+       (filter #(seq (:commands %)))))
 
 (defn handle-effects
   [ctx & {:keys [resp aggregate]}]

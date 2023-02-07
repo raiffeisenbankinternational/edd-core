@@ -135,6 +135,13 @@
                                         [:first-name [:string]]])
                 (edd/reg-cmd :error-cmd (fn [_ctx _cmd]
                                           {:error "Dont want to handle this"}))
+                (edd/reg-cmd :error-cmd (fn [_ctx _cmd]
+                                          {:error "Dont want to handle this"}))
+                (edd/reg-cmd :fx-cmd-1 (fn [_ctx _cmd]
+                                         {:event-id :fx-event-1}))
+                (edd/reg-event-fx :fx-event-1 (fn [_ctx _event]
+                                                {:service-name :fx-service
+                                                 :commands []}))
                 (edd/reg-cmd :mix-error-cmd (fn [_ctx _cmd]
                                               [{:event-id :som-event}
                                                {:error "Dont want to handle this"}
@@ -266,6 +273,29 @@
                                                              :breadcrumbs [0 0]})
                                first
                                :data))))))))))
+
+      (testing "When FX commands is empty list"
+        (let [agg-id (uuid/gen)
+              {:keys [invocation-id]} (make-request
+                                       ctx
+                                       [{:cmd-id :fx-cmd-1
+                                         :id     agg-id}])]
+          (edd/with-stores
+            ctx
+            (fn [ctx]
+              (let [r (event-store/get-request-log (with-realm ctx)
+                                                   {:invocation-id invocation-id})]
+                (is (= nil
+                       (-> r
+                           first
+                           :error))))
+              (let [r (event-store/get-response-log (with-realm ctx)
+                                                    {:invocation-id invocation-id})]
+                (is (= nil
+                       (-> r
+                           first
+                           :data
+                           :error))))))))
 
       (testing "When we have schema validation 
                or command handler error we should see 
