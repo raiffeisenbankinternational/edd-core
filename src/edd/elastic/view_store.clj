@@ -214,9 +214,9 @@
     (str "aggregates/"
          (name realm)
          "/latest/"
-         partition-prefix
-         "/"
          (name service-name)
+         "/"
+         partition-prefix
          "/"
          id
          ".json")))
@@ -242,7 +242,9 @@
          :as resp} (s3/put-object ctx
                                   {:s3 {:bucket {:name bucket}
                                         :object {:key key
-                                                 :content (util/to-json aggregate)}}})]
+                                                 :content (util/to-json {:aggregate aggregate
+                                                                         :service-name service-name
+                                                                         :realm realm})}}})]
     (when error
       (throw (ex-info "Could not store aggregate" {:error error})))
     resp))
@@ -276,7 +278,8 @@
       nil
       (-> resp
           slurp
-          util/to-edn))))
+          util/to-edn
+          :aggregate))))
 
 (defmethod update-aggregate
   :elastic
