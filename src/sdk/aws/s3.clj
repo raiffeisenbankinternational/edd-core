@@ -48,7 +48,7 @@
   (log/debug "Auth response" response)
   (cond
     (contains? response :error) (do
-                                  (log/error "Failed update" response)
+                                  (log/warn "Failed update, client should handle error" response)
                                   {:error (:error response)})
     (= (:status response 199) 404) (check-what-is-missing response)
     (> (:status response 199) 299) (do

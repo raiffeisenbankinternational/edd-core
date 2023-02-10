@@ -18,7 +18,7 @@
   ch.qos.logback/logback-classic {:mvn/version "1.4.5"},
   com.auth0/jwks-rsa {:mvn/version "0.21.3"},
   org.clojure/core.async {:mvn/version "1.6.673"},
-  http-kit/http-kit {:mvn/version "2.6.0"}
+  java-http-clj/java-http-clj {:mvn/version "0.4.3"}
   metosin/malli {:mvn/version "0.8.9"}},
  :paths ["src" "resources" "features/edd-core-swagger/src"
          "modules/edd-core-schema/src/"],

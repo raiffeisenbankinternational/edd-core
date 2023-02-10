@@ -160,8 +160,8 @@
                                   (assoc ctx
                                          :aggregate {:id agg-id}))
                 event/update-aggregate (fn [ctx]
-                                         (if (= (:request-id ctx)
-                                                req-id1)
+                                         (when (= (:request-id ctx)
+                                                  req-id1)
                                            (throw (ex-info "Something" {:badly :un-happy}))))]
     (mock-core
      :invocations [(util/to-json (req
