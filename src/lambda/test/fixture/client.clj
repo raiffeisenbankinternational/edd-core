@@ -2,8 +2,7 @@
   (:require [clojure.test :refer :all]
             [lambda.util :as util]
             [clojure.tools.logging :as log]
-            [clojure.data :refer [diff]]
-            [org.httpkit.client :as http]))
+            [clojure.data :refer [diff]]))
 
 (def ^:dynamic *world*)
 
@@ -92,7 +91,7 @@
   "Each request contained :method :url pair and response :body.
   Optionally there might be :req which is body of request that
   has to me matched"
-  [{:keys [url method] :as req} & rest]
+  [{:keys [url method] :as req} & _rest]
   (record-traffic req)
   (let [all (:responses @*world*)
         idx (find-first
@@ -106,16 +105,14 @@
           (swap! *world*
                  update-in [:responses]
                  #(remove-at % idx)))
-        (ref
-         (dissoc resp method :req :keep)))
+        (dissoc resp method :req :keep))
       (do
         (log/error {:error {:message "Mock not Found"
                             :url     url
                             :method  method
                             :req     req}})
-        (ref
-         {:status 200
-          :body   (util/to-json {:result nil})})))))
+        {:status 200
+         :body   (util/to-json {:result nil})}))))
 
 (defmacro mock-http
   [responses & body]
@@ -128,5 +125,5 @@
                       responses#)]
      (binding [*world* (atom {:config config#
                               :responses responses#})]
-       (with-redefs [http/request handle-request]
+       (with-redefs [util/request handle-request]
          (do ~@body)))))

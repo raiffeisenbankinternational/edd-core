@@ -60,7 +60,7 @@
                                               :raw true))))]
       (cond
         (contains? response :error) (do
-                                      (log/error "Failed update" response)
+                                      (log/warn "Failed update, client should handle error" response)
                                       {:error {:error response}})
         (= (:status response) ignored-status) nil
         (> (:status response) 299) (do

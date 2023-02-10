@@ -39,3 +39,24 @@
     (is (= {:error   ex
             :message {:some "error"}}
            (edd-util/try-parse-exception-data ex)))))
+
+(deftest test-retry-n
+  (let [attempts (atom [])]
+    (http-client/retry-n
+     (fn [attempt]
+       (swap! attempts conj attempt)))
+    (is (= [5]
+           @attempts)))
+  (let [attempts (atom [])]
+    (try
+      (http-client/retry-n
+       (fn [attempt]
+         (swap! attempts conj attempt)
+         (throw (ex-info "Attempt failed"
+                         {:attempt attempt}))))
+      (is (is (= []
+                 @attempts)))
+      (is (= "We didnt rase exception" nil))
+      (catch Exception _e
+        (is (is (= [5 4 3 2 1]
+                   @attempts)))))))
