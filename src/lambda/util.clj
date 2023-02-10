@@ -1,11 +1,13 @@
 (ns lambda.util
   (:require [jsonista.core :as json]
             [clojure.tools.logging :as log]
-            [org.httpkit.client :as http]
-            [clojure.test :refer :all]
+            [java-http-clj.core :as http]
+            [clojure.test :refer [deftest testing is]]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [lambda.aes :as aes])
+            [lambda.aes :as aes]
+            [clojure.set :as clojure-set]
+            [clojure.walk :as walk])
   (:import (java.time OffsetDateTime)
            (java.time.format DateTimeFormatter)
            (java.io File BufferedReader)
@@ -79,9 +81,63 @@
     (:form-params request) request
     :else {:body (to-json request)}))
 
+(defn url-encode
+  [s]
+  (URLEncoder/encode (str s) "utf8"))
+
+(defn nested-param
+  "Source: https://github.com/http-kit/http-kit"
+  [params]
+  (walk/prewalk (fn [d]
+                  (if (and (vector? d) (map? (second d)))
+                    (let [[fk m] d]
+                      (reduce (fn [m [sk v]]
+                                (assoc m (str (name fk) \[ (name sk) \]) v))
+                              {} m))
+                    d))
+                params))
+
+(defn query-string
+  "Returns URL-encoded query string for given params map.
+   Source: https://github.com/http-kit/http-kit"
+  [m]
+  (let [m (nested-param m)
+        param (fn [k v]  (str (url-encode (name k)) "=" (url-encode v)))
+        join  (fn [strs] (str/join "&" strs))]
+    (join (for [[k v] m] (if (sequential? v)
+                           (join (map (partial param k) (or (seq v) [""])))
+                           (param k v))))))
+
+(defn request
+  [{:keys [as]
+    :as req} & _rest]
+  (let [opts {:as (cond
+                    (and as
+                         (= as :stream)) :input-stream
+                    :else as)}
+        req (clojure-set/rename-keys req {:url :uri})
+        req (cond-> req
+              (:headers req) (update-in [:headers]
+                                        #(dissoc % "Host"))
+              (:query-params req) (update-in [:uri]
+                                             #(str %
+                                                   "?"
+                                                   (query-string (:query-params req))))
+              (:form-params req) (assoc-in [:headers "Content-Type"]
+                                           "application/x-www-form-urlencoded")
+              (:form-params req) (update-in [:body]
+                                            #(query-string (:form-params req))))
+        resp (http/send
+              req
+              opts)]
+    resp))
+
 (defn http-get
-  [url request & {:keys [raw]}]
-  (let [resp @(http/get url request)]
+  [url req & {:keys [raw]}]
+  (let [resp (request
+              (assoc req
+                     :method :get
+                     :url url))]
     (log/debug "Response" resp)
     (if raw
       resp
@@ -89,8 +145,11 @@
              :body (to-edn (:body resp))))))
 
 (defn http-delete
-  [url request & {:keys [raw]}]
-  (let [resp @(http/delete url request)]
+  [url req & {:keys [raw]}]
+  (let [resp (request
+              (assoc req
+                     :method :delete
+                     :url url))]
     (log/debug "Response" resp)
     (if raw
       resp
@@ -98,10 +157,13 @@
              :body (to-edn (:body resp))))))
 
 (defn http-put
-  [url request & {:keys [raw]}]
-  (log/debug url request)
-  (let [req (wrap-body request)
-        resp @(http/put url req)]
+  [url req & {:keys [raw]}]
+  (log/debug url req)
+  (let [req (wrap-body req)
+        resp (request
+              (assoc req
+                     :method :put
+                     :url url))]
     (log/debug "Response" resp)
     (if raw
       resp
@@ -109,10 +171,13 @@
              :body (to-edn (:body resp))))))
 
 (defn http-post
-  [url request & {:keys [raw]}]
-  (log/debug url request)
-  (let [req (wrap-body request)
-        resp @(http/post url req)]
+  [url req & {:keys [raw]}]
+  (log/debug url req)
+  (let [req (wrap-body req)
+        resp (request
+              (assoc req
+                     :method :post
+                     :url url))]
     (log/debug "Response" resp)
     (if raw
       resp

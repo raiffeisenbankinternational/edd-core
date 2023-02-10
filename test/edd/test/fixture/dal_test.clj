@@ -13,7 +13,6 @@
             [edd.elastic.view-store :as elastic-view]
             [edd.search :as view-store]
             [clojure.test :refer :all]
-            [org.httpkit.client :as http]
             [edd.elastic.view-store :as elastic]
             [lambda.util :as util]
             [edd.test.fixture.dal :as mock]
@@ -325,48 +324,48 @@
     :state   ":detached"}])
 
 (def elk-response
-  (future {:opts    {:body      (util/to-json {:size 600
-                                               :query
-                                               {:bool
-                                                {:must
-                                                 [{:match
-                                                   {:attrs.type ":booking-company"}}]}}}),
-                     :headers   {"Content-Type" "application/json"
-                                 "X-Amz-Date"   "20200818T113334Z"},
-                     :timeout   5000,
-                     :keepalive -1,
-                     :method    :post
-                     :url       "https://vpc-mock.eu-central-1.es.amazonaws.com/glms_risk_taker_svc/_search"}
-           :body    (util/to-json {:took      42,
-                                   :timed_out false,
-                                   :_shards
-                                   {:total      5,
-                                    :successful 5,
-                                    :skipped    0,
-                                    :failed     0},
-                                   :hits
-                                   {:total     {:value 2, :relation "eq"},
-                                    :max_score 0.09304003,
-                                    :hits
-                                    [{:_index  "glms_risk_taker_svc",
-                                      :_type   "_doc",
-                                      :_id
-                                      "e1a1e96f-93bb-4fdd-9605-ef2b38c1c458",
-                                      :_score  0.09304003,
-                                      :_source (first elk-objects)}
-                                     {:_index  "glms_risk_taker_svc",
-                                      :_type   "_doc",
-                                      :_id
-                                      "7c30b6a3-2816-4378-8ed9-0b73b61012d4",
-                                      :_score  0.09304003,
-                                      :_source (second elk-objects)}]}})
-           :headers {:access-control-allow-origin "*"
-                     :connection                  "keep-alive"
-                     :content-encoding            "gzip"},
-           :status  200}))
+  {:opts    {:body      (util/to-json {:size 600
+                                       :query
+                                       {:bool
+                                        {:must
+                                         [{:match
+                                           {:attrs.type ":booking-company"}}]}}}),
+             :headers   {"Content-Type" "application/json"
+                         "X-Amz-Date"   "20200818T113334Z"},
+             :timeout   5000,
+             :keepalive -1,
+             :method    :post
+             :url       "https://vpc-mock.eu-central-1.es.amazonaws.com/glms_risk_taker_svc/_search"}
+   :body    (util/to-json {:took      42,
+                           :timed_out false,
+                           :_shards
+                           {:total      5,
+                            :successful 5,
+                            :skipped    0,
+                            :failed     0},
+                           :hits
+                           {:total     {:value 2, :relation "eq"},
+                            :max_score 0.09304003,
+                            :hits
+                            [{:_index  "glms_risk_taker_svc",
+                              :_type   "_doc",
+                              :_id
+                              "e1a1e96f-93bb-4fdd-9605-ef2b38c1c458",
+                              :_score  0.09304003,
+                              :_source (first elk-objects)}
+                             {:_index  "glms_risk_taker_svc",
+                              :_type   "_doc",
+                              :_id
+                              "7c30b6a3-2816-4378-8ed9-0b73b61012d4",
+                              :_score  0.09304003,
+                              :_source (second elk-objects)}]}})
+   :headers {:access-control-allow-origin "*"
+             :connection                  "keep-alive"
+             :content-encoding            "gzip"},
+   :status  200})
 
 (deftest elastic-search
-  (with-redefs [http/post (fn [url req] elk-response)]
+  (with-redefs [util/http-post (fn [_url _req & _rest] elk-response)]
     (is (= elk-objects
            (search/simple-search (-> {}
                                      (elastic-view/register)

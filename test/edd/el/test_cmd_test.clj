@@ -11,7 +11,7 @@
             [edd.core :as edd]
             [aws.aws :as aws])
   (:import (clojure.lang ExceptionInfo)
-           (org.httpkit.client TimeoutException)))
+           [java.net.http HttpTimeoutException]))
 
 (def cmd-id (uuid/gen))
 
@@ -100,7 +100,7 @@
                        (cmd/fetch-dependencies-for-command ctx cmd)))))
       (testing "If resolved returns exception"
         (with-redefs [util/http-post (fn [ctx q]
-                                       (throw (TimeoutException. "")))]
+                                       (throw (HttpTimeoutException. "")))]
           (is (thrown? ExceptionInfo
                        (cmd/fetch-dependencies-for-command ctx cmd))))))))
 
