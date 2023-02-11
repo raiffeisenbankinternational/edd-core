@@ -123,13 +123,13 @@
                                              #(str %
                                                    "?"
                                                    (query-string (:query-params req))))
-              (:form-params req) (assoc-in [:headers "Content-Type"]
-                                           "application/x-www-form-urlencoded")
+              (:form-params req) (assoc-in [:headers "Content-Type"] "application/x-www-form-urlencoded")
               (:form-params req) (update-in [:body]
                                             #(query-string (:form-params req))))
         resp (http/send
               req
-              opts)]
+              opts)
+        resp (update resp :headers walk/keywordize-keys)]
     resp))
 
 (defn http-get

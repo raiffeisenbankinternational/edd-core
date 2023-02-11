@@ -257,9 +257,14 @@
            resp-serializer-fn util/to-json}
     :as   ctx}]
   (log/debug "to-api" resp)
-  (let [resp (aws/produce-compatible-error-response resp)]
+  (let [{:keys [exception
+                error]} resp
+        status (if (or exception error)
+                 500
+                 200)
+        resp (aws/produce-compatible-error-response resp)]
     (assoc ctx
-           :resp {:statusCode      200
+           :resp {:statusCode     status
                   :isBase64Encoded false
                   :headers         {"Access-Control-Allow-Headers"  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
                                     "Access-Control-Allow-Methods"  "OPTIONS,POST,PUT,GET"
