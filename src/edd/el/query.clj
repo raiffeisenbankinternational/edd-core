@@ -22,6 +22,37 @@
     (query-fn deps cmd)
     query-fn))
 
+(defn -make-request
+  [{:keys [meta url]
+    :as request}]
+  (http-client/retry-n
+   #(util/http-post
+     url
+     (http-client/request->with-timeouts
+      %
+      (dissoc request :url :meta)
+      :idle-timeout 10000))
+   :meta meta))
+
+(defn with-cache
+  [f & params]
+  (if (req/is-scoped)
+    (if-let [hint
+             (get-in
+              @req/*request*
+              [:edd-core :http-cache params])]
+      hint
+      (do
+        (swap! req/*request*
+               #(assoc-in % [:edd-core
+                             :http-cache
+                             params]
+                          (apply f params)))
+        (get-in
+         @req/*request*
+         [:edd-core :http-cache params])))
+    (apply f params)))
+
 (defn -http-call
   [ctx {:keys [service query]}]
   (let [token (aws/get-token ctx)
@@ -29,40 +60,18 @@
         url (calc-service-query-url
              service)]
     (when (:query-id query)
-      (http-client/retry-n
-       #(util/http-post
-         url
-         (http-client/request->with-timeouts
-          %
-          {:body    (util/to-json
-                     {:query          query
-                      :meta           (:meta ctx)
-                      :request-id     (:request-id ctx)
-                      :interaction-id (:interaction-id ctx)})
-           :headers {"Content-Type"    "application/json"
-                     "X-Authorization" token}}
-          :idle-timeout 10000))
-       :meta {:to-service   service
-              :from-service service-name
-              :query-id     (:query-id query)}))))
+      (with-cache -make-request  {:url url
+                                  :meta {:to-service   service
+                                         :from-service service-name
+                                         :query-id     (:query-id query)}
+                                  :body    (util/to-json
+                                            {:query          query
+                                             :meta           (:meta ctx)
+                                             :request-id     (:request-id ctx)
+                                             :interaction-id (:interaction-id ctx)})
 
-(defn with-cache
-  [request f]
-  (if (req/is-scoped)
-    (if-let [hint
-             (get-in
-              @req/*request*
-              [:edd-core :http-cache request])]
-      hint
-      (do
-        (swap! req/*request*
-               #(assoc-in % [:edd-core
-                             :http-cache
-                             request] (f request)))
-        (get-in
-         @req/*request*
-         [:edd-core :http-cache request])))
-    (f request)))
+                                  :headers {"Content-Type"    "application/json"
+                                            "X-Authorization" token}}))))
 
 (defn resolve-remote-dependency
   [ctx cmd {:keys [service query]} deps]
@@ -76,7 +85,7 @@
         request
         {:service service
          :query resolved-query}
-        response (with-cache request (partial -http-call ctx))]
+        response (-http-call ctx request)]
 
     (when (nil? (:query-id resolved-query))
       (log/info "Skiping resolving remote dependency because query-id is nil")

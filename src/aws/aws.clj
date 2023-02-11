@@ -28,7 +28,6 @@
   [ctx _]
   (let [resp (get @request/*request* :cache-keys)]
     (when resp
-      (log/info "Distributing response")
       (doall
        (map
         #(let [{:keys [error]} (sqs/sqs-publish
@@ -44,8 +43,7 @@
            invocation-id
            from-api] :as ctx} body]
 
-  (log/info "Response from-api?" from-api)
-  (util/d-time "Enqueueing success"
+  (util/d-time (str "Distributing success (from-api? " from-api ")")
                (enqueue-response ctx body))
   (util/to-json
    (util/http-post
@@ -100,12 +98,11 @@
         meta (get-in cache [:meta key])]
     (if (or (not (get cache key))
             (> (- current-time (get meta :time 0)) 1800000))
-      (do
-        (-> cache
-            (assoc-in [:meta key] {:time current-time})
-            (assoc key (common/retry
-                        get-fn
-                        3))))
+      (-> cache
+          (assoc-in [:meta key] {:time current-time})
+          (assoc key (common/retry
+                      get-fn
+                      3)))
       cache)))
 
 (defn admin-auth

@@ -52,9 +52,10 @@
                                   {:error (:error response)})
     (= (:status response 199) 404) (check-what-is-missing response)
     (> (:status response 199) 299) (do
-                                     (log/error "S3 Response failed"
-                                                (:status response)
-                                                (:body response))
+                                     (log/warn "S3 Response failed"
+                                               (:status response)
+                                               (slurp
+                                                (:body response)))
                                      {:error {:status  (:status response)
                                               :message (slurp (:body response))
                                               :key     (get-in object [:s3 :object :key])

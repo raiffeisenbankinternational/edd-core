@@ -56,7 +56,7 @@
                                          :Access-Control-Expose-Headers "*"
                                          :Content-Type                  "application/json"}
                        :isBase64Encoded false
-                       :statusCode      200}
+                       :statusCode      500}
               :method :post
               :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
              {:url
