@@ -8,6 +8,15 @@
             [edd.schema :as schema]
             [lambda.http-client :as http-client]))
 
+(defn call-query-fn
+  [_ cmd query-fn deps]
+  (if (fn? query-fn)
+    (query-fn deps cmd)
+    query-fn))
+
+(defn- service-query? [{:keys [query-id ref]}]
+  (and (some? query-id) (nil? ref)))
+
 (defn calc-service-query-url
   [service]
   (str "https://api."
@@ -16,13 +25,7 @@
        (name service)
        "/query"))
 
-(defn call-query-fn
-  [_ cmd query-fn deps]
-  (if (fn? query-fn)
-    (query-fn deps cmd)
-    query-fn))
-
-(defn -make-request
+(defn -make-service-query-request
   [{:keys [meta url]
     :as request}]
   (http-client/retry-n
@@ -32,6 +35,33 @@
       %
       (dissoc request :url :meta)
       :idle-timeout 10000))
+   :meta meta))
+
+(defn- service-rtf? [{:keys [query-id ref]}]
+  (and (nil? query-id) (some? ref)))
+
+(defn calc-service-rtf-url
+  [service {:keys [ref]}]
+  (str "https://"
+       (name :glms-content-svc)
+       "."
+       (util/get-env "PrivateHostedZoneName")
+       "/load/"
+       (name service)
+       "/"
+       ref))
+
+(defn -make-service-rtf-request
+  [{:keys [meta url]
+    :as request}]
+  (http-client/retry-n
+   #(util/http-get
+     url
+     (http-client/request->with-timeouts
+      %
+      (dissoc request :url :meta)
+      :idle-timeout 50000)
+     :raw true)
    :meta meta))
 
 (defn with-cache
@@ -56,22 +86,30 @@
 (defn -http-call
   [ctx {:keys [service query]}]
   (let [token (aws/get-token ctx)
-        service-name (:service-name ctx)
-        url (calc-service-query-url
-             service)]
-    (when (:query-id query)
-      (with-cache -make-request  {:url url
-                                  :meta {:to-service   service
-                                         :from-service service-name
-                                         :query-id     (:query-id query)}
-                                  :body    (util/to-json
-                                            {:query          query
-                                             :meta           (:meta ctx)
-                                             :request-id     (:request-id ctx)
-                                             :interaction-id (:interaction-id ctx)})
+        service-name (:service-name ctx)]
+    (cond
+      (service-query? query)
+      (with-cache -make-service-query-request {:url         (calc-service-query-url service)
+                                               :meta        {:to-service   service
+                                                             :from-service service-name
+                                                             :query-id     (:query-id query)}
+                                               :body        (util/to-json
+                                                             {:query          query
+                                                              :meta           (:meta ctx)
+                                                              :request-id     (:request-id ctx)
+                                                              :interaction-id (:interaction-id ctx)})
 
-                                  :headers {"Content-Type"    "application/json"
-                                            "X-Authorization" token}}))))
+                                               :headers     {"Content-Type"    "application/json"
+                                                             "X-Authorization" token}})
+
+      (service-rtf? query)
+      (with-cache -make-service-rtf-request {:url         (calc-service-rtf-url service query)
+                                             :meta        {:to-service   service
+                                                           :from-service service-name
+                                                           :ref          (:ref query)}
+
+                                             :headers     {"Accept"          "*/*"
+                                                           "X-Authorization" token}}))))
 
 (defn resolve-remote-dependency
   [ctx cmd {:keys [service query]} deps]
@@ -87,20 +125,22 @@
          :query resolved-query}
         response (-http-call ctx request)]
 
-    (when (nil? (:query-id resolved-query))
-      (log/info "Skiping resolving remote dependency because query-id is nil")
+    (when-not (or (service-query? resolved-query) (service-rtf? resolved-query))
+      (log/info "Skiping resolving remote dependency because query-id and ref are nil")
       nil)
     (when (:error response)
       (throw (ex-info (str "Error fetching dependency" service)
                       {:error {:to-service   service
                                :from-service service-name
                                :query-id     (:query-id resolved-query)
+                               :ref          (:ref resolved-query)
                                :message      (:error response)}})))
     (when (:error (get response :body))
       (throw (ex-info (str "Error response from service " service)
                       {:error {:to-service   service
                                :from-service service-name
                                :query-id     (:query-id resolved-query)
+                               :ref          (:ref resolved-query)
                                :message      {:response     (get response :body)
                                               :error-source service}}})))
     (if (> (:status response 0) 299)
@@ -109,9 +149,12 @@
                                :from-service service-name
                                :service      service
                                :query-id     (:query-id resolved-query)
+                               :ref          (:ref resolved-query)
                                :status       (:status response)
                                :message      (str "Response status:" (:status response))}}))
-      (get-in response [:body :result]))))
+      (cond
+        (service-query? resolved-query) (get-in response [:body :result])
+        (service-rtf? resolved-query) (get response :body)))))
 
 (defn- validate-response-schema-setting [ctx]
   (let [setting (or (:response-schema-validation ctx)
