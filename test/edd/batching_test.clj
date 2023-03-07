@@ -92,5 +92,54 @@
                            :value   2
                            :version 2}]))))
 
+(deftest test-batched-values-for-2-counters-should-not-interfer
+  (let [first-id (uuid/gen)
+        second-id (uuid/gen)
+        ctx (-> mock/ctx
+                (edd/reg-cmd :first-one (fn [_ctx cmd]
+                                          [{:event-id :first-event}
+                                           {:identity (:name cmd)}]))
+                (edd/reg-cmd :second-one (fn [{:keys [first-one
+                                                      first-one-id]} cmd]
+                                           (is (= first-id
+                                                  first-one))
+                                           (is (= {:first true,
+                                                   :version 1,
+                                                   :id first-id}
+                                                  first-one-id))
+                                           [{:identity (:name cmd)}])
+                             :deps {:first-one (fn [_ctx cmd]
+                                                 {:query-id :identity-query
+                                                  :name (:first-name cmd)})
+                                    :first-one-id (fn [_ctx cmd]
+                                                    {:query-id :id-query
+                                                     :id (:cmd-first-id cmd)})})
+                (edd/reg-query :identity-query (fn [ctx query]
+                                                 (common/get-aggregate-id-by-identity
+                                                  ctx
+                                                  (:name query))))
+                (edd/reg-event :first-event (fn [agg event]
+                                              (merge agg
+                                                     {:first true})))
+                (edd/reg-query :id-query (fn [ctx query]
+                                           (common/get-by-id
+                                            ctx
+                                            query))))]
+    (mock/with-mock-dal
+      (mock/handle-cmd ctx {:commands [{:cmd-id :first-one
+                                        :id     first-id
+                                        :name "first"}
+                                       {:cmd-id :second-one
+                                        :id     second-id
+                                        :cmd-first-id first-id
+                                        :first-name "first"
+                                        :name "second"}]})
+
+      (mock/verify-state :identity-store
+                         [{:id first-id
+                           :identity "first"}
+                          {:id second-id
+                           :identity "second"}]))))
+
 
 

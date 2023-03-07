@@ -261,6 +261,7 @@
 
                resp (resp->add-meta-to-events ctx resp)]
            (request-cache/update-aggregate ctx aggregate)
+           (request-cache/store-identities ctx (:identities resp))
            resp))))))
 
 (def initial-response

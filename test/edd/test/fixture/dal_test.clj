@@ -108,12 +108,16 @@
                     :id       2}] :identity-store)))
 
 (deftest when-identity-exists-then-exception
-  (with-mock-dal
-    (dal/store-identity {:identity 1})
-    (is (thrown? RuntimeException
-                 (dal/store-identity
-                  {:identity 1})))
-    (verify-state [{:identity 1}] :identity-store)))
+  (let [id (uuid/gen)]
+    (with-mock-dal
+      (dal/store-identity {:identity 1
+                           :id id})
+      (is (thrown? RuntimeException
+                   (dal/store-identity
+                    {:identity 1
+                     :id (uuid/gen)})))
+      (verify-state [{:identity 1
+                      :id id}] :identity-store))))
 
 (deftest when-store-command-then-ok
   (with-mock-dal
@@ -371,17 +375,6 @@
                                      (elastic-view/register)
                                      (assoc :service-name "test"
                                             :query {})))))))
-
-(deftest when-identity-exists-then-exception
-  (with-mock-dal
-    (dal/store-identity {:id       "id1"
-                         :identity 1})
-    (is (thrown? RuntimeException
-                 (dal/store-identity
-                  {:id       "id1"
-                   :identity 1})))
-    (verify-state :identity-store [{:id       "id1"
-                                    :identity 1}])))
 
 (deftest when-identity-exists-then-ok
   (with-mock-dal

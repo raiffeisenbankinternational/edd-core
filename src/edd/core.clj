@@ -167,8 +167,8 @@
 (defn get-meta
   [ctx item]
   (merge
-   (:meta ctx {})
-   (:meta item {})))
+   (:meta item {})
+   (:meta ctx {})))
 
 (defn- add-log-level
   [attrs ctx item]
@@ -201,6 +201,7 @@
   (update-mdc-for-request ctx item)
   (let [item (update item :breadcrumbs #(or % [0]))
         ctx (assoc ctx
+                   :meta (get-meta ctx item)
                    :request-id (:request-id item)
                    :breadcrumbs (:breadcrumbs item)
                    :interaction-id (:interaction-id item))]
