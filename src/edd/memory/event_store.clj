@@ -44,7 +44,7 @@
   Raises RuntimeException if identity is already taken"
   [identity]
   (log/info "Emulated 'store-identity' dal function")
-  (let [id-fn (juxt :id :identity)
+  (let [id-fn (juxt :identity)
         id (id-fn identity)
         store (:identity-store @*dal-state*)
         id-already-exists (some #(= (id-fn %) id) store)]

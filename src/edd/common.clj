@@ -4,6 +4,7 @@
    [edd.search :as search]
    [edd.el.event :as el-event]
    [lambda.uuid :as uuid]
+   [edd.request-cache :as request-cache]
    [clojure.tools.logging :as log]))
 
 (defn parse-param
@@ -48,12 +49,13 @@
   [ctx & [query]]
   {:pre [(or (:id ctx)
              query)]}
-  (dal/get-sequence-number-for-id
-   (if query
-     (assoc ctx :id (if (:id query)
-                      (:id query)
-                      (parse-param query)))
-     ctx)))
+  (let [id (if (:id query)
+             (:id query)
+             (parse-param query))]
+    (dal/get-sequence-number-for-id
+     (if query
+       (assoc ctx :id  id)
+       ctx))))
 
 (defn get-id-for-sequence-number
   [ctx & [query]]
@@ -70,10 +72,22 @@
   [ctx & [query]]
   {:pre [(or (:identity ctx)
              query)]}
-  (dal/get-aggregate-id-by-identity
-   (if query
-     (assoc ctx :identity (parse-param query))
-     ctx)))
+  (let [identity (or (:identitiy ctx)
+                     (parse-param query))
+        resp (request-cache/get-identitiy ctx identity)]
+    (if resp
+      resp
+      (dal/get-aggregate-id-by-identity
+       (assoc ctx :identity identity)))))
+
+(defn get-aggregate-by-identity
+  [ctx & [query]]
+  {:pre [(or (:identity ctx)
+             query)]}
+  (let [id (get-aggregate-id-by-identity query)]
+    (when id
+      (merge {:id id}
+             (get-by-id ctx id)))))
 
 (defn advanced-search
   [ctx & [query]]

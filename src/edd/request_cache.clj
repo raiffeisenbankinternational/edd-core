@@ -31,3 +31,28 @@
                        :aggregate
                        id]
                     (clojure-walk/keywordize-keys aggregate))))
+
+(defn get-identitiy
+  [ctx id]
+  (get-in @request/*request* [:edd-core
+                              :cache
+                              (get-realm ctx)
+                              :identities
+                              id]))
+
+(defn store-identities
+  [ctx identities]
+  (let  [identities (if (vector? identities)
+                      identities
+                      [identities])]
+    (swap! request/*request*
+           #(update-in % [:edd-core
+                          :cache
+                          (get-realm ctx)
+                          :identities]
+                       (fn [i]
+                         (reduce
+                          (fn [p {:keys [identity id]}]
+                            (assoc p identity id))
+                          (or i {})
+                          identities))))))

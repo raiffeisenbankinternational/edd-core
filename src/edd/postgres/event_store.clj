@@ -5,6 +5,7 @@
             [next.jdbc.connection :as jdbc-conn]
             [next.jdbc.result-set :as rs]
             [lambda.uuid :as uuid]
+            [lambda.util :as util]
             [clojure.string :as str]
             [edd.core :as edd]
             [edd.dal :refer [with-init
@@ -321,34 +322,39 @@
 (defmethod get-aggregate-id-by-identity
   :postgres
   [{:keys [identity] :as ctx}]
-  (let [params (if (coll? identity)
-                 identity
-                 [identity])
-        placeholders (map
-                      (fn [%] "?")
-                      params)
-        result (if (empty? params)
-                 []
-                 (jdbc/execute! @(:con ctx)
-                                (concat
-                                 [(str "SELECT id, aggregate_id FROM " (->table ctx :identity_store) "
+  (util/d-time
+   (str "Query db for identity:" identity)
+   (let [params (if (coll? identity)
+                  identity
+                  [identity])
+         placeholders (map
+                       (fn [%] "?")
+                       params)
+         result (if (empty? params)
+                  []
+                  (jdbc/execute! @(:con ctx)
+                                 (concat
+                                  [(str "SELECT id, aggregate_id FROM " (->table ctx :identity_store) "
                                            WHERE id IN (" (str/join ", "
                                                                     placeholders) ")
                                            AND service_name = ?")]
-                                 params
-                                 [(:service-name ctx)])
-                                {:builder-fn rs/as-unqualified-lower-maps}))]
-    (log/debug "Query result" result)
-    (if (coll? identity)
-      (reduce
-       (fn [p result]
-         (assoc p (:id result)
-                (:aggregate_id result)))
-       {}
-       result)
-      (-> result
-          (first)
-          (:aggregate_id)))))
+                                  params
+                                  [(:service-name ctx)])
+                                 {:builder-fn rs/as-unqualified-lower-maps}))]
+     (log/debug "Query result" result)
+     (let [response (if (coll? identity)
+                      (reduce
+                       (fn [p result]
+                         (assoc p (:id result)
+                                (:aggregate_id result)))
+                       {}
+                       result)
+                      (-> result
+                          (first)
+                          (:aggregate_id)))]
+
+       (log/info "Resolved identities" response)
+       response))))
 
 (defmethod get-events
   :postgres
