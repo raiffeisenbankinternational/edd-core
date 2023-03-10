@@ -137,6 +137,8 @@ RUN set -e &&\
     cd .. &&\
     echo "Running integration tests: $(pwd)" &&\
     env &&\
+    aws sqs purge-queue \
+          --queue-url "https://sqs.${AWS_DEFAULT_REGION}.amazonaws.com/${AccountId}/${AccountId}-${EnvironmentNameLower}-it" &&\
     clj -M:test:it &&\
     rm -rf /home/build/.m2/repository &&\
     rm -rf target &&\
