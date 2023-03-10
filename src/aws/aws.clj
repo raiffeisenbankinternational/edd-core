@@ -6,7 +6,8 @@
    [sdk.aws.common :as common]
    [clojure.set :as clojure-set]
    [sdk.aws.cognito-idp :as cognito-idp]
-   [sdk.aws.sqs :as sqs]))
+   [sdk.aws.sqs :as sqs]
+   [clojure.string :as string]))
 
 (defn get-next-invocation
   [runtime-api]
@@ -31,7 +32,9 @@
       (doall
        (map
         #(let [{:keys [error]} (sqs/sqs-publish
-                                (assoc ctx :queue "glms-router-svc-response"
+                                (assoc ctx :queue (str
+                                                   (:environment-name-lower ctx)
+                                                   "-glms-router-svc-response")
                                        :message (util/to-json
                                                  {:Records [%]})))]
            (when error
@@ -79,7 +82,14 @@
         (when (and (> (count items-to-delete) 0)
                    (= (count body)
                       (count (:Records req))))
-          (sqs/delete-message-batch ctx items-to-delete))))
+          (let [queue (-> items-to-delete
+                          first
+                          :eventSourceARN
+                          (string/split #":")
+                          last)]
+            (sqs/delete-message-batch (assoc ctx
+                                             :queue queue
+                                             :messages items-to-delete))))))
 
     (util/d-time "Enqueueing error"
                  (enqueue-response ctx body))
