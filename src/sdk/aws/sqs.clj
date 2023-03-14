@@ -107,116 +107,112 @@
 
 (defn sqs-publish
   [{:keys [queue message aws] :as ctx}]
-  (util/d-time
-   (str "sqs-publish: " queue)
-   (let [message-id (if (string? message)
-                      (uuid/gen)
-                      (:id message))
-         ^String message (if (string? message)
-                           message
-                           (:body message))
+  (let [message-id (if (string? message)
+                     (uuid/gen)
+                     (:id message))
+        ^String message (if (string? message)
+                          message
+                          (:body message))
 
-         message (URLEncoder/encode message "UTF-8")
-         message (if (is-message-too-big? message)
-                   message
-                   (message-to-s3 ctx message))
-         req {:method "POST"
-              :uri (str "/"
-                        (:account-id aws)
-                        "/"
-                        queue)
-              :query ""
-              :payload (str "Action=SendMessage"
-                            "&MessageBody=" message)
-              :headers {"Host" (str "sqs."
-                                    (get aws :region)
-                                    ".amazonaws.com")
-                        "Content-Type" "application/x-www-form-urlencoded"
-                        "Accept" "application/json"
-                        "X-Amz-Date" (sdk/create-date)}
-              :service "sqs"
-              :region (get aws :region)
-              :access-key (:aws-access-key-id aws)
-              :secret-key (:aws-secret-access-key aws)}
-         auth (sdk/authorize req)
-         {:keys [status]
-          :as response} (client/retry-n
-                         #(util/http-post
-                           (str "https://"
-                                (get (:headers req) "Host")
-                                (:uri req))
-                           (client/request->with-timeouts
-                            %
-                            {:body (:payload req)
-                             :version :http1.1
-                             :headers (-> (:headers req)
-                                          (assoc "Authorization" auth)
-                                          (dissoc "Host")
-                                          (assoc "X-Amz-Security-Token"
-                                                 (:aws-session-token aws)))})))]
-     (when (> status 399)
-       (throw (ex-info "Failed to send message"
-                       {:success false
-                        :id message-id
-                        :queue (:uri req)
-                        :message (get-in response [:body :Error :Message])
-                        :exception (:body response)})))
+        message (URLEncoder/encode message "UTF-8")
+        message (if (is-message-too-big? message)
+                  message
+                  (message-to-s3 ctx message))
+        req {:method "POST"
+             :uri (str "/"
+                       (:account-id aws)
+                       "/"
+                       queue)
+             :query ""
+             :payload (str "Action=SendMessage"
+                           "&MessageBody=" message)
+             :headers {"Host" (str "sqs."
+                                   (get aws :region)
+                                   ".amazonaws.com")
+                       "Content-Type" "application/x-www-form-urlencoded"
+                       "Accept" "application/json"
+                       "X-Amz-Date" (sdk/create-date)}
+             :service "sqs"
+             :region (get aws :region)
+             :access-key (:aws-access-key-id aws)
+             :secret-key (:aws-secret-access-key aws)}
+        auth (sdk/authorize req)
+        {:keys [status]
+         :as response} (client/retry-n
+                        #(util/http-post
+                          (str "https://"
+                               (get (:headers req) "Host")
+                               (:uri req))
+                          (client/request->with-timeouts
+                           %
+                           {:body (:payload req)
+                            :version :http1.1
+                            :headers (-> (:headers req)
+                                         (assoc "Authorization" auth)
+                                         (dissoc "Host")
+                                         (assoc "X-Amz-Security-Token"
+                                                (:aws-session-token aws)))})))]
+    (when (> status 399)
+      (throw (ex-info "Failed to send message"
+                      {:success false
+                       :id message-id
+                       :queue (:uri req)
+                       :message (get-in response [:body :Error :Message])
+                       :exception (:body response)})))
 
-     {:success true
-      :id message-id})))
+    {:success true
+     :id message-id}))
 
 (defn sqs-publish-batch
   [{:keys [queue messages aws] :as ctx}]
-  (lambda.util/d-time
-   (str "sqs-publish-batch: " queue)
-   (let [req {:method "POST"
-              :uri (str "/"
-                        (:account-id aws)
-                        "/"
-                        queue)
-              :query ""
-              :payload (str "Action=SendMessageBatch"
-                            (->> messages
-                                 (map-indexed message->query)
-                                 (str/join))
-                            "&Version="
-                            batch-version)
-              :headers {"Host" (str
-                                "sqs."
-                                (:region aws)
-                                ".amazonaws.com")
-                        "Content-Type" "application/x-www-form-urlencoded"
-                        "Accept" "application/json"
-                        "X-Amz-Date" (sdk/create-date)}
-              :service "sqs"
-              :region (:region aws)
-              :access-key (:aws-access-key-id aws)
-              :secret-key (:aws-secret-access-key aws)}
-         auth (sdk/authorize req)
-         response (client/retry-n
-                   #(util/http-post
-                     (str "https://"
-                          (get (:headers req) "Host")
-                          (:uri req))
-                     (client/request->with-timeouts
-                      %
-                      {:body (:payload req)
-                       :version :http1.1
-                       :headers (-> (:headers req)
-                                    (assoc "Authorization" auth)
-                                    (dissoc "Host")
-                                    (assoc "X-Amz-Security-Token"
-                                           (:aws-session-token aws)))}))
-                   :retries 3)]
-     (log/debug req)
-     (cond
-       (contains? response :error) (throw (ex-info "Failed to send message"
-                                                   {:error response}))
-       (> (:status response) 399) (throw (ex-info "Failed to send message"
-                                                  {:queue (:uri req)
-                                                   :exception (:body response)
-                                                   :message (get-in response [:body :Error :Message])}))
-       :else (-> response :body response->result)))))
+  (let [req {:method "POST"
+             :uri (str "/"
+                       (:account-id aws)
+                       "/"
+                       queue)
+             :query ""
+             :payload (str "Action=SendMessageBatch"
+                           (->> messages
+                                (map-indexed message->query)
+                                (str/join))
+                           "&Version="
+                           batch-version)
+             :headers {"Host" (str
+                               "sqs."
+                               (:region aws)
+                               ".amazonaws.com")
+                       "Content-Type" "application/x-www-form-urlencoded"
+                       "Accept" "application/json"
+                       "X-Amz-Date" (sdk/create-date)}
+             :service "sqs"
+             :region (:region aws)
+             :access-key (:aws-access-key-id aws)
+             :secret-key (:aws-secret-access-key aws)}
+        auth (sdk/authorize req)
+        response (client/retry-n
+                  #(util/http-post
+                    (str "https://"
+                         (get (:headers req) "Host")
+                         (:uri req))
+                    (client/request->with-timeouts
+                     %
+                     {:body (:payload req)
+                      :version :http1.1
+                      :headers (-> (:headers req)
+                                   (assoc "Authorization" auth)
+                                   (dissoc "Host")
+                                   (assoc "X-Amz-Security-Token"
+                                          (:aws-session-token aws)))}))
+                  :retries 3)]
+    (log/debug req)
+    (cond
+      (contains? response :error) (throw (ex-info "Failed to send message"
+                                                  {:error response}))
+      (> (:status response) 399) (throw (ex-info "Failed to send message"
+                                                 {:queue (:uri req)
+                                                  :exception (:body response)
+                                                  :message (get-in response [:body :Error :Message])}))
+      :else (-> response :body response->result))))
 
 (defn delete-message-batch
   [{:keys [aws queue messages]}]
