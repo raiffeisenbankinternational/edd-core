@@ -3,6 +3,7 @@
             [lambda.request :as request]
             [edd.el.cmd :as cmd]
             [edd.schema :as s]
+            [sdk.aws.s3 :as s3]
             [edd.el.event :as event]
             [edd.el.query :as query]
             [lambda.util :as util]
@@ -264,15 +265,25 @@
            #(dispatch-item (assoc ctx :item %))
            body))))
 
+(defn fetch-from-s3
+  [ctx {:keys [s3]
+        :as msg}]
+  (if s3
+    (-> (s3/get-object ctx msg)
+        slurp
+        util/to-edn)
+    msg))
+
 (defn filter-queue-request
   "If request is coming from queue we need to get out all request bodies"
   [{:keys [body] :as ctx}]
   (if (contains? body :Records)
     (let [queue-body (mapv
                       (fn [it]
-                        (-> it
-                            (:body)
-                            (util/to-edn)))
+                        (->> it
+                             :body
+                             util/to-edn
+                             (fetch-from-s3 ctx)))
                       (-> body
                           (:Records)))]
       (-> ctx
