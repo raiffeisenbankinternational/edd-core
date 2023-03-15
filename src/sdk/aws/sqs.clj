@@ -77,8 +77,10 @@
     (concat s f)))
 
 (defn message-to-s3
-  [{:keys [aws] :as ctx} message]
-  (let [key (str "sqs-content/" (uuid/gen))
+  [{:keys [aws service-name] :as ctx} message]
+  (let [key (str "sqs-content/" (or service-name
+                                    "no-svc")
+                 "/" (uuid/gen) ".json")
         object {:s3 {:bucket
                      {:name
                       (str
@@ -94,13 +96,12 @@
     (when error
       (throw (ex-info "Unable to store SQS payload"
                       error)))
-    (URLEncoder/encode (-> object
-                           util/to-json)
-                       "UTF-8")))
+    (-> object
+        util/to-json)))
 
 (defn is-message-too-big?
   [message]
-  (< (-> message
+  (> (-> message
          (.getBytes)
          alength)
      226214))
@@ -115,10 +116,10 @@
                 deduplication-id
                 id
                 ^String body]} message
-        body (URLEncoder/encode body "UTF-8")
         body (if (is-message-too-big? body)
-               body
-               (message-to-s3 ctx body))
+               (message-to-s3 ctx body)
+               body)
+        body (URLEncoder/encode body "UTF-8")
         req {:method "POST"
              :uri (str "/"
                        (:account-id aws)
