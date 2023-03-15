@@ -46,7 +46,7 @@
 
     - name: Create fifo queue
       community.aws.sqs_queue:
-        name: '{{ lookup("env", "EnvironmentNameLower") }}-it.fifo'
+        name: '{{ lookup("env", "AccountId") }}-{{ lookup("env", "EnvironmentNameLower") }}-it.fifo'
         region: '{{ lookup("env", "Region") }}'
         default_visibility_timeout: 120
         message_retention_period: 86400

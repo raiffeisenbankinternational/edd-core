@@ -3,6 +3,7 @@
             [aws.ctx :as aws-ctx]
             [clojure.string :as string]
             [lambda.util :as util]
+            [lambda.uuid :as uuid]
             [clojure.test :refer [deftest testing is]]))
 
 ; IMPORTANT IMPORTANT IMPORTANT
@@ -36,7 +37,37 @@
                                                                 {:message-id "some"
                                                                  :receipt-handle "some"})))))))))
 
-(deftest test-send-to-mossinf-queue
+(deftest test-send-and-receive-fifo
+  (testing "Test simple single send and receive from it FIFO quque"
+    (let [ctx (aws-ctx/init {:environment-name-lower (util/get-env "EnvironmentNameLower")})
+          message "test-message"
+          queue (str (util/get-env "AccountId")
+                     "-"
+                     (util/get-env "EnvironmentNameLower")
+                     "-"
+                     "it.fifo")]
+      (is (= {:success true
+              :id "id-1"}
+             (sqs/sqs-publish (assoc ctx
+                                     :queue queue
+                                     :message {:id "id-1"
+                                               :deduplication-id (uuid/gen)
+                                               :group-id "id2"
+                                               :body message}))))
+      (Thread/sleep 1000)
+      (let [resp (sqs/sqs-receive (assoc ctx
+                                         :queue queue))]
+        (is (= [message]
+               (mapv :body resp)))
+
+        (is (= [1 0]
+               (sqs/delete-message-batch (assoc ctx
+                                                :queue queue
+                                                :messages (conj resp
+                                                                {:message-id "some"
+                                                                 :receipt-handle "some"})))))))))
+
+(deftest test-send-to-missing-queue
   (testing "Test simple single send missing queue"
     (let [ctx (aws-ctx/init {:environment-name-lower (util/get-env "EnvironmentNameLower")})
           message "test-message"
