@@ -1,5 +1,6 @@
 (ns sdk.aws.sqs-it
   (:require [sdk.aws.sqs :as sqs]
+            [sdk.aws.s3 :as s3]
             [aws.ctx :as aws-ctx]
             [clojure.string :as string]
             [lambda.util :as util]
@@ -40,7 +41,9 @@
 (deftest test-send-and-receive-fifo
   (testing "Test simple single send and receive from it FIFO quque"
     (let [ctx (aws-ctx/init {:environment-name-lower (util/get-env "EnvironmentNameLower")})
-          message "test-message"
+          message (util/to-json
+                   {:message "info message with spaces and & ans stuff"
+                    :content {:nested (uuid/gen)}})
           queue (str (util/get-env "AccountId")
                      "-"
                      (util/get-env "EnvironmentNameLower")
@@ -70,7 +73,8 @@
 (deftest test-send-to-missing-queue
   (testing "Test simple single send missing queue"
     (let [ctx (aws-ctx/init {:environment-name-lower (util/get-env "EnvironmentNameLower")})
-          message "test-message"
+          message (util/to-json
+                   {:message "info"})
           queue (str (util/get-env "AccountId")
                      "-"
                      (util/get-env "EnvironmentNameLower")
@@ -91,9 +95,11 @@
 (deftest test-big-payload
   (testing "Test simple single send and receive from it quque"
     (let [ctx (aws-ctx/init {:environment-name-lower (util/get-env "EnvironmentNameLower")})
-          message (string/join
-                   ""
-                   (range 0, 300000))
+          message (util/to-json
+                   {:message (string/join
+                              ""
+                              (range 0, 300000))
+                    :other (uuid/gen)})
           queue (str (util/get-env "AccountId")
                      "-"
                      (util/get-env "EnvironmentNameLower")
@@ -107,20 +113,23 @@
                                                :body message}))))
       (Thread/sleep 1000)
       (let [resp (sqs/sqs-receive (assoc ctx
-                                         :queue queue))]
-        (is (= [{:name (str
-                        (get-in ctx [:aws :account-id])
-                        "-"
-                        (get-in ctx [:environment-name-lower])
-                        "-sqs")}]
-               (mapv
-                #(-> %
-                     :body
-                     util/to-edn
-                     :s3
-                     :bucket)
-                resp)))
+                                         :queue queue))
+            payload (-> resp
+                        first
+                        :body
+                        util/to-edn)]
+        (is (= {:name (str
+                       (get-in ctx [:aws :account-id])
+                       "-"
+                       (get-in ctx [:environment-name-lower])
+                       "-sqs")}
+               (-> payload
+                   :s3
+                   :bucket)))
 
+        (is (= message
+               (slurp
+                (s3/get-object ctx payload))))
         (is (= [1 0]
                (sqs/delete-message-batch (assoc ctx
                                                 :queue queue
