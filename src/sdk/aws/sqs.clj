@@ -107,17 +107,18 @@
 
 (defn sqs-publish
   [{:keys [queue message aws] :as ctx}]
-  (let [message-id (if (string? message)
-                     (uuid/gen)
-                     (:id message))
-        ^String message (if (string? message)
-                          message
-                          (:body message))
-
-        message (URLEncoder/encode message "UTF-8")
-        message (if (is-message-too-big? message)
-                  message
-                  (message-to-s3 ctx message))
+  (let [message (if (string? message)
+                  {:id (uuid/gen)
+                   :body message}
+                  message)
+        {:keys [group-id
+                deduplication-id
+                id
+                ^String body]} message
+        body (URLEncoder/encode body "UTF-8")
+        body (if (is-message-too-big? body)
+               body
+               (message-to-s3 ctx body))
         req {:method "POST"
              :uri (str "/"
                        (:account-id aws)
@@ -125,7 +126,11 @@
                        queue)
              :query ""
              :payload (str "Action=SendMessage"
-                           "&MessageBody=" message)
+                           "&MessageBody=" body
+                           (when deduplication-id
+                             (str "&MessageDeduplicationId=" deduplication-id))
+                           (when group-id
+                             (str "&MessageGroupId=" group-id)))
              :headers {"Host" (str "sqs."
                                    (get aws :region)
                                    ".amazonaws.com")
@@ -155,13 +160,13 @@
     (when (> status 399)
       (throw (ex-info "Failed to send message"
                       {:success false
-                       :id message-id
+                       :id id
                        :queue (:uri req)
                        :message (get-in response [:body :Error :Message])
                        :exception (:body response)})))
 
     {:success true
-     :id message-id}))
+     :id id}))
 
 (defn sqs-publish-batch
   [{:keys [queue messages aws] :as ctx}]
