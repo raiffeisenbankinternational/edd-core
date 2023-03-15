@@ -91,7 +91,7 @@
                                              :queue queue
                                              :messages items-to-delete))))))
 
-    (util/d-time "Enqueueing error"
+    (util/d-time "Distribute error"
                  (enqueue-response ctx body))
 
     (let [body (produce-compatible-error-response body)
