@@ -139,6 +139,8 @@ RUN set -e &&\
     env &&\
     aws sqs purge-queue \
           --queue-url "https://sqs.${AWS_DEFAULT_REGION}.amazonaws.com/${AccountId}/${AccountId}-${EnvironmentNameLower}-it" &&\
+    aws sqs purge-queue \
+          --queue-url "https://sqs.${AWS_DEFAULT_REGION}.amazonaws.com/${AccountId}/${AccountId}-${EnvironmentNameLower}-it.fifo" &&\
     clj -M:test:it &&\
     rm -rf /home/build/.m2/repository &&\
     rm -rf target &&\
