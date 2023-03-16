@@ -67,13 +67,19 @@
 
 (defn response->result
   [resp]
-  (let [{:keys [Failed Successful]}
-        (get-in resp [:SendMessageBatchResponse
-                      :SendMessageBatchResult])
+  (let [{:keys [Failed
+                Successful]} (get-in resp
+                                     [:SendMessageBatchResponse
+                                      :SendMessageBatchResult])
         f (map (fn [{:keys [Id Message]}]
-                 {:id Id :error Message :success false}) Failed)
+                 {:id Id
+                  :error Message
+                  :success false})
+               Failed)
         s (map (fn [{:keys [Id]}]
-                 {:id Id :success true}) Successful)]
+                 {:id Id
+                  :success true})
+               Successful)]
     (concat s f)))
 
 (defn message-to-s3
@@ -100,11 +106,22 @@
         util/to-json)))
 
 (defn is-message-too-big?
-  [message]
+  [^String message]
   (> (-> message
          (.getBytes)
          alength)
      226214))
+
+(defn parse-response
+  [{:keys [error]
+    :as response}]
+  (cond
+    error {:error {:success false
+                   :exception error}}
+    (> (:status response) 399) {:error {:success false
+                                        :exception  (get-in response [:body])
+                                        :message (get-in response [:body :Error :Message])}}
+    :else response))
 
 (defn sqs-publish
   [{:keys [queue message aws] :as ctx}]
@@ -116,9 +133,9 @@
                 deduplication-id
                 id
                 ^String body]} message
-        body (if (is-message-too-big? body)
-               (message-to-s3 ctx body)
-               body)
+        ^String body (if (is-message-too-big? body)
+                       (message-to-s3 ctx body)
+                       body)
         body (URLEncoder/encode body "UTF-8")
         req {:method "POST"
              :uri (str "/"
@@ -143,28 +160,25 @@
              :access-key (:aws-access-key-id aws)
              :secret-key (:aws-secret-access-key aws)}
         auth (sdk/authorize req)
-        {:keys [status]
-         :as response} (client/retry-n
-                        #(util/http-post
-                          (str "https://"
-                               (get (:headers req) "Host")
-                               (:uri req))
-                          (client/request->with-timeouts
-                           %
-                           {:body (:payload req)
-                            :version :http1.1
-                            :headers (-> (:headers req)
-                                         (assoc "Authorization" auth)
-                                         (dissoc "Host")
-                                         (assoc "X-Amz-Security-Token"
-                                                (:aws-session-token aws)))})))]
-    (when (> status 399)
+        {:keys [error]
+         :as response} (parse-response
+                        (client/retry-n
+                         #(util/http-post
+                           (str "https://"
+                                (get (:headers req) "Host")
+                                (:uri req))
+                           (client/request->with-timeouts
+                            %
+                            {:body (:payload req)
+                             :version :http1.1
+                             :headers (-> (:headers req)
+                                          (assoc "Authorization" auth)
+                                          (dissoc "Host")
+                                          (assoc "X-Amz-Security-Token"
+                                                 (:aws-session-token aws)))}))))]
+    (when error
       (throw (ex-info "Failed to send message"
-                      {:success false
-                       :id id
-                       :queue (:uri req)
-                       :message (get-in response [:body :Error :Message])
-                       :exception (:body response)})))
+                      error)))
 
     {:success true
      :id id}))
@@ -195,30 +209,26 @@
              :access-key (:aws-access-key-id aws)
              :secret-key (:aws-secret-access-key aws)}
         auth (sdk/authorize req)
-        response (client/retry-n
-                  #(util/http-post
-                    (str "https://"
-                         (get (:headers req) "Host")
-                         (:uri req))
-                    (client/request->with-timeouts
-                     %
-                     {:body (:payload req)
-                      :version :http1.1
-                      :headers (-> (:headers req)
-                                   (assoc "Authorization" auth)
-                                   (dissoc "Host")
-                                   (assoc "X-Amz-Security-Token"
-                                          (:aws-session-token aws)))}))
-                  :retries 3)]
-    (log/debug req)
-    (cond
-      (contains? response :error) (throw (ex-info "Failed to send message"
-                                                  {:error response}))
-      (> (:status response) 399) (throw (ex-info "Failed to send message"
-                                                 {:queue (:uri req)
-                                                  :exception (:body response)
-                                                  :message (get-in response [:body :Error :Message])}))
-      :else (-> response :body response->result))))
+        {:keys [error]
+         :as response} (parse-response
+                        (client/retry-n
+                         #(util/http-post
+                           (str "https://"
+                                (get (:headers req) "Host")
+                                (:uri req))
+                           (client/request->with-timeouts
+                            %
+                            {:body (:payload req)
+                             :version :http1.1
+                             :headers (-> (:headers req)
+                                          (assoc "Authorization" auth)
+                                          (dissoc "Host")
+                                          (assoc "X-Amz-Security-Token"
+                                                 (:aws-session-token aws)))}))
+                         :retries 3))]
+    (when error
+      (throw (ex-info "Failed to send batch" error)))
+    (-> response :body response->result)))
 
 (defn delete-message-batch
   [{:keys [aws queue messages]}]
