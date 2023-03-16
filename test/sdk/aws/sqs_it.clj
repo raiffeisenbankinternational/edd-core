@@ -38,12 +38,16 @@
                                                                 {:message-id "some"
                                                                  :receipt-handle "some"})))))))))
 
+(defn gen-message
+  []
+  (util/to-json
+   {:message "info message with spaces and & ans stuff"
+    :content {:nested (uuid/gen)}}))
+
 (deftest test-send-and-receive-fifo
   (testing "Test simple single send and receive from it FIFO quque"
     (let [ctx (aws-ctx/init {:environment-name-lower (util/get-env "EnvironmentNameLower")})
-          message (util/to-json
-                   {:message "info message with spaces and & ans stuff"
-                    :content {:nested (uuid/gen)}})
+          message (gen-message)
           queue (str (util/get-env "AccountId")
                      "-"
                      (util/get-env "EnvironmentNameLower")
@@ -140,10 +144,12 @@
 (deftest test-batch
   (testing "Test sending batch"
     (let [ctx (aws-ctx/init {:environment-name-lower (util/get-env "EnvironmentNameLower")})
+          msg1 (gen-message)
+          msg2 (gen-message)
           messages [{:id "id1"
-                     :body "msg-1"}
+                     :body msg1}
                     {:id "id2"
-                     :body "msg-2"}]
+                     :body msg2}]
 
           queue (str (util/get-env "AccountId")
                      "-"
@@ -161,7 +167,7 @@
       (let [resp (sqs/sqs-receive (assoc ctx
                                          :queue queue
                                          :max-number-of-messages 10))]
-        (is (= ["msg-1" "msg-2"]
+        (is (= [msg1 msg2]
                (mapv
                 #(-> %
                      :body)
