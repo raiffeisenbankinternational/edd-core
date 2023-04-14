@@ -423,27 +423,32 @@
                          {})))
 
 (defn store-results-impl
-  [{:keys [resp] :as ctx}]
+  [ctx resp]
   (log/debug "Storing results impl")
-  (log-response-impl ctx (:summary resp))
-  (store-events ctx resp)
-  (doseq [i (:identities resp)]
-    (store-identity ctx i))
-  (store-effects ctx resp)
+  (util/d-time
+   "storing-result-postgres"
+   (log-response-impl ctx (:summary resp))
+   (store-events ctx resp)
+   (doseq [i (:identities resp)]
+     (store-identity ctx i))
+   (store-effects ctx resp))
   ctx)
 
 (defmethod store-results
   :postgres
-  [{:keys [resp] :as ctx}]
+  [ctx]
   (try-to-data
-   #(do
+   #(let [resp (:resp ctx)
+          ctx (dissoc ctx :resp)
+          sequences (:sequences resp)]
       (jdbc/with-transaction
         [tx @(:con ctx)]
         (store-results-impl
-         (assoc ctx :con (delay tx)))
-        (doseq [i (:sequences resp)]
+         (assoc ctx :con (delay tx))
+         resp)
+        (doseq [i sequences]
           (prepare-store-sequence ctx i)))
-      (doseq [i (:sequences resp)]
+      (doseq [i sequences]
         (update-sequence ctx i))
       ctx)))
 

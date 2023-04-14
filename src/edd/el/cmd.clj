@@ -333,11 +333,14 @@
         partition-site (el-ctx/get-effect-partition-size ctx)]
     (if (< (count effects) partition-site)
       (resp->store-cache-partition ctx resp)
-      (map-indexed
-       (fn [idx %]
-         (resp->store-cache-partition ctx (assoc resp :effects %
-                                                 :idx idx)))
-       (partition partition-site partition-site nil effects)))))
+      (let [futures (vec
+                     (map-indexed
+                      (fn [idx %]
+                        (future
+                          (resp->store-cache-partition ctx (assoc resp :effects %
+                                                                  :idx idx))))
+                      (partition partition-site partition-site nil effects)))]
+        (mapv deref futures)))))
 
 (defn store-results
   [ctx resp]
