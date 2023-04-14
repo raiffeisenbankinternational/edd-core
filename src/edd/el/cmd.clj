@@ -16,7 +16,10 @@
    [edd.request-cache :as request-cache]
    [edd.schema.core :as edd-schema]
    [edd.el.query :as query])
-  (:import (clojure.lang ExceptionInfo)))
+  (:import (clojure.lang ExceptionInfo)
+           (java.util.concurrent Executors
+                                 ExecutorService
+                                 Future)))
 
 (def calc-service-query-url query/calc-service-query-url)
 (def resolve-remote-dependency query/resolve-remote-dependency)
@@ -327,20 +330,34 @@
   [ctx resp]
   (response-cache/cache-response ctx resp))
 
+(defn do-execute
+  [jobs]
+  (let [nthreads (min (count jobs)
+                      50)
+        _ (log/info (str "Using threads: " nthreads
+                         " to run: " (count jobs)
+                         " jobs"))
+        ^ExecutorService pool (Executors/newFixedThreadPool nthreads)
+        resp (mapv
+              (fn [^Future future]
+                (.get future))
+              (.invokeAll pool jobs))]
+    (.shutdown pool)
+    resp))
+
 (defn resp->cache-partitioned
   [ctx resp]
   (let [{:keys [effects]} resp
         partition-site (el-ctx/get-effect-partition-size ctx)]
     (if (< (count effects) partition-site)
       (resp->store-cache-partition ctx resp)
-      (let [futures (vec
-                     (map-indexed
-                      (fn [idx %]
-                        (future
-                          (resp->store-cache-partition ctx (assoc resp :effects %
-                                                                  :idx idx))))
-                      (partition partition-site partition-site nil effects)))]
-        (mapv deref futures)))))
+      (do-execute
+       (map-indexed
+        (fn [idx e]
+          #(resp->store-cache-partition ctx (assoc resp
+                                                   :effects e
+                                                   :idx idx)))
+        (partition partition-site partition-site nil effects))))))
 
 (defn store-results
   [ctx resp]
