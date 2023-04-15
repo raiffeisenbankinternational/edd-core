@@ -332,8 +332,13 @@
 
 (defn do-execute
   [jobs]
-  (let [nthreads (min (count jobs)
-                      50)
+  (System/gc)
+  (let [resonable-theread-count "10"
+        param-threads (util/get-env "CacheThreadCount"
+                                    resonable-theread-count)
+        param-threads (Integer/parseInt param-threads)
+        nthreads (min (count jobs)
+                      param-threads)
         _ (log/info (str "Using threads: " nthreads
                          " to run: " (count jobs)
                          " jobs"))
