@@ -390,12 +390,22 @@
                          AND service_name=?") id (:service-name ctx)]
                       {:builder-fn rs/as-unqualified-lower-maps})))
 
+(def partition-size 10000)
 (defn store-effects
   [ctx {:keys [effects]}]
   (log/debug "Storing effects: " effects)
+
   (when (seq effects)
-    (jdbc/execute-batch! @(:con ctx)
-                         (str "INSERT INTO " (->table ctx :command_store) " (id,
+    (loop [parts (partition partition-size
+                            partition-size
+                            nil
+                            effects)
+           total (count parts)
+           current 0]
+      (util/d-time
+       (str "Storing effects: " current "/" total)
+       (jdbc/execute-batch! @(:con ctx)
+                            (str "INSERT INTO " (->table ctx :command_store) " (id,
                                                     invocation_id,
                                                     request_id,
                                                     interaction_id,
@@ -405,22 +415,26 @@
                                                     aggregate_id,
                                                     data)
                             VALUES (?,?,?,?,?,?,?,?,?)")
-                         (mapv
-                          (fn [cmd]
-                            [(uuid/gen)
-                             (:invocation-id ctx)
-                             (:request-id ctx)
-                             (:interaction-id ctx)
-                             (breadcrumb-str (:breadcrumbs ctx))
-                             (:service-name ctx)
-                             (:service cmd)
-                             (-> cmd
-                                 (:commands)
-                                 (first)
-                                 (:id))
-                             cmd])
-                          effects)
-                         {})))
+                            (mapv
+                             (fn [cmd]
+                               [(uuid/gen)
+                                (:invocation-id ctx)
+                                (:request-id ctx)
+                                (:interaction-id ctx)
+                                (breadcrumb-str (:breadcrumbs ctx))
+                                (:service-name ctx)
+                                (:service cmd)
+                                (-> cmd
+                                    (:commands)
+                                    (first)
+                                    (:id))
+                                cmd])
+                             (first parts))
+                            {}))
+      (when (seq parts)
+        (recur (rest parts)
+               total
+               (inc current))))))
 
 (defn store-results-impl
   [ctx resp]
