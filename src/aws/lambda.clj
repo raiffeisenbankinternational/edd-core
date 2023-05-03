@@ -149,7 +149,7 @@
                               [:headers :lambda-runtime-aws-request-id])]
 
            (util/d-time
-            (str "Handling next request: " i + ", invocation-id: " invocation-id)
+            (str "Handling next request: " i ", invocation-id: " invocation-id)
             (binding [request/*request* (atom {:scoped true})]
               (handle-request
                (-> ctx

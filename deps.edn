@@ -1,12 +1,12 @@
 {:deps
- {org.clojure/clojure {:mvn/version "1.10.1"},
+ {org.clojure/clojure {:mvn/version "1.11.1"},
   com.alpha-prosoft/hikaricp
   {:mvn/version "5.0.14", :exclusions [org.slf4j/slf4j-api]},
-  com.auth0/java-jwt {:mvn/version "4.2.2"},
+  com.auth0/java-jwt {:mvn/version "4.4.0"},
   org.clojure/tools.logging {:mvn/version "1.2.4"},
   compojure/compojure {:mvn/version "1.7.0"},
   ring-cors/ring-cors {:mvn/version "0.1.13"},
-  org.postgresql/postgresql {:mvn/version "42.5.1"},
+  org.postgresql/postgresql {:mvn/version "42.6.0"},
   seancorfield/next.jdbc {:mvn/version "1.2.659"},
   org.clojure/data.xml {:mvn/version "0.2.0-alpha8"},
   features/edd-core-schema #:local{:root "modules/edd-core-schema"},
@@ -15,10 +15,10 @@
   java-http-clj/java-http-clj {:mvn/version "0.4.3"},
   alpha-prosoft/jsonista {:mvn/version "0.2.8"},
   clj-aws-sign/clj-aws-sign {:mvn/version "0.1.1"},
-  org.slf4j/slf4j-api {:mvn/version "2.0.6"},
+  org.slf4j/slf4j-api {:mvn/version "2.0.7"},
   io.forward/yaml {:mvn/version "1.0.11"},
-  ch.qos.logback/logback-classic {:mvn/version "1.4.5"},
-  com.auth0/jwks-rsa {:mvn/version "0.21.3"},
+  ch.qos.logback/logback-classic {:mvn/version "1.4.7"},
+  com.auth0/jwks-rsa {:mvn/version "0.22.0"},
   org.clojure/core.async {:mvn/version "1.6.673"}},
  :paths
  ["src"

@@ -2,8 +2,8 @@
   (:require [clojure.test :refer :all]
             [lambda.util :as util]
             [edd.el.cmd :as cmd]
+            [edd.el.query :as el-query]
             [edd.dal :as dal]
-            [edd.el.cmd :as cmd]
             [edd.common :as common]
             [edd.core :as edd]
             [lambda.test.fixture.client :as client]
@@ -11,10 +11,8 @@
             [edd.test.fixture.dal :as mock]
             [lambda.request :as request]
             [edd.ctx :as edd-ctx]
-            [lambda.uuid :as uuid]
             [aws.aws :as aws])
-  (:import (java.net URLEncoder)
-           (clojure.lang ExceptionInfo)))
+  (:import (java.net URLEncoder)))
 
 (def cmd-id #uuid "11111eeb-e677-4d73-a10a-1d08b45fe4dd")
 
@@ -22,52 +20,52 @@
 (def interaction-id #uuid "33333eeb-e677-4d73-a10a-1d08b45fe4dd")
 
 (deftest test-prepare-context-for-command-with-remote-query
-  "Test if context if properly prepared for remote queries"
-  (with-redefs [util/get-env (fn [v]
-                               (get {"PrivateHostedZoneName" "mock.com"} v))]
-    (let [meta {:realm :realm3}]
-      (mock/with-mock-dal
-        {:dps [{:service        :remote-svc
-                :request-id     request-id
-                :interaction-id interaction-id
-                :meta           meta
-                :query          {:param "Some Value"
-                                 :query-id :some-query-id}
-                :resp           {:remote :response}}]}
-        (let [cmd {:cmd-id :test-cmd
-                   :id     cmd-id
-                   :value  "Some Value"}
-              ctx (-> {}
-                      (edd-ctx/put-cmd :cmd-id :test-cmd
-                                       :options {:deps
-                                                 {:test-value
-                                                  {:query   (fn [_ cmd]
-                                                              {:param (:value cmd)
-                                                               :query-id :some-query-id})
-                                                   :service :remote-svc}}})
-                      (assoc :meta meta
-                             :request-id request-id
-                             :interaction-id interaction-id)
-                      (event-store/register))
-              deps (cmd/fetch-dependencies-for-command
-                    ctx
-                    cmd)]
-          (is (= {:test-value
-                  {:remote :response}}
-                 deps))
+  (testing "Test if context if properly prepared for remote queries"
+    (with-redefs [util/get-env (fn [v]
+                                 (get {"PrivateHostedZoneName" "mock.com"} v))]
+      (let [meta {:realm :realm3}]
+        (mock/with-mock-dal
+          {:dps [{:service        :remote-svc
+                  :request-id     request-id
+                  :interaction-id interaction-id
+                  :meta           meta
+                  :query          {:param "Some Value"
+                                   :query-id :some-query-id}
+                  :resp           {:remote :response}}]}
+          (let [cmd {:cmd-id :test-cmd
+                     :id     cmd-id
+                     :value  "Some Value"}
+                ctx (-> {}
+                        (edd-ctx/put-cmd :cmd-id :test-cmd
+                                         :options {:deps
+                                                   {:test-value
+                                                    {:query   (fn [_ cmd]
+                                                                {:param (:value cmd)
+                                                                 :query-id :some-query-id})
+                                                     :service :remote-svc}}})
+                        (assoc :meta meta
+                               :request-id request-id
+                               :interaction-id interaction-id)
+                        (event-store/register))
+                deps (cmd/fetch-dependencies-for-command
+                      ctx
+                      cmd)]
+            (is (= {:test-value
+                    {:remote :response}}
+                   deps))
 
-          (client/verify-traffic [{:body            (util/to-json
-                                                     {:query          {:param "Some Value"
-                                                                       :query-id :some-query-id}
-                                                      :meta           meta
-                                                      :request-id     request-id
-                                                      :interaction-id interaction-id})
-                                   :headers         {"X-Authorization" "#mock-id-token"
-                                                     "Content-Type"    "application/json"}
-                                   :method          :post
-                                   :idle-timeout    10000
-                                   :connect-timeout 300
-                                   :url             (cmd/calc-service-query-url "remote-svc")}]))))))
+            (client/verify-traffic [{:body            (util/to-json
+                                                       {:query          {:param "Some Value"
+                                                                         :query-id :some-query-id}
+                                                        :meta           meta
+                                                        :request-id     request-id
+                                                        :interaction-id interaction-id})
+                                     :headers         {"X-Authorization" "#mock-id-token"
+                                                       "Content-Type"    "application/json"}
+                                     :method          :post
+                                     :idle-timeout    10000
+                                     :connect-timeout 300
+                                     :url             (cmd/calc-service-query-url "remote-svc")}])))))))
 
 (deftest test-remote-dependency
   (let [meta {:realm :realm4}
@@ -213,6 +211,53 @@ and return nil to enable query-fn to have when conditions based on previously re
         (cmd/handle-commands ctx
                              {:commands [{:cmd-id :cmd-1
                                           :id     cmd-id-1}]})))))
+
+(deftest test-remote-dependency-exception
+  (testing "What ends up in context when remote dependency is not resolved"
+    (let [cmd-id-1 #uuid "11111eeb-e677-4d73-a10a-1d08b45fe4dd"
+          meta {:realm :realm4}
+          ctx (assoc mock/ctx
+                     :request-id request-id
+                     :interaction-id interaction-id
+                     :meta meta)
+          ctx (edd/reg-cmd ctx
+                           :cmd-1 (fn [ctx cmd]
+                                    (is (= nil
+                                           (:facility ctx)))
+                                    {:event-id :event-1
+                                     :value    (:value cmd)})
+                           :deps {:facility {:service :some-service
+                                             :query   (fn [_ _] {:query-id :query-1})}})
+          ctx (edd/reg-fx ctx (fn [ctx [event]]
+                                (is (= nil
+                                       (:facility ctx)))
+                                []))
+          ctx (edd/reg-query ctx
+                             :query-1 (fn [_ _]
+                                        (throw (RuntimeException. "Bla"))))]
+      (mock/with-mock-dal
+        (with-redefs  [el-query/-http-call
+                       (fn [ctx {:keys [service query]}]
+                         {:status 200
+                          :body  {:exception "Sorry"}})]
+          (is (= {:exception
+                  {:to-service :some-service
+                   :from-service nil
+                   :query-id :query-1
+                   :ref nil
+                   :message
+                   {:response {:exception "Sorry"} :error-source :some-service}}}
+                 (select-keys
+                  (edd/dispatch-item (assoc ctx
+                                            :item {:commands [{:cmd-id :cmd-1
+                                                               :id     cmd-id-1}]}))
+                  [:exception])))
+          (is (= {:exception "Bla"}
+                 (select-keys
+                  (edd/dispatch-item (assoc ctx
+                                            :item {:query {:query-id :query-1}}))
+                  [:exception]))))))))
+
 (def cmd-id-1 #uuid "11111eeb-e677-4d73-a10a-1d08b45fe4dd")
 (def cmd-id-deps #uuid "33333eeb-e677-4d73-a10a-1d08b45fe4dd")
 
@@ -491,7 +536,7 @@ and return nil to enable query-fn to have when conditions based on previously re
 
 (deftest test-encoding
   (is (= "%C3%96VK"
-         (URLEncoder/encode "ÖVK", "UTF-8"))))
+         (URLEncoder/encode "ÖVK" "UTF-8"))))
 
 (deftest serialization-test
   "when we serialize aggregate or search result
