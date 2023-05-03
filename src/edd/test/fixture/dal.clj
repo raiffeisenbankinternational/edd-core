@@ -172,9 +172,14 @@
   (util/fix-keys cmd))
 
 (defn handle-cmd
-  [{:keys [include-meta no-summary] :as ctx} cmd]
+  [{:keys [include-meta no-summary] :as ctx} {:keys [request-id
+                                                     interaction-id]
+                                              :as cmd}]
   (try
-    (let [resp (if (contains? cmd :commands)
+    (let [ctx (cond-> ctx
+                request-id (assoc :request-id request-id)
+                interaction-id (assoc :interaction-id interaction-id))
+          resp (if (contains? cmd :commands)
                  (when (or (= (:service-name ctx)
                               (:service cmd))
                            (= nil

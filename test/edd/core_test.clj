@@ -458,12 +458,30 @@
              :commands [{:a :b}]}]
            result))))
 
+(deftest test-wrap-global
+  (let [result (cmd/wrap-commands {:service-name "a"}
+                                  [])]
+    (is (= []
+           result))))
+
 (deftest test-wrap-global-commands
   (let [result (cmd/wrap-commands {:service-name "a"}
                                   [{:service  "a"
                                     :commands [{:a :b}]}])]
     (is (= [{:service  "a"
              :commands [{:a :b}]}]
+           result))))
+
+(deftest test-wrap-global-commands-multiple
+  (let [result (cmd/wrap-commands {:service-name "a"}
+                                  [{:service  "a"
+                                    :commands [{:a :b}]}
+                                   {:service  "d"
+                                    :commands [{:e :f}]}])]
+    (is (= [{:service  "a"
+             :commands [{:a :b}]}
+            {:service  "d"
+             :commands [{:e :f}]}]
            result))))
 
 (deftest test-wrap-global-commands-in-vector

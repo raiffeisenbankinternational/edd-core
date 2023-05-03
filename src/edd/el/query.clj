@@ -129,7 +129,7 @@
       (log/info "Skiping resolving remote dependency because query-id and ref are nil")
       nil)
     (when (:error response)
-      (throw (ex-info (str "Error fetching dependency" service)
+      (throw (ex-info (str "Request error fetching dependency" service)
                       {:error {:to-service   service
                                :from-service service-name
                                :query-id     (:query-id resolved-query)
@@ -137,6 +137,14 @@
                                :message      (:error response)}})))
     (when (:error (get response :body))
       (throw (ex-info (str "Error response from service " service)
+                      {:error {:to-service   service
+                               :from-service service-name
+                               :query-id     (:query-id resolved-query)
+                               :ref          (:ref resolved-query)
+                               :message      {:response     (get response :body)
+                                              :error-source service}}})))
+    (when (:exception (get response :body))
+      (throw (ex-info (str "Exception response from service " service)
                       {:error {:to-service   service
                                :from-service service-name
                                :query-id     (:query-id resolved-query)
