@@ -51,7 +51,8 @@
 
 (def command-store-with-bc
   (sort-crumbs
-   [{:breadcrumbs [0
+   [{:service :local-test
+     :breadcrumbs [0
                    0]
      :commands    [{:cmd-id :inc
                     :id     id1
@@ -59,7 +60,8 @@
                    {:cmd-id :inc
                     :id     id1
                     :level  1}]}
-    {:breadcrumbs [0
+    {:service :local-test
+     :breadcrumbs [0
                    1]
      :commands    [{:cmd-id :inc
                     :id     id1
@@ -67,7 +69,8 @@
                    {:cmd-id :inc
                     :id     id1
                     :level  1}]}
-    {:breadcrumbs [0
+    {:service :local-test
+     :breadcrumbs [0
                    0
                    0]
      :commands    [{:cmd-id :inc
@@ -76,7 +79,8 @@
                    {:cmd-id :inc
                     :id     id1
                     :level  2}]}
-    {:breadcrumbs [0
+    {:service :local-test
+     :breadcrumbs [0
                    0
                    1]
      :commands    [{:cmd-id :inc
@@ -85,7 +89,8 @@
                    {:cmd-id :inc
                     :id     id1
                     :level  2}]}
-    {:breadcrumbs [0
+    {:service :local-test
+     :breadcrumbs [0
                    0
                    2]
      :commands    [{:cmd-id :inc
@@ -94,7 +99,8 @@
                    {:cmd-id :inc
                     :id     id1
                     :level  2}]}
-    {:breadcrumbs [0
+    {:service :local-test
+     :breadcrumbs [0
                    0
                    3]
      :commands    [{:cmd-id :inc
@@ -103,7 +109,8 @@
                    {:cmd-id :inc
                     :id     id1
                     :level  2}]}
-    {:breadcrumbs [0
+    {:service :local-test
+     :breadcrumbs [0
                    1
                    0]
      :commands    [{:cmd-id :inc
@@ -112,7 +119,8 @@
                    {:cmd-id :inc
                     :id     id1
                     :level  2}]}
-    {:breadcrumbs [0
+    {:service :local-test
+     :breadcrumbs [0
                    1
                    1]
      :commands    [{:cmd-id :inc
@@ -121,7 +129,8 @@
                    {:cmd-id :inc
                     :id     id1
                     :level  2}]}
-    {:breadcrumbs [0
+    {:service :local-test
+     :breadcrumbs [0
                    1
                    2]
      :commands    [{:cmd-id :inc
@@ -130,7 +139,8 @@
                    {:cmd-id :inc
                     :id     id1
                     :level  2}]}
-    {:breadcrumbs [0
+    {:service :local-test
+     :breadcrumbs [0
                    1
                    3]
      :commands    [{:cmd-id :inc

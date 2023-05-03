@@ -44,25 +44,29 @@
 
 (defn wrap-commands
   [ctx commands]
-  (if-not (contains? (into [] commands) :commands)
-    (into []
-          (map
-           (fn [cmd]
-             (if-not (contains? cmd :commands)
-               {:service  (:service-name ctx)
-                :commands [cmd]}
-               cmd))
-           (if (map? commands)
-             [commands]
-             commands)))
-    [commands]))
+  (let [commands (if (map? commands)
+                   [commands]
+                   commands)]
+    (map
+     (fn [cmd]
+       (let [cmd (if-not (:commands cmd)
+                   {:commands [cmd]}
+                   cmd)
+             cmd (update cmd
+                         :service
+                         #(or %
+                              (:service-name ctx)))]
+         cmd))
+     commands)))
 
 (defn clean-effects
   [ctx effects]
-  (->> effects
-       (remove nil?)
-       (wrap-commands ctx)
-       (filter #(seq (:commands %)))))
+  (if (seq effects)
+    (->> effects
+         (remove nil?)
+         (wrap-commands ctx)
+         (filter #(seq (:commands %))))
+    []))
 
 (defn handle-effects
   [ctx & {:keys [resp aggregate]}]
@@ -219,11 +223,18 @@
 
       :else true)))
 
+(defn with-aggregate
+  [aggregate]
+  (swap! request/*request* #(update % :mdc
+                                    assoc
+                                    :aggregate-id
+                                    (:id aggregate))))
+
 (defn handle-command
   [ctx {:keys [cmd-id] :as cmd}]
   (log/info (:meta ctx))
   (util/d-time
-   (str "handling-command-" cmd-id)
+   (str "handling-command: " cmd-id)
    (let [{:keys [handler]} (edd-ctx/get-cmd ctx cmd-id)
          dependencies (fetch-dependencies-for-command ctx cmd)
          ctx (merge dependencies ctx)
@@ -236,6 +247,7 @@
      (if error
        validation
        (let [aggregate (common/get-by-id ctx {:id id})
+             _ (with-aggregate aggregate)
              ctx (el-ctx/put-aggregate ctx aggregate)
              resp (->> (get-response-from-command-handler
                         ctx

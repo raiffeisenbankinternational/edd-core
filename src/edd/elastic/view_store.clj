@@ -285,10 +285,20 @@
   :elastic
   [{:keys [aggregate] :as ctx}]
   (util/d-time
-   (str "Updating aggregate s3: " (realm ctx) (:id aggregate) (:version aggregate))
+   (str "Updating aggregate s3: "
+        (realm ctx)
+        " "
+        (:id aggregate)
+        " "
+        (:version aggregate))
    (store-to-s3 ctx))
   (util/d-time
-   (str "Updating aggregate elastic: " (realm ctx) (:id aggregate) (:version aggregate))
+   (str "Updating aggregate elastic: "
+        (realm ctx)
+        " "
+        (:id aggregate)
+        " "
+        (:version aggregate))
    (store-to-elastic ctx)))
 
 (defmethod with-init

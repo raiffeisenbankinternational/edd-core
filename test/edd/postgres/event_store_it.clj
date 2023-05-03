@@ -23,18 +23,22 @@
   [ctx]
   (assoc-in ctx [:meta :realm] :test))
 
+(defn clean-ctx
+  []
+  (-> {}
+      (assoc :service-name "local-test")
+      (assoc :response-cache :default)
+      (assoc :environment-name-lower (util/get-env "EnvironmentNameLower"))
+      (assoc :aws {:region                (util/get-env "AWS_DEFAULT_REGION")
+                   :account-id            (util/get-env "AccountId")
+                   :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID")
+                   :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY")
+                   :aws-session-token     (util/get-env "AWS_SESSION_TOKEN")})
+      (event-store/register)
+      (view-store/register)))
+
 (defn get-ctx
-  ([] (-> {}
-          (assoc :service-name "local-test")
-          (assoc :response-cache :default)
-          (assoc :environment-name-lower (util/get-env "EnvironmentNameLower"))
-          (assoc :aws {:region                (util/get-env "AWS_DEFAULT_REGION")
-                       :account-id            (util/get-env "AccountId")
-                       :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID")
-                       :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY")
-                       :aws-session-token     (util/get-env "AWS_SESSION_TOKEN")})
-          (event-store/register)
-          (view-store/register)
+  ([] (-> (clean-ctx)
           (edd/reg-cmd :cmd-1 (fn [ctx cmd]
                                 [{:identity (:id cmd)}
                                  {:sequence (:id cmd)}
@@ -126,7 +130,7 @@
      :interaction-id interaction-id
      :response resp}))
 
-(deftest testr-request-log
+(deftest test-request-log
   (let [ctx (get-ctx)
         ctx (-> ctx
                 (edd/reg-cmd :schema-cmd (fn [_ctx _cmd]
@@ -767,3 +771,295 @@
                             {:method  :get
                              :timeout 90000000
                              :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
+
+(defn get-fx-meta
+  [ctx req]
+  (edd/with-stores
+    ctx
+    (fn [ctx]
+      (->> (event-store/get-response-log ctx
+                                         req)
+           (sort-by :breadcrumbs)
+           (mapv #(select-keys %
+                               [:fx-total
+                                :fx-error
+                                :fx-exception
+                                :fx-remaining]))))))
+
+(deftest test-commands-stracking
+  (binding [*dal-state* (atom {})]
+    (let [ctx (-> (clean-ctx)
+                  (assoc :invocation-id (uuid/gen))
+                  (with-realm)
+                  (edd/reg-cmd :cmd-level-1 (fn [_ _]
+                                              {:event-id :event-level-1}))
+                  (edd/reg-cmd :cmd-level-2 (fn [_ _]
+                                              {:event-id :event-level-2}))
+                  (edd/reg-event-fx :event-level-1 (fn [_ event]
+                                                     {:cmd-id :cmd-level-2
+                                                      :id (:id event)})))
+          agg-id (uuid/gen)
+          interaction-id (uuid/gen)
+          request-id (uuid/gen)]
+
+      (let [resp (edd/handler (assoc ctx :no-summary true)
+                              {:request-id     request-id
+                               :interaction-id interaction-id
+                               :meta           {:realm (get-in ctx [:meta :realm])}
+                               :commands       [{:cmd-id :cmd-level-1
+                                                 :id     agg-id}]})]
+
+        (is (= [{:fx-error 0
+                 :fx-exception 0
+                 :fx-remaining 1
+                 :fx-total 1}]
+               (get-fx-meta ctx {:request-id request-id})))
+        (doseq [cmd (get-in resp [:result :effects])]
+          (edd/handler (assoc ctx :no-summary true)
+                       cmd))
+        (is (= [{:fx-total 1
+                 :fx-error 0
+                 :fx-exception 0
+                 :fx-remaining 0}
+                {:fx-total 0
+                 :fx-error 0
+                 :fx-exception 0
+                 :fx-remaining 0}]
+
+               (get-fx-meta ctx {:request-id request-id})))))))
+
+(deftest test-commands-with-error
+  (binding [*dal-state* (atom {})]
+    (let [ctx (-> (clean-ctx)
+                  (assoc :invocation-id (uuid/gen))
+                  (with-realm)
+                  (edd/reg-cmd :cmd-level-1 (fn [_ _]
+                                              {:event-id :event-level-1}))
+                  (edd/reg-cmd :cmd-level-2 (fn [_ _]
+                                              {:error "Level 2 error"}))
+                  (edd/reg-event-fx :event-level-1 (fn [_ event]
+                                                     {:cmd-id :cmd-level-2
+                                                      :id (:id event)})))
+          agg-id (uuid/gen)
+          interaction-id (uuid/gen)
+          request-id (uuid/gen)]
+
+      (let [resp (edd/handler (assoc ctx :no-summary true)
+                              {:request-id     request-id
+                               :interaction-id interaction-id
+                               :meta           {:realm (get-in ctx [:meta :realm])}
+                               :commands       [{:cmd-id :cmd-level-1
+                                                 :id     agg-id}]})]
+
+        (is (= [{:fx-error 0
+                 :fx-exception 0
+                 :fx-remaining 1
+                 :fx-total 1}]
+               (get-fx-meta ctx {:request-id request-id})))
+        (doseq [cmd (get-in resp [:result :effects])]
+          (edd/handler (assoc ctx :no-summary true)
+                       cmd))
+        (is (= [{:fx-total 1
+                 :fx-error 1
+                 :fx-exception 0
+                 :fx-remaining 0}
+                {:fx-error 0
+                 :fx-exception 0
+                 :fx-remaining 0
+                 :fx-total 0}]
+               (get-fx-meta ctx {:request-id request-id})))))))
+
+(deftest test-commands-stracking-multiple
+  (binding [*dal-state* (atom {})]
+    (let [ctx (-> (clean-ctx)
+                  (assoc :invocation-id (uuid/gen))
+                  (with-realm)
+                  (edd/reg-cmd :cmd-level-1 (fn [_ _]
+                                              {:event-id :event-level-1}))
+                  (edd/reg-cmd :cmd-level-2 (fn [_ _]
+                                              {:event-id :event-level-2}))
+                  (edd/reg-cmd :cmd-level-3 (fn [_ _]
+                                              {:event-id :event-level-3}))
+                  (edd/reg-event-fx :event-level-1 (fn [_ event]
+                                                     [{:cmd-id :cmd-level-2
+                                                       :id (:id event)}
+                                                      {:cmd-id :cmd-level-2
+                                                       :id (:id event)}]))
+                  (edd/reg-event-fx :event-level-2 (fn [_ event]
+                                                     {:cmd-id :cmd-level-3
+                                                      :id (:id event)})))
+          agg-id (uuid/gen)
+          interaction-id (uuid/gen)
+          request-id (uuid/gen)
+          resp (edd/handler (assoc ctx :no-summary true)
+                            {:request-id     request-id
+                             :interaction-id interaction-id
+                             :meta           {:realm (get-in ctx [:meta :realm])}
+                             :commands       [{:cmd-id :cmd-level-1
+                                               :id     agg-id}]})]
+
+      (is (= [{:fx-error 0
+               :fx-exception 0
+               :fx-remaining 2
+               :fx-total 2}]
+             (get-fx-meta ctx {:request-id request-id})))
+      (let [resp (mapv
+                  #(edd/handler (assoc ctx :no-summary true)
+                                %)
+                  (get-in resp [:result :effects]))]
+
+        (is (= [{:fx-total 4
+                 :fx-error 0
+                 :fx-exception 0
+                 :fx-remaining 2}
+                {:fx-total 1
+                 :fx-error 0
+                 :fx-exception 0
+                 :fx-remaining 1}
+                {:fx-total 1
+                 :fx-error 0
+                 :fx-exception 0
+                 :fx-remaining 1}]
+               (get-fx-meta ctx {:request-id request-id})))
+        (mapv
+         #(edd/handler (assoc ctx :no-summary true)
+                       %)
+         (get-in (first
+                  resp)
+                 [:result :effects]))
+        (is (= [{:fx-total 4
+                 :fx-error 0
+                 :fx-exception 0
+                 :fx-remaining 1}
+                {:fx-total 1
+                 :fx-error 0
+                 :fx-exception 0
+                 :fx-remaining 0}
+                {:fx-total 0
+                 :fx-error 0
+                 :fx-exception 0
+                 :fx-remaining 0}
+                {:fx-total 1
+                 :fx-error 0
+                 :fx-exception 0
+                 :fx-remaining 1}]
+               (get-fx-meta ctx {:request-id request-id})))))))
+
+(defn incnil
+  [p]
+  (if p
+    (inc p)
+    1))
+
+(deftest test-commands-stracking-random
+  (binding [*dal-state* (atom {})]
+    (let [fx-per-command 2
+          counts (atom {:fx-total 0
+                        :fx-error 0
+                        :fx-exception 0
+                        :fx-remaining 0})
+          next-cmd (fn [event]
+                     (mapv
+                      (fn [_]
+                        (let [next-num (+ 2
+                                          (rand-int 4))
+                                        ; Lest make it a bit more longer and avoid exit early
+                              next-num (if (and
+                                            (= next-num
+                                               5)
+                                            (< (:fx-total @counts)
+                                               20))
+                                         2
+                                         next-num)]
+
+                          (swap! counts #(-> %
+                                             (update :fx-total inc)
+                                             (update :fx-remaining inc)))
+                          {:service "local-test"
+                           :commands [{:cmd-id (-> (str "cmd-level-" next-num)
+                                                   keyword)
+                                       :id (:id event)}]}))
+                      (range (if (> (:fx-total @counts)
+                                    100)
+                               0
+                               fx-per-command))))
+
+          ctx (-> (clean-ctx)
+                  (assoc :invocation-id (uuid/gen))
+                  (with-realm)
+                  (edd/reg-cmd :cmd-level-1 (fn [_ _]
+                                              {:event-id :event-level-1}))
+                  (edd/reg-cmd :cmd-level-2 (fn [_ _]
+                                              (swap! counts #(-> %
+                                                                 (update :fx-remaining dec)
+                                                                 (update :cmd-level-2 incnil)))
+                                              {:event-id :event-level-2}))
+                  (edd/reg-cmd :cmd-level-3 (fn [_ _]
+                                              (swap! counts #(-> %
+                                                                 (update :fx-error inc)
+                                                                 (update :fx-remaining dec)
+                                                                 (update :cmd-level-3 incnil)))
+                                              {:error "Level 3 error"}))
+                  (edd/reg-cmd :cmd-level-4 (fn [_ _]
+                                              (swap! counts #(-> %
+                                                                 (update :fx-remaining dec)
+                                                                 (update :cmd-level-4 incnil)))
+                                              {:event-id :event-level-4}))
+                  (edd/reg-cmd :cmd-level-5 (fn [_ _]
+                                              (swap! counts #(-> %
+                                                                 (update :fx-remaining dec)
+                                                                 (update :cmd-level-5 incnil)))
+                                              {:event-id :event-level-5}))
+                  (edd/reg-event-fx :event-level-1 (fn [_ event]
+                                                     (next-cmd event)))
+                  (edd/reg-event-fx :event-level-2 (fn [_ event]
+                                                     (next-cmd event)))
+                  (edd/reg-event-fx :event-level-4 (fn [_ event]
+                                                     (next-cmd event))))
+          agg-id (uuid/gen)
+          interaction-id (uuid/gen)
+          request-id (uuid/gen)]
+      (loop [cmds [{:request-id     request-id
+                    :interaction-id interaction-id
+                    :meta           {:realm (get-in ctx [:meta :realm])}
+                    :commands       [{:cmd-id :cmd-level-1
+                                      :id     agg-id}]}]]
+        (let [effects (reduce
+                       (fn [p cmd]
+                         (concat
+                          p
+                          (-> (edd/handler (assoc ctx :no-summary true)
+                                           cmd)
+                              :result
+                              :effects)))
+                       []
+                       cmds)]
+          (is (= [(select-keys @counts
+                               [:fx-total
+                                :fx-error
+                                :fx-exception
+                                :fx-remaining])]
+                 (get-fx-meta ctx {:request-id request-id
+                                   :breadcrumbs [0]})))
+          (when (seq effects)
+            (recur effects))))
+      (is (= (get-fx-meta ctx {:request-id request-id
+                               :breadcrumbs [0]})
+             (get-fx-meta ctx {:request-id request-id
+                               :breadcrumbs [0]})))
+      (is (= {:fx-remaining 0}
+             (select-keys @counts [:fx-remaining])))
+      (log/info "TOTAL: " @counts)
+      (let [{:keys [cmd-level-2
+                    cmd-level-3
+                    cmd-level-4
+                    cmd-level-5]} @counts]
+        (is (= [{:fx-total (+ cmd-level-2
+                              cmd-level-4
+                              cmd-level-3
+                              cmd-level-5)
+                 :fx-error cmd-level-3
+                 :fx-exception 0
+                 :fx-remaining 0}]
+               (get-fx-meta ctx {:request-id request-id
+                                 :breadcrumbs [0]})))))))
