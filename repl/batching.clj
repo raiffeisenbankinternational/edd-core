@@ -24,10 +24,10 @@
                    (fn [ctx cmd]
                      {:event-id :inced
                       :value     (inc (get-in ctx [:counter :value] 0))})
-                   :dps {:counter
-                         (fn [cmd]
-                           {:query-id :get-by-id
-                            :id       (:id cmd)})})
+                   :deps {:counter
+                          (fn [_ctx cmd]
+                            {:query-id :get-by-id
+                             :id       (:id cmd)})})
 
       (edd/reg-query :get-by-id common/get-by-id)
       (edd/reg-event :inced (fn [ctx event]

@@ -102,18 +102,19 @@ RUN set -e &&\
        cd $i &&\
        echo "Building module $i" &&\
        bb -i '(let [build-id "'${BUILD_ID}'" \
-                    lib (symbol `edd-core.glms/edd-core) \
+                    lib (symbol `edd-core/edd-core) \
+                    new-lib (symbol "'${ARTIFACT_ORG}/${PROJECT_NAME}'") \
                     deps (read-string \
                           (slurp (io/file "deps.edn"))) \
                     global (get-in deps [:deps lib]) \
                     deps (if global \
-                           (assoc-in deps [:deps lib] {:mvn/version (str "1." build-id)}) \
+                           (assoc-in deps [:deps new-lib] {:mvn/version (str "1." build-id)}) \
                            deps) \
                     aliases [:test] \
                     deps (reduce \
                            (fn [p alias] \
-                             (if (get-in p [:aliases alias :extra-deps lib]) \
-                               (assoc-in p [:aliases alias :extra-deps lib] \
+                             (if (get-in p [:aliases alias :extra-deps new-lib]) \
+                               (assoc-in p [:aliases alias :extra-deps new-lib] \
                                          {:mvn/version (str "1." build-id)}) \
                                p)) \
                            deps \

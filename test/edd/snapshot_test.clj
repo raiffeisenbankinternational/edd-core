@@ -63,7 +63,9 @@
                              :value   2}])))))
 
 (deftest apply-events-snapshot-and-older-events
-  (testing "snapshot available and older events, only snapshot will be considered"
+  (testing "snapshot available and older events, only snapshot will be considered
+            if event was applied again we would have value incremented. But shanphot
+            already has this event-seq applied so we skip it"
     (mock/with-mock-dal
       {:event-store     [{:event-id :event-1
                           :event-seq 3
@@ -71,8 +73,8 @@
        :aggregate-store [{:id      agg-id
                           :value   1
                           :version 3}]}
-      (let [resp (event/handle-event (assoc-in ctx [:apply :aggregate-id] agg-id))]
-        (mock/verify-state :aggregate-store
-                           [{:id      agg-id
-                             :version 3
-                             :value   1}])))))
+      (event/handle-event (assoc-in ctx [:apply :aggregate-id] agg-id))
+      (mock/verify-state :aggregate-store
+                         [{:id      agg-id
+                           :version 3
+                           :value   1}]))))

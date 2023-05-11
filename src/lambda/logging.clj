@@ -31,7 +31,7 @@
 
 (defn- wrapped-json-for-aws
   [obj]
-  (str "/*" (json/write-value-as-string obj) "*/"))
+  (json/write-value-as-string obj))
 
 (defn as-json
   (^String [level msg]

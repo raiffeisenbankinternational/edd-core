@@ -1,7 +1,8 @@
 (ns lambda.filters
   (:require [lambda.util :as util]
             [clojure.tools.logging :as log]
-            [clojure.string :as str]
+            [lambda.request :as request]
+            [clojure.string :as string]
             [sdk.aws.s3 :as s3]
             [lambda.jwt :as jwt]
             [aws.aws :as aws]
@@ -21,10 +22,26 @@
                                          (first)
                                          (:body)))))})
 
+(defn parse-query-string
+  [request]
+  (->>  (clojure.string/split request #"&")
+        (map #(string/split % #"="))
+        (reduce
+         (fn [p [key value]]
+           (let [keys (string/split key #"\[|\]")
+                 keys (remove empty? keys)
+                 keys (map keyword keys)
+                 value (util/decode-json-special value)]
+             (assoc-in
+              p
+              keys
+              value)))
+         {})))
+
 (defn parse-key
   [key]
   (try
-    (let [parts (str/split key #"/")
+    (let [parts (string/split key #"/")
           realm (first parts)
           parts (rest parts)
           realm (if (= realm "upload")
@@ -41,12 +58,12 @@
                (first parts)
                (-> parts
                    (first)
-                   (str/split #"\.")
+                   (string/split #"\.")
                    (first)))
           request-id (if (= 2 (count parts))
                        (-> parts
                            (second)
-                           (str/split #"\.")
+                           (string/split #"\.")
                            (first))
                        id)]
       {:request-id     (uuid/parse request-id)
@@ -78,7 +95,7 @@
                             key (get-in record [:s3 :object :key])
                             bucket (get-in record [:s3 :bucket :name])]
                         (log/info "Parsing key" key)
-                        (if-not (str/ends-with? key "/")
+                        (if-not (string/ends-with? key "/")
                           (let [{:keys [request-id
                                         interaction-id
                                         date
@@ -130,16 +147,16 @@
         groups (cond
                  (vector? groups) groups
                  groups (-> groups
-                            (str/split #","))
+                            (string/split #","))
                  :else [])
-        groups (filter #(str/includes? % "-") groups)
+        groups (filter #(string/includes? % "-") groups)
         id-claim (keyword (get-in ctx [:auth :mapping :id] :email))
         id (get claims id-claim)]
     (reduce
      (fn [user group]
        (let [group (name group)
              [prefix value] (-> group
-                                (str/split #"-" 2))
+                                (string/split #"-" 2))
              [prefix value] (if (= prefix "lime")
                               ["roles" group]
                               [prefix value])
@@ -176,12 +193,12 @@
   [user-claims]
   (reduce
    (fn [p [k v]]
-     (let [key (str/replace (name k) #"department_code" "department-code")
+     (let [key (string/replace (name k) #"department_code" "department-code")
            key (cond
                  (= key "department") key
                  (= key "department-code") key
-                 (str/starts-with? key "x-") (subs key 2)
-                 (str/starts-with? key "custom:x-") (subs key 9)
+                 (string/starts-with? key "x-") (subs key 2)
+                 (string/starts-with? key "custom:x-") (subs key 9)
                  :else nil)]
        (if key
          (assoc p (keyword key) v)
@@ -207,8 +224,8 @@
                  (non-interactive user)
                  (first (remove
                          #(or (= % :anonymous)
-                              (str/starts-with? (name %)
-                                                "realm-"))
+                              (string/starts-with? (name %)
+                                                   "realm-"))
                          roles)))
         role (or role :anonymous)
 
@@ -233,11 +250,37 @@
                               :realm (get-realm ctx user {})
                               :user (dissoc user :realm))))))
 
+(defn store-trace-headers!
+  [req]
+  (let [trace-header (-> req
+                         :headers
+                         :lambda-runtime-trace-id)]
+    (swap! request/*request*
+           assoc
+           :trace-headers
+           (cond-> {}
+             trace-header (assoc "X-Amzn-Trace-Id" trace-header)))))
+
+(defn parse-api-request
+  [{:keys [body
+           req
+           lambda-api-requiest]
+    :as ctx}]
+  (store-trace-headers! lambda-api-requiest)
+  (let [method (:httpMethod req)
+        filtered (case method
+                   "GET" (parse-query-string
+                          (get-in req [:queryStringParameters :request]))
+                   (util/to-edn (:body body)))
+        ctx (assoc ctx :body filtered)]
+    (-> ctx
+        (assign-metadata))))
+
 (def from-api
   {:init jwt/fetch-jwks-keys
    :cond (fn [{:keys [body]}]
            (contains? body :path))
-   :fn   (fn [{:keys [req body] :as ctx}]
+   :fn   (fn [{:keys [req] :as ctx}]
            (let [{http-method :httpMethod
                   path        :path} req]
              (cond
@@ -246,10 +289,7 @@
 
                (= http-method "OPTIONS")
                (assoc ctx :health-check true)
-
-               :else (-> ctx
-                         (assoc :body (util/to-edn (:body body)))
-                         (assign-metadata)))))})
+               :else (parse-api-request ctx))))})
 
 (defn to-api
   [{:keys [resp resp-content-type resp-serializer-fn]

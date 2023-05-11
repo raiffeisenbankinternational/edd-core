@@ -1,11 +1,8 @@
 (ns edd.sequence-test
   (:require
    [clojure.test :refer :all]
-   [aws.lambda  :refer [handle-request]]
    [edd.test.fixture.dal :as mock]
    [edd.core :as edd]
-   [edd.memory.view-store :as view-store]
-   [edd.memory.event-store :as event-store]
    [lambda.uuid :as uuid]))
 
 (def ctx

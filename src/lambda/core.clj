@@ -2,14 +2,11 @@
   (:gen-class)
   (:require [lambda.util :as util]
             [clojure.tools.logging :as log]
-            [lambda.logging :as lambda-logging]
             [aws.lambda :as lambda]
             [clojure.string :as str]))
 
 (defn start
   [& params]
-  (alter-var-root #'clojure.tools.logging/*logger-factory*
-                  (fn [f] (lambda-logging/slf4j-json-factory)))
   (let [ctx (first params)
         startup-milis (Long/parseLong
                        (str

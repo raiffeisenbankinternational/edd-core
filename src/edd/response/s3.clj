@@ -9,7 +9,7 @@
   :s3
   [{:keys [aws service-name] :as ctx} {:keys [idx] :as resp}]
   (util/d-time
-   (str "Storing cache response: " idx)
+   (str "Storing cache response " (or idx ""))
    (let [s3 {:s3 {:bucket {:name (str (:account-id aws)
                                       "-"
                                       (:environment-name-lower ctx)

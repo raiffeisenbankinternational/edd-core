@@ -1,7 +1,7 @@
 (ns edd.postgres.event-store-it
   (:require [clojure.test :refer :all]
             [edd.postgres.event-store :as event-store]
-            [edd.commands-batch-test :as batch-test]
+            [lambda.request :as request]
             [lambda.test.fixture.client :refer [verify-traffic-edn]]
             [edd.memory.view-store :as view-store]
             [lambda.test.fixture.state :refer [*dal-state*]]
@@ -11,11 +11,8 @@
             [lambda.test.fixture.core :as core-mock]
             [lambda.util :as util]
             [edd.common :as common]
-            [lambda.logging :as lambda-logging]
             [clojure.tools.logging :as log]
-            [edd.el.cmd :as cmd]
-            [lambda.core :as core])
-  (:import (clojure.lang ExceptionInfo)))
+            [lambda.core :as core]))
 
 (def fx-id (uuid/gen))
 
@@ -129,6 +126,38 @@
      :request-id request-id
      :interaction-id interaction-id
      :response resp}))
+
+(deftest simple-command-handler-test
+  (let [agg-id (uuid/gen)
+        ctx (->
+             (clean-ctx)
+             (edd/reg-cmd :simple-cmd-1 (fn [_ctx {:keys [name]}]
+                                          {:event-id :simple-event-1
+                                           :name name})))]
+    (edd/with-stores
+      ctx
+      (fn [ctx]
+        (make-request ctx
+                      [{:cmd-id :simple-cmd-1
+                        :name "Johnny"
+                        :id agg-id}])
+        (mock/verify-state :aggregate-store
+                           [])
+        (make-request ctx
+                      [{:cmd-id :simple-cmd-1
+                        :name "Johnny"
+                        :id agg-id}])
+        (mock/verify-state :aggregate-store
+                           [])
+        (binding [request/*request* (atom {})]
+          (edd/handler ctx
+                       {:request-id     (uuid/gen)
+                        :interaction-id (uuid/gen)
+                        :meta           {:realm :test}
+                        :apply          {:aggregate-id agg-id}}))
+        (mock/verify-state :aggregate-store
+                           [{:id agg-id
+                             :version 2}])))))
 
 (deftest test-request-log
   (let [ctx (get-ctx)
@@ -461,7 +490,7 @@
                                           {:event-id :i1-created}]))
                   (edd/reg-cmd :cmd-i2 (fn [ctx cmd]
                                          [{:event-id :i1-created}])
-                               :dps {:seq edd.common/get-sequence-number-for-id})
+                               :deps {:seq edd.common/get-sequence-number-for-id})
                   (edd/reg-fx (fn [ctx events]
                                 {:commands [{:cmd-id :cmd-i2
                                              :id     (:id (first events))}]
@@ -868,6 +897,75 @@
                  :fx-remaining 0
                  :fx-total 0}]
                (get-fx-meta ctx {:request-id request-id})))))))
+
+(deftest test-commands-with-exception
+  (binding [*dal-state* (atom {})]
+    (let [attempt (atom 0)
+          ctx (-> (clean-ctx)
+                  (assoc :invocation-id (uuid/gen))
+                  (with-realm)
+                  (edd/reg-cmd :cmd-level-1 (fn [_ _]
+                                              {:event-id :event-level-1}))
+                  (edd/reg-cmd :cmd-level-2 (fn [_ _]
+                                              (when (< @attempt 2)
+                                                (swap! attempt inc)
+                                                (throw (ex-info "Leve2 exception"
+                                                                {:message "Level2 exceptiopn"})))))
+                  (edd/reg-event-fx :event-level-1 (fn [_ event]
+                                                     {:cmd-id :cmd-level-2
+                                                      :id (:id event)})))
+          agg-id (uuid/gen)
+          interaction-id (uuid/gen)
+          request-id (uuid/gen)
+          request {:request-id     request-id
+                   :interaction-id interaction-id
+                   :meta           {:realm (get-in ctx [:meta :realm])}
+                   :commands       [{:cmd-id :cmd-level-1
+                                     :id     agg-id}]}]
+
+      (let [resp (edd/handler (assoc ctx :no-summary true)
+                              request)]
+
+        (is (= [{:fx-error 0
+                 :fx-exception 0
+                 :fx-remaining 1
+                 :fx-total 1}]
+               (get-fx-meta ctx {:request-id request-id})))
+        (doseq [cmd (get-in resp [:result :effects])]
+          (edd/handler (assoc ctx :no-summary true)
+                       cmd))
+        (is (= [{:fx-total 1
+                 :fx-error 0
+                 :fx-exception 1
+                 :fx-remaining 1}]
+               (get-fx-meta ctx {:request-id request-id})))
+
+        (doseq [cmd (get-in resp [:result :effects])]
+          (edd/handler (assoc ctx :no-summary true)
+                       cmd))
+        (doseq [cmd (get-in resp [:result :effects])]
+          (edd/handler (assoc ctx :no-summary true)
+                       cmd))
+
+        (is (= [{:fx-total 1
+                 :fx-error 0
+                 :fx-exception 2
+                 :fx-remaining 0}
+                {:fx-error 0
+                 :fx-exception 0
+                 :fx-remaining 0
+                 :fx-total 0}]
+               (get-fx-meta ctx {:request-id request-id})))))))
+
+(deftest parent-bradcrumbs
+  (is (= []
+         (event-store/get-parent-breadcrumbs [])))
+  (is (= []
+         (event-store/get-parent-breadcrumbs [0])))
+  (is (= [[0]]
+         (event-store/get-parent-breadcrumbs [0 1])))
+  (is (= [[0 1] [0]]
+         (event-store/get-parent-breadcrumbs [0 1 2]))))
 
 (deftest test-commands-stracking-multiple
   (binding [*dal-state* (atom {})]

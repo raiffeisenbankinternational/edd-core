@@ -507,9 +507,9 @@
   [ctx]
   (-> ctx
       (edd/reg-cmd :cmd-1 my-command-handler
-                   :dps {:facility (fn [cmd]
-                                     {:query-id :query-1
-                                      :identity (:external cmd)})})
+                   :deps {:facility (fn [_ctx cmd]
+                                      {:query-id :query-1
+                                       :identity (:external cmd)})})
       (edd/reg-query :query-1
                      (fn [ctx query]
                        (let [id (common/get-aggregate-id-by-identity ctx query)]

@@ -13,10 +13,10 @@
                    (fn [ctx cmd]
                      {:event-id :event-1
                       :name     "Test name"})
-                   :dps {:test-dps
-                         (fn [cmd]
-                           {:query-id :get-by-id
-                            :id       (:id cmd)})})
+                   :deps {:test-dps
+                          (fn [_ctx cmd]
+                            {:query-id :get-by-id
+                             :id       (:id cmd)})})
 
       (edd/reg-query :get-by-id common/get-by-id)
       (edd/reg-event :event-1 (fn [ctx event]

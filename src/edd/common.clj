@@ -30,10 +30,11 @@
                 (:id ctx) (:id ctx)
                 query (parse-param query)
                 :else nil)]
-    (let [resp (el-event/get-by-id (assoc ctx :id id))]
+    (let [aggregate (el-event/get-by-id ctx id)]
       (if query
-        (:aggregate resp)
-        resp))
+        aggregate
+        (assoc ctx
+               :aggregate aggregate)))
     (log/warn "Id is nil")))
 
 (defn fetch-by-id

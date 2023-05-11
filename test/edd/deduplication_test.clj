@@ -16,10 +16,10 @@
       (edd/reg-cmd :do-sth
                    (fn [ctx cmd]
                      {:event-id :sth-done})
-                   :dps {:sth
-                         (fn [cmd]
-                           {:query-id :get-by-id
-                            :id       (:id cmd)})})
+                   :deps {:sth
+                          (fn [_ctx cmd]
+                            {:query-id :get-by-id
+                             :id       (:id cmd)})})
 
       (edd/reg-query :get-by-id common/get-by-id)))
 

@@ -102,11 +102,13 @@
   :postgres
   [{:keys [invocation-id request-id interaction-id service-name] :as ctx} body]
   (log/debug "Storing request" (:commands body))
-  (let [receive-count (or (-> ctx :req :attributes :ApproximateReceiveCount) "1")
+  (let [receive-count (or
+                       (-> ctx :attributes :ApproximateReceiveCount)
+                       "-1")
         receive-count-int (Integer/parseInt receive-count)
-        breadcrumbs (:breadcrumbs body)
-        ps (jdbc/prepare @(:con ctx)
-                         [(str "INSERT INTO " (->table ctx :command_request_log) " (
+        breadcrumbs (:breadcrumbs body)]
+    (jdbc/execute! @(:con ctx)
+                   [(str "INSERT INTO " (->table ctx :command_request_log) " (
                                                          invocation_id,
                                                          request_id,
                                                          interaction_id,
@@ -117,41 +119,62 @@
                                                          data)
                             VALUES (?,?,?,?,?,?,?,?)
                             ON CONFLICT (request_id, breadcrumbs) DO UPDATE
-                            SET receive_count = ?")])
-        params [[invocation-id
-                 request-id
-                 interaction-id
-                 (breadcrumb-str breadcrumbs)
-                 service-name
-                 0
-                 receive-count-int
-                 (if (= breadcrumbs [0])
-                   body
-                   {:ref (vec
-                          (drop-last breadcrumbs))})
-                 receive-count-int]]]
-    (p/execute-batch! ps params)))
+                            SET receive_count = command_request_log.receive_count + 1")
+                    invocation-id
+                    request-id
+                    interaction-id
+                    (breadcrumb-str breadcrumbs)
+                    service-name
+                    0
+                    receive-count-int
+                    (if (= breadcrumbs [0])
+                      body
+                      {:ref (vec
+                             (drop-last breadcrumbs))})])))
 
-(def ^:private updateable-fields #{"error" "receive_count"})
+(defn get-parent-breadcrumbs
+  [breadcrumbs]
+  (->> breadcrumbs
+       drop-last
+       (reduce
+        (fn [p v]
+          (let [current (conj (or (last p)
+                                  [])
+                              v)]
+            (conj p current)))
+        [])
+       reverse))
 
-(defn- update-request
-  [{:keys [request-id] :as ctx} body field data]
-  (when (contains? updateable-fields field)
-    (let [ps (jdbc/prepare @(:con ctx)
-                           [(str "UPDATE " (->table ctx :command_request_log)
-                                 "SET " field " = ?
-                               WHERE request_id = ?
-                                 AND breadcrumbs = ?")])
-          params [[data
-                   request-id
-                   (breadcrumb-str (:breadcrumbs body))]]]
-      (p/execute-batch! ps params))))
+(defn log-request-error-impl
+  [{:keys [request-id] :as ctx} body data]
+  (let [breadcrumbs (:breadcrumbs body)
+        root-breadcrumbs (get-parent-breadcrumbs breadcrumbs)]
+    (jdbc/execute! @(:con ctx)
+                   [(str "UPDATE " (->table ctx :command_request_log) "
+                             SET error = ?
+                           WHERE request_id = ?
+                             AND breadcrumbs = ?")
+                    data
+                    request-id
+                    (breadcrumb-str breadcrumbs)])
+    (when (seq root-breadcrumbs)
+      (jdbc/execute-batch! @(:con ctx)
+                           (str "UPDATE " (->table ctx :command_response_log) "
+                                 SET fx_exception = fx_exception + 1
+                               WHERE request_id = ? 
+                                 AND breadcrumbs = ?")
+                           (mapv
+                            (fn [bc]
+                              [request-id
+                               (breadcrumb-str bc)])
+                            root-breadcrumbs)
+                           {:builder-fn rs/as-unqualified-lower-maps}))))
 
 (defmethod log-request-error
   :postgres
   [ctx body error]
   (log/debug "Storing request error" (error))
-  (update-request ctx body "error" error))
+  (log-request-error-impl ctx body error))
 
 (defmethod log-dps
   :postgres
@@ -198,22 +221,14 @@
    {:keys [effects
            error]}]
   (let [effect-count (count effects)
-        breadcrumbs (drop-last
-                     (:breadcrumbs ctx))
-        breadcrumbs  (reduce
-                      (fn [p v]
-                        (let [current (conj (or (last p)
-                                                [])
-                                            v)]
-                          (conj p current)))
-                      []
-                      breadcrumbs)
-        breadcrumbs (reverse breadcrumbs)
+        breadcrumbs (:breadcrumbs ctx)
+        root-breadcrumbs (get-parent-breadcrumbs breadcrumbs)
         out (jdbc/execute-batch! @(:con ctx)
                                  (str "UPDATE " (->table ctx :command_response_log) "
                                  SET fx_total = fx_total + ?,
                                      fx_remaining = fx_remaining  + ? - 1,
-                                     fx_error = fx_error + ?
+                                     fx_error = fx_error + ?,
+                                     fx_last_on = NOW()
                                WHERE request_id = ? 
                                  AND breadcrumbs = ?
                            RETURNING breadcrumbs, fx_remaining")
@@ -226,7 +241,7 @@
                                        0)
                                      request-id
                                      (breadcrumb-str b)])
-                                  breadcrumbs)
+                                  root-breadcrumbs)
                                  {:builder-fn rs/as-unqualified-lower-maps})]
     out))
 
@@ -406,24 +421,29 @@
 (defmethod get-events
   :postgres
   [{:keys [id service-name version]
-    :as   ctx
-    :or   {version 0}}]
+    :as   ctx}]
   {:pre [id service-name]}
-  (log/info "Fetching events for aggregate" id)
-  (let [data (try-to-data
-              #(jdbc/execute! @(:con ctx)
-                              [(str "SELECT data
+  (let [version (or version
+                    0)]
+    (util/d-time
+     (str "Fetching events for aggregate: "  {:id id
+                                              :version version})
+     (let [data (jdbc/execute! @(:con ctx)
+                               [(str "SELECT data
                                 FROM " (->table ctx :event_store) "
                                 WHERE aggregate_id=?
                                   AND service_name=?
                                   AND event_seq>?
-                                ORDER BY event_seq ASC") id service-name version]
-                              {:builder-fn rs/as-arrays}))]
-    (if (:error data)
-      data
-      (flatten
-       (rest
-        data)))))
+                                ORDER BY event_seq ASC")
+                                id
+                                service-name
+                                version]
+                               {:builder-fn rs/as-arrays})]
+       (if (:error data)
+         data
+         (flatten
+          (rest
+           data)))))))
 
 (defmethod get-max-event-seq
   :postgres
@@ -459,9 +479,10 @@
                                                     breadcrumbs,
                                                     source_service,
                                                     target_service,
+                                                    target_breadcrumbs,
                                                     aggregate_id,
                                                     data)
-                            VALUES (?,?,?,?,?,?,?,?,?)")
+                            VALUES (?,?,?,?,?,?,?,?,?,?)")
                             (mapv
                              (fn [cmd]
                                [(uuid/gen)
@@ -471,6 +492,7 @@
                                 (breadcrumb-str (:breadcrumbs ctx))
                                 (:service-name ctx)
                                 (:service cmd)
+                                (breadcrumb-str (:breadcrumbs cmd))
                                 (-> cmd
                                     (:commands)
                                     (first)

@@ -67,9 +67,8 @@
 (deftest apply-when-two-events-1
   (testing "Ensure that wee only udpate aggregate once for same aggregate id"
     (with-redefs [common/create-date (fn [] "20210322T232540Z")
-                  event/get-by-id (fn [ctx]
-                                    (assoc ctx
-                                           :aggregate {:id agg-id}))]
+                  event/get-by-id (fn [_ctx id]
+                                    {:id id})]
       (mock-core
        :invocations [(util/to-json (req
                                     [{:apply          {:service      "glms-booking-company-svc",
@@ -150,16 +149,15 @@
 
 (deftest apply-when-error-all-failed
   (with-redefs [common/create-date (fn [] "20210322T232540Z")
-                event/get-by-id (fn [ctx]
+                event/get-by-id (fn [ctx id]
                                   (when (= (:request-id ctx)
                                            req-id2)
                                     (throw (ex-info "Something" {:badly :1wrong})))
                                   (when (= (:request-id ctx)
                                            req-id3)
                                     (throw (RuntimeException. "Non clojure error")))
-                                  (assoc ctx
-                                         :aggregate {:id agg-id}))
-                event/update-aggregate (fn [ctx]
+                                  {:id id})
+                event/update-aggregate (fn [ctx _aggregate]
                                          (when (= (:request-id ctx)
                                                   req-id1)
                                            (throw (ex-info "Something" {:badly :un-happy}))))]
