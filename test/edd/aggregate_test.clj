@@ -30,18 +30,17 @@
 
 (deftest test-apply
   (let [agg (event/get-current-state
-             (assoc apply-ctx
-                    :events
-                    [{:event-id  :event-1
-                      :id        cmd-id
-                      :event-seq 1
-                      :k1        "a"}
-                     {:event-id  :event-2
-                      :id        cmd-id
-                      :event-seq 2
-                      :k2        "b"}]
-                    :id "ag1"))
-        agg (:aggregate agg)]
+             apply-ctx
+             {:events
+              [{:event-id  :event-1
+                :id        cmd-id
+                :event-seq 1
+                :k1        "a"}
+               {:event-id  :event-2
+                :id        cmd-id
+                :event-seq 2
+                :k2        "b"}]
+              :id "ag1"})]
     (is (= {:id            cmd-id
             :filter-result "ab"
             :version       2

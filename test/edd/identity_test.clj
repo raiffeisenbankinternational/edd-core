@@ -1,6 +1,5 @@
 (ns edd.identity-test
   (:require
-   [aws.lambda  :refer [handle-request]]
    [edd.test.fixture.dal :as mock]
    [edd.core :as edd]
    [lambda.uuid :as uuid]))

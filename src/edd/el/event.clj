@@ -46,7 +46,7 @@
    (get ctx :agg-filter [])))
 
 (defn get-current-state
-  [{:keys [id events snapshot] :as ctx}]
+  [ctx {:keys [id events snapshot]}]
   {:pre [id events]}
   (log/debug "Updating aggregates" id)
   (log/debug "Events: " events)
@@ -56,41 +56,40 @@
     (:error events) (throw (ex-info "Error fetching events" {:error events}))
     (> (count events) 0) (let [aggregate (create-aggregate snapshot events (:def-apply ctx))
                                result-agg (apply-agg-filter ctx aggregate)]
-                           (assoc
-                            ctx
-                            :aggregate result-agg))
-    snapshot (assoc ctx :aggregate snapshot)
-    :else (assoc ctx :aggregate nil)))
+                           result-agg)
+    :else (or snapshot
+              nil)))
 
 (defn fetch-snapshot
-  [{:keys [id] :as ctx}]
+  [ctx id]
   (if-let [snapshot (search/get-snapshot ctx id)]
-    (do
-      (when snapshot
-        (log/info "Found snapshot: " (:version snapshot)))
-      (assoc ctx
-             :snapshot snapshot
-             :version (:version snapshot)))
-    ctx))
-
-(defn get-events [ctx]
-  (assoc ctx :events (dal/get-events ctx)))
+    (do (log/info "Found snapshot version: " (:version snapshot))
+        snapshot)
+    (log/info "Snapshot not found")))
 
 (defn get-by-id
-  [{:keys [id] :as ctx}]
-  {:pre [(:id ctx)]}
-  (let [cache-snapshot (request-cache/get-aggregate ctx id)]
-    (if cache-snapshot
-      (assoc ctx :aggregate cache-snapshot)
-      (-> ctx
-          (fetch-snapshot)
-          (get-events)
-          (get-current-state)))))
+  [ctx id]
+  {:pre [id]}
+  (if-let [cache-snapshot (request-cache/get-aggregate ctx id)]
+    (do
+      (log/info (format "Found in cache, id: %s, :version %s"
+                        (:id cache-snapshot)
+                        (:version cache-snapshot)))
+      cache-snapshot)
+    (let [snapshot (fetch-snapshot ctx id)
+          events (dal/get-events (assoc ctx
+                                        :id id
+                                        :version (:version snapshot)))]
+      (log/info (format "Events to apply: %s" (count events)))
+      (get-current-state ctx {:id id
+                              :events events
+                              :snapshot snapshot}))))
 
 (defn update-aggregate
-  [ctx]
-  (if (:aggregate ctx)
-    (search/update-aggregate ctx)
+  [ctx aggregate]
+  (if aggregate
+    (search/update-aggregate (assoc ctx
+                                    :aggregate aggregate))
     ctx))
 
 (defn handle-event
@@ -98,21 +97,25 @@
   (let [meta (:meta apply)
         ctx (assoc ctx :meta meta)
         realm (:realm meta)
-        agg-id (:aggregate-id apply)]
-
+        agg-id (:aggregate-id apply)
+        request-scoped (request/is-scoped)
+        applied (and request-scoped
+                     (get-in @request/*request* [:applied realm agg-id]))]
     (util/d-time
-     (str "handling-apply: " realm " " (:aggregate-id apply))
-     (if (request/is-scoped)
-       (let [applied (get-in @request/*request* [:applied realm agg-id])]
-         (when-not applied
-           (-> ctx
-               (assoc :id agg-id)
-               (get-by-id)
-               (update-aggregate))
-           (swap! request/*request*
-                  #(assoc-in % [:applied realm agg-id] {:apply true}))))
-       (-> ctx
-           (assoc :id agg-id)
-           (get-by-id)
-           (update-aggregate)))))
-  {:apply true})
+     (format "handling-apply, id: %s, version: %s" realm (:aggregate-id apply))
+
+     (when-not request-scoped
+       ; Always update aggregate when no caching
+       (update-aggregate ctx
+                         (get-by-id ctx agg-id)))
+
+     (when-not applied
+       ; Cache mismatsh
+       (update-aggregate ctx
+                         (get-by-id ctx agg-id)))
+
+     (when request-scoped
+       ; Update cache if enabled
+       (swap! request/*request*
+              #(assoc-in % [:applied realm agg-id] {:apply true})))
+     {:apply true})))

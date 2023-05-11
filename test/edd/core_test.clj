@@ -67,10 +67,10 @@
                       [])))
       (edd/reg-cmd :dummy-cmd-2
                    dummy-command-handler-2
-                   :dps {:test-dps (fn [cmd] {:query-id :test-query})})
+                   :deps {:test-dps (fn [_ctx _cmd] {:query-id :test-query})})
       (edd/reg-cmd :dummy-cmd-3
                    dummy-command-handler-3
-                   :dps {:test-dps (fn [cmd] {:query-id :test-query})}
+                   :deps {:test-dps (fn [_ctx _cmd] {:query-id :test-query})}
                    :id-fn (fn [dps cmd] (get-in dps [:test-dps :id])))
       (edd/reg-cmd :object-uploaded dummy-command-handler)
       (edd/reg-cmd :error-cmd (fn [ctx cmd]
@@ -345,27 +345,27 @@
 
 (deftest test-apply
   (let [agg (event/get-current-state
-             (assoc apply-ctx
-                    :events [{:event-id  :event-1
-                              :id        cmd-id
-                              :event-seq 1
-                              :k1        "a"}
-                             {:event-id  :event-2
-                              :id        cmd-id
-                              :event-seq 2
-                              :k2        "b"}]
-                    :id "ag1"))]
-    (is (= {:aggregate {:id      cmd-id
-                        :version 2
-                        :e1      {:event-id  :event-1,
-                                  :k1        "a"
-                                  :event-seq 1
-                                  :id        cmd-id},
-                        :e2      {:event-id  :event-2
-                                  :k2        "b"
-                                  :event-seq 2
-                                  :id        cmd-id}}}
-           (select-keys agg [:aggregate])))))
+             apply-ctx
+             {:events [{:event-id  :event-1
+                        :id        cmd-id
+                        :event-seq 1
+                        :k1        "a"}
+                       {:event-id  :event-2
+                        :id        cmd-id
+                        :event-seq 2
+                        :k2        "b"}]
+              :id "ag1"})]
+    (is (= {:id      cmd-id
+            :version 2
+            :e1      {:event-id  :event-1,
+                      :k1        "a"
+                      :event-seq 1
+                      :id        cmd-id},
+            :e2      {:event-id  :event-2
+                      :k2        "b"
+                      :event-seq 2
+                      :id        cmd-id}}
+           agg))))
 
 (deftest test-get-by-id
 
