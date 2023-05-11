@@ -25,13 +25,13 @@
                                  (get {"PrivateHostedZoneName" "mock.com"} v))]
       (let [meta {:realm :realm3}]
         (mock/with-mock-dal
-          {:dps [{:service        :remote-svc
-                  :request-id     request-id
-                  :interaction-id interaction-id
-                  :meta           meta
-                  :query          {:param "Some Value"
-                                   :query-id :some-query-id}
-                  :resp           {:remote :response}}]}
+          {:deps [{:service        :remote-svc
+                   :request-id     request-id
+                   :interaction-id interaction-id
+                   :meta           meta
+                   :query          {:param "Some Value"
+                                    :query-id :some-query-id}
+                   :resp           {:remote :response}}]}
           (let [cmd {:cmd-id :test-cmd
                      :id     cmd-id
                      :value  "Some Value"}
@@ -388,12 +388,12 @@ and return nil to enable query-fn to have when conditions based on previously re
   (with-redefs [util/get-env (fn [v]
                                (get {"PrivateHostedZoneName" "mock.com"} v))]
     (mock/with-mock-dal
-      {:dps [{:service        :remote-svc
-              :request-id     request-id
-              :interaction-id interaction-id
-              :query          {:param "Some Value"
-                               :query-id :some-query-id}
-              :resp           {:remote :response}}]}
+      {:deps [{:service        :remote-svc
+               :request-id     request-id
+               :interaction-id interaction-id
+               :query          {:param "Some Value"
+                                :query-id :some-query-id}
+               :resp           {:remote :response}}]}
       (let [meta {:realm :realm5}
             ctx (-> {:meta           meta
                      :request-id     request-id
@@ -503,13 +503,13 @@ and return nil to enable query-fn to have when conditions based on previously re
                                        :value    (:value cmd)
                                        :c1       (:c1 ctx)
                                        :c2       (:c2 ctx)})
-                             :dps [:c1 (fn [cmd] {:query-id :get-by-id
-                                                  :id       (:id cmd)})
-                                   :c2 (fn [{:keys [c1] :as cmd}]
-                                         (is (not= nil c1))
-                                         {:query-id :query-1
-                                          :c1       c1
-                                          :id       (:id cmd)})]))]
+                             :deps [:c1 (fn [_ctx cmd] {:query-id :get-by-id
+                                                        :id       (:id cmd)})
+                                    :c2 (fn [{:keys [c1] :as _ctx} cmd]
+                                          (is (not= nil c1))
+                                          {:query-id :query-1
+                                           :c1       c1
+                                           :id       (:id cmd)})]))]
     (let [current-events [{:event-id  :event-0
                            :event-seq 4
                            :value     :0
@@ -555,17 +555,17 @@ and return nil to enable query-fn to have when conditions based on previously re
                                               :version 1}))
                                       {:event-id :event-1
                                        :value    {"first-name" (:first-name cmd)}})
-                             :dps [:jack (fn [_cmd]
-                                           {:query-id :get-by-id
-                                            :id       cmd-id-2})])
+                             :deps [:jack (fn [_ctx _cmd]
+                                            {:query-id :get-by-id
+                                             :id       cmd-id-2})])
                 (edd/reg-cmd :cmd-2 (fn [{:keys [aggregate]} _cmd]
                                       (is (= aggregate
                                              {:id      cmd-id-1
                                               :v0      {:first-name "Edd-1"}
                                               :version 1}))
                                       [])
-                             :dps [:aggregate (fn [cmd] {:query-id :get-by-id
-                                                         :id       (:id cmd)})]))]
+                             :deps [:aggregate (fn [_ctx cmd] {:query-id :get-by-id
+                                                               :id       (:id cmd)})]))]
 
     (mock/with-mock-dal
       {:aggregate-store [{:id      cmd-id-2

@@ -79,3 +79,14 @@
 
     (is (= {:department-code "dcode"}
            (lambda-filter/extract-attrs {:department_code "dcode"})))))
+
+(deftest test-parse-query
+  (let [query-string "address[street]=Main&address[city]=New York"]
+    (is (= {:address {:street "Main"
+                      :city "New York"}}
+           (lambda-filter/parse-query-string query-string))))
+  (let [query-string "address[street]=:main&address[city]=New York&address[zip][code]=4210"]
+    (is (= {:address {:street :main
+                      :city "New York"
+                      :zip {:code "4210"}}}
+           (lambda-filter/parse-query-string query-string)))))

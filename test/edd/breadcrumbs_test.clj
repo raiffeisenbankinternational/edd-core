@@ -17,12 +17,12 @@
                    (fn [ctx cmd]
                      {:event-id :inced
                       :level    (or (:level cmd) 0)})
-                   :dps {:counter
-                         (fn [cmd]
-                           {:query-id :get-by-id
-                            :id       (:id cmd)})})
+                   :deps {:counter
+                          (fn [_ctx cmd]
+                            {:query-id :get-by-id
+                             :id       (:id cmd)})})
 
-      (edd/reg-fx (fn [ctx evts]
+      (edd/reg-fx (fn [_ctx evts]
                     (for [evt evts]
                       (let [level (inc (:level evt))]
                         (when (< level 3)

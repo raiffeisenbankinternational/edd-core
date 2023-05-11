@@ -2,7 +2,7 @@
   (:require [jsonista.core :as json]
             [clojure.tools.logging :as log]
             [java-http-clj.core :as http]
-            [clojure.test :refer [deftest testing is]]
+            [lambda.request :as request]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [lambda.aes :as aes]
@@ -22,20 +22,24 @@
 
 (def offset-date-time-format "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
 
+(defn decode-json-special
+  [^String v]
+  (case (first v)
+    \: (if (str/starts-with? v "::")
+         (subs v 1)
+         (keyword (subs v 1)))
+    \# (if (str/starts-with? v "##")
+         (subs v 1)
+         (UUID/fromString (subs v 1)))
+    v))
+
 (def ^ObjectMapper json-mapper
   (json/object-mapper
    {:decode-key-fn true
     :decode-fn
     (fn [v]
       (condp instance? v
-        String (case (first v)
-                 \: (if (str/starts-with? v "::")
-                      (subs v 1)
-                      (keyword (subs v 1)))
-                 \# (if (str/starts-with? v "##")
-                      (subs v 1)
-                      (UUID/fromString (subs v 1)))
-                 v)
+        String (decode-json-special v)
         v))
     :encoders      {String         (fn [^String v ^JsonGenerator jg]
                                      (cond
@@ -82,8 +86,9 @@
     :else {:body (to-json request)}))
 
 (defn url-encode
-  [s]
-  (URLEncoder/encode (str s) "utf8"))
+  [^String message]
+  (let [^Charset charset (Charset/forName "UTF-8")]
+    (URLEncoder/encode message charset)))
 
 (defn nested-param
   "Source: https://github.com/http-kit/http-kit"
@@ -116,9 +121,12 @@
                          (= as :stream)) :input-stream
                     :else as)}
         req (clojure-set/rename-keys req {:url :uri})
+        trace-headers (get @request/*request* :trace-headers)
         req (cond-> req
               (:headers req) (update-in [:headers]
-                                        #(dissoc % "Host"))
+                                        #(-> %
+                                             (dissoc "Host")
+                                             (merge trace-headers)))
               (:query-params req) (update-in [:uri]
                                              #(str %
                                                    "?"
@@ -214,21 +222,26 @@
   [name]
   (log/debug "Loading config name:" name)
   (let [file (io/as-file name)
+        temp-file (io/as-file (str "/tmp/" name))
         classpath (io/as-file
                    (io/resource
                     name))]
     (to-edn
-     (if (.exists ^File file)
-       (do
-         (log/debug "Loading from file config:" name)
-         (-> file
-             (slurp)
-             (decrypt name)))
-       (do
-         (log/debug "Loading config from classpath:" name)
-         (-> classpath
-             (slurp)
-             (decrypt name)))))))
+     (cond
+       (.exists ^File file) (do
+                              (log/debug "Loading from file config:" name)
+                              (-> file
+                                  (slurp)
+                                  (decrypt name)))
+       (.exists ^File temp-file) (do
+                                   (log/info "Loading from /tmp/" name)
+                                   (-> temp-file
+                                       (slurp)))
+       :else (do
+               (log/debug "Loading config from classpath:" name)
+               (-> classpath
+                   (slurp)
+                   (decrypt name)))))))
 
 (defn base64encode
   [^String to-encode]
@@ -260,11 +273,6 @@
     (->> message-bytes
          (.doFinal mac)
          (.encodeToString (Base64/getEncoder)))))
-
-(defn url-encode
-  [^String message]
-  (let [^Charset charset (Charset/forName "UTF-8")]
-    (URLEncoder/encode message charset)))
 
 (defmacro d-time
   "Evaluates expr and logs time it took.  Returns the value of

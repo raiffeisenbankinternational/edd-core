@@ -28,8 +28,10 @@
 (defn fetch-dependencies-for-command
   [ctx {:keys [cmd-id] :as cmd}]
   (log/debug "Fetching context for: " cmd-id)
-  (let [{:keys [deps]} (edd-ctx/get-cmd ctx cmd-id)]
-    (query/fetch-dependencies-for-deps ctx deps cmd)))
+  (util/d-time
+   (str "Fetching all deps for " cmd-id)
+   (let [{:keys [deps]} (edd-ctx/get-cmd ctx cmd-id)]
+     (query/fetch-dependencies-for-deps ctx deps cmd))))
 
 (defn with-breadcrumbs
   [ctx resp]
@@ -225,10 +227,12 @@
 
 (defn with-aggregate
   [aggregate]
-  (swap! request/*request* #(update % :mdc
-                                    assoc
-                                    :aggregate-id
-                                    (:id aggregate))))
+  (when aggregate
+    (swap! request/*request* #(update % :mdc
+                                      assoc
+                                      :aggregate
+                                      (select-keys aggregate
+                                                   [:id :version])))))
 
 (defn handle-command
   [ctx {:keys [cmd-id] :as cmd}]
@@ -246,7 +250,7 @@
                        {:cmd-id (:cmd-id cmd)})))
      (if error
        validation
-       (let [aggregate (common/get-by-id ctx {:id id})
+       (let [aggregate (common/get-by-id ctx id)
              _ (with-aggregate aggregate)
              ctx (el-ctx/put-aggregate ctx aggregate)
              resp (->> (get-response-from-command-handler
@@ -257,15 +261,17 @@
                        (resp->assign-event-seq ctx))
              resp (assoc resp :meta [{cmd-id {:id id}}])
              aggregate-schema (edd-ctx/get-service-schema ctx)
-             aggregate (-> ctx
-                           (assoc :id id
-                                  :events (:events resp [])
-                                  :snapshot aggregate)
-                           (event/get-current-state)
-                           (:aggregate)
-                           (or {}))]
+             aggregate (event/get-current-state
+                        ctx
+                        {:id id
+                         :events (:events resp [])
+                         :snapshot aggregate})
+             _ (with-aggregate aggregate)]
 
-         (when-not (m/validate aggregate-schema aggregate)
+         (when (and
+                aggregate
+                (not
+                 (m/validate aggregate-schema aggregate)))
            (throw (ex-info "Invalid aggregate state"
                            {:error (me/humanize
                                     (m/explain aggregate-schema aggregate))})))

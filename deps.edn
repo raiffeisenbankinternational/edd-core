@@ -1,25 +1,25 @@
 {:deps
- {org.clojure/clojure {:mvn/version "1.11.1"},
+ {org.clojure/clojure #:mvn{:version "1.11.1"},
   com.alpha-prosoft/hikaricp
   {:mvn/version "5.0.14", :exclusions [org.slf4j/slf4j-api]},
-  com.auth0/java-jwt {:mvn/version "4.4.0"},
-  org.clojure/tools.logging {:mvn/version "1.2.4"},
-  compojure/compojure {:mvn/version "1.7.0"},
-  ring-cors/ring-cors {:mvn/version "0.1.13"},
-  org.postgresql/postgresql {:mvn/version "42.6.0"},
-  seancorfield/next.jdbc {:mvn/version "1.2.659"},
-  org.clojure/data.xml {:mvn/version "0.2.0-alpha8"},
+  com.auth0/java-jwt #:mvn{:version "4.4.0"},
+  org.clojure/tools.logging #:mvn{:version "1.2.4"},
+  compojure/compojure #:mvn{:version "1.7.0"},
+  ring-cors/ring-cors #:mvn{:version "0.1.13"},
+  org.postgresql/postgresql #:mvn{:version "42.6.0"},
+  seancorfield/next.jdbc #:mvn{:version "1.2.659"},
+  org.clojure/data.xml #:mvn{:version "0.2.0-alpha8"},
   features/edd-core-schema #:local{:root "modules/edd-core-schema"},
-  org.clojure/data.csv {:mvn/version "1.0.1"},
-  metosin/malli {:mvn/version "0.8.9"},
-  java-http-clj/java-http-clj {:mvn/version "0.4.3"},
-  alpha-prosoft/jsonista {:mvn/version "0.2.8"},
-  clj-aws-sign/clj-aws-sign {:mvn/version "0.1.1"},
-  org.slf4j/slf4j-api {:mvn/version "2.0.7"},
-  io.forward/yaml {:mvn/version "1.0.11"},
-  ch.qos.logback/logback-classic {:mvn/version "1.4.7"},
-  com.auth0/jwks-rsa {:mvn/version "0.22.0"},
-  org.clojure/core.async {:mvn/version "1.6.673"}},
+  org.clojure/data.csv #:mvn{:version "1.0.1"},
+  metosin/malli #:mvn{:version "0.8.9"},
+  java-http-clj/java-http-clj #:mvn{:version "0.4.3"},
+  alpha-prosoft/jsonista #:mvn{:version "0.2.8"},
+  clj-aws-sign/clj-aws-sign #:mvn{:version "0.1.1"},
+  org.slf4j/slf4j-api #:mvn{:version "2.0.7"},
+  io.forward/yaml #:mvn{:version "1.0.11"},
+  ch.qos.logback/logback-classic #:mvn{:version "1.4.7"},
+  com.auth0/jwks-rsa #:mvn{:version "0.22.0"},
+  org.clojure/core.async #:mvn{:version "1.6.673"}},
  :paths
  ["src"
   "resources"
@@ -28,22 +28,22 @@
  :aliases
  {:jar
   {:extra-paths ["resources"],
-   :extra-deps #:luchiniatwork{cambada {:mvn/version "1.0.5"}},
+   :extra-deps #:luchiniatwork{cambada #:mvn{:version "1.0.5"}},
    :main-opts
    ["-m" "cambada.jar" "-m" "lambda.core" "-m" "--copy-source "]},
   :test
   {:extra-paths ["test" "features/edd-core-swagger/test"],
-   :extra-deps #:org.clojure{test.check {:mvn/version "1.1.1"}}},
+   :extra-deps #:org.clojure{test.check #:mvn{:version "1.1.1"}}},
   :unit
-  {:extra-deps #:lambdaisland{kaocha {:mvn/version "1.75.1190"}},
+  {:extra-deps #:lambdaisland{kaocha #:mvn{:version "1.75.1190"}},
    :main-opts ["-m" "kaocha.runner" "unit"]},
   :it
-  {:extra-deps #:lambdaisland{kaocha {:mvn/version "1.75.1190"}},
+  {:extra-deps #:lambdaisland{kaocha #:mvn{:version "1.75.1190"}},
    :main-opts ["-m" "kaocha.runner" "it"]},
   :readme
   {:extra-paths ["target/src"],
-   :extra-deps #:alpha-prosoft{readme {:mvn/version "1.7"}},
+   :extra-deps #:alpha-prosoft{readme #:mvn{:version "1.7"}},
    :main-opts ["-m" "seancorfield.readme"]},
   :outdated
-  {:extra-deps #:olical{depot {:mvn/version "2.3.0"}},
+  {:extra-deps #:olical{depot #:mvn{:version "2.3.0"}},
    :main-opts ["-m" "depot.outdated.main"]}}}

@@ -129,12 +129,12 @@ services will be resolved. Example:
 
 ``` clojure
 (mock/with-mock-dal
-      {:dps [{:service        :remote-svc
-              :request-id     request-id
-              :interaction-id interaction-id
-              :meta           meta
-              :query          {:param "Some Value"}
-              :resp           {:remote :response}}]
+      {:deps [{:service        :remote-svc
+               :request-id     request-id
+               :interaction-id interaction-id
+               :meta           meta
+               :query          {:param "Some Value"}
+               :resp           {:remote :response}}]
        :event-store []
        ...})
       ....

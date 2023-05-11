@@ -1,13 +1,8 @@
 (ns lambda.s3-test
   (:require
    [lambda.util :as util]
-   [aws.lambda :refer [handle-request]]
-   [clojure.string :as str]
-   [lambda.util :refer [to-edn]]
    [lambda.filters :as fl]
-   [lambda.uuid :as uuid]
    [lambda.core :as core]
-   [lambda.util :as util]
    [lambda.test.fixture.core :refer [mock-core]]
    [lambda.test.fixture.client :refer [verify-traffic-edn]]
    [clojure.test :refer :all]

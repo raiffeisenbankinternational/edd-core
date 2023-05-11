@@ -3,8 +3,7 @@
             [aws.aws :as aws]
             [lambda.request :as request]
             [lambda.uuid :as uuid]
-            [clojure.tools.logging :as log]
-            [clojure.set :as clojure-set]))
+            [clojure.tools.logging :as log]))
 
 (defn apply-filters
   [{:keys [filters req] :as ctx}]
@@ -50,14 +49,13 @@
 (defn handle-error
   [ctx e]
   (log/error e "Error processing request")
-  (send-response
-   (let [data (ex-data e)]
-     (assoc ctx
-            :resp {:exception (or data
-                                  (try (.getMessage e)
-                                       (catch IllegalArgumentException e
-                                         (log/error e)
-                                         "Unknown")))}))))
+  (let [data (ex-data e)]
+    (assoc ctx
+           :resp {:exception (or data
+                                 (try (.getMessage e)
+                                      (catch IllegalArgumentException e
+                                        (log/error e)
+                                        "Unknown")))})))
 
 (defn with-cache
   [fn]
@@ -86,20 +84,15 @@
 (defn handle-request
   [ctx req]
   (let [{:keys [error body]} req]
-    (log/debug "Request body" (util/to-json body))
     (if error
-      (do
-        (log/error "Request failed" (util/to-json req))
-        (send-response
-         (assoc ctx
-                :resp {:error error})))
+      (assoc ctx :resp {:exception error})
       (try
         (-> ctx
             (assoc :req body
+                   :lambda-api-requiest req
                    :query-string-parameters (:queryStringParameters body))
             (apply-filters)
             (invoke-handler)
-            (send-response)
             (doall))
         (catch Exception e
           (handle-error (assoc ctx
@@ -117,6 +110,25 @@
    :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY" "")
    :aws-session-token     (util/get-env "AWS_SESSION_TOKEN" "")})
 
+(defn initalize-context
+  [ctx]
+  (-> ctx
+      (merge (util/load-config "secret.json"))
+      (merge (util/to-edn
+              (util/get-env "CustomConfig" "{}")))
+      (assoc :service-name (keyword (util/get-env
+                                     "ServiceName"
+                                     "local-test"))
+             :aws (merge (fetch-aws-config)
+                         (get ctx :aws {}))
+             :hosted-zone-name (util/get-env
+                                "PublicHostedZoneName"
+                                "example.com")
+             :environment-name-lower (util/get-env
+                                      "EnvironmentNameLower"
+                                      "local"))
+      (init-filters)))
+
 (defn lambda-custom-runtime
   [init-ctx handler & {:keys [filters post-filter]
                        :or   {filters     []
@@ -124,24 +136,10 @@
   (with-cache
     #(let [api (util/get-env "AWS_LAMBDA_RUNTIME_API")
            ctx (-> init-ctx
-                   (merge (util/load-config "secret.json"))
                    (assoc :filters filters
                           :handler handler
                           :post-filter post-filter)
-                   (merge (util/to-edn
-                           (util/get-env "CustomConfig" "{}")))
-                   (assoc :service-name (keyword (util/get-env
-                                                  "ServiceName"
-                                                  "local-test"))
-                          :aws (merge (fetch-aws-config)
-                                      (get init-ctx :aws {}))
-                          :hosted-zone-name (util/get-env
-                                             "PublicHostedZoneName"
-                                             "example.com")
-                          :environment-name-lower (util/get-env
-                                                   "EnvironmentNameLower"
-                                                   "local"))
-                   (init-filters))]
+                   (initalize-context))]
        (doseq [i (get-loop)]
          (let [request (aws/get-next-request api)
                invocation-id (get-in
@@ -151,54 +149,14 @@
            (util/d-time
             (str "Handling next request: " i ", invocation-id: " invocation-id)
             (binding [request/*request* (atom {:scoped true})]
-              (handle-request
-               (-> ctx
-                   (assoc :from-api (is-from-api request))
-                   (assoc :api api
-                          :invocation-id (if-not (int? invocation-id)
-                                           (uuid/parse invocation-id)
-                                           invocation-id)))
-               request))))))))
+              (send-response
+               (handle-request
+                (-> ctx
+                    (assoc :from-api (is-from-api request))
+                    (assoc :api api
+                           :invocation-id (if-not (int? invocation-id)
+                                            (uuid/parse invocation-id)
+                                            invocation-id)))
+                request)))))))))
 
-(defn lambda-request-handler
-  [init-ctx handler body & {:keys [filters post-filter]
-                            :or   {filters     []
-                                   post-filter (fn [ctx] ctx)}}]
-  (with-cache
-    #(let [api (util/get-env "AWS_LAMBDA_RUNTIME_API")
-           ctx (-> init-ctx
-                   (merge (util/load-config "secret.json"))
-                   (assoc :filters filters
-                          :handler handler
-                          :post-filter post-filter)
-                   (merge (util/to-edn
-                           (util/get-env "CustomConfig" "{}")))
-                   (assoc :service-name (keyword (util/get-env
-                                                  "ServiceName"
-                                                  "local-test"))
-                          :aws (merge
-                                (fetch-aws-config)
-                                (get init-ctx :aws {}))
-                          :hosted-zone-name (util/get-env
-                                             "PublicHostedZoneName"
-                                             "example.com")
-                          :environment-name-lower (util/get-env
-                                                   "EnvironmentNameLower"
-                                                   "local"))
-                   (init-filters))]
-       (let [request {:body body}
-             invocation-id (get-in
-                            request
-                            [:headers :lambda-runtime-aws-request-id])]
 
-         (util/d-time
-          (str "Handling request")
-          (binding [request/*request* (atom {:scoped true})]
-            (handle-request
-             (-> ctx
-                 (assoc :from-api (is-from-api request))
-                 (assoc :api api
-                        :invocation-id (if-not (int? invocation-id)
-                                         (uuid/parse invocation-id)
-                                         invocation-id)))
-             request)))))))
