@@ -80,7 +80,7 @@
   (get-in @*dal-state* [:identities (keyword id)] (uuid/gen)))
 
 (defn prepare-dps-calls
-  []
+  [ctx]
   (mapv
    (fn [%]
      (let [req {:query
@@ -91,7 +91,9 @@
            req-2 (if (:interaction-id %)
                    (assoc req-1 :interaction-id (:interaction-id %))
                    req-1)]
-       (-> {:post (cmd/calc-service-query-url (:service %))
+       (-> {:post (query/calc-service-query-url
+                   (:service %)
+                   (:meta ctx))
             :body (util/to-json {:result (:resp %)})
             :req  req-2})))
 
@@ -129,7 +131,7 @@
                 request/*request* (atom {})]
         %
         (client/mock-http
-         {:responses (vec (concat (prepare-dps-calls)
+         {:responses (vec (concat (prepare-dps-calls ctx)
                                   (get @*dal-state* :responses [])))
           :config {:reuse-responses true}}
          (with-redefs

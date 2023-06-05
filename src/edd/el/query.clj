@@ -18,12 +18,22 @@
   (and (some? query-id) (nil? ref)))
 
 (defn calc-service-query-url
-  [service]
-  (str "https://api."
-       (util/get-env "PrivateHostedZoneName")
-       "/legacy/"
-       (name service)
-       "/query"))
+  [service {:keys [realm]
+            :as meta}]
+  (let [api-url (util/get-env "ApiUrl")
+        default-url (str "https://api."
+                         (util/get-env "PrivateHostedZoneName"))
+        url (str
+             (or api-url
+                 default-url)
+             "/private/"
+             (case realm
+               :test "test"
+               "prod")
+             "/"
+             (name service)
+             "/query")]
+    url))
 
 (defn -make-service-query-request
   [{:keys [meta url]
@@ -84,12 +94,13 @@
     (apply f params)))
 
 (defn -http-call
-  [ctx {:keys [service query]}]
+  [{:keys [meta]
+    :as ctx} {:keys [service query]}]
   (let [token (aws/get-token ctx)
         service-name (:service-name ctx)]
     (cond
       (service-query? query)
-      (with-cache -make-service-query-request {:url         (calc-service-query-url service)
+      (with-cache -make-service-query-request {:url         (calc-service-query-url service meta)
                                                :meta        {:to-service   service
                                                              :from-service service-name
                                                              :query-id     (:query-id query)}

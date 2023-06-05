@@ -21,7 +21,6 @@
                                  ExecutorService
                                  Future)))
 
-(def calc-service-query-url query/calc-service-query-url)
 (def resolve-remote-dependency query/resolve-remote-dependency)
 (def resolve-local-dependency query/resolve-local-dependency)
 
@@ -236,7 +235,7 @@
 
 (defn handle-command
   [ctx {:keys [cmd-id] :as cmd}]
-  (log/info (:meta ctx))
+  (log/info "Requst meta: " (:meta ctx))
   (util/d-time
    (str "handling-command: " cmd-id)
    (let [{:keys [handler]} (edd-ctx/get-cmd ctx cmd-id)
