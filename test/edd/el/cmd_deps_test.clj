@@ -65,7 +65,7 @@
                                      :method          :post
                                      :idle-timeout    10000
                                      :connect-timeout 300
-                                     :url             (cmd/calc-service-query-url "remote-svc")}])))))))
+                                     :url             (el-query/calc-service-query-url "remote-svc" meta)}])))))))
 
 (deftest test-remote-dependency
   (let [meta {:realm :realm4}
@@ -78,7 +78,7 @@
                     util/get-env (fn [v]
                                    (get {"PrivateHostedZoneName" "mock.com"} v))]
         (client/mock-http
-         [{:post (cmd/calc-service-query-url "some-remote-service")
+         [{:post (el-query/calc-service-query-url "some-remote-service" meta)
            :body (util/to-json {:result {:a :b}})}]
          (is (= {:a :b}
                 (cmd/resolve-remote-dependency
@@ -107,7 +107,7 @@
                                   :method          :post
                                   :idle-timeout    10000
                                   :connect-timeout 300
-                                  :url             (cmd/calc-service-query-url "some-remote-service")}]))))))
+                                  :url             (el-query/calc-service-query-url "some-remote-service" meta)}]))))))
 
 (deftest test-remote-dep-when-query-id-is-not-set
   (testing "If deps fn does not return a map with query-id we are skipping dependency resolution
@@ -121,7 +121,7 @@ and return nil to enable query-fn to have when conditions based on previously re
                     util/get-env (fn [v]
                                    (get {"PrivateHostedZoneName" "mock.com"} v))]
         (client/mock-http
-         [{:post (cmd/calc-service-query-url "some-remote-service")
+         [{:post (el-query/calc-service-query-url "some-remote-service" meta)
            :body (util/to-json {:result {:a :b}})}]
          (is (= nil
                 (cmd/resolve-remote-dependency
@@ -427,7 +427,7 @@ and return nil to enable query-fn to have when conditions based on previously re
                                  :method          :post
                                  :idle-timeout    10000
                                  :connect-timeout 300
-                                 :url             (cmd/calc-service-query-url "remote-svc")}])))))
+                                 :url             (el-query/calc-service-query-url "remote-svc"  meta)}])))))
 
 (deftest dependant-deps
   (let [current-aggregate {:id      cmd-id-1
