@@ -132,8 +132,7 @@
                                                    "?"
                                                    (query-string (:query-params req))))
               (:form-params req) (assoc-in [:headers "Content-Type"] "application/x-www-form-urlencoded")
-              (:form-params req) (update-in [:body]
-                                            #(query-string (:form-params req))))
+              (:form-params req) (assoc-in [:body] (query-string (:form-params req))))
         resp (http/send
               req
               opts)
