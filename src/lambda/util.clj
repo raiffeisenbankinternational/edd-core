@@ -16,6 +16,7 @@
            (javax.crypto.spec SecretKeySpec)
            (com.fasterxml.jackson.core JsonGenerator)
            (clojure.lang Keyword)
+           (mikera.vectorz AVector)
            (com.fasterxml.jackson.databind ObjectMapper)
            (java.nio.charset Charset)
            (java.net URLEncoder)))
@@ -53,7 +54,12 @@
                     UUID           (fn [^UUID v ^JsonGenerator jg]
                                      (.writeString jg (str "#" v)))
                     Keyword        (fn [^Keyword v ^JsonGenerator jg]
-                                     (.writeString jg (str ":" (name v))))}}))
+                                     (.writeString jg (str ":" (name v))))
+                    AVector        (fn [^AVector v ^JsonGenerator jg]
+                                     (.writeStartArray jg)
+                                     (doseq [n v]
+                                       (.writeNumber jg (str n)))
+                                     (.writeEndArray jg))}}))
 
 (defn date-time
   (^OffsetDateTime [] (OffsetDateTime/now))

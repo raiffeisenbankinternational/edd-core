@@ -2,14 +2,16 @@
   (:require [clojure.test :refer :all]
             [lambda.util :as util]
             [lambda.uuid :as uuid]
+            [mikera.vectorz.core :as v]
+            [clojure.core.matrix :as m]
             [lambda.test.fixture.client :as client])
 
   (:import (java.time OffsetDateTime)))
 
-; Dear security guy! All tokens and JWKS information here
-; is from non existing user pools
-; please go somewhere else to find secrets as there are none usefull
-; to be found here.
+;; Dear security guy! All tokens and JWKS information here
+;; is from non existing user pools
+;; please go somewhere else to find secrets as there are none usefull
+;; to be found here.
 
 (deftest test-parser-deserialization
   (let [result (util/to-edn
@@ -56,6 +58,11 @@
 (deftest test-parser-serialization
   (let [result (util/to-json {:json (uuid/parse "c2baf5fb-1268-4a25-bd12-ece185e86104")})]
     (is (= result "{\"json\":\"#c2baf5fb-1268-4a25-bd12-ece185e86104\"}"))))
+
+(deftest test-vectorz-serialization
+  (let [result (util/to-json {:vectorz (v/vector 1.0 2.0 3.0)})]
+    (is (= "{\"vectorz\":[1.0,2.0,3.0]}"
+           result))))
 
 (deftest test-get-env
   (is (= (util/get-env "USER")
