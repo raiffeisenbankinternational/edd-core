@@ -19,6 +19,8 @@
   io.forward/yaml #:mvn{:version "1.0.11"},
   ch.qos.logback/logback-classic #:mvn{:version "1.4.7"},
   com.auth0/jwks-rsa #:mvn{:version "0.22.0"},
+  net.mikera/core.matrix {:mvn/version "0.63.0"}
+  net.mikera/vectorz-clj {:mvn/version "0.48.0"}
   org.clojure/core.async #:mvn{:version "1.6.673"}},
  :paths
  ["src"
