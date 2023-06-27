@@ -13,12 +13,16 @@
   (let [request-id (uuid/gen)
         interaction-id (uuid/gen)
         ctx (-> {:request-id     request-id
-                 :interaction-id interaction-id}
+                 :interaction-id interaction-id
+                 :meta {:realm :x}}
                 (edd.core/reg-fx
                  (fn [ctx events]
                    [{:service  "test-svc"
                      :commands {:id     "1"
-                                :cmd-id "2"}}
+                                :cmd-id "2"}
+                     :meta {:group-id 1
+                            :realm :y}
+                     :request-id :custom-uuid}
                     {:service  "test-svc-2"
                      :commands {:id     "3"
                                 :cmd-id "4"}}])))
@@ -27,13 +31,14 @@
     (is (= [{:commands       {:cmd-id "2"
                               :id     "1"}
              :interaction-id interaction-id
-             :meta           {}
+             :meta           {:group-id 1
+                              :realm :x}
              :request-id     request-id
              :service        "test-svc"}
             {:commands       {:cmd-id "4"
                               :id     "3"}
              :interaction-id interaction-id
-             :meta           {}
+             :meta           {:realm :x}
              :request-id     request-id
              :service        "test-svc-2"}]
            resp))))

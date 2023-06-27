@@ -87,7 +87,7 @@
         effects (map #(assoc %
                              :request-id (:request-id ctx)
                              :interaction-id (:interaction-id ctx)
-                             :meta (:meta ctx {}))
+                             :meta (merge (:meta %) (:meta ctx {})))
                      effects)]
 
     (assoc resp :effects effects)))
