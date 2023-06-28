@@ -114,7 +114,7 @@
     (:sort q) (assoc :sort (form-sorting (:sort q)))))
 
 (defn advanced-direct-search
-  [ctx elastic-query]
+  [ctx elastic-query & {:keys [raw-data] :as opts}]
   (let [json-query (util/to-json elastic-query)
         index-name (make-index-name (realm ctx) (or (:index-name ctx) (:service-name ctx)))
         {:keys [error] :as body} (el/query
@@ -133,9 +133,13 @@
     {:total total
      :from  (get elastic-query :from 0)
      :size  (get elastic-query :size default-size)
-     :hits  (mapv
-             :_source
-             (get-in body [:hits :hits] []))}))
+     :hits
+     (if raw-data
+       (into []
+             (get-in body [:hits :hits] []))
+       (mapv
+        :_source
+        (get-in body [:hits :hits] [])))}))
 
 (defmethod advanced-search
   :elastic
