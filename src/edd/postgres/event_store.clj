@@ -230,8 +230,7 @@
                                      fx_error = fx_error + ?,
                                      fx_last_on = NOW()
                                WHERE request_id = ? 
-                                 AND breadcrumbs = ?
-                           RETURNING breadcrumbs, fx_remaining")
+                                 AND breadcrumbs = ?")
                                  (mapv
                                   (fn [b]
                                     [effect-count
