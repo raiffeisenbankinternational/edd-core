@@ -6,7 +6,7 @@
             [next.jdbc.result-set :as rs]
             [lambda.uuid :as uuid]
             [lambda.util :as util]
-            [clojure.string :as str]
+            [clojure.string :as string]
             [edd.core :as edd]
             [edd.dal :refer [with-init
                              get-events
@@ -33,12 +33,12 @@
   (let [realm (get-in ctx [:meta :realm] :no_realm)]
     (str " " (name realm) "." (-> table
                                   (name)
-                                  (str/replace #"-" "_")) " ")))
+                                  (string/replace #"-" "_")) " ")))
 
 (defn error-matches?
   [msg words]
   (every?
-   #(str/includes? msg %)
+   #(string/includes? msg %)
    words))
 
 (defn parse-error
@@ -62,12 +62,12 @@
       (throw (ex-info "Postgres error"
                       {:error (-> (.getMessage e)
                                   (or "No message")
-                                  (str/replace "\n" "")
+                                  (string/replace "\n" "")
                                   (parse-error))}
                       e)))))
 
 (defn breadcrumb-str [breadcrumbs]
-  (str/join ":" (or breadcrumbs [])))
+  (string/join ":" (or breadcrumbs [])))
 
 (defn store-events
   [ctx {:keys [events]}]
@@ -148,7 +148,8 @@
 (defn log-request-error-impl
   [{:keys [request-id] :as ctx} body data]
   (let [breadcrumbs (:breadcrumbs body)
-        root-breadcrumbs (get-parent-breadcrumbs breadcrumbs)]
+        root-breadcrumbs (into [breadcrumbs]
+                               (get-parent-breadcrumbs breadcrumbs))]
     (jdbc/execute! @(:con ctx)
                    [(str "UPDATE " (->table ctx :command_request_log) "
                              SET error = ?
@@ -158,17 +159,23 @@
                     request-id
                     (breadcrumb-str breadcrumbs)])
     (when (seq root-breadcrumbs)
-      (jdbc/execute-batch! @(:con ctx)
-                           (str "UPDATE " (->table ctx :command_response_log) "
+      (jdbc/execute! @(:con ctx)
+                     (into [(str "UPDATE " (->table ctx :command_response_log) "
                                  SET fx_exception = fx_exception + 1
-                               WHERE request_id = ? 
-                                 AND breadcrumbs = ?")
-                           (mapv
-                            (fn [bc]
-                              [request-id
-                               (breadcrumb-str bc)])
-                            root-breadcrumbs)
-                           {:builder-fn rs/as-unqualified-lower-maps}))))
+                               WHERE "
+                                 (string/join " OR "
+                                              (mapv
+                                               (fn [_]
+                                                 "(request_id = ? AND breadcrumbs = ?)")
+                                               root-breadcrumbs)))]
+                           (flatten
+                            (mapv
+                             (fn [b]
+                               [request-id
+                                (breadcrumb-str b)])
+                             root-breadcrumbs)))
+
+                     {:builder-fn rs/as-unqualified-lower-maps}))))
 
 (defmethod log-request-error
   :postgres
@@ -223,25 +230,31 @@
   (let [effect-count (count effects)
         breadcrumbs (:breadcrumbs ctx)
         root-breadcrumbs (get-parent-breadcrumbs breadcrumbs)
-        out (jdbc/execute-batch! @(:con ctx)
-                                 (str "UPDATE " (->table ctx :command_response_log) "
-                                 SET fx_total = fx_total + ?,
-                                     fx_remaining = fx_remaining  + ? - 1,
-                                     fx_error = fx_error + ?,
-                                     fx_last_on = NOW()
-                               WHERE request_id = ? 
-                                 AND breadcrumbs = ?")
-                                 (mapv
-                                  (fn [b]
-                                    [effect-count
-                                     effect-count
-                                     (if error
-                                       1
-                                       0)
-                                     request-id
-                                     (breadcrumb-str b)])
-                                  root-breadcrumbs)
-                                 {:builder-fn rs/as-unqualified-lower-maps})]
+        out (when (seq root-breadcrumbs)
+              (jdbc/execute! @(:con ctx)
+                             (into [(str "UPDATE " (->table ctx :command_response_log)
+                                         "SET fx_total = fx_total + ?,
+                                           fx_remaining = fx_remaining  + ? - 1,
+                                           fx_error = fx_error + ?,
+                                           fx_last_on = NOW()
+                                       WHERE "
+                                         (string/join " OR "
+                                                      (mapv
+                                                       (fn [_]
+                                                         "(request_id = ? AND breadcrumbs = ?)")
+                                                       root-breadcrumbs)))
+                                    effect-count
+                                    effect-count
+                                    (if error
+                                      1
+                                      0)]
+                                   (flatten
+                                    (mapv
+                                     (fn [b]
+                                       [request-id
+                                        (breadcrumb-str b)])
+                                     root-breadcrumbs)))
+                             {:builder-fn rs/as-unqualified-lower-maps}))]
     out))
 
 (defmethod log-response
@@ -396,8 +409,8 @@
                   (jdbc/execute! @(:con ctx)
                                  (concat
                                   [(str "SELECT id, aggregate_id FROM " (->table ctx :identity_store) "
-                                           WHERE id IN (" (str/join ", "
-                                                                    placeholders) ")
+                                           WHERE id IN (" (string/join ", "
+                                                                       placeholders) ")
                                            AND service_name = ?")]
                                   params
                                   [(:service-name ctx)])
