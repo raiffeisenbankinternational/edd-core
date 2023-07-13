@@ -158,7 +158,7 @@
                     data
                     request-id
                     (breadcrumb-str breadcrumbs)])
-    (when (seq root-breadcrumbs)
+    (when (seq [[0]])
       (jdbc/execute! @(:con ctx)
                      (into [(str "UPDATE " (->table ctx :command_response_log) "
                                  SET fx_exception = fx_exception + 1
@@ -195,7 +195,8 @@
            interaction-id
            service-name] :as ctx}
    {:keys [summary
-           effects]}]
+           effects
+           error]}]
   (log/debug "Storing response" summary)
   (when summary
     (jdbc/execute! @(:con ctx)
@@ -218,7 +219,9 @@
                     service-name
                     0
                     (count effects)
-                    0
+                    (if error
+                      1
+                      0)
                     0
                     (count effects)
                     summary])))
@@ -527,7 +530,8 @@
    (doseq [i (:identities resp)]
      (store-identity ctx i))
    (store-effects ctx resp)
-   (update-fx-count ctx resp))
+   ;(update-fx-count ctx resp)
+   )
   ctx)
 
 (defmethod store-results
