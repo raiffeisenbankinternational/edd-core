@@ -282,3 +282,80 @@
       (if (:error response)
         response
         {:version (get-in response [:headers :x-amz-version-id])}))))
+
+(defn concat-content [a b]
+  (flatten
+   (conj [a] b)))
+
+(defn xml-to-edn [xml]
+  (if (some? (:tag xml))
+    {(-> xml
+         :tag
+         name
+         string/lower-case
+         keyword)
+     (let [m
+           (mapv
+            (fn [x] (xml-to-edn x))
+            (:content xml))]
+       (if (and (= 1 (count m))
+                (string? (first m)))
+         (first m)
+         (apply merge-with concat-content m)))}
+
+    xml))
+
+(defn sort-contents [contents]
+  (if (map? contents)
+    [contents]
+    (sort-by :lastmodified contents)))
+
+(defn list-objects
+  ([ctx object]
+   (list-objects ctx object {:retries client/retry-count}))
+
+  ([{:keys [_aws] :as ctx}
+    {:keys [s3] :as object}
+    {:keys [retries] :as _params}]
+
+   (let [bucket (get-in s3 [:bucket :name])
+         prefix (get-in s3 [:prefix])
+         req
+         (merge (s3-request-helper ctx object)
+                {:method     "GET"
+                 :uri        (str "/"
+                                  bucket)
+                 :query      [["list-type" "2"]
+                              ["prefix" prefix]]})
+
+         common (common/authorize req)
+         url (str "https://"
+                  (get (:headers req) "Host")
+                  (:uri req)
+                  "?list-type=2"
+                  "&prefix=" prefix)
+         response (client/retry-n #(-> (util/http-get
+                                        url
+                                        (client/request->with-timeouts
+                                         %
+                                         {:as      :stream
+                                          :headers (-> (:headers req)
+                                                       (dissoc "Host")
+                                                       (assoc "Authorization" common)
+                                                       (assoc "Accept" "application/json"))})
+                                        :raw true)
+                                       (parse-response  object))
+                                  :retries retries)
+         {:keys [error] :as response} response]
+     (if error
+       response
+       (when (:body response)
+         (-> (:body response)
+             (io/reader :encoding "UTF-8")
+             xml/parse
+             xml-to-edn
+
+             (update-in
+              [:listbucketresult :contents]
+              sort-contents)
+             (doto tap>)))))))

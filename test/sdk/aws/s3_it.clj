@@ -289,3 +289,25 @@
                  (-> (ex-data e)
                      (select-keys [:code :message :bucketname])))))))))
 
+(deftest test-s3-list-objects
+  (let [ctx    {:aws (lambda/fetch-aws-config)
+                :service-name (keyword (util/get-env
+                                        "ServiceName"
+                                        "local-test"))
+                :hosted-zone-name (util/get-env
+                                   "PublicHostedZoneNetme"
+                                   "example.com")
+                :environment-name-lower (util/get-env
+                                         "EnvironmentNameLower")}]
+    (testing "Testing happy path of put and list-objects"
+      (let [key (gen-key)
+            data "sample-data"]
+        (s3/put-object ctx (for-object-with-content key data))
+        (is (= 1
+               (let [r (s3/list-objects ctx (-> (for-object-with-content key "sample-data")
+                                                (update :s3 dissoc :object)
+                                                (assoc-in [:s3 :prefix] key)))]
+                 (-> r
+                     :listbucketresult
+                     :contents
+                     count))))))))
