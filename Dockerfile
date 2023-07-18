@@ -39,7 +39,7 @@ ARG BUILD_ID
 
 RUN set -e &&\
     echo "Org: ${ARTIFACT_ORG}" &&\
-    clj -M:test:unit &&\
+    clojure -M:test:unit &&\
     export AWS_DEFAULT_REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region) &&\
     export AWS_REGION=$AWS_DEFAULT_REGION &&\
     TARGET_ACCOUNT_ID="$(aws sts get-caller-identity | jq -r '.Account')" &&\
@@ -80,7 +80,7 @@ RUN set -e &&\
     echo "Run ansible stuff" &&\
     ansible-playbook ansible/deploy/deploy.yaml &&\
     echo "Building b${BUILD_ID}" &&\
-    clj -M:jar  \
+    clojure -M:jar  \
        --aot "clojure.java.io" \
        --app-group-id ${ARTIFACT_ORG} \
        --app-artifact-id ${PROJECT_NAME} \
@@ -122,10 +122,10 @@ RUN set -e &&\
                 (spit "deps.edn" (with-out-str \
                                    (clojure.pprint/pprint deps))))' &&\
        cat deps.edn &&\
-       clj -Stree &&\
-       clj -M:test:it &&\
-       clj -M:test:unit &&\
-       clj -M:jar  \
+       clojure -Stree &&\
+       clojure -M:test:it &&\
+       clojure -M:test:unit &&\
+       clojure -M:jar  \
              --aot "clojure.java.io" \
              --app-group-id ${ARTIFACT_ORG} \
              --app-artifact-id ${i} \
@@ -142,7 +142,7 @@ RUN set -e &&\
           --queue-url "https://sqs.${AWS_DEFAULT_REGION}.amazonaws.com/${AccountId}/${AccountId}-${EnvironmentNameLower}-it" &&\
     aws sqs purge-queue \
           --queue-url "https://sqs.${AWS_DEFAULT_REGION}.amazonaws.com/${AccountId}/${AccountId}-${EnvironmentNameLower}-it.fifo" &&\
-    clj -M:test:it &&\
+    clojure -M:test:it &&\
     rm -rf /home/build/.m2/repository &&\
     rm -rf target &&\
     tree /dist

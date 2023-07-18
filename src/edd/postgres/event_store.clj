@@ -147,40 +147,21 @@
 
 (defn log-request-error-impl
   [{:keys [request-id] :as ctx} body data]
-  (let [breadcrumbs (:breadcrumbs body)
-        root-breadcrumbs (into [breadcrumbs]
-                               (get-parent-breadcrumbs breadcrumbs))]
+  (let [breadcrumbs (:breadcrumbs body)]
     (jdbc/execute! @(:con ctx)
                    [(str "UPDATE " (->table ctx :command_request_log) "
-                             SET error = ?
+                             SET error = ?,
+                                 fx_exception = fx_exception + 1
                            WHERE request_id = ?
                              AND breadcrumbs = ?")
                     data
                     request-id
-                    (breadcrumb-str breadcrumbs)])
-    (when (seq [[0]])
-      (jdbc/execute! @(:con ctx)
-                     (into [(str "UPDATE " (->table ctx :command_response_log) "
-                                 SET fx_exception = fx_exception + 1
-                               WHERE "
-                                 (string/join " OR "
-                                              (mapv
-                                               (fn [_]
-                                                 "(request_id = ? AND breadcrumbs = ?)")
-                                               root-breadcrumbs)))]
-                           (flatten
-                            (mapv
-                             (fn [b]
-                               [request-id
-                                (breadcrumb-str b)])
-                             root-breadcrumbs)))
-
-                     {:builder-fn rs/as-unqualified-lower-maps}))))
+                    (breadcrumb-str breadcrumbs)])))
 
 (defmethod log-request-error
   :postgres
   [ctx body error]
-  (log/debug "Storing request error" (error))
+  (log/info "Storing request error")
   (log-request-error-impl ctx body error))
 
 (defmethod log-dps
@@ -193,72 +174,43 @@
   [{:keys [invocation-id
            request-id
            interaction-id
-           service-name] :as ctx}
+           service-name
+           breadcrumbs] :as ctx}
    {:keys [summary
            effects
            error]}]
   (log/debug "Storing response" summary)
   (when summary
     (jdbc/execute! @(:con ctx)
-                   [(str "INSERT INTO " (->table ctx :command_response_log) " (invocation_id,
-                                                           request_id,
-                                                           interaction_id,
-                                                           breadcrumbs,
-                                                           service_name,
-                                                           cmd_index,
-                                                           fx_total, 
-                                                           fx_error, 
-                                                           fx_exception, 
-                                                           fx_remaining,
-                                                           data)
-                            VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+                   [(str "INSERT INTO " (->table ctx :command_response_log) " 
+                                          (invocation_id,
+                                           request_id,
+                                           interaction_id,
+                                           breadcrumbs,
+                                           service_name,
+                                           cmd_index,
+                                           fx_processed,
+                                           fx_created, 
+                                           fx_error, 
+                                           data)
+                            VALUES (?,?,?,?,?,?,?,?,?,?)")
                     invocation-id
                     request-id
                     interaction-id
-                    (breadcrumb-str (:breadcrumbs ctx))
+                    (breadcrumb-str breadcrumbs)
                     service-name
                     0
+                    (cond
+                      ; First one is on actuall fx
+                      (= (count breadcrumbs) 1) 0
+                      ; I Would not call error one processed
+                      error 0
+                      :else 1)
                     (count effects)
                     (if error
                       1
                       0)
-                    0
-                    (count effects)
                     summary])))
-
-(defn update-fx-count
-  [{:keys [request-id] :as ctx}
-   {:keys [effects
-           error]}]
-  (let [effect-count (count effects)
-        breadcrumbs (:breadcrumbs ctx)
-        root-breadcrumbs (get-parent-breadcrumbs breadcrumbs)
-        out (when (seq root-breadcrumbs)
-              (jdbc/execute! @(:con ctx)
-                             (into [(str "UPDATE " (->table ctx :command_response_log)
-                                         "SET fx_total = fx_total + ?,
-                                           fx_remaining = fx_remaining  + ? - 1,
-                                           fx_error = fx_error + ?,
-                                           fx_last_on = NOW()
-                                       WHERE "
-                                         (string/join " OR "
-                                                      (mapv
-                                                       (fn [_]
-                                                         "(request_id = ? AND breadcrumbs = ?)")
-                                                       root-breadcrumbs)))
-                                    effect-count
-                                    effect-count
-                                    (if error
-                                      1
-                                      0)]
-                                   (flatten
-                                    (mapv
-                                     (fn [b]
-                                       [request-id
-                                        (breadcrumb-str b)])
-                                     root-breadcrumbs)))
-                             {:builder-fn rs/as-unqualified-lower-maps}))]
-    out))
 
 (defmethod log-response
   :postgres
@@ -679,6 +631,87 @@
                       interaction-id,
                       (breadcrumb-str breadcrumbs)]
                      {:builder-fn rs/as-unqualified-kebab-maps})))
+
+(defn get-response-trace-log
+  [ctx {:keys [request-id
+               invocation-id
+               breadcrumbs
+               interaction-id]}]
+  (log/info "Fetching response" invocation-id)
+  (let [select "SUM(fx_created) AS fx_created,
+                SUM(fx_processed) AS fx_processed,
+                SUM(fx_error) AS fx_error,
+                SUM(fx_created) - SUM(fx_processed) - SUM(fx_error) AS fx_remaining"]
+    (cond
+      invocation-id (jdbc/execute!
+                     @(:con ctx)
+                     [(str "SELECT " select  "
+                                 FROM " (->table ctx :command_response_log) "
+                                 WHERE invocation_id=?") invocation-id]
+                     {:builder-fn rs/as-unqualified-kebab-maps})
+      request-id (jdbc/execute!
+                  @(:con ctx)
+                  (if breadcrumbs
+                    [(str "SELECT " select  "
+                                FROM " (->table ctx :command_response_log) "
+                                WHERE request_id=?
+                                AND breadcrumbs=?")
+                     request-id,
+                     (breadcrumb-str breadcrumbs)]
+                    [(str "SELECT " select  "
+                                FROM " (->table ctx :command_response_log) "
+                                WHERE request_id=?")
+                     request-id])
+                  {:builder-fn rs/as-unqualified-kebab-maps})
+      interaction-id  (jdbc/execute!
+                       @(:con ctx)
+                       [(str "SELECT " select  "
+                                   FROM " (->table ctx :command_response_log) "
+                                   WHERE interaction_id=?
+                                   AND breadcrumbs=?")
+                        interaction-id,
+                        (breadcrumb-str (or breadcrumbs
+                                            [0]))]
+                       {:builder-fn rs/as-unqualified-kebab-maps}))))
+
+(defn get-request-trace-log
+  [ctx {:keys [request-id
+               invocation-id
+               breadcrumbs
+               interaction-id]}]
+  (log/info "Fetching response" invocation-id)
+  (let [select "SUM(fx_exception) AS fx_exception"]
+    (cond
+      invocation-id (jdbc/execute!
+                     @(:con ctx)
+                     [(str "SELECT " select  "
+                                 FROM " (->table ctx :command_request_log) "
+                                 WHERE invocation_id=?") invocation-id]
+                     {:builder-fn rs/as-unqualified-kebab-maps})
+      request-id (jdbc/execute!
+                  @(:con ctx)
+                  (if breadcrumbs
+                    [(str "SELECT " select  "
+                                FROM " (->table ctx :command_request_log) "
+                                WHERE request_id=?
+                                AND breadcrumbs=?")
+                     request-id,
+                     (breadcrumb-str breadcrumbs)]
+                    [(str "SELECT " select  "
+                                FROM " (->table ctx :command_request_log) "
+                                WHERE request_id=?")
+                     request-id])
+                  {:builder-fn rs/as-unqualified-kebab-maps})
+      interaction-id  (jdbc/execute!
+                       @(:con ctx)
+                       [(str "SELECT " select  "
+                                   FROM " (->table ctx :command_request_log) "
+                                   WHERE interaction_id=?
+                                   AND breadcrumbs=?")
+                        interaction-id,
+                        (breadcrumb-str (or breadcrumbs
+                                            [0]))]
+                       {:builder-fn rs/as-unqualified-kebab-maps}))))
 
 (defmacro verify-state
   [ctx interaction-id x y]
