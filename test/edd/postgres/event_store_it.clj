@@ -810,10 +810,38 @@
                                          req)
            (sort-by :breadcrumbs)
            (mapv #(select-keys %
-                               [:fx-total
-                                :fx-error
+                               [:fx-error
                                 :fx-exception
-                                :fx-remaining]))))))
+                                :fx-remaining
+                                :fx-created
+                                :fx-processed]))))))
+
+(defn get-request-meta
+  [ctx req]
+  (edd/with-stores
+    ctx
+    (fn [ctx]
+      (->> (event-store/get-request-log ctx
+                                        req)
+           (sort-by :breadcrumbs)
+           (mapv #(select-keys %
+                               [:fx-exception]))))))
+
+(defn get-response-trace-log
+  [ctx req]
+  (edd/with-stores
+    ctx
+    (fn [ctx]
+      (->> (event-store/get-response-trace-log ctx req)
+           (sort-by :breadcrumbs)))))
+
+(defn get-request-trace-log
+  [ctx req]
+  (edd/with-stores
+    ctx
+    (fn [ctx]
+      (->> (event-store/get-request-trace-log ctx req)
+           (sort-by :breadcrumbs)))))
 
 (deftest test-commands-stracking
   (binding [*dal-state* (atom {})]
@@ -839,23 +867,24 @@
                                                  :id     agg-id}]})]
 
         (is (= [{:fx-error 0
-                 :fx-exception 0
-                 :fx-remaining 1
-                 :fx-total 1}]
+                 :fx-created 1
+                 :fx-processed 0}]
                (get-fx-meta ctx {:request-id request-id})))
         (doseq [cmd (get-in resp [:result :effects])]
           (edd/handler (assoc ctx :no-summary true)
                        cmd))
-        (is (= [{:fx-total 1
+        (is (= [{:fx-created 1
                  :fx-error 0
-                 :fx-exception 0
-                 :fx-remaining 1}
-                {:fx-total 0
+                 :fx-processed 0}
+                {:fx-created 0
                  :fx-error 0
-                 :fx-exception 0
+                 :fx-processed 1}]
+               (get-fx-meta ctx {:request-id request-id})))
+        (is (= [{:fx-created 1
+                 :fx-processed 1
+                 :fx-error 0
                  :fx-remaining 0}]
-
-               (get-fx-meta ctx {:request-id request-id})))))))
+               (get-response-trace-log ctx {:request-id request-id})))))))
 
 (deftest test-commands-with-error
   (binding [*dal-state* (atom {})]
@@ -881,33 +910,36 @@
                                                  :id     agg-id}]})]
 
         (is (= [{:fx-error 0
-                 :fx-exception 0
-                 :fx-remaining 1
-                 :fx-total 1}]
+                 :fx-processed 0
+                 :fx-created 1}]
                (get-fx-meta ctx {:request-id request-id})))
         (doseq [cmd (get-in resp [:result :effects])]
           (edd/handler (assoc ctx :no-summary true)
                        cmd))
-        (is (= [{:fx-total 1
+        (is (= [{:fx-processed 0
                  :fx-error 0
-                 :fx-exception 0
-                 :fx-remaining 1}
+                 :fx-created 1}
                 {:fx-error 1
-                 :fx-exception 0
-                 :fx-remaining 0
-                 :fx-total 0}]
-               (get-fx-meta ctx {:request-id request-id})))))))
+                 :fx-created 0
+                 :fx-processed 0}]
+               (get-fx-meta ctx {:request-id request-id})))
+        (is (= [{:fx-created 1
+                 :fx-processed 0
+                 :fx-error 1
+                 :fx-remaining 0}]
+               (get-response-trace-log ctx {:request-id request-id})))))))
 
 (deftest test-commands-with-exception
   (binding [*dal-state* (atom {})]
     (let [attempt (atom 0)
+          max-attemnt 2
           ctx (-> (clean-ctx)
                   (assoc :invocation-id (uuid/gen))
                   (with-realm)
                   (edd/reg-cmd :cmd-level-1 (fn [_ _]
                                               {:event-id :event-level-1}))
                   (edd/reg-cmd :cmd-level-2 (fn [_ _]
-                                              (when (< @attempt 2)
+                                              (when (< @attempt max-attemnt)
                                                 (swap! attempt inc)
                                                 (throw (ex-info "Leve2 exception"
                                                                 {:message "Level2 exceptiopn"})))))
@@ -927,18 +959,19 @@
                               request)]
 
         (is (= [{:fx-error 0
-                 :fx-exception 0
-                 :fx-remaining 1
-                 :fx-total 1}]
+                 :fx-processed 0
+                 :fx-created 1}]
                (get-fx-meta ctx {:request-id request-id})))
         (doseq [cmd (get-in resp [:result :effects])]
           (edd/handler (assoc ctx :no-summary true)
                        cmd))
-        (is (= [{:fx-total 1
-                 :fx-error 0
-                 :fx-exception 1
-                 :fx-remaining 1}]
+        (is (= [{:fx-error 0
+                 :fx-processed 0
+                 :fx-created 1}]
                (get-fx-meta ctx {:request-id request-id})))
+
+        (is (= [{:fx-exception 0}]
+               (get-request-meta ctx {:request-id request-id})))
 
         (doseq [cmd (get-in resp [:result :effects])]
           (edd/handler (assoc ctx :no-summary true)
@@ -947,15 +980,14 @@
           (edd/handler (assoc ctx :no-summary true)
                        cmd))
 
-        (is (= [{:fx-total 1
+        (is (= [{:fx-created 1
+                 :fx-processed 1
                  :fx-error 0
-                 :fx-exception 2
-                 :fx-remaining 1}
-                {:fx-error 0
-                 :fx-exception 0
-                 :fx-remaining 0
-                 :fx-total 0}]
-               (get-fx-meta ctx {:request-id request-id})))))))
+                 :fx-remaining 0}]
+               (get-response-trace-log ctx {:request-id request-id})))
+        (testing (format "We tried %s time" max-attemnt)
+          (is (= [{:fx-exception max-attemnt}]
+                 (get-request-trace-log ctx {:request-id request-id}))))))))
 
 (deftest parent-bradcrumbs
   (is (= []
@@ -997,27 +1029,23 @@
                                                :id     agg-id}]})]
 
       (is (= [{:fx-error 0
-               :fx-exception 0
-               :fx-remaining 2
-               :fx-total 2}]
+               :fx-created 2
+               :fx-processed 0}]
              (get-fx-meta ctx {:request-id request-id})))
       (let [resp (mapv
                   #(edd/handler (assoc ctx :no-summary true)
                                 %)
                   (get-in resp [:result :effects]))]
 
-        (is (= [{:fx-total 2
+        (is (= [{:fx-processed 0
                  :fx-error 0
-                 :fx-exception 0
-                 :fx-remaining 2}
-                {:fx-total 1
+                 :fx-created 2}
+                {:fx-processed 1
                  :fx-error 0
-                 :fx-exception 0
-                 :fx-remaining 1}
-                {:fx-total 1
+                 :fx-created 1}
+                {:fx-processed 1
                  :fx-error 0
-                 :fx-exception 0
-                 :fx-remaining 1}]
+                 :fx-created 1}]
                (get-fx-meta ctx {:request-id request-id})))
         (mapv
          #(edd/handler (assoc ctx :no-summary true)
@@ -1025,23 +1053,24 @@
          (get-in (first
                   resp)
                  [:result :effects]))
-        (is (= [{:fx-total 2
+        (is (= [{:fx-processed 0
                  :fx-error 0
-                 :fx-exception 0
-                 :fx-remaining 2}
-                {:fx-total 1
+                 :fx-created 2}
+                {:fx-processed 1
                  :fx-error 0
-                 :fx-exception 0
-                 :fx-remaining 1}
-                {:fx-total 0
+                 :fx-created 1}
+                {:fx-processed 1
                  :fx-error 0
-                 :fx-exception 0
-                 :fx-remaining 0}
-                {:fx-total 1
+                 :fx-created 0}
+                {:fx-processed 1
                  :fx-error 0
-                 :fx-exception 0
+                 :fx-created 1}]
+               (get-fx-meta ctx {:request-id request-id})))
+        (is (= [{:fx-created 4
+                 :fx-processed 3
+                 :fx-error 0
                  :fx-remaining 1}]
-               (get-fx-meta ctx {:request-id request-id})))))))
+               (get-response-trace-log ctx {:request-id request-id})))))))
 
 (defn incnil
   [p]
