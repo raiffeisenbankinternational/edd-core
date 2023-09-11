@@ -51,11 +51,9 @@
   (log/error e "Error processing request")
   (let [data (ex-data e)]
     (assoc ctx
-           :resp {:exception (or data
-                                 (try (.getMessage e)
-                                      (catch IllegalArgumentException e
-                                        (log/error e)
-                                        "Unknown")))})))
+           :resp {:exception {:message (or data
+                                           (ex-message e)
+                                           "Unable to parse exception")}})))
 
 (defn with-cache
   [fn]

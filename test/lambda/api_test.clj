@@ -538,7 +538,7 @@
     :post-filter fl/to-api)
    (verify-traffic-edn
     [{:body   {:body            (util/to-json
-                                 {:error {:jwt :invalid}})
+                                 {:exception {:message {:jwt :invalid}}})
                :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
                                  :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
                                  :Access-Control-Allow-Origin   "*"
@@ -590,7 +590,7 @@
     :post-filter fl/to-api)
    (verify-traffic-edn
     [{:body   {:body            (util/to-json
-                                 {:error "Some error"})
+                                 {:exception {:message "Some error"}})
                :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
                                  :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
                                  :Access-Control-Allow-Origin   "*"

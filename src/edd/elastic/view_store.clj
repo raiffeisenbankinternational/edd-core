@@ -316,7 +316,7 @@
   (assoc ctx
          :view-store :elastic
          :elastic-search {:scheme (util/get-env "IndexDomainScheme" "https")
-                          :url    (util/get-env "IndexDomainEndpoint")}))
+                          :url    (util/get-env "IndexDomainEndpoint" "127.0.0.1:9200")}))
 
 (defmethod get-snapshot
   :elastic

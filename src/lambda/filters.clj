@@ -301,8 +301,7 @@
                 error]} resp
         status (if (or exception error)
                  500
-                 200)
-        resp (aws/produce-compatible-error-response resp)]
+                 200)]
     (assoc ctx
            :resp {:statusCode     status
                   :isBase64Encoded false

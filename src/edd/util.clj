@@ -1,5 +1,4 @@
-(ns edd.util
-  (:require [clojure.tools.logging :as log]))
+(ns edd.util)
 
 (defn try-parse-exception-data
   [^Throwable e]
@@ -10,8 +9,5 @@
         {:error   e
          :message data})
       {:error   e
-       :message (try (.getMessage e)
-                     (catch IllegalArgumentException e
-                       (log/error e)
-                       e))})))
+       :message (ex-message e)})))
 

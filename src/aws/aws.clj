@@ -53,15 +53,6 @@
     (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/response")
     {:body (util/to-json body)})))
 
-(defn produce-compatible-error-response
-  "Because we rely on error on client we will replace :exception to :error"
-  [resp]
-  (if (map? resp)
-    (clojure-set/rename-keys resp {:exception :error})
-    (map
-     #(clojure-set/rename-keys % {:exception :error})
-     resp)))
-
 (defn send-error
   [{:keys [api
            invocation-id
@@ -94,8 +85,7 @@
     (util/d-time "Distribute error"
                  (enqueue-response ctx body))
 
-    (let [body (produce-compatible-error-response body)
-          resp (util/to-json body)]
+    (let [resp (util/to-json body)]
       (log/error resp)
       (util/to-json
        (util/http-post

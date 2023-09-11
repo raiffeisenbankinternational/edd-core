@@ -7,6 +7,7 @@
              :as client-mock]
             [lambda.test.fixture.core :refer [mock-core]]
             [edd.core :as edd]
+            [edd.el.cmd :as edd-cmd]
             [lambda.core :as core]
             [edd.test.fixture.dal :as mock]
             [edd.memory.event-store :as event-store]
@@ -232,7 +233,7 @@
                           :invocation-id  0
                           :request-id     req-id1
                           :interaction-id int-id}
-                         {:error          {:failed "have I!"},
+                         {:exception      {:failed "have I!"},
                           :invocation-id  0
                           :request-id     req-id2
                           :interaction-id int-id}
@@ -312,7 +313,7 @@
                            :invocation-id  0
                            :request-id     req-id1
                            :interaction-id int-id}
-                          {:error          {:failed "yes"}
+                          {:exception      {:failed "yes"}
                            :invocation-id  0
                            :request-id     req-id2
                            :interaction-id int-id}
@@ -354,3 +355,57 @@
              (map
               #(util/to-edn %)
               @messages))))))
+
+(deftest test-exception-in-handler
+  (let [messages (atom [])]
+    (with-redefs [common/create-date (fn [] "20210322T232540Z")
+                  edd-cmd/handle-command (fn [_ctx _body-fn]
+                                           (throw (RuntimeException.)))
+
+                  sqs/delete-message-batch (fn [{:keys [_message]}]
+                                             (throw (RuntimeException. "Deleting something")))
+                  sqs/sqs-publish (fn [{:keys [_message]}]
+                                    (throw (RuntimeException. "Publihsing something")))]
+      (mock-core
+       :invocations [(util/to-json (req
+                                    [{:request-id     req-id1
+                                      :interaction-id int-id
+                                      :commands       [{:id     agg-id
+                                                        :cmd-id :cmd-1
+                                                        :name   "CMD1"}]}
+                                     {:request-id     req-id2
+                                      :interaction-id int-id
+                                      :commands       [{:id     agg-id
+                                                        :cmd-id :cmd-4
+                                                        :name   "CMD4"}]}
+                                     {:request-id     req-id3
+                                      :interaction-id int-id
+                                      :commands       [{:id     agg-id
+                                                        :cmd-id :cmd-1
+                                                        :name   "CMD3"}]}]))]
+
+       :requests [{:post "https://sqs.eu-central-1.amazonaws.com/local/test-evets-queue"}]
+       (core/start
+        ctx
+        edd/handler)
+       (is  (= [{:body   [{:request-id req-id1
+                           :exception "Unable to parse exception",
+                           :interaction-id int-id
+                           :invocation-id 0}
+                          {:request-id req-id2
+                           :exception "Unable to parse exception",
+                           :interaction-id int-id
+                           :invocation-id 0}
+                          {:request-id req-id3
+                           :exception "Unable to parse exception",
+                           :interaction-id int-id
+                           :invocation-id 0}]
+                 :method :post
+                 :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
+
+                {:method  :get
+                 :timeout 90000000
+                 :url     "http://mock/2018-06-01/runtime/invocation/next"}]
+               (map
+                #(dissoc % :headers :keepalive)
+                (client-mock/traffic-edn))))))))

@@ -191,10 +191,9 @@
 
 (defn try-parse-exception
   [^Throwable e]
-  (try (.getMessage e)
-       (catch IllegalArgumentException e
-         (log/error e)
-         "Unknown error processing item")))
+  (or
+   (ex-message e)
+   "Unable to parse exception"))
 
 (defn dispatch-item
   [{:keys [item] :as ctx}]
@@ -235,7 +234,6 @@
            :invocation-id  (:invocation-id ctx)
            :request-id     (:request-id item)
            :interaction-id (:interaction-id ctx)}))
-
       (catch Exception e
         (do
           (log/error e)

@@ -54,18 +54,6 @@
                             :id        cmd-id}}
            agg))))
 
-#_(deftest test-apply-cmd
-    (with-redefs [search/simple-search identity]
-
-      (try
-        (event/handle-event (-> apply-ctx
-                                (postgres-event-store/register)
-                                (assoc :apply
-                                       {:aggregate-id 1})))
-        (catch Exception e
-          (is (= "Postgres error"
-                 (.getMessage e)))))))
-
 (deftest test-apply-cmd-storing-error
   (with-redefs [dal/get-events (fn [_]
                                  [{:event-id :event-1

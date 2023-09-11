@@ -789,7 +789,7 @@
                             {:method  :get
                              :timeout 90000000
                              :url     "http://mock/2018-06-01/runtime/invocation/next"}
-                            {:body   {:error          "Timeout"
+                            {:body   {:exception     "Timeout"
                                       :invocation-id  invocation-id-1
                                       :request-id     request-id
                                       :interaction-id interaction-id}
