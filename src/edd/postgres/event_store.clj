@@ -60,7 +60,7 @@
     (func)
     (catch Exception e
       (throw (ex-info "Postgres error"
-                      {:error (-> (.getMessage e)
+                      {:error (-> (ex-message e)
                                   (or "No message")
                                   (string/replace "\n" "")
                                   (parse-error))}

@@ -63,6 +63,7 @@ RUN set -e &&\
     domain_name=$(aws es list-domain-names  | jq -r '.DomainNames[0].DomainName') &&\
     echo "Found domain ${domain_name}" &&\
     domain_url=$(aws es describe-elasticsearch-domain --domain-name ${domain_name} | jq -r '.DomainStatus.Endpoints.vpc') &&\
+    export IndexDomainScheme=https &&\
     export IndexDomainEndpoint=$domain_url &&\
     export DatabaseEndpoint="$(aws rds describe-db-instances --query 'DBInstances[].Endpoint.Address' --filter "Name=engine,Values=postgres" --output text)" &&\
     flyway -password="${DatabasePassword}" \

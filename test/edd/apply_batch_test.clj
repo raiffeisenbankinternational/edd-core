@@ -89,11 +89,11 @@
                                       :interaction-id int-id}]))]
 
        :requests [{:post "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"}
-                  {:post   (str "https:///test_local_test/_doc/" agg-id)
+                  {:post   (str "http://127.0.0.1:9200/test_local_test/_doc/" agg-id)
                    :status 200}
-                  {:post   (str "https:///test_local_test/_doc/" agg-id)
+                  {:post   (str "http://127.0.0.1:9200/test_local_test/_doc/" agg-id)
                    :status 200}
-                  {:post   (str "https:///test_local_test/_doc/" agg-id)
+                  {:post   (str "http://127.0.0.1:9200/test_local_test/_doc/" agg-id)
                    :status 200}
                   {:put (str "https://s3.eu-central-1.amazonaws.com/--aggregates/aggregates/test/latest/local-test/1110/"
                              agg-id
@@ -118,14 +118,15 @@
                              :method :post
                              :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
                             {:body            {:id agg-id}
-                             :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/es/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=8b2d9b4b2390562f95edc1b2dc52223e9cac7eb1b50b460156d53183ef2346e3"
+                             :headers         {"Authorization"
+                                               "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/es/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=ab1a70f0e461912913f915bee46ebf1df7c742edab626007e33d747195613d39"
                                                "Content-Type"         "application/json"
                                                "X-Amz-Date"           "20210322T232540Z"
                                                "X-Amz-Security-Token" ""}
                              :method          :post
                              :idle-timeout    20000
                              :connect-timeout 300
-                             :url             "https:///test_local_test/_doc/05120289-90f3-423c-ad9f-c46f9927a53e"}
+                             :url             "https://127.0.0.1:9200/test_local_test/_doc/05120289-90f3-423c-ad9f-c46f9927a53e"}
                             {:url
                              (str "https://s3.eu-central-1.amazonaws.com/--aggregates/aggregates/test/latest/local-test/1110/"
                                   agg-id
@@ -186,15 +187,15 @@
      (core/start
       ctx
       edd/handler)
-     (verify-traffic-edn [{:body   [{:error          {:badly :un-happy}
+     (verify-traffic-edn [{:body   [{:exception {:badly :un-happy}
                                      :invocation-id  0
                                      :request-id     req-id1,
                                      :interaction-id int-id}
-                                    {:error          {:badly :1wrong}
+                                    {:exception  {:badly :1wrong}
                                      :invocation-id  0
                                      :request-id     req-id2,
                                      :interaction-id int-id}
-                                    {:error          "Non clojure error"
+                                    {:exception      "Non clojure error"
                                      :invocation-id  0
                                      :request-id     req-id3,
                                      :interaction-id int-id}]
