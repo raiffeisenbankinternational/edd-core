@@ -122,10 +122,11 @@
 (defn request
   [{:keys [as]
     :as req} & _rest]
-  (let [opts {:as (cond
-                    (and as
-                         (= as :stream)) :input-stream
-                    :else as)}
+  (let [opts (cond-> {}
+               as (assoc :as as)
+               (and as
+                    (= as :stream)) (assoc :as :input-stream))
+
         req (clojure-set/rename-keys req {:url :uri})
         trace-headers (get @request/*request* :trace-headers)
         req (cond-> req

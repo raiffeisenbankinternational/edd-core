@@ -24,11 +24,12 @@
                      :secret-key (:aws-secret-access-key aws)}
               body (assoc :payload body))
         auth (common/authorize req)
-        request (cond-> {:headers   (-> (:headers req)
-                                        (dissoc "Host")
-                                        (assoc
-                                         "X-Amz-Security-Token" (:aws-session-token aws)
-                                         "Authorization" auth))
+        headers (-> (:headers req)
+                    (dissoc "Host")
+                    (assoc "Authorization" auth))
+        headers (cond-> headers
+                  (:aws-session-token aws) (assoc "X-Amz-Security-Token" (:aws-session-token aws)))
+        request (cond-> {:headers  headers
                          :keepalive 300000}
                   body (assoc :body body))]
 
