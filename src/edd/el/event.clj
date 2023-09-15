@@ -79,11 +79,13 @@
     (let [snapshot (fetch-snapshot ctx id)
           events (dal/get-events (assoc ctx
                                         :id id
-                                        :version (:version snapshot)))]
-      (log/info (format "Events to apply: %s" (count events)))
-      (get-current-state ctx {:id id
-                              :events events
-                              :snapshot snapshot}))))
+                                        :version (:version snapshot)))
+          _ (log/info (format "Events to apply: %s" (count events)))
+          aggreagate (get-current-state ctx {:id id
+                                             :events events
+                                             :snapshot snapshot})]
+      (request-cache/update-aggregate ctx aggreagate)
+      aggreagate)))
 
 (defn update-aggregate
   [ctx aggregate]
