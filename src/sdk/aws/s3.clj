@@ -113,7 +113,7 @@
    (get-object ctx object {:retries client/retry-count}))
   ([{:keys [_aws] :as ctx}
     object
-    {:keys [retries] :as _params}]
+    {:keys [retries binary] :as _params}]
    (let [req
          (merge (s3-request-helper ctx object)
                 {:method     "GET"
@@ -139,7 +139,9 @@
      (if error
        response
        (when (:body response)
-         (io/reader (:body response) :encoding "UTF-8"))))))
+         (if binary
+           (:body response)
+           (io/reader (:body response) :encoding "UTF-8")))))))
 
 (defn delete-object
   [{:keys [aws] :as ctx} object]
