@@ -1,13 +1,13 @@
 (ns edd.schema.core
   (:require
-    [malli.core :as m]
-    [malli.util :as mu]
-    [malli.transform :as mt]))
+   [malli.core :as m]
+   [malli.util :as mu]
+   [malli.transform :as mt]))
 
 (defonce transformers
-         (mt/transformer
-           mt/default-value-transformer
-           mt/strip-extra-keys-transformer))
+  (mt/transformer
+   mt/default-value-transformer
+   mt/strip-extra-keys-transformer))
 
 (defn decode
   ([schema entity]
@@ -22,14 +22,14 @@
 (defn cmd
   ([cmd-id]
    (m/schema
-     [:map
-      [:cmd-id {:json-schema/type "string"} [:= cmd-id]]
-      [:id uuid?]]))
+    [:map
+     [:cmd-id {:json-schema/type "string"} [:= cmd-id]]
+     [:id uuid?]]))
   ([cmd-id attrs]
    (-> (m/schema
-         [:map
-          [:cmd-id {:json-schema/type "string"} [:= cmd-id]]
-          [:id uuid?]])
+        [:map
+         [:cmd-id {:json-schema/type "string"} [:= cmd-id]]
+         [:id uuid?]])
        (mu/assoc :attrs attrs))))
 
 (def str-date
@@ -40,17 +40,17 @@
 
 (def amount
   (m/schema
-    [:map-of {:min 1}
-     [:keyword {:gen/elements     [:EUR]
-                :json-schema/type "string"}]
-     int?]))
+   [:map-of {:min 1}
+    [:keyword {:gen/elements     [:EUR]
+               :json-schema/type "string"}]
+    int?]))
 
 (def percentage
   (m/schema
-    [:and
-     number?
-     [:>= 0]
-     [:<= 1]]))
+   [:and
+    number?
+    [:>= 0]
+    [:<= 1]]))
 
 (def non-empty-string
   [:re
@@ -58,9 +58,7 @@
    #"\S+"])
 
 (defn schema-keys [schema]
-  (let [props (:children (mu/to-map-syntax schema))]
-    (map (fn [[p]] p) props)))
-
+  (mapv first (m/children schema)))
 
 (defn replace-merge
   "Replaces all keys which are schema relevant by m2 and leaves
@@ -153,7 +151,6 @@
     :uuid]
    [:interaction-id {:description interraction-id-description}
     :uuid]])
-
 
 (defn EddCoreQueryConsumes
   ([] [:map
