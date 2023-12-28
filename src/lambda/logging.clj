@@ -7,6 +7,9 @@
            (org.slf4j LoggerFactory)
            (org.slf4j Logger)))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn- stacktrace-as-str
   [e]
   (if (instance? Throwable e)
@@ -15,7 +18,7 @@
 
 (defn- log-common-attrs
   [level msg]
-  {:level     (str/upper-case (.getName level))
+  {:level     (str/upper-case (.getName ^clojure.lang.Keyword level))
    :message   msg
    :timestamp (LocalDateTime/now)
    :mdc       (if (bound? #'request/*request*)

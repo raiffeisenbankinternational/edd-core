@@ -5,6 +5,9 @@
             [malli.transform :as mt]
             [edd.schema.core :as schema-core]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (def YYYY-MM-DD #"\d{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[0-1])")
 
 (def date? [:re YYYY-MM-DD])

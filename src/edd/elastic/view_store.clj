@@ -15,6 +15,9 @@
             [clojure.string :as string]
             [edd.search :refer [parse]]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn realm
   [ctx]
   (name (get-in ctx [:meta :realm] :no_realm)))

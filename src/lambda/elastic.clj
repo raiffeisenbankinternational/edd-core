@@ -6,6 +6,9 @@
    [clojure.string :refer [join]]
    [sdk.aws.common :as common]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn get-env
   [name & [default]]
   (get (System/getenv) name default))
@@ -58,13 +61,15 @@
                          (= method "DELETE") (util/http-delete
                                               url
                                               request
-                                              :raw true))))]
+                                              :raw true))))
+          status (long (:status response))
+          ignored-status (long (or ignored-status 0))]
       (cond
         (contains? response :error) (do
                                       (log/warn "Failed update, client should handle error" response)
                                       {:error {:error response}})
-        (= (:status response) ignored-status) nil
-        (> (:status response) 299) (do
-                                     {:error {:message (:body response)
-                                              :status  (:status response)}})
+        (= status ignored-status) nil
+        (> status 299) (do
+                         {:error {:message (:body response)
+                                  :status  (:status response)}})
         :else (util/to-edn (:body response))))))

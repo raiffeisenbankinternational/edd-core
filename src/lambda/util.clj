@@ -21,6 +21,9 @@
            (java.nio.charset Charset)
            (java.net URLEncoder)))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (def offset-date-time-format "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
 
 (defn decode-json-special
@@ -287,11 +290,9 @@
   [message & expr]
   `(do
      (let [start# (. System (nanoTime))
-           mem# (-> (- (.totalMemory (Runtime/getRuntime))
-                       (.freeMemory (Runtime/getRuntime)))
-                    (/ 1024)
-                    (/ 1024)
-                    (int))
+           mem# (/ (long (- (.totalMemory (Runtime/getRuntime))
+                            (.freeMemory (Runtime/getRuntime))))
+                   1048576)
 
            ignore# (log/info (str "START " ~message "; memory(mb): " mem#))
            ret# (do
@@ -301,11 +302,9 @@
                   "elapsed(msec): " (/ (double (- (. System (nanoTime)) start#)) 1000000.0) "; "
                   "memory(mb): " (str mem#
                                       " -> "
-                                      (-> (- (.totalMemory (Runtime/getRuntime))
-                                             (.freeMemory (Runtime/getRuntime)))
-                                          (/ 1024)
-                                          (/ 1024)
-                                          (int)))))
+                                      (/ (long (- (.totalMemory (Runtime/getRuntime))
+                                                  (.freeMemory (Runtime/getRuntime))))
+                                         1048576))))
        ret#)))
 
 (defn fix-keys

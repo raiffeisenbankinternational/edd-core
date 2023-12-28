@@ -5,6 +5,9 @@
             [clojure.string :as str]
             [clojure.tools.logging :as log]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defmethod cache-response
   :s3
   [{:keys [aws service-name] :as ctx} {:keys [idx] :as resp}]

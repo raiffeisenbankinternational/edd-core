@@ -5,6 +5,9 @@
    [lambda.test.fixture.state :as state]
    [clojure.tools.logging :as log]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn to-keywords
   [a]
   (cond
@@ -88,7 +91,7 @@
   (let [[fields-key fields value-key value] (:search q)]
     (if (some
          #(let [v (get-in p (to-keywords %) "")]
-            (.contains v value))
+            (.contains ^String v value))
          fields)
       true
       false)))
@@ -149,8 +152,8 @@
       (= value_a value_b) (compare-item
                            (rest attrs) a b)
       (= order :asc) (compare value_a value_b)
-      (= order :desc) (- (compare value_a value_b))
-      (= order :desc-number) (- (compare-as-number value_a value_b))
+      (= order :desc) (- (long (compare value_a value_b)))
+      (= order :desc-number) (- (long (compare-as-number value_a value_b)))
       (= order :asc-number) (compare-as-number value_a value_b))))
 
 (defn sort-fn
@@ -188,8 +191,8 @@
                   (map apply-select)
                   (apply-sort)
                   (into []))
-        to (+ (get query :from 0)
-              (get query :size (count hits)))]
+        to (+ (long (get query :from 0))
+              (long (get query :size (count hits))))]
     {:total (count hits)
      :from  (get query :from 0)
      :size  (get query :size default-size)
