@@ -5,6 +5,9 @@
            (javax.crypto.spec SecretKeySpec PBEKeySpec IvParameterSpec)
            (java.util Base64 Arrays)))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn- ^Key secret-spec
   [^bytes msg-bytes, ^String password]
   (let [key-factory (SecretKeyFactory/getInstance "PBKDF2WithHmacSHA256")

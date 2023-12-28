@@ -7,6 +7,9 @@
             [clojure.java.io :as io]
             [clojure.string :as string]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn get-host
   [ctx]
   (str "s3."
@@ -46,21 +49,22 @@
 (defn- parse-response
   [response object]
   (log/debug "Auth response" response)
-  (cond
-    (contains? response :error) (do
-                                  (log/warn "Failed update, client should handle error" response)
-                                  {:error (:error response)})
-    (= (:status response 199) 404) (check-what-is-missing response)
-    (> (:status response 199) 299) (do
-                                     (log/warn "S3 Response failed"
-                                               (:status response)
-                                               (slurp
-                                                (:body response)))
-                                     {:error {:status  (:status response)
-                                              :message (slurp (:body response))
-                                              :key     (get-in object [:s3 :object :key])
-                                              :bucket  (get-in object [:s3 :bucket :name])}})
-    :else response))
+  (let [status (long (:status response 199))]
+    (cond
+      (contains? response :error) (do
+                                    (log/warn "Failed update, client should handle error" response)
+                                    {:error (:error response)})
+      (= status 404) (check-what-is-missing response)
+      (> status 299) (do
+                       (log/warn "S3 Response failed"
+                                 (:status response)
+                                 (slurp
+                                  (:body response)))
+                       {:error {:status  (:status response)
+                                :message (slurp (:body response))
+                                :key     (get-in object [:s3 :object :key])
+                                :bucket  (get-in object [:s3 :bucket :name])}})
+      :else response)))
 
 (defn get-aws-token [{:keys [aws]}]
   (let [token (:aws-session-token aws)]

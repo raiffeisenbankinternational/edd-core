@@ -1,6 +1,9 @@
 (ns edd.ctx
   (:require [malli.util :as mu]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (def EddCoreAggregateSchema
   [:map])
 

@@ -2,6 +2,9 @@
   (:require [lambda.request :as request]
             [clojure.walk :as clojure-walk]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn- get-realm
   [ctx]
   (get-in ctx [:meta :realm]))

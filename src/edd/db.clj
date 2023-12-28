@@ -11,15 +11,18 @@
    (java.time LocalDate LocalDateTime)
    (org.postgresql.jdbc PgPreparedStatement)))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (def date-format "dd/MM/yyyy")
 
 (extend-protocol result-set/ReadableColumn
   Date
-  (read-column-by-index [v _ _]
-    (.toLocalDateTime v))
+  (read-column-by-index [^java.sql.Date v _ _]
+    (.toLocalDateTime (Timestamp. (.getTime v))))
 
   Timestamp
-  (read-column-by-index [v _ _]
+  (read-column-by-index [^java.sql.Timestamp v _ _]
     (.toLocalDateTime v))
 
   PGobject
@@ -46,18 +49,18 @@
     (.setObject ^PgPreparedStatement ps i (to-pg-json v)))
 
   LocalDateTime
-  (set-parameter [v ^PgPreparedStatement s i]
+  (set-parameter [^LocalDateTime v ^PgPreparedStatement s i]
     (.setObject s i
-                (Timestamp/from v)))
+                (Timestamp/valueOf v)))
 
   Keyword
   (set-parameter [v ^PgPreparedStatement s i]
     (.setObject s i
                 (name v)))
   LocalDate
-  (set-parameter [v ^PgPreparedStatement s i]
+  (set-parameter [^LocalDate v ^PgPreparedStatement s i]
     (.setObject s i
-                (Timestamp/from v))))
+                (Timestamp/valueOf (.atStartOfDay v)))))
 
 (defn init
   [ctx]

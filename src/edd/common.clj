@@ -7,6 +7,9 @@
    [edd.request-cache :as request-cache]
    [clojure.tools.logging :as log]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn parse-param
   [query]
   (if (or (uuid? query)

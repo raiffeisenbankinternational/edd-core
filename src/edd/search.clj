@@ -1,6 +1,9 @@
 (ns edd.search
   (:require [clojure.tools.logging :as log]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn parse
 ; TODO parse => build-filter
   [op->filter-builder filter-spec]

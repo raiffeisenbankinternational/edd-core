@@ -25,6 +25,9 @@
   (:import [com.zaxxer.hikari HikariDataSource]
            [com.zaxxer.hikari.pool HikariProxyConnection]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (def errors
   {:concurrent-modification ["pkey" "duplicate key value violates unique constraint"]})
 
@@ -182,7 +185,7 @@
   (log/debug "Storing response" summary)
   (when summary
     (jdbc/execute! @(:con ctx)
-                   [(str "INSERT INTO " (->table ctx :command_response_log) " 
+                   [(str "INSERT INTO " (->table ctx :command_response_log) "
                                           (invocation_id,
                                            request_id,
                                            interaction_id,
@@ -190,8 +193,8 @@
                                            service_name,
                                            cmd_index,
                                            fx_processed,
-                                           fx_created, 
-                                           fx_error, 
+                                           fx_created,
+                                           fx_error,
                                            data)
                             VALUES (?,?,?,?,?,?,?,?,?,?)")
                     invocation-id

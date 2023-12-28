@@ -1,6 +1,9 @@
 (ns lambda.uuid
   (:import (java.util UUID)))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn gen
   []
   (UUID/randomUUID))

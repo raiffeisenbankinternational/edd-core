@@ -1,6 +1,9 @@
 (ns edd.dal
   (:require [clojure.tools.logging :as log]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defmulti get-events
   (fn [{:keys [_id] :as ctx}]
     (:event-store ctx :default)))

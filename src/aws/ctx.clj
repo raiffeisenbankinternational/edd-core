@@ -3,6 +3,9 @@
             [malli.core :as m]
             [malli.error :as me]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (def AWSRuntimeSchema
   (m/schema
    [:map

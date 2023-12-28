@@ -9,6 +9,9 @@
    [sdk.aws.sqs :as sqs]
    [clojure.string :as string]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn get-next-invocation
   [runtime-api]
   (util/http-get
@@ -94,10 +97,10 @@
 
 (defn get-or-set
   [cache key get-fn]
-  (let [current-time (util/get-current-time-ms)
+  (let [current-time (long (util/get-current-time-ms))
         meta (get-in cache [:meta key])]
     (if (or (not (get cache key))
-            (> (- current-time (get meta :time 0)) 1800000))
+            (> (- current-time (long (get meta :time 0))) 1800000))
       (-> cache
           (assoc-in [:meta key] {:time current-time})
           (assoc key (common/retry

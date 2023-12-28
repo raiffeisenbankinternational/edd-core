@@ -10,6 +10,9 @@
             [clojure.string :as str])
   (:import (java.net URLEncoder)))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (def MessageStandardSchema
   (m/schema
    [:map
@@ -38,7 +41,7 @@
        (sort (fn [[k1 _v1] [k2 _v2]] (compare k1 k2)))
        (map
         #(map (fn [m]
-                (URLEncoder/encode m "UTF-8"))
+                (URLEncoder/encode (str m) "UTF-8"))
               %))
        (#(map (fn [pair] (str/join "=" pair)) %))
        (str/join "&")))
@@ -50,7 +53,7 @@
 (defn message->query
   "Convert message to query parameters"
   [index {:keys [id group-id ^String body deduplication-id]}]
-  (let [i (inc index)
+  (let [i (inc (long index))
         entity (partial request-entity i)]
     (when-not body
       (throw (ex-info "Message is required"
@@ -59,7 +62,7 @@
                        :group-id group-id})))
     (str
      (entity "Id" id)
-     (entity "MessageBody" (URLEncoder/encode body "UTF-8"))
+     (entity "MessageBody" (URLEncoder/encode (str body) "UTF-8"))
      (when deduplication-id
        (entity "MessageDeduplicationId" deduplication-id))
      (when group-id
@@ -115,13 +118,14 @@
 (defn parse-response
   [{:keys [error]
     :as response}]
-  (cond
-    error {:error {:success false
-                   :exception error}}
-    (> (:status response) 399) {:error {:success false
-                                        :exception  (get-in response [:body])
-                                        :message (get-in response [:body :Error :Message])}}
-    :else response))
+  (let [status (long (:status response))]
+    (cond
+      error {:error {:success false
+                     :exception error}}
+      (> status 399) {:error {:success false
+                              :exception  (get-in response [:body])
+                              :message (get-in response [:body :Error :Message])}}
+      :else response)))
 
 (defn sqs-publish
   [{:keys [queue message aws] :as ctx}]
@@ -245,13 +249,13 @@
               :payload (str "Action=DeleteMessageBatch"
                             "&QueueUrl=" queue-url
                             (str/join (map-indexed
-                                       (fn [idx %]
+                                       (fn [^long idx %]
                                          (str "&DeleteMessageBatchRequestEntry." (inc idx) ".Id="
                                               (get % :message-id
                                                    (get % :messageId))
                                               "&DeleteMessageBatchRequestEntry." (inc idx) ".ReceiptHandle="
-                                              (URLEncoder/encode (get % :receipt-handle
-                                                                      (get % :receiptHandle)) "UTF-8")))
+                                              (URLEncoder/encode (str (get % :receipt-handle
+                                                                           (get % :receiptHandle))) "UTF-8")))
                                        messages))
                             "&Expires=2020-04-18T22%3A52%3A43PST"
                             "&Version=2012-11-05")
@@ -341,7 +345,7 @@
                                             (dissoc "Host")
                                             (assoc "X-Amz-Security-Token"
                                                    (:aws-session-token aws)))})))]
-       (when (> status 200)
+       (when (> (long status) 200)
          (throw (-> "Failed to receive message" (ex-info response))))
 
        (->> response
@@ -391,6 +395,6 @@
                                           (dissoc "Host")
                                           (assoc "X-Amz-Security-Token"
                                                  (:aws-session-token aws)))})))]
-     (when (> status 200)
+     (when (> (long status) 200)
        (throw (-> "Failed to purge message" (ex-info response))))
      response)))

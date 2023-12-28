@@ -2,7 +2,11 @@
   (:require [clojure.tools.logging :as log]
             [edd.util :as edd-util]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (def retry-count 5)
+
 (defn request->with-timeouts
   "Assign timeouts based on retry attempt
   We take squre function of attempt and multiply"
@@ -14,28 +18,30 @@
                    connect-timeout-step 100
                    idle-timeout         5000
                    idle-timeout-step    4000}}]
-  (let [attempt (- retry-count n)]
+  (let [attempt (long (- (long retry-count) (long n)))]
     (assoc
      req
      :keepalive -1
-     :connect-timeout (-> attempt
-                          (* attempt)
-                          (* connect-timeout-step)
-                          (+ connect-timeout))
-     :idle-timeout (-> attempt
-                       (* attempt)
-                       (* idle-timeout-step)
-                       (+ idle-timeout)))))
+     :connect-timeout (long (-> attempt
+                                (* attempt)
+                                (* (long connect-timeout-step))
+                                (+ (long connect-timeout))))
+     :idle-timeout (long (-> attempt
+                             (* attempt)
+                             (* (long idle-timeout-step))
+                             (+ (long idle-timeout)))))))
 
 (defn retry-n-impl
   "Retry function with 1 that accepts retry count"
   [f attempt total resp meta]
-  (if (zero? attempt)
+  (if (zero? (long attempt))
     (throw (ex-info (str "Failed to execute request: " attempt "/" total)
                     (merge {:total-attempts total
                             :error          resp}
                            meta)))
-    (let [response (try
+    (let [total (long total)
+          attempt (long attempt)
+          response (try
                      (apply f [attempt])
                      (catch Exception e
                        (when (= attempt 1)
@@ -51,7 +57,7 @@
           (log/warn (str "Retrying " (- total attempt) "/" total) (:message response))
           (when (not= attempt total)
             ;sleep only when second attempt
-            (Thread/sleep (+ 1000 (rand-int 1000))))
+            (Thread/sleep (long (+ 1000 (long (rand-int 1000))))))
           (retry-n-impl f (dec attempt) total response meta))
         response))))
 

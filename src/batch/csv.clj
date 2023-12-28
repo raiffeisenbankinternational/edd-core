@@ -2,6 +2,9 @@
   (:require [clojure.data.csv :as csv]
             [clojure.string :as str]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn remove-m
   [column]
   (apply str (filter (fn [c] (not= c \return)) column)))

@@ -4,6 +4,12 @@
    [malli.util :as mu]
    [malli.transform :as mt]))
 
+#?(:clj
+   (set! *warn-on-reflection* true))
+
+#?(:clj
+   (set! *unchecked-math* :warn-on-boxed))
+
 (defonce transformers
   (mt/transformer
    mt/default-value-transformer

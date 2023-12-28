@@ -4,6 +4,9 @@
             [clojure.tools.logging :as log]
             [lambda.http-client :as client]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn- cognito-request
   [{{:keys
      [aws-access-key-id
@@ -39,17 +42,18 @@
                                    (dissoc "Host")
                                    (assoc
                                     "X-Amz-Security-Token" aws-session-token
-                                    "Authorization" auth))})))]
+                                    "Authorization" auth))})))
+        status (long (:status response))]
     (log/debug "Auth response" response)
     (cond
       (contains? response :error) (do
                                     (log/error "Failed update" response)
                                     {:error (:error response)})
-      (> (:status response) 299) (do
-                                   (log/error "Auth failure response"
-                                              (:status response)
-                                              (:body response))
-                                   {:error {:status (:status response)}})
+      (> status 299) (do
+                       (log/error "Auth failure response"
+                                  status
+                                  (:body response))
+                       {:error {:status status}})
       :else response)))
 
 (defn admin-initiate-auth

@@ -1,6 +1,9 @@
 (ns sdk.aws.xray
   (:require [clojure.string :as string]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn generate-xray-segment-id
   []
   (let [hex-chars "0123456789abcdef"
