@@ -8,6 +8,9 @@
             [aws.aws :as aws]
             [lambda.uuid :as uuid]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (def from-queue
   {:cond (fn [{:keys [body]}]
            (if (and

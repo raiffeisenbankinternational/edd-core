@@ -14,6 +14,9 @@
    :implements [com.amazonaws.services.lambda.runtime.RequestStreamHandler])
   (:import (com.amazonaws.services.lambda.runtime Context)))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn send-error
   [{:keys [from-api]} e]
   (log/error e "Error processing request")

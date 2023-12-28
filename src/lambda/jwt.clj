@@ -9,6 +9,9 @@
            (com.auth0.jwk Jwk)
            (com.auth0.jwt.exceptions SignatureVerificationException)))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn validate-token-attributes
   [{{region :region}                                  :env
     {user-pool-id :user-pool-id client-id :client-id} :auth} token]
@@ -25,8 +28,8 @@
                               user-pool-id))
                     :valid
                     :invalid))
-      (assoc :exp (if (> (:exp token)
-                         (util/get-current-time-ms))
+      (assoc :exp (if (> (long (:exp token))
+                         (long (util/get-current-time-ms)))
                     :valid
                     :invalid))))
 

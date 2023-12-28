@@ -3,6 +3,9 @@
             [lambda.util :as util]
             [sdk.aws.common :as common]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn make-request
   [{:keys [aws action body]}]
   (log/info "Make request" body)
@@ -29,10 +32,11 @@
                                     (dissoc "Host")
                                     (assoc "Authorization" auth))
                        :timeout 5000})
-                    3)]
+                    3)
+          status (long (:status response))]
       (when (contains? response :error)
         (throw (ex-info "Invocation error" (:error response))))
-      (when (> (:status response) 399)
+      (when (> status 399)
         (throw (ex-info "Invocation error" (:body response))))
       (:body response))))
 

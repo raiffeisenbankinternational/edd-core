@@ -13,6 +13,9 @@
             [edd.search :as search]
             [edd.ctx :as edd-ctx]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (def EddCoreRegCmd
   (m/schema
    [:map

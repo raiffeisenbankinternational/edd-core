@@ -1,5 +1,8 @@
 (ns edd.util)
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn try-parse-exception-data
   [^Throwable e]
   (let [data (ex-data e)]

@@ -10,6 +10,8 @@
             [yaml.writer :refer [YAMLWriter]]
             [jsonista.core :as json]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
 
 (def ^:private template
   {:openapi    "3.0.3"

@@ -16,6 +16,9 @@
                     store-results]]
    [lambda.util :as util]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn fix-keys
   [val]
   (-> val
@@ -147,7 +150,7 @@
   (->> @*dal-state*
        (:event-store)
        (filter #(and (= (:id %) id)
-                     (if version (> (:event-seq %) version) true)))
+                     (if version (> (long (:event-seq %)) (long version)) true)))
        (into [])
        (sort-by #(:event-seq %))))
 

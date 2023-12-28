@@ -17,6 +17,9 @@
    [lambda.util :as util]
    [lambda.uuid :as uuid]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn table-name
   [ctx table]
   (str

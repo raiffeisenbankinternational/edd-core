@@ -5,6 +5,9 @@
             [lambda.uuid :as uuid]
             [clojure.tools.logging :as log]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (defn apply-filters
   [{:keys [filters req] :as ctx}]
   (reduce

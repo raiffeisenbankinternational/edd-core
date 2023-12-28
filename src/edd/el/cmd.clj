@@ -21,6 +21,9 @@
                                  ExecutorService
                                  Future)))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
 (def resolve-remote-dependency query/resolve-remote-dependency)
 (def resolve-local-dependency query/resolve-local-dependency)
 
@@ -146,9 +149,9 @@
 (defn resp->assign-event-seq
   [ctx {:keys [events] :as resp}]
   (let [aggregate (el-ctx/get-aggregate ctx)
-        last-sequence (:version aggregate 0)]
+        last-sequence (long (:version aggregate 0))]
     (assoc resp
-           :events (map-indexed (fn [idx event]
+           :events (map-indexed (fn [^long idx event]
                                   (assoc event
                                          :event-seq
                                          (+ last-sequence idx 1)))
@@ -324,7 +327,7 @@
                              :identities (count (:identities resp))
                              :sequences  (count (:sequences resp))})))
 
-(defn retry [f n]
+(defn retry [f ^long n]
   (try
     (f)
     (catch ExceptionInfo e
@@ -335,7 +338,7 @@
                  (not (zero? n)))
           (do
             (log/warn (str "Failed handling attempt: " n) e)
-            (Thread/sleep (+ 1000 (rand-int 1000)))
+            (Thread/sleep (+ 1000 (long (rand-int 1000))))
             (retry f (dec n)))
           (throw e))))))
 
@@ -371,7 +374,7 @@
   [ctx resp]
   (let [{:keys [effects]} resp
         partition-site (el-ctx/get-effect-partition-size ctx)]
-    (if (< (count effects) partition-site)
+    (if (< (long (count effects)) partition-site)
       (resp->store-cache-partition ctx resp)
       (do-execute
        (map-indexed
