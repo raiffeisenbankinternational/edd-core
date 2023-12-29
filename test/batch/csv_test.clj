@@ -43,6 +43,12 @@
             :C2 "Lorem \"\"Ipsum\"\" \"\"b"}
            (first (into [] result))))))
 
+(deftest test-parser-newline-only
+  (let [result (csv/parse-csv
+                (io/reader (io/resource "batch/csv-test-newline.csv")))]
+    (is (= nil
+           (first (into [] result))))))
+
 (deftest test-serialize-reader
   (is (= "{\"a\":\":b\",\"c\":\"BufferedReader\"}"
          (util/to-json {:a :b :c (io/reader (io/resource "batch/csv-test.csv"))}))))
