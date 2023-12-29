@@ -18,8 +18,10 @@
            (clojure.lang Keyword)
            (mikera.vectorz AVector)
            (com.fasterxml.jackson.databind ObjectMapper)
+           (com.fasterxml.jackson.databind.module SimpleModule)
            (java.nio.charset Charset)
-           (java.net URLEncoder)))
+           (java.net URLEncoder)
+           (jsonista.jackson FunctionalUUIDKeySerializer)))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
@@ -37,9 +39,22 @@
          (UUID/fromString (subs v 1)))
     v))
 
+(def edd-core-module
+  (doto (SimpleModule. "EddCore")
+    (.addKeySerializer
+     UUID
+     (FunctionalUUIDKeySerializer. (partial str "#")))))
+
 (def ^ObjectMapper json-mapper
   (json/object-mapper
-   {:decode-key-fn true
+   {:modules [edd-core-module]
+    :decode-key-fn
+    (fn [v]
+      (case (first v)
+        \# (if (str/starts-with? v "##")
+             (subs v 1)
+             (UUID/fromString (subs v 1)))
+        (keyword v)))
     :decode-fn
     (fn [v]
       (condp instance? v
