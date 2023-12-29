@@ -27,12 +27,23 @@
 
 (defn csv-data->maps
   [csv-data keep-original]
-  (map zipmap
-       (->> (first csv-data)                                ;; First row is the header
-            (map
-             #(convert-column-names % keep-original))      ;; Drop if you want string keys instead
-            repeat)
-       (rest csv-data)))
+  ;; Remove any empty lines to avoid mapping them to keys.
+  (let [rest-csv-data
+        (filter
+         (fn [x]
+           ;; If we have only one item and that item is only a single
+           ;; char, we got an empty line.
+           (not
+            (and
+             (<= (count x) 1)
+             (<= (count (first x)) 1))))
+         (rest csv-data))]
+    (map zipmap
+         (->> (first csv-data)                                ;; First row is the header
+              (map
+               #(convert-column-names % keep-original))      ;; Drop if you want string keys instead
+              repeat)
+         rest-csv-data)))
 
 (defn parse-csv
   [stream & [sep keep-original]]
