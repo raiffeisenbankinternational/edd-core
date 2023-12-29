@@ -48,6 +48,26 @@
                 "{\"json\": \"#c2baf5fb-1268-4a25-bd12-ece185e86104\"}")]
     (is (= result {:json (uuid/parse "c2baf5fb-1268-4a25-bd12-ece185e86104")}))))
 
+(deftest test-uuid-as-key-serialization
+  (testing "Rountrip of uuid keys should work"
+    (is
+     (=
+      {#uuid "4c41737a-498e-4ed9-9408-59a3cdddbae3"
+       #uuid "4c41737a-498e-4ed9-9408-59a3cdddbae3"
+       :nested {:edn true,
+                :bla :ble,
+                :blo ":bli",
+                :li  ["a" :a ":a"]}}
+      (->
+       {#uuid "4c41737a-498e-4ed9-9408-59a3cdddbae3"
+        #uuid "4c41737a-498e-4ed9-9408-59a3cdddbae3"
+        :nested {:edn true,
+                 :bla :ble,
+                 :blo ":bli",
+                 :li  ["a" :a ":a"]}}
+       (util/to-json)
+       (util/to-edn))))))
+
 (deftest test-double-serialization
   (is (= "{\"c\":\":d\",\"e\":\"{\\\"a\\\":\\\":b\\\"}\"}"
          (util/to-json
