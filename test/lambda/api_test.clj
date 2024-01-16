@@ -34,7 +34,7 @@
     :x-authorization              token
     :Accept
     "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-    :Accept-Encoding              "gzip, deflate, sdch",
+    :Accept-Encoding              "deflate, sdch",
     :X-Forwarded-For              "127.0.0.1, 127.0.0.2",
     :CloudFront-Viewer-Country    "US",
     :Accept-Language              "en-US,en;q=0.8",
@@ -89,7 +89,7 @@
     :X-Forwarded-Port             ["443"],
     :Accept
     ["text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"],
-    :Accept-Encoding              ["gzip, deflate, sdch"],
+    :Accept-Encoding              ["deflate, sdch"],
     :X-Forwarded-For              ["127.0.0.1, 127.0.0.2"],
     :CloudFront-Viewer-Country    ["US"],
     :Accept-Language              ["en-US,en;q=0.8"],
@@ -119,7 +119,7 @@
     :x-authorization              token
     :Accept
     "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-    :Accept-Encoding              "gzip, deflate, sdch",
+    :Accept-Encoding              "deflate, sdch",
     :X-Forwarded-For              "127.0.0.1, 127.0.0.2",
     :CloudFront-Viewer-Country    "US",
     :Accept-Language              "en-US,en;q=0.8",
@@ -174,7 +174,7 @@
     :X-Forwarded-Port             ["443"],
     :Accept
     ["text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"],
-    :Accept-Encoding              ["gzip, deflate, sdch"],
+    :Accept-Encoding              ["deflate, sdch"],
     :X-Forwarded-For              ["127.0.0.1, 127.0.0.2"],
     :CloudFront-Viewer-Country    ["US"],
     :Accept-Language              ["en-US,en;q=0.8"],
@@ -200,7 +200,7 @@
     :x-authorization        token,
     :Accept                 "*/*",
     :x-amzn-cipher-suite    "ECDHE-RSA-AES128-GCM-SHA256",
-    :Accept-Encoding        "gzip, deflate, br",
+    :Accept-Encoding        "deflate, br",
     :X-Forwarded-For        "10.223.44.173, 10.223.128.204, 10.223.128.218",
     :x-amzn-vpc-id          "vpc-08466e8fa1fc4d330",
     :x-amzn-vpce-id         "vpce-0a42e0e4f6052d2a6",
@@ -262,7 +262,7 @@
     ["eyJhbGciOiJSUzUxMiIsImtpZCI6IkJEWWpZZXk2eUo3LTZWZWFjUkZlT2dPcVZuayIsInBpLmF0bSI6ImF1cHQifQ.eyJjbGllbnRfaWQiOiJyYmktZ2xtcy1tMm0tcHJvZCIsImlzcyI6Imh0dHBzOi8vaWRwLnJiaW50ZXJuYXRpb25hbC5jb20iLCJqdGkiOiJyV0xjZENuaVMycVM4M1EyR3BvdCIsInN1YiI6InJiaS1nbG1zLW0ybS1wcm9kIiwiaWF0IjoxNjQ5MTY1ODYyLCJzY29wZSI6Im0ybSBSQkktR0xNUy1QLVJlYWxtLVRlc3QgUkJJLUdMTVMtUC1Vc2VycyIsImV4cCI6MTY0OTE2NzY2Mn0.OtOVoqV9N9WVhbbI20nUNSi3iy4gM8o-FRrE-kEvrSAcTutvSNDcccsD9pPajwOrRXqViGxQ4l_3iwC5zz6o5hFVu3AifRsnDwUJ89Q7uJVZbfUUdXTFb2l0Z4aER0TJvICFhfIIN8bEXPhiKqWgzkAOLCTJZvbSwb2pilzqj8BZnLND90eB3MTH-0mLJUsfFTD6NO26TDk-VVWsiCy5ZVT9hluzMxVIITYoo4PIIcMOB75JFqh3R0Uuq6iI4L2Nro9hPMEozGXnuX2a3TDuo9nRhu9HuM3tfUnj4OAfP3japMW8Nsy6qtikKrsImAGDpH-d3eBzfuUxX23h8REsOA"],
     :Accept                 ["*/*"],
     :x-amzn-cipher-suite    ["ECDHE-RSA-AES128-GCM-SHA256"],
-    :Accept-Encoding        ["gzip, deflate, br"],
+    :Accept-Encoding        ["deflate, br"],
     :X-Forwarded-For        ["10.223.44.173, 10.223.128.204, 10.223.128.218"],
     :x-amzn-vpc-id          ["vpc-08466e8fa1fc4d330"],
     :x-amzn-vpce-id         ["vpce-0a42e0e4f6052d2a6"],
@@ -287,7 +287,7 @@
     :x-authorization        token,
     :Accept                 "*/*",
     :x-amzn-cipher-suite    "ECDHE-RSA-AES128-GCM-SHA256",
-    :Accept-Encoding        "gzip, deflate, br",
+    :Accept-Encoding        "deflate, br",
     :X-Forwarded-For        "10.223.44.173, 10.223.128.204, 10.223.128.218",
     :x-amzn-vpc-id          "vpc-08466e8fa1fc4d330",
     :x-amzn-vpce-id         "vpce-0a42e0e4f6052d2a6",
@@ -348,7 +348,7 @@
     ["eyJhbGciOiJSUzUxMiIsImtpZCI6IkJEWWpZZXk2eUo3LTZWZWFjUkZlT2dPcVZuayIsInBpLmF0bSI6ImF1cHQifQ.eyJjbGllbnRfaWQiOiJyYmktZ2xtcy1tMm0tcHJvZCIsImlzcyI6Imh0dHBzOi8vaWRwLnJiaW50ZXJuYXRpb25hbC5jb20iLCJqdGkiOiJyV0xjZENuaVMycVM4M1EyR3BvdCIsInN1YiI6InJiaS1nbG1zLW0ybS1wcm9kIiwiaWF0IjoxNjQ5MTY1ODYyLCJzY29wZSI6Im0ybSBSQkktR0xNUy1QLVJlYWxtLVRlc3QgUkJJLUdMTVMtUC1Vc2VycyIsImV4cCI6MTY0OTE2NzY2Mn0.OtOVoqV9N9WVhbbI20nUNSi3iy4gM8o-FRrE-kEvrSAcTutvSNDcccsD9pPajwOrRXqViGxQ4l_3iwC5zz6o5hFVu3AifRsnDwUJ89Q7uJVZbfUUdXTFb2l0Z4aER0TJvICFhfIIN8bEXPhiKqWgzkAOLCTJZvbSwb2pilzqj8BZnLND90eB3MTH-0mLJUsfFTD6NO26TDk-VVWsiCy5ZVT9hluzMxVIITYoo4PIIcMOB75JFqh3R0Uuq6iI4L2Nro9hPMEozGXnuX2a3TDuo9nRhu9HuM3tfUnj4OAfP3japMW8Nsy6qtikKrsImAGDpH-d3eBzfuUxX23h8REsOA"],
     :Accept                 ["*/*"],
     :x-amzn-cipher-suite    ["ECDHE-RSA-AES128-GCM-SHA256"],
-    :Accept-Encoding        ["gzip, deflate, br"],
+    :Accept-Encoding        ["deflate, br"],
     :X-Forwarded-For        ["10.223.44.173, 10.223.128.204, 10.223.128.218"],
     :x-amzn-vpc-id          ["vpc-08466e8fa1fc4d330"],
     :x-amzn-vpce-id         ["vpce-0a42e0e4f6052d2a6"],

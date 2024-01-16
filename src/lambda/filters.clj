@@ -1,12 +1,14 @@
 (ns lambda.filters
-  (:require [lambda.util :as util]
-            [clojure.tools.logging :as log]
-            [lambda.request :as request]
+  (:require [aws.aws :as aws]
             [clojure.string :as string]
-            [sdk.aws.s3 :as s3]
+            [clojure.tools.logging :as log]
+            [lambda.codec :as codec]
+            [lambda.gzip :as gzip]
             [lambda.jwt :as jwt]
-            [aws.aws :as aws]
-            [lambda.uuid :as uuid]))
+            [lambda.request :as request]
+            [lambda.util :as util]
+            [lambda.uuid :as uuid]
+            [sdk.aws.s3 :as s3]))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
@@ -295,22 +297,37 @@
                :else (parse-api-request ctx))))})
 
 (defn to-api
-  [{:keys [resp resp-content-type resp-serializer-fn]
+  [{:keys [req resp resp-content-type resp-serializer-fn]
     :or   {resp-content-type  "application/json"
            resp-serializer-fn util/to-json}
     :as   ctx}]
   (log/debug "to-api" resp)
   (let [{:keys [exception
-                error]} resp
-        status (if (or exception error)
-                 500
-                 200)]
-    (assoc ctx
-           :resp {:statusCode     status
-                  :isBase64Encoded false
-                  :headers         {"Access-Control-Allow-Headers"  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-                                    "Access-Control-Allow-Methods"  "OPTIONS,POST,PUT,GET"
-                                    "Access-Control-Expose-Headers" "*"
-                                    "Content-Type"                  resp-content-type
-                                    "Access-Control-Allow-Origin"   "*"}
-                  :body            (resp-serializer-fn resp)})))
+                error]}
+        resp
+
+        status
+        (if (or exception error)
+          500
+          200)
+
+        content
+        (resp-serializer-fn resp)
+
+        http-base
+        {:statusCode status
+         :headers {"Access-Control-Allow-Headers"  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                   "Access-Control-Allow-Methods"  "OPTIONS,POST,PUT,GET"
+                   "Access-Control-Expose-Headers" "*"
+                   "Content-Type"                  resp-content-type
+                   "Access-Control-Allow-Origin"   "*"}}
+
+        http-data
+        (if (gzip/accepts-gzip? req)
+          (gzip/sub-response-gzip content)
+          (gzip/sub-response content))
+
+        http-response
+        (merge-with merge http-base http-data)]
+
+    (assoc ctx :resp http-response)))

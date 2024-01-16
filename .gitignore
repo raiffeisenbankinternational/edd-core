@@ -15,3 +15,5 @@ lambda-apigw-lib.iml
 .#*
 \#*\#
 *~
+
+src/lambda/log.clj
