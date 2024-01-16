@@ -1,17 +1,140 @@
 (ns lambda.util-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.core.matrix :as m]
+            [clojure.java.io :as io]
+            [clojure.test :refer :all]
+            [java-http-clj.core :as http]
+            [lambda.codec :as codec]
+            [lambda.test.fixture.client :as client]
             [lambda.util :as util]
             [lambda.uuid :as uuid]
-            [mikera.vectorz.core :as v]
-            [clojure.core.matrix :as m]
-            [lambda.test.fixture.client :as client])
+            [mikera.vectorz.core :as v])
 
-  (:import (java.time OffsetDateTime)))
+  (:import (java.time OffsetDateTime)
+           (java.io InputStream)))
 
 ;; Dear security guy! All tokens and JWKS information here
 ;; is from non existing user pools
 ;; please go somewhere else to find secrets as there are none usefull
 ;; to be found here.
+
+(deftest test-request-as-coercion
+
+  (testing "string coericion, no gzip"
+    (let [capture!
+          (atom nil)
+
+          response
+          (with-redefs [http/send
+                        (fn [req opt]
+                          (reset! capture! {:req req :opt opt})
+                          {:status 200
+                           :headers {"Some-Header" "Test"}
+                           :body (-> "test"
+                                     codec/string->bytes
+                                     io/input-stream)})]
+            (util/request {:url "http://test.com"}))]
+
+      (is (= {:req {:uri "http://test.com"}
+              :opt {:as :input-stream
+                    :headers {"accept-encoding" "gzip"}}}
+             (-> capture! deref)))
+
+      (is (= {:status 200
+              :headers {:some-header "Test"}
+              :body "test"}
+             response))))
+
+  (testing "string coericion, got gzip"
+    (let [capture!
+          (atom nil)
+
+          response
+          (with-redefs [http/send
+                        (fn [req opt]
+                          (reset! capture! {:req req :opt opt})
+                          {:status 200
+                           :headers {"Some-Header" "Test"
+                                     "Content-Encoding" "Gzip"}
+                           :body (-> "test"
+                                     codec/string->bytes
+                                     codec/bytes->gzip
+                                     io/input-stream)})]
+            (util/request {:url "http://test.com"}))]
+
+      (is (= {:req {:uri "http://test.com"}
+              :opt {:as :input-stream
+                    :headers {"accept-encoding" "gzip"}}}
+             (-> capture! deref)))
+
+      (is (= {:status 200
+              :headers {:some-header "Test"
+                        :content-encoding "Gzip"}
+              :body "test"}
+             response))))
+
+  (testing "stream coericion, gzip"
+    (let [capture!
+          (atom nil)
+
+          {:as response :keys [body]}
+          (with-redefs [http/send
+                        (fn [req opt]
+                          (reset! capture! {:req req :opt opt})
+                          {:status 200
+                           :headers {"Some-Header" "Test"
+                                     "Content-Encoding" "Gzip"}
+                           :body (-> "test"
+                                     codec/string->bytes
+                                     codec/bytes->gzip
+                                     io/input-stream)})]
+            (util/request {:url "http://test.com"
+                           :as :stream}))]
+
+      (is (= {:req {:uri "http://test.com"
+                    :as :stream}
+              :opt {:as :input-stream
+                    :headers {"accept-encoding" "gzip"}}}
+             (-> capture! deref)))
+
+      (is (= {:status 200
+              :headers {:some-header "Test"
+                        :content-encoding "Gzip"}}
+             (dissoc response :body)))
+
+      (is (instance? InputStream body))
+      (is (= "test" (slurp body)))))
+
+  (testing "byte-array coericion, gzip"
+    (let [capture!
+          (atom nil)
+
+          {:as response :keys [body]}
+          (with-redefs [http/send
+                        (fn [req opt]
+                          (reset! capture! {:req req :opt opt})
+                          {:status 200
+                           :headers {"Some-Header" "Test"
+                                     "Content-Encoding" "Gzip"}
+                           :body (-> "test"
+                                     codec/string->bytes
+                                     codec/bytes->gzip
+                                     io/input-stream)})]
+            (util/request {:url "http://test.com"
+                           :as :byte-array}))]
+
+      (is (= {:req {:uri "http://test.com"
+                    :as :byte-array}
+              :opt {:as :input-stream
+                    :headers {"accept-encoding" "gzip"}}}
+             (-> capture! deref)))
+
+      (is (= {:status 200
+              :headers {:some-header "Test"
+                        :content-encoding "Gzip"}}
+             (dissoc response :body)))
+
+      (is (instance? (type (byte-array 0)) body))
+      (is (= "test" (slurp body))))))
 
 (deftest test-parser-deserialization
   (let [result (util/to-edn

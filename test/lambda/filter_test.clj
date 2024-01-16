@@ -1,7 +1,9 @@
 (ns lambda.filter-test
   (:require [clojure.test :refer :all]
+            [lambda.codec :as codec]
             [lambda.filters :as lambda-filter]
-            [lambda.jwt-test :as jwt-test]))
+            [lambda.jwt-test :as jwt-test]
+            [lambda.util :as util]))
 
 (def claims
   {:cognito:groups ["lime-risk-managers"
@@ -90,3 +92,50 @@
                       :city "New York"
                       :zip {:code "4210"}}}
            (lambda-filter/parse-query-string query-string)))))
+
+(defn truncate-response [res]
+  (-> res
+      (update-in [:resp :headers]
+                 select-keys
+                 ["Content-Type" "Content-Encoding"])
+      (dissoc :req)))
+
+(deftest test-to-api-no-gzip
+  (let [res
+        (lambda-filter/to-api
+         {:resp {:message ["hello" :world]}})]
+    (is (= {:resp
+            {:statusCode 200
+             :headers
+             {"Content-Type" "application/json"}
+             :isBase64Encoded false
+             :body "{\"message\":[\"hello\",\":world\"]}"}}
+           (truncate-response res)))))
+
+(deftest test-to-api-gzip
+  (let [res
+        (lambda-filter/to-api
+         {:req {:headers {:Accept-Encoding "Foo; Gzip; Bar"}}
+          :resp {:message ["hello" :world]}})
+
+        expected-body
+        "H4sIAAAAAAAA/6tWyk0tLk5MT1WyilbKSM3JyVfSUbIqzy/KSVGKrQUA7MSEOh4AAAA="
+
+        decoded
+        (-> expected-body
+            codec/string->bytes
+            codec/base64->bytes
+            codec/gzip->bytes
+            codec/bytes->string
+            util/to-edn)]
+
+    (is (= {:resp
+            {:statusCode 200
+             :headers
+             {"Content-Type" "application/json"
+              "Content-Encoding" "gzip"}
+             :isBase64Encoded true
+             :body expected-body}}
+           (truncate-response res)))
+
+    (is (= {:message ["hello" :world]} decoded))))
