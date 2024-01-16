@@ -1,27 +1,30 @@
 (ns lambda.util
-  (:require [jsonista.core :as json]
-            [clojure.tools.logging :as log]
-            [java-http-clj.core :as http]
-            [lambda.request :as request]
-            [clojure.java.io :as io]
-            [clojure.string :as str]
-            [lambda.aes :as aes]
+  (:refer-clojure :exclude [update-keys])
+  (:require [clojure.java.io :as io]
             [clojure.set :as clojure-set]
-            [clojure.walk :as walk])
-  (:import (java.time OffsetDateTime)
+            [clojure.string :as str]
+            [clojure.tools.logging :as log]
+            [clojure.walk :as walk]
+            [java-http-clj.core :as http]
+            [jsonista.core :as json]
+            [lambda.aes :as aes]
+            [lambda.gzip :as gzip]
+            [lambda.request :as request])
+  (:import (clojure.lang Keyword)
+           (com.fasterxml.jackson.core JsonGenerator)
+           (com.fasterxml.jackson.databind ObjectMapper)
+           (com.fasterxml.jackson.databind.module SimpleModule)
+           (java.io File BufferedReader InputStream)
+           (java.net URLEncoder)
+           (java.nio.charset Charset)
+           (java.nio.charset StandardCharsets)
+           (java.time OffsetDateTime)
            (java.time.format DateTimeFormatter)
-           (java.io File BufferedReader)
            (java.util UUID Date Base64)
            (javax.crypto Mac)
            (javax.crypto.spec SecretKeySpec)
-           (com.fasterxml.jackson.core JsonGenerator)
-           (clojure.lang Keyword)
-           (mikera.vectorz AVector)
-           (com.fasterxml.jackson.databind ObjectMapper)
-           (com.fasterxml.jackson.databind.module SimpleModule)
-           (java.nio.charset Charset)
-           (java.net URLEncoder)
-           (jsonista.jackson FunctionalUUIDKeySerializer)))
+           (jsonista.jackson FunctionalUUIDKeySerializer)
+           (mikera.vectorz AVector)))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
@@ -100,8 +103,12 @@
   (json/read-value json json-mapper))
 
 (defn to-json
-  [edn]
+  ^String [edn]
   (json/write-value-as-string edn json-mapper))
+
+(defn to-json-bytes
+  ^bytes [edn]
+  (json/write-value-as-bytes edn json-mapper))
 
 (defn wrap-body [request]
   (cond
@@ -137,14 +144,36 @@
                            (join (map (partial param k) (or (seq v) [""])))
                            (param k v))))))
 
-(defn request
-  [{:keys [as]
-    :as req} & _rest]
-  (let [opts (cond-> {}
-               as (assoc :as as)
-               (and as
-                    (= as :stream)) (assoc :as :input-stream))
+(defn update-keys
+  [m f]
+  (let [ret (persistent!
+             (reduce-kv (fn [acc k v] (assoc! acc (f k) v))
+                        (transient {})
+                        m))]
+    (with-meta ret (meta m))))
 
+(defn header->kw [^String header]
+  (-> header str/trim str/lower-case keyword))
+
+(defn maybe-ungzip-res [res]
+  (if (gzip/response-gzipped? res)
+    (gzip/ungzip-response res)
+    res))
+
+(defn stream->string ^String [^InputStream stream]
+  (new String
+       (.readAllBytes stream)
+       StandardCharsets/UTF_8))
+
+(defn stream->bytes ^bytes [^InputStream stream]
+  (.readAllBytes stream))
+
+(defn request
+  [{:as req :keys [as]} & _rest]
+  ;; Preserve the origin `:as` argument.
+  ;; When emitting a request, specify `:input-stream`.
+  (let [opt {:as :input-stream
+             :headers {"accept-encoding" "gzip"}}
         req (clojure-set/rename-keys req {:url :uri})
         trace-headers (get @request/*request* :trace-headers)
         req (cond-> req
@@ -158,11 +187,24 @@
                                                    (query-string (:query-params req))))
               (:form-params req) (assoc-in [:headers "Content-Type"] "application/x-www-form-urlencoded")
               (:form-params req) (assoc-in [:body] (query-string (:form-params req))))
-        resp (http/send
-              req
-              opts)
-        resp (update resp :headers walk/keywordize-keys)]
-    resp))
+        res (-> req
+                (http/send opt)
+                (update :headers update-keys header->kw)
+                (maybe-ungzip-res))]
+
+    ;; Now when the body has been ungzipped, apply the origin
+    ;; `:as` coercion. Without gzip being applied first, the
+    ;; coercion will be broken.
+    (case as
+
+      (nil :string)
+      (update res :body stream->string)
+
+      (:stream :input-stream)
+      res
+
+      (:byte-array)
+      (update res :body stream->bytes))))
 
 (defn http-get
   [url req & {:keys [raw]}]
