@@ -1,0 +1,59 @@
+{:QueryExecutionDetail
+ {:ResultConfiguration
+  {:OutputLocation
+   "s3://118123141711-dev19-sqs/73d212b6-1258-494e-ac3e-bdba3c2c7a11.csv"},
+  :Stats
+  {:ProcessedBytes 0,
+   :ProcessedInputRows 0,
+   :ProcessedRows 0,
+   :EngineExecutionTimeInMillis 357,
+   :ProcessedInputBytes 0,
+   :ResultReuseInformation {:ReusedPreviousResult false}},
+  :QueryExecutionId "73d212b6-1258-494e-ac3e-bdba3c2c7a11",
+  :OutputLocation
+  "s3://118123141711-dev19-sqs/73d212b6-1258-494e-ac3e-bdba3c2c7a11.csv",
+  :WorkGroup "primary",
+  :QueryExecutionContext
+  {:Database "test_limit_review_db", :Catalog "awsdatacatalog"},
+  :Query "select aggregate from test_applicationaaaa",
+  :Status
+  {:SubmissionDateTime 1.706112269104E9,
+   :CompletionDateTime 1.706112269661E9,
+   :StateChangeReason
+   "TABLE_NOT_FOUND: line 1:23: Table 'awsdatacatalog.test_limit_review_db.test_applicationaaaa' does not exist",
+   :State "FAILED"}},
+ :QueryExecution
+ {:ResultConfiguration
+  {:OutputLocation
+   "s3://118123141711-dev19-sqs/73d212b6-1258-494e-ac3e-bdba3c2c7a11.csv"},
+  :SubstatementType "SELECT",
+  :QueryExecutionId "73d212b6-1258-494e-ac3e-bdba3c2c7a11",
+  :Statistics
+  {:ServicePreProcessingTimeInMillis 69,
+   :ServiceProcessingTimeInMillis 58,
+   :TotalExecutionTimeInMillis 557,
+   :DataScannedInBytes 0,
+   :EngineExecutionTimeInMillis 357,
+   :QueryQueueTimeInMillis 73,
+   :ResultReuseInformation {:ReusedPreviousResult false}},
+  :WorkGroup "primary",
+  :QueryExecutionContext
+  {:Database "test_limit_review_db", :Catalog "awsdatacatalog"},
+  :EngineVersion
+  {:SelectedEngineVersion "AUTO",
+   :EffectiveEngineVersion "Athena engine version 3"},
+  :Query "select aggregate from test_applicationaaaa",
+  :StatementType "DML",
+  :ResultReuseConfiguration {:ResultReuseByAgeConfiguration {:Enabled false}},
+  :Status
+  {:AthenaError
+   {:ErrorMessage
+    "TABLE_NOT_FOUND: line 1:23: Table 'awsdatacatalog.test_limit_review_db.test_applicationaaaa' does not exist",
+    :ErrorType 1301,
+    :ErrorCategory 2,
+    :Retryable false},
+   :SubmissionDateTime 1.706112269104E9,
+   :CompletionDateTime 1.706112269661E9,
+   :StateChangeReason
+   "TABLE_NOT_FOUND: line 1:23: Table 'awsdatacatalog.test_limit_review_db.test_applicationaaaa' does not exist",
+   :State "FAILED"}}}
