@@ -1,0 +1,50 @@
+{:QueryExecutionDetail
+ {:ResultConfiguration
+  {:OutputLocation
+   "s3://118123141711-dev19-sqs/158e17c1-ef19-46d7-bd54-65f859868711.csv"},
+  :Stats
+  {:ProcessedBytes 9508662,
+   :ProcessedInputRows 5478,
+   :ProcessedRows 5478,
+   :EngineExecutionTimeInMillis 3092,
+   :ProcessedInputBytes 9193002,
+   :ResultReuseInformation {:ReusedPreviousResult false}},
+  :QueryExecutionId "158e17c1-ef19-46d7-bd54-65f859868711",
+  :OutputLocation
+  "s3://118123141711-dev19-sqs/158e17c1-ef19-46d7-bd54-65f859868711.csv",
+  :WorkGroup "primary",
+  :QueryExecutionContext
+  {:Database "test_limit_review_db", :Catalog "awsdatacatalog"},
+  :Query "select aggregate from test_dimension",
+  :Status
+  {:SubmissionDateTime 1.704979253312E9,
+   :CompletionDateTime 1.704979256599E9,
+   :State "SUCCEEDED"}},
+ :QueryExecution
+ {:ResultConfiguration
+  {:OutputLocation
+   "s3://118123141711-dev19-sqs/158e17c1-ef19-46d7-bd54-65f859868711.csv"},
+  :SubstatementType "SELECT",
+  :QueryExecutionId "158e17c1-ef19-46d7-bd54-65f859868711",
+  :Statistics
+  {:ServicePreProcessingTimeInMillis 90,
+   :ServiceProcessingTimeInMillis 38,
+   :QueryPlanningTimeInMillis 1264,
+   :TotalExecutionTimeInMillis 3287,
+   :DataScannedInBytes 9508662,
+   :EngineExecutionTimeInMillis 3092,
+   :QueryQueueTimeInMillis 67,
+   :ResultReuseInformation {:ReusedPreviousResult false}},
+  :WorkGroup "primary",
+  :QueryExecutionContext
+  {:Database "test_limit_review_db", :Catalog "awsdatacatalog"},
+  :EngineVersion
+  {:SelectedEngineVersion "AUTO",
+   :EffectiveEngineVersion "Athena engine version 3"},
+  :Query "select aggregate from test_dimension",
+  :StatementType "DML",
+  :ResultReuseConfiguration {:ResultReuseByAgeConfiguration {:Enabled false}},
+  :Status
+  {:SubmissionDateTime 1.704979253312E9,
+   :CompletionDateTime 1.704979256599E9,
+   :State "SUCCEEDED"}}}

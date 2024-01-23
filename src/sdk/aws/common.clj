@@ -24,6 +24,28 @@
               (retry f (dec n) response))
           response)))))
 
+(defmacro with-retry [[retries timeout] & body]
+  (let [retries (or retries 3)
+        timeout (or timeout 1000)]
+    `(loop [n# ~retries]
+       (let [[result# e#]
+             (try
+               [(do ~@body) nil]
+               (catch Throwable e#
+                 (log/errorf e# "Retry has failed, n: %s" n#)
+                 [nil e#]))]
+         (if e#
+           (if (zero? n#)
+             (throw (ex-info "All attempts have been exhaused"
+                             {:retries ~retries
+                              :timeout ~timeout}
+                             e#))
+             (let [timeout#
+                   (long (+ ~timeout (rand-int ~timeout)))]
+               (Thread/sleep timeout#)
+               (recur (dec n#))))
+           result#)))))
+
 (defn create-date
   []
   (.format
