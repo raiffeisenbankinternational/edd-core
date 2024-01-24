@@ -5,7 +5,8 @@
             [lambda.util :as utils]
             [lambda.test.fixture.client :as client]
             [lambda.util :as util]
-            [clojure.tools.logging :as log]))
+            [clojure.tools.logging :as log]
+            [lambda.emf :as emf]))
 
 (def region "eu-central-1")
 
@@ -37,6 +38,7 @@
           ~invocations)
          responses# (vec (concat req-calls# ~requests))]
      (with-redefs [fl/get-realm realm-mock
+                   emf/start-metrics-publishing! (fn [] (constantly nil))
                    core/get-loop (fn [] (range 0 (count ~invocations)))
                    utils/get-env (partial get-env-mock ~env)
                    utils/get-current-time-ms (fn [] 1587403965)]

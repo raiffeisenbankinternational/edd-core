@@ -350,7 +350,7 @@
      (let [start# (. System (nanoTime))
            mem# (/ (long (- (.totalMemory (Runtime/getRuntime))
                             (.freeMemory (Runtime/getRuntime))))
-                   1048576)
+                   1048576.0)
 
            ignore# (log/info (str "START " ~message "; memory(mb): " mem#))
            ret# (do
@@ -362,7 +362,7 @@
                                       " -> "
                                       (/ (long (- (.totalMemory (Runtime/getRuntime))
                                                   (.freeMemory (Runtime/getRuntime))))
-                                         1048576))))
+                                         1048576.0))))
        ret#)))
 
 (defn fix-keys
