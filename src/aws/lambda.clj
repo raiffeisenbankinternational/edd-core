@@ -1,6 +1,7 @@
 (ns aws.lambda
   (:require [lambda.util :as util]
             [aws.aws :as aws]
+            [lambda.emf :as emf]
             [lambda.request :as request]
             [lambda.uuid :as uuid]
             [clojure.tools.logging :as log]))
@@ -134,6 +135,7 @@
   [init-ctx handler & {:keys [filters post-filter]
                        :or   {filters     []
                               post-filter (fn [ctx] ctx)}}]
+  (emf/start-metrics-publishing!)
   (with-cache
     #(let [api (util/get-env "AWS_LAMBDA_RUNTIME_API")
            ctx (-> init-ctx
