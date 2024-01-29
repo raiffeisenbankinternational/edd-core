@@ -322,12 +322,21 @@
                    "Content-Type"                  resp-content-type
                    "Access-Control-Allow-Origin"   "*"}}
 
+        gzip?
+        (gzip/accepts-gzip? req)
+
         http-data
-        (if (gzip/accepts-gzip? req)
+        (if gzip?
           (gzip/sub-response-gzip content)
           (gzip/sub-response content))
 
         http-response
         (merge-with merge http-base http-data)]
+
+    (log/infof "HTTP response, status: %s, origin body size: %s, accepts gzip: %s, final payload size: %s"
+               status
+               (count content)
+               (boolean gzip?)
+               (-> http-data :body count))
 
     (assoc ctx :resp http-response)))
