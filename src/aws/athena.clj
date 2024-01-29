@@ -5,6 +5,7 @@
   See the data samples captured on dev19 in test/resources/athena/ directory.
   "
   (:require
+   [clojure.string :as str]
    [clojure.tools.logging :as log]
    [lambda.util :as util]
    [lambda.uuid :as uuid]
@@ -218,11 +219,25 @@
           .getHost))
 
 (defn execution->key-path ^String [QueryExecution]
-  (some-> QueryExecution
-          :ResultConfiguration
-          :OutputLocation
-          java.net.URI.
-          .getPath))
+  (when-let [key-path
+             (some-> QueryExecution
+                     :ResultConfiguration
+                     :OutputLocation
+                     java.net.URI.
+                     .getPath)]
+    (if (str/starts-with? key-path "/")
+      (subs key-path 1)
+      key-path)))
+
+(defn execution->s3-object ^String [QueryExecution]
+  (let [bucket
+        (execution->bucket QueryExecution)
+
+        key-path
+        (execution->key-path QueryExecution)]
+
+    {:s3 {:bucket {:name bucket}
+          :object {:key key-path}}}))
 
 (defn poll-query-execution
   "

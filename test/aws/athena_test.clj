@@ -34,8 +34,21 @@
         key-path
         (athena/execution->key-path QueryExecution)]
 
-    (is (= "/158e17c1-ef19-46d7-bd54-65f859868711.csv"
+    (is (= "158e17c1-ef19-46d7-bd54-65f859868711.csv"
            key-path))))
+
+(deftest test-execution->s3-object
+
+  (let [{:keys [QueryExecution]}
+        (resource->edn "GetQueryExecution.edn")
+
+        s3-object
+        (athena/execution->s3-object QueryExecution)]
+
+    (is (= {:s3
+            {:bucket {:name "118123141711-dev19-sqs"}
+             :object {:key "158e17c1-ef19-46d7-bd54-65f859868711.csv"}}}
+           s3-object))))
 
 (deftest test-execution->submission-epoch
 
