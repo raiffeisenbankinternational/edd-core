@@ -34,9 +34,9 @@
                                      io/input-stream)})]
             (util/request {:url "http://test.com"}))]
 
-      (is (= {:req {:uri "http://test.com"}
-              :opt {:as :input-stream
-                    :headers {"accept-encoding" "gzip"}}}
+      (is (= {:req {:uri "http://test.com"
+                    :headers {"Accept-Encoding" "gzip"}}
+              :opt {:as :input-stream}}
              (-> capture! deref)))
 
       (is (= {:status 200
@@ -61,9 +61,9 @@
                                      io/input-stream)})]
             (util/request {:url "http://test.com"}))]
 
-      (is (= {:req {:uri "http://test.com"}
-              :opt {:as :input-stream
-                    :headers {"accept-encoding" "gzip"}}}
+      (is (= {:req {:uri "http://test.com"
+                    :headers {"Accept-Encoding" "gzip"}}
+              :opt {:as :input-stream}}
              (-> capture! deref)))
 
       (is (= {:status 200
@@ -91,9 +91,9 @@
                            :as :stream}))]
 
       (is (= {:req {:uri "http://test.com"
-                    :as :stream}
-              :opt {:as :input-stream
-                    :headers {"accept-encoding" "gzip"}}}
+                    :as :stream
+                    :headers {"Accept-Encoding" "gzip"}}
+              :opt {:as :input-stream}}
              (-> capture! deref)))
 
       (is (= {:status 200
@@ -123,9 +123,9 @@
                            :as :byte-array}))]
 
       (is (= {:req {:uri "http://test.com"
-                    :as :byte-array}
-              :opt {:as :input-stream
-                    :headers {"accept-encoding" "gzip"}}}
+                    :as :byte-array
+                    :headers {"Accept-Encoding" "gzip"}}
+              :opt {:as :input-stream}}
              (-> capture! deref)))
 
       (is (= {:status 200
