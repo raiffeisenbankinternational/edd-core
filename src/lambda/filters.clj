@@ -335,8 +335,8 @@
 
     (log/infof "HTTP response, status: %s, origin body size: %s, accepts gzip: %s, final payload size: %s"
                status
-               (count content)
+               (some-> content codec/string->bytes alength)
                (boolean gzip?)
-               (-> http-data :body count))
+               (some-> http-data :body codec/string->bytes alength))
 
     (assoc ctx :resp http-response)))
