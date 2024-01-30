@@ -172,8 +172,7 @@
   [{:as req :keys [as]} & _rest]
   ;; Preserve the origin `:as` argument.
   ;; When emitting a request, specify `:input-stream`.
-  (let [opt {:as :input-stream
-             :headers {"accept-encoding" "gzip"}}
+  (let [opt {:as :input-stream}
         req (clojure-set/rename-keys req {:url :uri})
         trace-headers (get @request/*request* :trace-headers)
         req (cond-> req
@@ -186,7 +185,9 @@
                                                    "?"
                                                    (query-string (:query-params req))))
               (:form-params req) (assoc-in [:headers "Content-Type"] "application/x-www-form-urlencoded")
-              (:form-params req) (assoc-in [:body] (query-string (:form-params req))))
+              (:form-params req) (assoc-in [:body] (query-string (:form-params req)))
+
+              :finally (update :headers assoc "Accept-Encoding" "gzip"))
         res (-> req
                 (http/send opt)
                 (update :headers update-keys header->kw)
