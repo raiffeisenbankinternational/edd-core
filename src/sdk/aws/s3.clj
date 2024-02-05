@@ -55,13 +55,12 @@
                                     (log/warn "Failed update, client should handle error" response)
                                     {:error (:error response)})
       (= status 404) (check-what-is-missing response)
-      (> status 299) (do
+      (> status 299) (let [message (slurp (:body response))]
                        (log/warn "S3 Response failed"
                                  (:status response)
-                                 (slurp
-                                  (:body response)))
+                                 message)
                        {:error {:status  (:status response)
-                                :message (slurp (:body response))
+                                :message message
                                 :key     (get-in object [:s3 :object :key])
                                 :bucket  (get-in object [:s3 :bucket :name])}})
       :else response)))
