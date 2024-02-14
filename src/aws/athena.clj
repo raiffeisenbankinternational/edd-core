@@ -306,7 +306,8 @@
         (list-query-executions aws {:max-results 50})
 
         {:keys [QueryExecutions]}
-        (batch-get-query-execution aws QueryExecutionIds)
+        (when (seq QueryExecutionIds)
+          (batch-get-query-execution aws QueryExecutionIds))
 
         QueryExecutions
         (sort-by (comp - execution->submission-epoch)
