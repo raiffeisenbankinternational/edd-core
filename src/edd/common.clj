@@ -1,11 +1,11 @@
 (ns edd.common
   (:require
+   [clojure.tools.logging :as log]
    [edd.dal :as dal]
-   [edd.search :as search]
    [edd.el.event :as el-event]
-   [lambda.uuid :as uuid]
    [edd.request-cache :as request-cache]
-   [clojure.tools.logging :as log]))
+   [edd.search :as search]
+   [lambda.uuid :as uuid]))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
@@ -114,3 +114,13 @@
 (defn create-identity
   [& _]
   (uuid/gen))
+
+(defn get-by-id-and-version
+  [ctx query]
+  (let [{:keys [id ^long version]} query]
+    (when (> version 0)
+      (let [events      (dal/get-events (assoc ctx :id id))
+            upper-bound (count events)]
+        (when (> version upper-bound)
+          (throw (ex-info "Version does not exist" {:error events})))
+        (el-event/create-aggregate {} (take version events) (:def-apply ctx))))))
