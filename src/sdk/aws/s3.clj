@@ -111,6 +111,26 @@
       response
       (io/reader (:body response) :encoding "UTF-8"))))
 
+(defn enhanced-binary-stream
+  [response]
+  (let [nothing? (= "0" (:content-length (:headers response)))
+        ^java.io.InputStream something (if nothing?
+                                         nil
+                                         (:body response))
+        read-implementation
+        (if nothing?
+          (fn [_ _ _] -1)
+          (fn
+            ([] (.read something))
+            ([^bytes b] (.read something b))
+            ([^bytes b ^long offset ^long len] (.read something b (int offset) (int len)))))]
+    (proxy [java.io.InputStream clojure.lang.IMeta] []
+      (read
+        ([] (read-implementation))
+        ([^bytes b] (read-implementation b))
+        ([^bytes b ^long offset ^long len] (read-implementation b offset len)))
+      (meta [] {:empty-content? nothing?}))))
+
 (defn get-object
   ([ctx object]
    (get-object ctx object {:retries client/retry-count}))
@@ -143,7 +163,7 @@
        response
        (when (:body response)
          (if binary
-           (:body response)
+           (enhanced-binary-stream response)
            (io/reader (:body response) :encoding "UTF-8")))))))
 
 (defn delete-object
