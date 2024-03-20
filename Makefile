@@ -13,3 +13,10 @@ ENV = $(shell echo $(env) | tr a-z A-Z)
 
 push:
 	git push origin HEAD:refs/for/master%topic=env/${ENV}
+
+.PHONY: repl
+repl:
+	clj -M:local:dev:test:nrepl
+
+lint:
+	./format.sh
