@@ -168,22 +168,22 @@
   (set
    (concat
     GCMetricsTimeNames
-    ["GCTotalTime"])))
+    ["GCTotalTime" "GCTotalTimeAggregated"])))
 
 (def ^:private GCMetricsCountNames
   (m/children GCMetricsCount))
 
 (def ^:private GCMetricsNames
   (concat
-   GCMetricsTimeNames
-   GCMetricsCountNames
-   ["GCTotalTime" "GCTotalCount"]))
+   #_GCMetricsTimeNames
+   #_GCMetricsCountNames
+   ["GCTotalTime" "GCTotalCount" "GCTotalTimeAggregated" "GCTotalCountAggregated"]))
 
 (def ^:private GCMetricsCountNames+AggregatedCountNamesSet
   (set
    (concat
     GCMetricsCountNames
-    ["GCTotalCount"])))
+    ["GCTotalCount" "GCTotalCountAggregated"])))
 
 (def ^:private AllMetricNames
   (vec
@@ -257,6 +257,9 @@
     ["Dimensions" {} AllDimensions]
     ["Metrics" {} AllMetrics]]))
 
+(def ^:private last-gc-observations
+  (atom {}))
+
 (defn gc-metrics!
   []
   (let [gc-metrics (vec (for [subdimension-key gc-submetrics-directive-names
@@ -277,18 +280,31 @@
                            "Value" (bean->dimension-value gc-bean)
                            "Subdimension" subdimension-key
                            "StorageResolution" 60}))
-        gc-metrics-without-subdimension (mapv #(dissoc % "Subdimension") gc-metrics)
-        {:strs [Time Count]} (group-by #(get % "Subdimension") gc-metrics)]
-    (conj
-     gc-metrics-without-subdimension
-     {"Name" "GCTotalTime"
-      "Unit" "Milliseconds"
-      "Value" (reduce + (mapv #(get % "Value") Time))
-      "StorageResolution" 60}
-     {"Name" "GCTotalCount"
-      "Unit" "Count"
-      "Value" (reduce + (mapv #(get % "Value") Count))
-      "StorageResolution" 60})))
+        {:strs [Time Count]} (group-by #(get % "Subdimension") gc-metrics)
+        ^long total-time (reduce + (mapv #(get % "Value" 0) Time))
+        ^long total-gc-count (reduce + (mapv #(get % "Value" 0) Count))
+        {last-total-time :total-time
+         last-total-count :total-gc-count} @last-gc-observations]
+    (swap! last-gc-observations assoc :total-time total-time :total-gc-count total-gc-count)
+    (when (and (> total-time 0) (> total-gc-count 0))
+      ;; GC1 garbage collector is not yet supported in GraalVM native-image thus we will be getting 0 values all the time.
+      ;; It's not worth to report those figures to CloudWatch
+      [{"Name" "GCTotalTime"
+        "Unit" "Milliseconds"
+        "Value" (- total-time (long (or last-total-time 0)))
+        "StorageResolution" 60}
+       {"Name" "GCTotalCount"
+        "Unit" "Count"
+        "Value" (- total-gc-count (long (or last-total-count 0)))
+        "StorageResolution" 60}
+       {"Name" "GCTotalTimeAggregated"
+        "Unit" "Milliseconds"
+        "Value" total-time
+        "StorageResolution" 60}
+       {"Name" "GCTotalCountAggregated"
+        "Unit" "Count"
+        "Value" total-gc-count
+        "StorageResolution" 60}])))
 
 (def AWSEvent
   (m/schema
