@@ -356,11 +356,9 @@
         param-threads (util/get-env "CacheThreadCount"
                                     resonable-theread-count)
         param-threads (Integer/parseInt param-threads)
-        nthreads (min (count jobs)
-                      param-threads)
+        nthreads param-threads
         _ (log/info (str "Using threads: " nthreads
-                         " to run: " (count jobs)
-                         " jobs"))
+                         " to run jobs"))
         ^ExecutorService pool (Executors/newFixedThreadPool nthreads)
         resp (mapv
               (fn [^Future future]
@@ -371,36 +369,45 @@
 
 (defn resp->cache-partitioned
   [ctx resp]
-  (let [effects (:effects resp)
-        resp (dissoc resp :effects)
-        partition-site (el-ctx/get-effect-partition-size ctx)]
-    (if (< (long (count effects)) partition-site)
-      (assoc resp
-             :cache-result
-             (resp->store-cache-partition ctx
-                                          (assoc resp
-                                                 :effects effects))
-             :effects effects)
-      (let [_ (System/gc)
+  (util/d-time
+   "Cache partitioned"
+   (let [effects (:effects resp)
+         resp (dissoc resp :effects)
+         partition-site (el-ctx/get-effect-partition-size ctx)]
+     (if (< (long (count effects)) partition-site)
+       (assoc resp
+              :cache-result
+              (resp->store-cache-partition ctx
+                                           (assoc resp
+                                                  :effects effects))
+              :effects effects)
+       (let [_ (System/gc)
 
-            parts
-            (partition partition-site partition-site nil effects)
+             parts
+             (partition partition-site partition-site nil effects)
 
-            _ (System/gc)
+             _ (System/gc)
 
-            cache-result
-            (do-execute
+             parts
              (map-indexed
               (fn [idx e]
-                #(resp->store-cache-partition ctx (assoc resp
-                                                         :effects e
-                                                         :idx idx)))
-              parts))]
+                (assoc resp
+                       :effects e
+                       :idx idx))
+              parts)
 
-        (System/gc)
-        (assoc resp
-               :cache-result cache-result
-               :effects (flatten parts))))))
+             cache-result
+             (pmap
+              #(resp->store-cache-partition ctx %)
+              parts)
+
+             parts
+             (map :effects parts)]
+
+         (System/gc)
+         (assoc resp
+                :cache-result cache-result
+                :effects (flatten parts)))))))
 
 (defn store-results
   [ctx resp]
@@ -412,11 +419,12 @@
                 :cache-result)]
     (when (:error cache-result)
       (throw (ex-info "Error caching result" (:error cache-result))))
-    (dal/store-results (assoc ctx
-                              :resp
-                              (assoc-in resp
-                                        [:summary :cache-result]
-                                        cache-result)))
+    (doall
+     (dal/store-results (assoc ctx
+                               :resp
+                               (assoc-in resp
+                                         [:summary :cache-result]
+                                         cache-result))))
     (swap! request/*request*
            update
            :cache-keys
