@@ -40,11 +40,10 @@
   (let [parent-breadcrumb (or (get-in ctx [:breadcrumbs]) [])]
     (update resp :effects
             (fn [cmds]
-              (vec
-               (map-indexed
-                (fn [i cmd]
-                  (assoc cmd :breadcrumbs
-                         (conj parent-breadcrumb i))) cmds))))))
+              (map-indexed
+               (fn [i cmd]
+                 (assoc cmd :breadcrumbs
+                        (conj parent-breadcrumb i))) cmds)))))
 
 (defn wrap-commands
   [ctx commands]
@@ -401,8 +400,7 @@
         (System/gc)
         (assoc resp
                :cache-result cache-result
-               :effects (vec
-                         (flatten parts)))))))
+               :effects (flatten parts))))))
 
 (defn store-results
   [ctx resp]
