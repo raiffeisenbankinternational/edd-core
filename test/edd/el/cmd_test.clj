@@ -134,13 +134,20 @@
 (deftest test-cache-partitioning
   (let [ctx {:service-name "local-test"
              :breadcrumbs  "0"
-             :request-id   "1"}]
-    (is (= {:key "response/1/0/local-test.json"}
-           (el-cmd/resp->cache-partitioned ctx {:effects [{:a :b}]})))
-    (is (= [{:key "response/1/0/local-test-part.0.json"}
-            {:key "response/1/0/local-test-part.1.json"}]
+             :request-id   "1"}
+        resp-1 {:effects [{:a :b}]}
+
+        resp-2 {:effects [{:a :b} {:a :b} {:a :b}]}]
+    (is (= (assoc resp-1
+                  :cache-result
+                  {:key "response/1/0/local-test.json"})
+           (el-cmd/resp->cache-partitioned ctx resp-1)))
+    (is (= (assoc resp-2
+                  :cache-result
+                  [{:key "response/1/0/local-test-part.0.json"}
+                   {:key "response/1/0/local-test-part.1.json"}])
            (el-cmd/resp->cache-partitioned (el-ctx/set-effect-partition-size ctx 2)
-                                           {:effects [{:a :b} {:a :b} {:a :b}]})))))
+                                           resp-2)))))
 
 (deftest enqueue-response
   (binding [request/*request* (atom {:cache-keys [{:key "response/0/0/local-test-0.json"}

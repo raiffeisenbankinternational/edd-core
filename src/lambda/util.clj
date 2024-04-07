@@ -348,9 +348,10 @@
   [message & expr]
   `(do
      (let [start# (. System (nanoTime))
-           mem# (/ (long (- (.totalMemory (Runtime/getRuntime))
-                            (.freeMemory (Runtime/getRuntime))))
-                   1048576.0)
+           mem# (long
+                 (/ (long (- (.totalMemory (Runtime/getRuntime))
+                             (.freeMemory (Runtime/getRuntime))))
+                    1048576.0))
 
            ignore# (log/info (str "START " ~message "; memory(mb): " mem#))
            ret# (do
@@ -360,9 +361,10 @@
                   "elapsed(msec): " (/ (double (- (. System (nanoTime)) start#)) 1000000.0) "; "
                   "memory(mb): " (str mem#
                                       " -> "
-                                      (/ (long (- (.totalMemory (Runtime/getRuntime))
-                                                  (.freeMemory (Runtime/getRuntime))))
-                                         1048576.0))))
+                                      (long
+                                       (/ (long (- (.totalMemory (Runtime/getRuntime))
+                                                   (.freeMemory (Runtime/getRuntime))))
+                                          1048576.0)))))
        ret#)))
 
 (defn fix-keys
