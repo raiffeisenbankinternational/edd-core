@@ -372,21 +372,44 @@
 
 (defn resp->cache-partitioned
   [ctx resp]
-  (let [{:keys [effects]} resp
+  (let [effects (:effects resp)
+        resp (dissoc resp :effects)
         partition-site (el-ctx/get-effect-partition-size ctx)]
     (if (< (long (count effects)) partition-site)
-      (resp->store-cache-partition ctx resp)
-      (do-execute
-       (map-indexed
-        (fn [idx e]
-          #(resp->store-cache-partition ctx (assoc resp
-                                                   :effects e
-                                                   :idx idx)))
-        (partition partition-site partition-site nil effects))))))
+      (assoc resp
+             :cache-result
+             (resp->store-cache-partition ctx resp)
+             :effects effects)
+      (let [_ (System/gc)
+
+            parts
+            (partition partition-site partition-site nil effects)
+
+            _ (System/gc)
+
+            cache-result
+            (do-execute
+             (map-indexed
+              (fn [idx e]
+                #(resp->store-cache-partition ctx (assoc resp
+                                                         :effects e
+                                                         :idx idx)))
+              parts))]
+
+        (System/gc)
+        (assoc resp
+               :cache-result cache-result
+               :effects (vec
+                         (flatten parts)))))))
 
 (defn store-results
   [ctx resp]
-  (let [cache-result (resp->cache-partitioned ctx resp)]
+  (let [{:keys [cache-result] :as resp}
+        (resp->cache-partitioned ctx resp)
+
+        resp
+        (dissoc resp
+                :cache-result)]
     (when (:error cache-result)
       (throw (ex-info "Error caching result" (:error cache-result))))
     (dal/store-results (assoc ctx
@@ -399,7 +422,7 @@
            :cache-keys
            (fn [v]
              (conj v cache-result)))
-    resp))
+    (:summary resp)))
 
 (defn process-commands
   [ctx {:keys [commands] :as body}]
@@ -436,8 +459,8 @@
               resp (with-breadcrumbs ctx resp)
               resp (assoc resp
                           :summary (resp->response-summary ctx resp))
-              resp (store-results ctx resp)]
-          (:summary resp))))))
+              summary (store-results ctx resp)]
+          summary)))))
 
 (defn handle-commands
   [ctx body]
