@@ -378,7 +378,9 @@
     (if (< (long (count effects)) partition-site)
       (assoc resp
              :cache-result
-             (resp->store-cache-partition ctx resp)
+             (resp->store-cache-partition ctx
+                                          (assoc resp
+                                                 :effects effects))
              :effects effects)
       (let [_ (System/gc)
 
