@@ -400,7 +400,7 @@
              cache-result
              (util/d-time
               "Start storing cached partitions"
-              (pmap
+              (map
                (fn [part]
                                         ;#
                  (resp->store-cache-partition ctx part))
@@ -414,9 +414,8 @@
 
              effects
              (util/d-time
-              "Prepare final cache response"
-              (doall
-               (flatten parts)))]
+              "Preparing response"
+              (flatten parts))]
 
          (System/gc)
          (assoc resp
