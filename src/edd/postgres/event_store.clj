@@ -477,7 +477,6 @@
 
 (defn store-results-impl
   [ctx resp]
-  (log/debug "Storing results impl")
   (util/d-time
    "storing-result-postgres "
    (log-response-impl ctx resp)
