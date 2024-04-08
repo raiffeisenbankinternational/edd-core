@@ -303,10 +303,10 @@
 (defn resp->response-summary
   [{:keys [no-summary]} resp]
 
-  (let [effects (:effects resp)
-        effects (if (> (count effects) 100)
-                  []
-                  effects)]
+  (let [sample (take 11 (:effects resp))
+        sample (if (> (count sample) 10)
+                 []
+                 sample)]
     (cond
       (:error resp) resp
       no-summary resp :else {:success    true
@@ -320,7 +320,7 @@
                                                        :service-name (:service v)})
                                               (:commands v))))
                                           []
-                                          effects)
+                                          sample)
                              :events     (count (:events resp))
                              :meta       (:meta resp)
                              :identities (count (:identities resp))
