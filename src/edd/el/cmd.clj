@@ -352,7 +352,7 @@
 (defn do-execute
   [jobs]
   (System/gc)
-  (let [resonable-theread-count "10"
+  (let [resonable-theread-count "5"
         param-threads (util/get-env "CacheThreadCount"
                                     resonable-theread-count)
         param-threads (Integer/parseInt param-threads)
@@ -396,10 +396,14 @@
                        :idx idx))
               parts)
 
-             cache-result
-             (pmap
-              #(resp->store-cache-partition ctx %)
+             jobs
+             (map
+              (fn [part]
+                #(resp->store-cache-partition ctx part))
               parts)
+
+             cache-result
+             (do-execute jobs)
 
              parts
              (map :effects parts)]
@@ -452,23 +456,41 @@
         (dissoc resp :cache-result))
       (do
         (validate-commands ctx commands)
-        (let [resp (loop [queue commands
-                          resp initial-response]
-                     (let [c (first queue)
-                           r (handle-command ctx c)
-                           resp (merge-with concat resp r)]
-                       (cond
-                         (:error r) (assoc initial-response
-                                           :error (:error r))
-                         (seq
-                          (rest queue)) (recur (rest queue)
-                                               resp)
-                         :else resp)))
-              resp (with-breadcrumbs ctx resp)
-              resp (assoc resp
-                          :summary (resp->response-summary ctx resp))
-              summary (store-results ctx resp)]
-          summary)))))
+        (let [resp
+              (util/d-time
+               "handle-request"
+               (loop [queue commands
+                      resp initial-response]
+                 (let [c (first queue)
+                       r (handle-command ctx c)
+                       resp (merge-with concat resp r)]
+                   (cond
+                     (:error r) (assoc initial-response
+                                       :error (:error r))
+                     (seq
+                      (rest queue)) (recur (rest queue)
+                                           resp)
+                     :else resp))))
+
+              resp
+              (util/d-time
+               "assign-breadcumbts"
+               (with-breadcrumbs ctx resp))
+
+              summary
+              (util/d-time
+               "summarize-response"
+               (resp->response-summary ctx resp))
+
+              resp
+              (assoc resp
+                     :summary summary)
+
+              result
+              (util/d-time
+               "store-final-result"
+               (store-results ctx resp))]
+          result)))))
 
 (defn handle-commands
   [ctx body]
