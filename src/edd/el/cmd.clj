@@ -396,22 +396,32 @@
                        :idx idx))
               parts)
 
-             jobs
-             (map
-              (fn [part]
-                #(resp->store-cache-partition ctx part))
-              parts)
-
+             ;jobs
              cache-result
-             (do-execute jobs)
+             (util/d-time
+              "Start storing cached partitions"
+              (pmap
+               (fn [part]
+                                        ;#
+                 (resp->store-cache-partition ctx part))
+               parts))
+
+             ;cache-result
+             ;(do-execute jobs)
 
              parts
-             (map :effects parts)]
+             (map :effects parts)
+
+             effects
+             (util/d-time
+              "Prepare final cache response"
+              (doall
+               (flatten parts)))]
 
          (System/gc)
          (assoc resp
                 :cache-result cache-result
-                :effects (flatten parts)))))))
+                :effects effects))))))
 
 (defn store-results
   [ctx resp]
