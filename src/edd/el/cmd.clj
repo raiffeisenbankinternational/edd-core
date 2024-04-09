@@ -373,8 +373,11 @@
    "Cache partitioned"
    (let [effects (:effects resp)
          resp (dissoc resp :effects)
-         partition-site (el-ctx/get-effect-partition-size ctx)]
-     (if (< (long (count effects)) partition-site)
+         partition-size (el-ctx/get-effect-partition-size ctx)
+         sample (take partition-size
+                      effects)]
+     (if (< (count sample)
+            partition-size)
        (assoc resp
               :cache-result
               (resp->store-cache-partition ctx
@@ -384,7 +387,9 @@
        (let [_ (System/gc)
 
              parts
-             (partition partition-site partition-site nil effects)
+             (util/d-time
+              (format "Parition effect:s %s" partition-size)
+              (partition partition-size partition-size nil effects))
 
              _ (System/gc)
 
