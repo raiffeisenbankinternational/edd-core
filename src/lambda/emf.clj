@@ -378,31 +378,43 @@
    event
    metrics))
 
+(def UserMetrics
+  (m/schema
+   [:vector {}
+    [:map {:closed true}
+     ["Name" {} :string]
+     ["Unit" {} MetricDirectiveUnit]
+     ["Value" {} [:or :int :double :string]]
+     ["StorageResolution" {} [:int {:min 1 :max 60}]]]]))
+
 (defn ->event
-  []
-  (let [memory-metrics (memory-metrics)
-        gc-metrics     (gc-metrics!)]
-    (merge-event-with-metrics
-     {"_aws"
-      {"CloudWatchMetrics"
-       [{"Namespace"  static-namespace-name
-         "Dimensions" [#{"ServiceName" "ServiceType" "LogGroup"}]
-         "Metrics"    []}]
-       "Timestamp"         (now-timestamp)}
-      "LogGroup"             (->log-group)
-      "executionEnvironment" (->execution-environment)
-      "ServiceType"          "AWS::Lambda::Function"
-      "logStreamId"          (->log-stream-id)
-      "functionVersion"      (->function-version)
-      "ServiceName"          (->function-name)}
-     (vec (concat memory-metrics gc-metrics)))))
+  {:malli/schema [:=> [:cat [:or UserMetrics :nil]] :map]}
+  ([]
+   (->event nil))
+  ([user-metrics]
+   (let [memory-metrics (memory-metrics)
+         gc-metrics     (gc-metrics!)]
+     (merge-event-with-metrics
+      {"_aws"
+       {"CloudWatchMetrics"
+        [{"Namespace"  static-namespace-name
+          "Dimensions" [#{"ServiceName" "ServiceType" "LogGroup"}]
+          "Metrics"    []}]
+        "Timestamp"         (now-timestamp)}
+       "LogGroup"             (->log-group)
+       "executionEnvironment" (->execution-environment)
+       "ServiceType"          "AWS::Lambda::Function"
+       "logStreamId"          (->log-stream-id)
+       "functionVersion"      (->function-version)
+       "ServiceName"          (->function-name)}
+      (vec (concat memory-metrics gc-metrics user-metrics))))))
 
 (def ^:private TEN_SECONDS
   "Timer should run every 10 seconds"
   10000)
 
 (defn publish-event!
-  {:malli/schema [:=> [:cat AWSEvent] :nil]}
+  {:malli/schema [:=> [:cat :map] :nil]}
   [event]
   ;; Lock on System/out to prevent interleaving of the output
   (locking System/out
