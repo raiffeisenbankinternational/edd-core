@@ -16,5 +16,5 @@ lambda-apigw-lib.iml
 .#*
 \#*\#
 *~
-
+.docker
 src/lambda/log.clj

@@ -9,13 +9,12 @@
 
 (def ctx
   (-> mock/ctx
-      (module/register :files [:file1 :file2])
-      ))
+      (module/register :files [:file1 :file2])))
 
 (deftest test-import
   (with-redefs [s3/get-object (fn [_ object]
                                 (util/to-csv
-                                  [{:COL1 "val1"}]))]
+                                 [{:COL1 "val1"}]))]
     (let [date "2021-12-06"
           id (uuid/named date)
           ctx (edd/reg-event-fx ctx module/upload-done-event
@@ -51,7 +50,6 @@
                              :date   date
                              :id     id
                              :key    "file3.csv"})
-
 
         (mock/verify-state :aggregate-store
                            [{:id      id

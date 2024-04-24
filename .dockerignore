@@ -1,6 +1,10 @@
+.git
+.docker
+.cpcache
+.clj-kondo/.cache
 Dockerfile
 lambda.yml
 Makefile
 README.md
-target        
+target
 your-lambda.iml

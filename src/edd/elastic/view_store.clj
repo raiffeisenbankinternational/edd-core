@@ -10,7 +10,7 @@
                                 get-snapshot]]
             [lambda.util :as util]
             [lambda.elastic :as elastic]
-            [sdk.aws.s3 :as s3]
+            [edd.s3.view-store :as s3.vs]
             [clojure.tools.logging :as log]
             [clojure.string :as string]
             [edd.search :refer [parse]]))
@@ -210,84 +210,6 @@
       (if error
         (throw (ex-info "Could not store aggregate" {:error error}))))))
 
-(defn form-path
-  [realm
-   service-name
-   id]
-  (let [partition-prefix (-> (str id)
-                             last
-                             str
-                             util/hex-str-to-bit-str)]
-    (str "aggregates/"
-         (name realm)
-         "/latest/"
-         (name service-name)
-         "/"
-         partition-prefix
-         "/"
-         id
-         ".json")))
-
-(defn store-to-s3
-  [{:keys [aggregate
-           service-name] :as ctx}]
-  (let [id (str (:id aggregate))
-
-        realm (realm ctx)
-        bucket (str
-                (util/get-env
-                 "AccountId")
-                "-"
-                (util/get-env
-                 "EnvironmentNameLower")
-                "-aggregates")
-        key (form-path
-             realm
-             service-name
-             id)
-        {:keys [error]
-         :as resp} (s3/put-object ctx
-                                  {:s3 {:bucket {:name bucket}
-                                        :object {:key key
-                                                 :content (util/to-json {:aggregate aggregate
-                                                                         :service-name service-name
-                                                                         :realm realm})}}})]
-    (when error
-      (throw (ex-info "Could not store aggregate" {:error error})))
-    resp))
-
-(defn get-from-s3
-  [{:keys [service-name] :as ctx} id]
-  (let [id (str id)
-        realm (realm ctx)
-        bucket (str
-                (util/get-env
-                 "AccountId")
-                "-"
-                (util/get-env
-                 "EnvironmentNameLower")
-                "-aggregates")
-        key (form-path
-             realm
-             service-name
-             id)
-        {:keys [error]
-         :as resp} (s3/get-object ctx
-                                  {:s3 {:bucket {:name bucket}
-                                        :object {:key key}}})]
-    (when (and error
-               (not= (:status error)
-                     404))
-      (throw (ex-info "Could not store aggregate" {:error error})))
-    (if (or
-         (nil? resp)
-         (= (:status error) 404))
-      nil
-      (-> resp
-          slurp
-          util/to-edn
-          :aggregate))))
-
 (defmethod update-aggregate
   :elastic
   [{:keys [aggregate] :as ctx}]
@@ -298,7 +220,7 @@
         (:id aggregate)
         " "
         (:version aggregate))
-   (store-to-s3 ctx))
+   (s3.vs/store-to-s3 ctx))
   (util/d-time
    (str "Updating aggregate elastic: "
         (realm ctx)
@@ -326,4 +248,4 @@
   [ctx id]
   (util/d-time
    (str "Fetching snapshot aggregate: " (realm ctx) " " id)
-   (get-from-s3 ctx id)))
+   (s3.vs/get-from-s3 ctx id)))

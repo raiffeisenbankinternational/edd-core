@@ -1,0 +1,24 @@
+;;
+;; Attributes known to be used for exact matching
+;; or sorting. Acts as a source of truth when ge-
+;; nerating btree indexes. An example of index:
+;;
+;; attribute #>> array['attrs', 'foo', 'bar']
+;;
+
+{:glms-application-svc
+ #{:attrs.application-id}
+
+ :glms-dimension-svc
+ #{:state
+   :attrs.cocunut
+   :attrs.top-parent-id}
+
+ :glms-notification-svc
+ #{:attrs.status
+   :attrs.user.id
+   :attrs.user.role}
+
+ :glms-currency-svc
+ #{:business-date
+   :batch-number}}

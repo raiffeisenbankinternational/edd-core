@@ -64,20 +64,29 @@
 
 (defn init
   [ctx]
-  (let [spec {:dbtype                    "postgres"
+  (let [{:keys [hosted-zone-name]}
+        ctx
+
+        ;; Make it work with Jupyter notebook (no such var there).
+        host
+        (or (util/get-env "DatabaseEndpoint")
+            (str "rds-glms-health-db." hosted-zone-name))
+
+        password
+        (or (get-in ctx [:db :password])
+            (util/get-env "DatabasePassword" "no-secret"))
+
+        spec {:dbtype                    "postgres"
               :dbname                    "postgres"
               :initializationFailTimeout 0
               :reWriteBatchedInserts     true
               :minimumIdle 1
               :validationTimeout 1000
               :maximumPoolSize 10
-              :password                  (get-in ctx [:db :password]
-                                                 (util/get-env "DatabasePassword"
-                                                               "no-secret"))
+              :password                  password
               :username                  "postgres"
-              :host                      (util/get-env "DatabaseEndpoint" "127.0.0.1")
+              :host                      host
               :schema                    "postgres"
               :port                      "5432"}]
     (log/info "Initializing postgres event-store: " (dissoc spec :user :username :password))
     spec))
-

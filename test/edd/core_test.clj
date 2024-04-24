@@ -57,6 +57,7 @@
   [ctx]
   (-> mock/ctx
       (merge ctx)
+      (assoc-in [:meta :realm] :test)
       (assoc :service-name :local-test)
       (edd/reg-cmd :dummy-cmd dummy-command-handler)
       (edd/reg-fx (fn [ctx events]
@@ -149,12 +150,12 @@
                                          {:event-id  :dummy-event-1
                                           :handled   true
                                           :event-seq 6
-                                          :meta      {}
+                                          :meta      {:realm :test}
                                           :id        cmd-id-2}
                                          {:event-id  :dummy-event-2
                                           :handled   true
                                           :event-seq 7
-                                          :meta      {}
+                                          :meta      {:realm :test}
                                           :id        cmd-id-2}
                                          {:event-id  :cmd-id
                                           :id        cmd-id-3
@@ -165,7 +166,7 @@
                                          {:event-id  :dummy-event
                                           :handled   true
                                           :event-seq 22
-                                          :meta      {}
+                                          :meta      {:realm :test}
                                           :id        cmd-id}
                                          {:event-id  :cmd-id
                                           :id        dps-id
@@ -173,7 +174,7 @@
                                          {:event-id  :dummy-event-3
                                           :handled   true
                                           :event-seq 32
-                                          :meta      {}
+                                          :meta      {:realm :test}
                                           :id        dps-id}])
         (is (= {:effects    [{:cmd-id       :fx-command
                               :id           #uuid "22222111-1111-1111-1111-111111111111"
@@ -512,4 +513,3 @@
   (is (= [{:value :a}]
          (edd/prepare-response {:resp          [{:value :a}]
                                 :queue-request true}))))
-
