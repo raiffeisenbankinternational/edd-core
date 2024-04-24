@@ -1,0 +1,42 @@
+- name: "Global {{ item }}"
+  execute_lambda:
+    name: '{{ parameters["EnvironmentNameUpper"] }}-glms-health-db'
+    payload:
+      action: ":migrate"
+      payload:
+        service: ":{{ parameters['ServiceName'] }}"
+        discriminator: ":global"
+        realm: ":{{ item }}"
+  register: migrate_output
+- fail:
+    msg: '{{ migrate_output.output }}'
+  when: '"error" in migrate_output.result.output'
+
+- name: "Local {{ item }}"
+  execute_lambda:
+    name: '{{ parameters["EnvironmentNameUpper"] }}-glms-health-db'
+    payload:
+      action: ":migrate"
+      payload:
+        service: ":{{ parameters['ServiceName'] }}"
+        discriminator: ":local"
+        realm: ":{{ item }}"
+  register: migrate_output
+- fail:
+    msg: '{{ migrate_output.output }}'
+  when: '"error" in migrate_output.result.output'
+
+- name: "Migrate to DB {{ item }}"
+  execute_lambda:
+    name: '{{ parameters["EnvironmentNameUpper"] }}-glms-health-db'
+    payload:
+      action: ":move-to-postgres"
+      payload:
+        service: ":{{ parameters['ServiceName'] }}"
+        discriminator: ":global"
+        realm: ":{{ item }}"
+  register: migrate_output
+  when: "migrate_to_pg is defined and migrate_to_pg == True"
+- fail:
+    msg: '{{ migrate_output.output }}'
+  when: '"error" in migrate_output.result.output'

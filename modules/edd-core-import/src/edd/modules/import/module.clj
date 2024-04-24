@@ -6,7 +6,6 @@
             [edd.postgres.event-store :as postgres-event-store]
             [edd.core :as edd]))
 
-
 (def upload-done-event cmd/upload-done-event)
 
 (defn import-handler
@@ -16,7 +15,6 @@
                   ; Do nothing. We rely on events being stored in S3 bucket
                   )]
     (edd/handler ctx body)))
-
 
 (defn register
   [ctx & {:keys [files]}]

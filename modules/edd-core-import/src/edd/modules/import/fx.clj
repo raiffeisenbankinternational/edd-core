@@ -2,7 +2,6 @@
   (:require [edd.core :as edd]
             [edd.el.ctx :as el-ctx]))
 
-
 (defn register
   [ctx]
   (-> ctx

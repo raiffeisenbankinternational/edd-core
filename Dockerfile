@@ -30,7 +30,7 @@ USER root
 RUN mkdir -p /home/jenkins
 RUN chown build:build /home/build -R &&\
     chown build:build /home/jenkins -R &&\
-    chown build:build /dist -R 
+    chown build:build /dist -R
 
 
 USER build
@@ -67,17 +67,22 @@ RUN set -e &&\
     export IndexDomainEndpoint=$domain_url &&\
     export DatabaseEndpoint="$(aws rds describe-db-instances --query 'DBInstances[].Endpoint.Address' --filter "Name=engine,Values=postgres" --output text)" &&\
     flyway -password="${DatabasePassword}" \
-               -schemas=glms,test,prod \
-               -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
-               clean &&\
+           -schemas=glms,test,prod \
+           -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
+           -cleanDisabled="false" \
+           clean &&\
     flyway -password="${DatabasePassword}" \
            -schemas=test\
            -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
-           -locations="filesystem:${PWD}/sql/files/edd" migrate &&\
-    flyway -password="${DatabasePassword}" \
-            -schemas=prod \
-            -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
-            -locations="filesystem:${PWD}/sql/files/edd" migrate &&\
+           -locations="filesystem:${PWD}/sql/files/edd" \
+           -X \
+           migrate &&\
+    # flyway -password="${DatabasePassword}" \
+    #        -schemas=prod \
+    #        -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
+    #        -locations="filesystem:${PWD}/sql/files/edd" \
+    #        -X \
+    #        migrate &&\
     echo "Run ansible stuff" &&\
     ansible-playbook ansible/deploy/deploy.yaml &&\
     echo "Building b${BUILD_ID}" &&\
