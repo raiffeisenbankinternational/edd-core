@@ -39,7 +39,7 @@
          :body (util/to-json body)}
 
         response
-        (util/http-get url params {:raw true})
+        (util/http-get url params :raw true)
 
         {:keys [status body]}
         response

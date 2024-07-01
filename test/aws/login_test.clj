@@ -11,10 +11,10 @@
 
         result
         (with-redefs [util/http-get
-                      (fn [url params opt]
+                      (fn [url params & args]
                         (reset! capture! {:url url
                                           :params params
-                                          :opt opt})
+                                          :args args})
                         {:status 200
                          :body (util/to-json {:id-token "secret-token"})})]
 
@@ -28,7 +28,7 @@
             :params
             {:query-params {"json" "true" "user-password-auth" "true"}
              :body "{\"username\":\"john\",\"password\":\"Smith123\"}"}
-            :opt {:raw true}}
+            :args [:raw true]}
            @capture!))))
 
 (deftest test-get-id-token-error
