@@ -13,7 +13,7 @@
   metosin/malli {:mvn/version "0.8.9"},
   java-http-clj/java-http-clj {:mvn/version "0.4.3"},
   com.alpha-prosoft/jsonista {:mvn/version "0.3.8.11"},
-  com.alpha-prosoft/clj-aws-sign {:mvn/version "0.1.1.16"},
+  com.alpha-prosoft/clj-aws-sign {:mvn/version "0.1.1.18"},
   org.slf4j/slf4j-api {:mvn/version "2.0.7"},
   io.forward/yaml {:mvn/version "1.0.11"},
   ch.qos.logback/logback-classic {:mvn/version "1.4.7"},
