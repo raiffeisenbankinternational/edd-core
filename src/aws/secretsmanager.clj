@@ -99,6 +99,9 @@
 (defn get-secret-value
   "
   https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
+
+  Return a map where the :SecretString key
+  holds the string payload of the secret.
   "
 
   ([aws secret-id]

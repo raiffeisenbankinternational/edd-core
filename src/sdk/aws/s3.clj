@@ -1,11 +1,18 @@
 (ns sdk.aws.s3
-  (:require [sdk.aws.common :as common]
-            [lambda.util :as util]
-            [lambda.http-client :as client]
-            [clojure.data.xml :as xml]
-            [clojure.tools.logging :as log]
-            [clojure.java.io :as io]
-            [clojure.string :as string]))
+  (:import
+   java.time.OffsetDateTime
+   java.time.ZoneOffset
+   java.time.format.DateTimeFormatter)
+  (:require
+   [clj-aws-sign.core :as sign]
+   [clojure.data.xml :as xml]
+   [clojure.java.io :as io]
+   [clojure.string :as string]
+   [clojure.tools.logging :as log]
+   [lambda.http-client :as client]
+   [lambda.util :as util]
+   [ring.util.codec :as codec]
+   [sdk.aws.common :as common]))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
@@ -384,3 +391,105 @@
               [:listbucketresult :contents]
               sort-contents)
              (doto tap>)))))))
+
+(def ^DateTimeFormatter aws-formatter
+  (-> "yyyyMMdd'T'HHmmss'Z'"
+      (DateTimeFormatter/ofPattern)
+      (.withZone ZoneOffset/UTC)))
+
+(defn get-aws-timestamp ^String []
+  (.format aws-formatter (OffsetDateTime/now)))
+
+(defn presign-url
+  "
+  https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
+
+  Create a presigned, time-sensitive URL for a certain S3 object.
+  When the method is :get (which is default), the URL is used to
+  download a private file. Use the :post method to create a URL
+  to upload a file directly to S3 from a browser through the standard
+  <form> tag and a single file input.
+  "
+  (^String [aws bucket path expires-sec]
+   (presign-url aws bucket path expires-sec nil))
+
+  (^String [aws bucket path expires-sec {:keys [method]
+                                         :or {method :get}}]
+
+   (let [{:keys [region
+                 aws-access-key-id
+                 aws-secret-access-key
+                 aws-session-token]}
+         aws
+
+         timestamp-full
+         (get-aws-timestamp)
+
+         timestamp-short
+         (subs timestamp-full 0 8)
+
+         credential
+         (format "%s/%s/%s/s3/aws4_request"
+                 aws-access-key-id
+                 timestamp-short
+                 region)
+
+         host
+         (format "%s.s3.%s.amazonaws.com" bucket region)
+
+         headers
+         {"host" host}
+
+         query-params
+         {"X-Amz-Algorithm" "AWS4-HMAC-SHA256"
+          "X-Amz-Credential" credential
+          "X-Amz-Date" timestamp-full
+          "X-Amz-Expires" (str expires-sec)
+          "X-Amz-SignedHeaders" "host"
+          "X-Amz-Security-Token" aws-session-token}
+
+         method-norm
+         (-> method name string/upper-case)
+
+         string-to-sign
+         (sign/string-to-sign {:timestamp timestamp-full
+                               :method method-norm
+                               :uri path
+                               :query query-params
+                               :payload sign/UNSIGNED_PAYLOD
+                               :short-timestamp timestamp-short
+                               :region region
+                               :service "s3"
+                               :headers headers})
+
+         signature
+         (sign/signature {:secret-key aws-secret-access-key
+                          :short-timestamp timestamp-short
+                          :region region
+                          :service "s3"
+                          :string-to-sign string-to-sign})
+
+         base-url
+         (format "https://%s/%s" host path)]
+
+     (format "%s?%s"
+             base-url
+             (-> query-params
+                 (assoc "X-Amz-Signature" signature)
+                 (codec/form-encode))))))
+
+(comment
+
+  ;; generate temporary creds in CloudShell
+  (def AWS
+    {:aws-access-key-id ""
+     :aws-secret-access-key ""
+     :aws-session-token ""
+     :region "eu-central-1"})
+
+  (presign-url AWS
+               "118123141711-dev19-daily-calculation-batch"
+               "reports/2024-03-25/glms-application-journal-report.csv"
+               3600)
+
+  nil)
