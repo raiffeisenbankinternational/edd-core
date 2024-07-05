@@ -14,7 +14,8 @@
    (clojure.lang Keyword)
    (java.io InputStream
             OutputStream)
-   (java.time LocalDate)
+   (java.time.temporal Temporal)
+   (java.util UUID)
    (org.dhatim.fastexcel StyleSetter
                          Workbook
                          Worksheet)
@@ -48,10 +49,16 @@
   ;; just do nothing to prevent NPE
   [_ws _i _j _x])
 
-(defmethod set-value Keyword
-  ;; keywords are not supported by default, add them
-  [^Worksheet ws ^Integer i ^Integer j ^Keyword x]
+(defmethod set-value UUID
+  ;; UUID is not supported by default, add it
+  [^Worksheet ws ^Integer i ^Integer j ^UUID x]
   (.value ws i j (str x)))
+
+(defmethod set-value Keyword
+  ;; Keyword is not supported by default, add it;
+  ;; skip the leading colon.
+  [^Worksheet ws ^Integer i ^Integer j ^Keyword x]
+  (.value ws i j (-> x str (subs 1))))
 
 (defmethod set-value String
   [^Worksheet ws ^Integer i ^Integer j ^String x]
@@ -65,9 +72,9 @@
   [^Worksheet ws ^Integer i ^Integer j ^Boolean x]
   (.value ws i j x))
 
-(defmethod set-value LocalDate
-  ;; coerce to string as it is stored as an integer
-  [^Worksheet ws ^Integer i ^Integer j ^LocalDate x]
+(defmethod set-value Temporal
+  ;; Coerce all the java.time objects to their string view.
+  [^Worksheet ws ^Integer i ^Integer j ^Temporal x]
   (.value ws i j (str x)))
 
 (defn write-matrix
