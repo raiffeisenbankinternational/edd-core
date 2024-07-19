@@ -86,10 +86,15 @@
                  (:fx ctx))
         effects (flatten effects)
         effects (clean-effects ctx effects)
-        effects (map #(assoc %
-                             :request-id (:request-id ctx)
-                             :interaction-id (:interaction-id ctx)
-                             :meta (merge (:meta ctx {}) (:meta %)))
+        effects (map (fn [effect]
+                       (let [updated-fx
+                             (assoc effect
+                                    :request-id (:request-id ctx)
+                                    :interaction-id (:interaction-id ctx)
+                                    :meta (merge (:meta ctx {}) (:meta effect)))]
+                         (if (and (contains? (:meta effect) :group-id) (nil? (get-in effect [:meta :group-id])))
+                           (update updated-fx :meta dissoc :group-id)
+                           updated-fx)))
                      effects)]
 
     (assoc resp :effects effects)))

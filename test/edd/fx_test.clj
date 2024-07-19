@@ -25,7 +25,12 @@
                      :request-id :custom-uuid}
                     {:service  "test-svc-2"
                      :commands {:id     "3"
-                                :cmd-id "4"}}])))
+                                :cmd-id "4"}}
+                    {:service  "test-svc"
+                     :commands {:id     "6"
+                                :cmd-id "7"}
+                     :meta {:group-id nil
+                            :realm :y}}])))
         resp (cmd/handle-effects ctx)
         resp (get-in resp [:effects])]
     (is (= [{:commands       {:cmd-id "2"
@@ -40,7 +45,12 @@
              :interaction-id interaction-id
              :meta           {:realm :x}
              :request-id     request-id
-             :service        "test-svc-2"}]
+             :service        "test-svc-2"}
+            {:service "test-svc",
+             :commands {:id "6", :cmd-id "7"},
+             :interaction-id interaction-id
+             :meta {:realm :y},
+             :request-id     request-id}]
            resp))))
 
 (def ctx
