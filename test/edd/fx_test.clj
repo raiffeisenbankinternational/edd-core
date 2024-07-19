@@ -32,7 +32,7 @@
                               :id     "1"}
              :interaction-id interaction-id
              :meta           {:group-id 1
-                              :realm :x}
+                              :realm :y}
              :request-id     request-id
              :service        "test-svc"}
             {:commands       {:cmd-id "4"
