@@ -258,6 +258,56 @@ and return nil to enable query-fn to have when conditions based on previously re
                                             :item {:query {:query-id :query-1}}))
                   [:exception]))))))))
 
+(deftest test-remote-dependency-loop-detection
+  (testing "Detect loop messages"
+    (let [cmd-id-1 #uuid "11111eeb-e677-4d73-a10a-1d08b45fe4dd"
+          meta {:realm :realm4}
+          ctx (assoc mock/ctx
+                     :request-id request-id
+                     :interaction-id interaction-id
+                     :meta meta)
+          ctx (edd/reg-cmd ctx
+                           :cmd-1 (fn [ctx cmd]
+                                    (is (= nil
+                                           (:facility ctx)))
+                                    {:event-id :event-1
+                                     :value    (:value cmd)})
+                           :deps {:facility {:service :some-service
+                                             :query   (fn [_ _] {:query-id :query-1})}})
+          ctx (edd/reg-fx ctx (fn [ctx [event]]
+                                (is (= nil
+                                       (:facility ctx)))
+                                []))
+          ctx (edd/reg-query ctx
+                             :query-1 (fn [_ _]
+                                        (throw (RuntimeException. "Bla"))))]
+      (mock/with-mock-dal
+        (is (= {:result
+                {:success true,
+                 :effects [],
+                 :events 1,
+                 :meta [{:cmd-1 {:id cmd-id-1}}]
+                 :identities 0,
+                 :sequences 0}}
+               (select-keys
+                (edd/dispatch-item
+                 (assoc
+                  ctx
+                  :item
+                  {:commands [{:id cmd-id-1
+                               :cmd-id :cmd-1}]
+                   :breadcrumbs [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]}))
+                [:result])))
+        (is (= {:error :loop-detected}
+               (select-keys
+                (edd/dispatch-item
+                 (assoc
+                  ctx
+                  :item
+                  {:query {:query-id :query-1}
+                   :breadcrumbs [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]}))
+                [:error])))))))
+
 (def cmd-id-1 #uuid "11111eeb-e677-4d73-a10a-1d08b45fe4dd")
 (def cmd-id-deps #uuid "33333eeb-e677-4d73-a10a-1d08b45fe4dd")
 
