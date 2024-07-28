@@ -216,6 +216,10 @@
                    item)
 
             resp (cond
+                   (> (count (:breadcrumbs item)) 20)
+                   (do
+                     (log/warn :loop-detected item)
+                     {:error :loop-detected})
                    (contains? item :apply) (event/handle-event (-> ctx
                                                                    (assoc :apply (assoc
                                                                                   (:apply item)
