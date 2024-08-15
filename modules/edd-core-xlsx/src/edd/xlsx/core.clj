@@ -12,8 +12,6 @@
   "
   (:import
    (clojure.lang Keyword)
-   (java.io InputStream
-            OutputStream)
    (java.time.temporal Temporal)
    (java.util UUID)
    (org.dhatim.fastexcel StyleSetter
@@ -79,15 +77,18 @@
 
 (defn write-matrix
   "
-  Dump a plain matrix (a vector of vectors) into an output stream.
-  The first line is considered a header and has a custom style.
+  Dump a plain matrix (a vector of vectors) into a destination.
+  The destination is anything that can be coerced to the
+  `OutputStream` instance using the `io/output-stream` function.
+  The first line is considered a header and is marked with
+  a custom style.
   "
-  ([matrix sheet-title output-stream]
-   (write-matrix matrix sheet-title output-stream nil))
+  ([matrix sheet-title dest]
+   (write-matrix matrix sheet-title dest nil))
 
   ([matrix
     ^String sheet-title
-    ^OutputStream output-stream
+    dest
     {:keys [zoom
             version
             application
@@ -97,10 +98,14 @@
           application "clojure"
           header-color "eeeeee"}}]
 
-   (with-open [wb (new Workbook
-                       output-stream
-                       application
-                       version)]
+   (with-open [output-stream
+               (io/output-stream dest)
+
+               wb
+               (new Workbook
+                    output-stream
+                    application
+                    version)]
 
      (let [ws (.newWorksheet wb sheet-title)]
 
@@ -118,35 +123,25 @@
                ^StyleSetter (.fillColor header-color)
                (.set))))))))
 
-(defn write-matrix-to-file
-  "
-  Like write-matrix but write into a file by its path.
-  "
-  ([matrix sheet-title file-path]
-   (write-matrix-to-file matrix sheet-title file-path nil))
-
-  ([matrix sheet-title file-path options]
-   (with-open [output-stream (-> file-path
-                                 io/file
-                                 io/output-stream)]
-     (write-matrix matrix
-                   sheet-title
-                   output-stream
-                   options))))
-
 (defn read-matrix
   "
-  Having an input stream with Excel payload, read the given sheet
-  (first when not set) into a matrix, a vector of vectors or strings.
-  "
-  ([input-stream]
-   (read-matrix input-stream nil))
+  Having a source with Excel payload, read the given sheet
+  into a matrix, a vector of vectors or strings. When sheet
+  is not set, the first one is used.
 
-  ([^InputStream input-stream
+  The source argument is anything that can be corced to
+  the `InputStream` object using the `io/input-stream`
+  function.
+  "
+  ([src]
+   (read-matrix src nil))
+
+  ([src
     {:keys [sheet-index]
      :or {sheet-index 0}}]
 
-   (with-open [wb (new ReadableWorkbook input-stream)]
+   (with-open [in (io/input-stream src)
+               wb (new ReadableWorkbook in)]
      (let [^Sheet sheet
            (-> wb (.getSheet sheet-index) (.get))]
        (vec
@@ -155,16 +150,3 @@
             (vec
              (for [j (range 0 cell-count)]
                (.orElse (.getCellRawValue row j) nil))))))))))
-
-(defn read-matrix-from-file
-  "
-  Like read-matrix but read from a file by its path.
-  "
-  ([file-path]
-   (read-matrix-from-file file-path nil))
-
-  ([file-path options]
-   (with-open [in (-> file-path
-                      io/file
-                      io/input-stream)]
-     (read-matrix in options))))
