@@ -1,6 +1,6 @@
 services:
   opensearch-node1:
-    image: opensearchproject/opensearch:1.2.0
+    image: literal:${DOCKER_URL}/opensearchproject/opensearch:1.2.0
     container_name: opensearch-node1
     environment:
       - cluster.name=opensearch-cluster
@@ -22,7 +22,7 @@ services:
     networks:
       - opensearch-net
   opensearch-dashboards:
-    image: opensearchproject/opensearch-dashboards:1.2.0
+    image: literal:${DOCKER_URL}/opensearchproject/opensearch-dashboards:1.2.0
     container_name: opensearch-dashboards
     ports:
       - 5601:5601
@@ -34,7 +34,7 @@ services:
       - opensearch-net
 
   pstgres:
-    image: postgres
+    image: literal:${DOCKER_URL}/library/postgres:15
     container_name: postgres
     ports:
       - 5432:5432

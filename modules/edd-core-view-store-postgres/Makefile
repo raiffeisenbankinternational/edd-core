@@ -1,9 +1,13 @@
+env ?= $(error Please specify the env=... argument, e.g. env=DEV99)
+ENV = $(shell echo $(env) | tr a-z A-Z)
 
 all: test
 
 .PHONY: repl
 repl:
-	clj -M:local:dev:test:nrepl
+	PrivateHostedZoneName=lime-${env}.internal.rbigroup.cloud \
+	DatabaseEndpoint=localhost \
+	clojure -M:local:dev:test:nrepl:cider:portal
 
 test-unit:
 	clojure -M:test:unit

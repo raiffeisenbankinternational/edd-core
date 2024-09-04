@@ -124,3 +124,9 @@
         (when (> version upper-bound)
           (throw (ex-info "Version does not exist" {:error events})))
         (el-event/create-aggregate {} (take version events) (:def-apply ctx))))))
+
+(defn get-by-id-and-version-v2
+  [ctx query]
+  (let [{:keys [id ^int version]} query]
+    (when (> version 0)
+      (search/get-by-id-and-version ctx id version))))

@@ -46,4 +46,8 @@
   [ctx id]
   nil)
 
+(defmulti get-by-id-and-version
+  (fn [ctx id version]
+    (:view-store ctx :default)))
+
 (def default-size 50)

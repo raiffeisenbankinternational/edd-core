@@ -1,7 +1,6 @@
-version: '3'
 services:
   opensearch-node1:
-    image: opensearchproject/opensearch:1.2.0
+    image: literal:${DOCKER_URL}/opensearchproject/opensearch:1.2.0
     container_name: opensearch-node1
     environment:
       - cluster.name=opensearch-cluster
@@ -24,7 +23,7 @@ services:
     networks:
       - opensearch-net
   opensearch-dashboards:
-    image: opensearchproject/opensearch-dashboards:1.2.0
+    image: literal:${DOCKER_URL}/opensearchproject/opensearch-dashboards:1.2.0
     container_name: opensearch-dashboards
     ports:
       - 5601:5601
@@ -36,7 +35,9 @@ services:
       - opensearch-net
 
   pstgres:
-    image: postgres
+    build:
+      context: .
+      dockerfile: Dockerfile.pg
     container_name: postgres
     ports:
       - 5432:5432
@@ -44,6 +45,26 @@ services:
       - "5432"
     environment:
       POSTGRES_PASSWORD: "no-secret"
+    networks:
+      - opensearch-net
+
+  root-migration:
+    image: literal:${DOCKER_URL}/flyway/flyway
+    command: -url=jdbc:postgresql://pstgres:5432/postgres -schemas=test -user=postgres -password="no-secret" -connectRetries=60 migrate
+    volumes:
+      - ../sql/files/edd:/flyway/sql
+    depends_on:
+      - pstgres 
+    networks:
+      - opensearch-net
+
+  service-migration:
+    image: literal:${DOCKER_URL}/flyway/flyway
+    command: -url=jdbc:postgresql://pstgres:5432/postgres -schemas=test_local_test -user=postgres -password="no-secret" -connectRetries=60 migrate
+    volumes:
+      - ../modules/edd-core-view-store-postgres/migrations:/flyway/sql
+    depends_on:
+      - pstgres 
     networks:
       - opensearch-net
 

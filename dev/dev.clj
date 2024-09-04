@@ -1,4 +1,4 @@
-(ns dev
+#_(ns dev
   (:require
    [edd.postgres.const :as c]
    [edd.postgres.entity :as e]
@@ -7,7 +7,7 @@
    [lambda.uuid :as uuid]
    [next.jdbc :as jdbc]))
 
-(def DB-OPT
+#_(def DB-OPT
   {:dbtype "postgres"
    :dbname "test"
    :port 15432
@@ -15,7 +15,7 @@
    :user "test"
    :password "test"})
 
-(defn insert-fake-rows [db limit]
+#_(defn insert-fake-rows [db limit]
 
   (let [rows
         (for [x (range 0 limit)]

@@ -1,4 +1,5 @@
 (ns edd.dal-it
+  (:import (java.time LocalDateTime))
   (:require [clojure.test :refer [deftest testing is]]
             [clojure.tools.logging :as log]
             [lambda.util :as util]
@@ -18,6 +19,7 @@
    :interaction-id (uuid/gen)
    :invocation-id (uuid/gen)
    :meta {:realm :test}
+   :ref-date (LocalDateTime/now)
    :environment-name-lower "pipeline"
    :elastic-search {:url (util/get-env "IndexDomainEndpoint")}
    :db {:endpoint (util/get-env "DatabaseEndpoint")

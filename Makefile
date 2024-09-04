@@ -35,13 +35,20 @@ push:
 
 .PHONY: repl
 repl:
-	clj -M:local:dev:test:nrepl
+	PrivateHostedZoneName=lime-${env}.internal.rbigroup.cloud \
+	DatabaseEndpoint=localhost \
+	clojure -M:cider:local:dev:test:portal
 
 lint-check:
 	./format.sh check
 
 lint-fix:
 	./format.sh
+
+clean:
+	- rm -rf ./.cpcache
+	- rm -rf ./.clj-kondo
+	- rm -rf ./.lsp
 
 docker-clean:
 	rm -rf .docker

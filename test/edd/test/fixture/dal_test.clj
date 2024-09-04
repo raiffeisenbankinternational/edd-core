@@ -441,12 +441,13 @@
                             :id        id}]
               :identities []
               :meta       [{:test-cmd {:id id}}]
-              :sequences  []}
+              :sequences  []
+              :aggregates [{:version 3, :id id}]}
              (mock/get-commands-response ctx {:cmd-id :test-cmd
                                               :id     id})))
       (let [request-id (uuid/gen)
             interaction-id (uuid/gen)]
-        (testing "Wirth included meta"
+        (testing "With included meta"
           (is (= {:effects    [{:breadcrumbs    [0
                                                  0]
                                 :commands       [{:cmd-id :fx-cmd
@@ -464,7 +465,8 @@
                                 :interaction-id interaction-id}]
                   :identities []
                   :meta       [{:test-cmd-fx {:id id}}]
-                  :sequences  []}
+                  :sequences  []
+                  :aggregates [{:id id, :version 4}]}
                  (mock/get-commands-response (assoc ctx :include-meta true
                                                     :request-id request-id
                                                     :interaction-id interaction-id)
@@ -490,7 +492,8 @@
                                 :id        id}]
                   :identities []
                   :meta       [{:test-cmd-fx {:id id}}]
-                  :sequences  []}
+                  :sequences  []
+                  :aggregates [{:id id :version 5}]}
                  (mock/get-commands-response (assoc ctx :request-id request-id
                                                     :interaction-id interaction-id)
                                              {:commands       [{:cmd-id :test-cmd-fx
