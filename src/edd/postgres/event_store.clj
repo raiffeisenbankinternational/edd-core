@@ -6,6 +6,7 @@
             [lambda.uuid :as uuid]
             [lambda.util :as util]
             [clojure.string :as string]
+            [edd.postgres.history :as history]
             [edd.core :as edd]
             [edd.postgres.pool :as pool :refer [->conn]]
             [edd.dal :refer [with-init
@@ -472,31 +473,43 @@
                total
                (inc current))))))
 
+(defn store-history
+  [ctx resp]
+  (let [{:keys [aggregates]} resp]
+    (when (seq aggregates)
+      (history/new-entries ctx aggregates))))
+
 (defn store-results-impl
   [ctx resp]
   (util/d-time
    "storing-result-postgres "
    (log-response-impl ctx resp)
    (store-events ctx resp)
+   (store-history ctx resp)
    (doseq [i (:identities resp)]
      (store-identity ctx i))
-   (store-effects ctx resp)
-   ;(update-fx-count ctx resp)
-   )
+   (store-effects ctx resp))
   ctx)
 
 (defmethod store-results
   :postgres
   [ctx]
   (try-to-data
-   #(let [resp (:resp ctx)
-          ctx (dissoc ctx :resp)
-          sequences (:sequences resp)]
+   #(let [resp
+          (:resp ctx)
+
+          ctx
+          (dissoc ctx :resp)
+
+          sequences
+          (:sequences resp)]
+
       (jdbc/with-transaction
         [tx (->conn ctx)]
         (store-results-impl
          (assoc ctx :con (delay tx))
          resp)
+
         (doseq [i sequences]
           (prepare-store-sequence ctx i)))
       (doseq [i sequences]

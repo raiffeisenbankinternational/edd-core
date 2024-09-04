@@ -1,19 +1,22 @@
 (ns edd.elastic.view-store
   (:gen-class)
   (:require [clojure.test :refer :all]
-            [lambda.elastic :as el]
             [edd.search :refer [with-init
+                                parse
                                 simple-search
                                 default-size
                                 advanced-search
                                 update-aggregate
-                                get-snapshot]]
+                                get-snapshot
+                                get-by-id-and-version]]
+            [edd.postgres.history :as history]
+            [edd.postgres.pool :refer [->conn]]
+            [edd.postgres.common :refer [->realm ->service]]
             [lambda.util :as util]
             [lambda.elastic :as elastic]
             [edd.s3.view-store :as s3.vs]
             [clojure.tools.logging :as log]
-            [clojure.string :as string]
-            [edd.search :refer [parse]]))
+            [clojure.string :as string]))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
@@ -120,7 +123,7 @@
   [ctx elastic-query & {:keys [raw-data] :as opts}]
   (let [json-query (util/to-json elastic-query)
         index-name (make-index-name (realm ctx) (or (:index-name ctx) (:service-name ctx)))
-        {:keys [error] :as body} (el/query
+        {:keys [error] :as body} (elastic/query
                                   {:method         "POST"
                                    :path           (str "/" index-name "/_search")
                                    :body           json-query
@@ -249,3 +252,10 @@
   (util/d-time
    (str "Fetching snapshot aggregate: " (realm ctx) " " id)
    (s3.vs/get-from-s3 ctx id)))
+
+(defmethod get-by-id-and-version
+  :elastic
+  [ctx id version]
+  (when-let [history-entry
+             (history/get-by-id-and-version ctx id version)]
+    (:aggregate history-entry)))

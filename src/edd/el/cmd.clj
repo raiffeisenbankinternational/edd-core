@@ -1,4 +1,5 @@
 (ns edd.el.cmd
+
   (:require
    [edd.flow :refer :all]
    [clojure.tools.logging :as log]
@@ -17,6 +18,7 @@
    [edd.schema.core :as edd-schema]
    [edd.el.query :as query])
   (:import (clojure.lang ExceptionInfo)
+           (java.time LocalDateTime)
            (java.util.concurrent Executors
                                  ExecutorService
                                  Future)))
@@ -256,23 +258,36 @@
                        {:cmd-id (:cmd-id cmd)})))
      (if error
        validation
-       (let [aggregate (common/get-by-id ctx id)
-             _ (with-aggregate aggregate)
-             ctx (el-ctx/put-aggregate ctx aggregate)
-             resp (->> (get-response-from-command-handler
-                        ctx
-                        :cmd cmd
-                        :command-handler handler)
-                       (resp->add-user-to-events ctx)
-                       (resp->assign-event-seq ctx))
-             resp (assoc resp :meta [{cmd-id {:id id}}])
-             aggregate-schema (edd-ctx/get-service-schema ctx)
-             aggregate (event/get-current-state
-                        ctx
-                        {:id id
-                         :events (:events resp [])
-                         :snapshot aggregate})
-             _ (with-aggregate aggregate)]
+       (let [aggregate
+             (common/get-by-id ctx id)
+
+             _
+             (with-aggregate aggregate)
+
+             ctx
+             (el-ctx/put-aggregate ctx aggregate)
+
+             resp
+             (->> (get-response-from-command-handler
+                   ctx
+                   :cmd cmd
+                   :command-handler handler)
+                  (resp->add-user-to-events ctx)
+                  (resp->assign-event-seq ctx))
+             resp
+             (assoc resp :meta [{cmd-id {:id id}}])
+
+             aggregate-schema
+             (edd-ctx/get-service-schema ctx)
+
+             {:keys [aggregate aggregates]}
+             (event/get-state-for-each-event
+              ctx
+              {:id id
+               :events (:events resp [])
+               :snapshot aggregate})
+             _
+             (with-aggregate aggregate)]
 
          (when (and
                 aggregate
@@ -282,11 +297,17 @@
                            {:error (me/humanize
                                     (m/explain aggregate-schema aggregate))})))
 
-         (let [resp (handle-effects ctx
-                                    :resp resp
-                                    :aggregate aggregate)
+         (let [resp
+               (handle-effects ctx
+                               :resp resp
+                               :aggregate aggregate)
 
-               resp (resp->add-meta-to-events ctx resp)]
+               resp
+               (resp->add-meta-to-events ctx resp)
+
+               resp
+               (assoc resp :aggregates (-> aggregates reverse vec))]
+
            (request-cache/update-aggregate ctx aggregate)
            (request-cache/store-identities ctx (:identities resp))
            resp))))))
@@ -482,7 +503,7 @@
                       resp initial-response]
                  (let [c (first queue)
                        r (handle-command ctx c)
-                       resp (merge-with concat resp r)]
+                       resp (merge-with into resp r)]
                    (cond
                      (:error r) (assoc initial-response
                                        :error (:error r))
@@ -513,11 +534,18 @@
 
 (defn handle-commands
   [ctx body]
-  (let [ctx (assoc ctx
-                   :meta (merge
-                          (:meta ctx {})
-                          (:meta body {})))
-        ctx (s3-cache/register ctx)]
+  (let [ref-date
+        (LocalDateTime/now)
+
+        ctx
+        (assoc ctx
+               :meta (merge
+                      (:meta ctx {})
+                      (:meta body {}))
+               :ref-date ref-date)
+
+        ctx
+        (s3-cache/register ctx)]
 
     (try
       (retry #(process-commands ctx body)

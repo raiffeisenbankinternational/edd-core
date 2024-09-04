@@ -56,6 +56,65 @@
                             :id        cmd-id}}
            agg))))
 
+(deftest test-apply-many-aggregates
+  (let [agg
+        (event/get-state-for-each-event
+         apply-ctx
+         {:events
+          [{:event-id :event-1
+            :id cmd-id
+            :event-seq 1
+            :k1 "a"}
+           {:event-id :event-2
+            :id cmd-id
+            :event-seq 2
+            :k2 "b"}]
+          :id "ag1"})]
+    (is (=
+         {:aggregates
+          [{:e1
+            {:event-id :event-1,
+             :id #uuid "00111111-1111-1111-1111-111111111111",
+             :event-seq 1,
+             :k1 "a"},
+            :version 2,
+            :id #uuid "00111111-1111-1111-1111-111111111111",
+            :e2
+            {:event-id :event-2,
+             :id #uuid "00111111-1111-1111-1111-111111111111",
+             :event-seq 2,
+             :k2 "b"}}
+           {:e1 {:event-id :event-1, :id #uuid "00111111-1111-1111-1111-111111111111", :event-seq 1, :k1 "a"}, :version 1, :id #uuid "00111111-1111-1111-1111-111111111111"}],
+          :current-state
+          {:e1
+           {:event-id :event-1,
+            :id #uuid "00111111-1111-1111-1111-111111111111",
+            :event-seq 1,
+            :k1 "a"},
+           :version 2,
+           :id #uuid "00111111-1111-1111-1111-111111111111",
+           :e2
+           {:event-id :event-2,
+            :id #uuid "00111111-1111-1111-1111-111111111111",
+            :event-seq 2,
+            :k2 "b"}},
+          :aggregate
+          {:e1
+           {:event-id :event-1,
+            :id #uuid "00111111-1111-1111-1111-111111111111",
+            :event-seq 1,
+            :k1 "a"},
+           :version 2,
+           :id #uuid "00111111-1111-1111-1111-111111111111",
+           :e2
+           {:event-id :event-2,
+            :id #uuid "00111111-1111-1111-1111-111111111111",
+            :event-seq 2,
+            :k2 "b"},
+           :filter-result "ab"}}
+
+         agg))))
+
 (deftest test-apply-cmd-storing-error
   (with-redefs [dal/get-events (fn [_]
                                  [{:event-id :event-1

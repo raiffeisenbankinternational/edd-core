@@ -2,12 +2,11 @@
   "
   PG-specific implementation of the view-store abstraction.
   "
-  (:import
-   clojure.lang.Keyword)
+
   (:require
-   [clojure.string :as str]
    [clojure.tools.logging :as log]
    [edd.view-store.postgres.api :as api]
+   [edd.postgres.history :as history]
    [edd.view-store.postgres.common
     :refer [->long!
             ->realm
@@ -22,8 +21,8 @@
                        simple-search
                        advanced-search
                        update-aggregate
-                       get-snapshot]]
-   [lambda.util :as util]))
+                       get-snapshot
+                       get-by-id-and-version]]))
 
 (defmethod with-init
   :postgres
@@ -37,10 +36,6 @@
   (let [{:keys [aggregate]}
         ctx
 
-        {:keys [id
-                version]}
-        aggregate
-
         realm
         (->realm ctx)
 
@@ -51,29 +46,29 @@
         (->conn ctx)]
 
     (api/upsert conn realm service aggregate)
-    (s3.vs/store-to-s3 ctx)))
+    (s3.vs/store-to-s3 ctx))
 
-(defmethod simple-search
-  :postgres
-  [{:as ctx :keys [query]}]
+  (defmethod simple-search
+    :postgres
+    [{:as ctx :keys [query]}]
 
-  (log/infof "__PG SIMPLE SEARCH: %s" query)
+    (log/infof "__PG SIMPLE SEARCH: %s" query)
 
-  (let [realm
-        (->realm ctx)
+    (let [realm
+          (->realm ctx)
 
-        service
-        (->service ctx)
+          service
+          (->service ctx)
 
-        attrs
-        (-> query
-            (dissoc :query-id)
-            (parser/validate-simple-search!))
+          attrs
+          (-> query
+              (dissoc :query-id)
+              (parser/validate-simple-search!))
 
-        conn
-        (->conn ctx)]
+          conn
+          (->conn ctx)]
 
-    (api/find-by-attrs conn realm service attrs)))
+      (api/find-by-attrs conn realm service attrs))))
 
 (defmethod advanced-search
   :postgres
@@ -151,6 +146,13 @@
         (->service ctx)]
 
     (api/get-by-id conn realm service id)))
+
+(defmethod get-by-id-and-version
+  :postgres
+  [ctx id version]
+  (when-let [history-entry
+             (history/get-by-id-and-version ctx id version)]
+    (:aggregate history-entry)))
 
 (defn register
   [ctx]
