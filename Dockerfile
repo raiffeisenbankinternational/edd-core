@@ -65,9 +65,8 @@ RUN set -e &&\
     domain_url=$(aws es describe-elasticsearch-domain --domain-name ${domain_name} | jq -r '.DomainStatus.Endpoints.vpc') &&\
     export IndexDomainScheme=https &&\
     export IndexDomainEndpoint=$domain_url &&\
-    export DatabaseEndpoint="$(aws rds describe-db-instances --query 'DBInstances[].Endpoint.Address' --filter "Name=engine,Values=postgres" --output text)" &&\
     flyway -password="${DatabasePassword}" \
-           -schemas=glms,test,prod \
+           -schemas=glms,test,prod,test_local_svc \
            -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
            -cleanDisabled="false" \
            clean &&\
@@ -75,14 +74,13 @@ RUN set -e &&\
            -schemas=test\
            -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
            -locations="filesystem:${PWD}/sql/files/edd" \
+           migrate &&\
+    flyway -password="${DatabasePassword}" \
+           -schemas=prod \
+           -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
+            -locations="filesystem:${PWD}/modules/edd-core-view-store-postgres/migrations" \
            -X \
            migrate &&\
-    # flyway -password="${DatabasePassword}" \
-    #        -schemas=prod \
-    #        -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
-    #        -locations="filesystem:${PWD}/sql/files/edd" \
-    #        -X \
-    #        migrate &&\
     echo "Run ansible stuff" &&\
     ansible-playbook ansible/deploy/deploy.yaml &&\
     echo "Building b${BUILD_ID}" &&\

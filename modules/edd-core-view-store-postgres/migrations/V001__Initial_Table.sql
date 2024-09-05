@@ -1,4 +1,4 @@
-create extension if not exists "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public CASCADE;
 
 create table if not exists aggregates (
     id UUID primary key,

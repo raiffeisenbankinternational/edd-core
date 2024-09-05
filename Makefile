@@ -27,6 +27,8 @@ env ?= $(error Please specify the env=... argument, e.g. env=DEV99)
 ENV = $(shell echo $(env) | tr a-z A-Z)
 
 push:
+	git fetch
+	git rebase origin/master
 	git push origin HEAD:refs/for/master%topic=env/${ENV}
 
 .PHONY: repl
