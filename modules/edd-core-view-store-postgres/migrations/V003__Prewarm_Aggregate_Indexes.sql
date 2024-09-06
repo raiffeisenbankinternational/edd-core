@@ -1,5 +1,3 @@
-DROP EXTENSION pg_prewarm CASCADE;
-
 CREATE EXTENSION IF NOT EXISTS pg_prewarm WITH SCHEMA public CASCADE;
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
@@ -8,7 +6,7 @@ SELECT extname AS extension_name,
 FROM pg_extension
 JOIN pg_namespace ON pg_extension.extnamespace = pg_namespace.oid;
 
-SET search_path TO public, pg_catalog;
+DROP MATERIALIZED VIEW IF EXISTS mv_aggregates_index_prewarm;
 
 create materialized view mv_aggregates_index_prewarm as
 select

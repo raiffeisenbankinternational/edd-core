@@ -52,9 +52,18 @@
                                           (ex-data e))
                                    e)))
                        (edd-util/try-parse-exception-data e)))]
-      (if (:error response)
+      (if (or
+           (:error response)
+           (> (:status response 0) 499))
         (do
-          (log/warn (str "Retrying " (- total attempt) "/" total) (:message response))
+          (log/warnf
+           "Retrying %s/%s, because: %s"
+           (- total attempt)
+           total
+           (or (:error response)
+               (format "response status: %s, with body %s"
+                       (:status response)
+                       (:body response))))
           (when (not= attempt total)
             ;sleep only when second attempt
             (Thread/sleep (long (+ 1000 (long (rand-int 1000))))))
