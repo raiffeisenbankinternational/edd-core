@@ -428,7 +428,7 @@
 
         order-by
         (when sort-parsed
-          (parser/sort-parsed->order-by sort-parsed))]
+          (parser/sort-parsed->order-by service sort-parsed))]
 
     (if search-parsed
 

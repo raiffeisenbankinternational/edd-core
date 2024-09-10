@@ -108,7 +108,7 @@
   Turn the parsed :sort structure into a HoneySQL
   :order-by structure.
   "
-  [sort-parsed]
+  [service sort-parsed]
   (vec
    (for [{:keys [attr order]}
          sort-parsed]
@@ -128,8 +128,17 @@
               [:attrs :creation-time])
              :created_at
 
-             ;; else
-             (honey/json-get-in-text c/COL_AGGREGATE path))]
+             ;; service-dependent cases
+             (case [service path]
+
+               ;; A special case for the application service:
+               ;; the rows must be sorted as integers but not strings.
+               ;; There is a special index in the application service.
+               [:glms-application-svc [:attrs :application-id]]
+               [:cast (honey/json-get-in-text c/COL_AGGREGATE path) :int]
+
+               ;; fallback
+               (honey/json-get-in-text c/COL_AGGREGATE path)))]
 
        [sort-field sql-order]))))
 
@@ -196,6 +205,9 @@
       (let [{:keys [query]}
             content]
         [:not (filter-parsed->where service query)])
+
+      :group-broken
+      false
 
       (:group-variadic :group-array)
       (let [{:keys [condition
@@ -565,10 +577,10 @@
   Turn the unparsed `sort` expression into the :order-by
   HoneySQL data structure.
   "
-  [os-sort]
-  (-> os-sort
-      parse-sort!
-      sort-parsed->order-by))
+  [service os-sort]
+  (->> os-sort
+       (parse-sort!)
+       (sort-parsed->order-by service)))
 
 (defn attrs->filter
   "
