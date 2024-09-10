@@ -65,6 +65,20 @@
                                   :value 42}]]
              result))))
 
+  (testing "boken group (UI case)"
+    (let [query
+          [:and [:= :foo 42] [:or]]
+
+          result
+          (parser/parse-filter! query)]
+
+      (is (= [:group-variadic
+              {:condition :and,
+               :children
+               [[:predicate [:predicate-simple {:op :=, :attr :foo, :value 42}]]
+                [:group-broken [:or]]]}]
+             result))))
+
   (testing "in predicate but value is not sequential"
     (let [query
           [:in :foo.bar.baz 42]]
@@ -398,6 +412,15 @@
     (is (= "(aggregate @@ '$.attrs.\"risk-on-id\" == \"#390ec691-cd69-49fa-b80a-408b861b55a4\"') AND (aggregate @@ '$.attrs.\"risk-taker-id\" == \"#b0000000-0000-0000-0000-000000826673\"') AND (aggregate @@ '$.attrs.fat1 == \"TCMG\"') AND (aggregate @@ '$.attrs.fat2 == \"TCM12\"') AND (aggregate @?? '$.attrs.status  ?  ((@ == \":approved\") || (@ == \":activated\"))') AND (aggregate @@ '$.attrs.\"facility-type\" == \":tcmg-facility\"')"
            (filter->result filter)))))
 
+(deftest test-filter-broken-group
+  (let [filter
+        [:or [:= :foo 1] [:and]]]
+    (is (= "(aggregate @@ '$.foo == 1') OR FALSE"
+           (filter->result filter))))
+  (let [filter [:and]]
+    (is (= "FALSE"
+           (filter->result filter)))))
+
 (deftest test-parse-os-group-array
 
   (testing "test group array"
@@ -590,7 +613,7 @@
 
         result
         (honey/format {:select [:*]
-                       :order-by (parser/sort->order-by search)})]
+                       :order-by (parser/sort->order-by :test search)})]
 
     (is (= ["SELECT * ORDER BY (aggregate #>> ARRAY['attrs', 'some', 'name']) ASC, (aggregate #>> ARRAY['attrs', 'foo', 'test']) DESC"]
            result))))
@@ -602,34 +625,49 @@
 
         result
         (honey/format {:select [:*]
-                       :order-by (parser/sort->order-by search)})]
+                       :order-by (parser/sort->order-by :test search)})]
 
     (is (= ["SELECT * ORDER BY (aggregate #>> ARRAY['attrs', 'cocunut']) ASC"]
            result))))
 
-(deftest test-sort-by-application-id
+(deftest test-sort-by-application-id-no-service
 
   (let [search
         ["attrs.application-id" :asc]
 
         result
         (honey/format {:select [:*]
-                       :order-by (parser/sort->order-by search)})]
+                       :order-by (parser/sort->order-by :test search)})]
 
     (is (= ["SELECT * ORDER BY (aggregate #>> ARRAY['attrs', 'application-id']) ASC"]
+           result))))
+
+(deftest test-sort-by-application-id-with-service
+
+  (let [search
+        ["attrs.application-id" :asc]
+
+        clause
+        (parser/sort->order-by c/SVC_APPLICATION search)
+
+        result
+        (honey/format {:select [:*]
+                       :order-by clause})]
+
+    (is (= ["SELECT * ORDER BY CAST((aggregate #>> ARRAY['attrs', 'application-id']) AS INT) ASC"]
            result))))
 
 (deftest test-sort-by-empty
 
   (try
-    (parser/sort->order-by [])
+    (parser/sort->order-by :test [])
     (is false)
     (catch Exception e
       (is (= "could not parse OS sort DSL"
              (ex-message e)))))
 
   (try
-    (parser/sort->order-by [:some.attrs :unknown])
+    (parser/sort->order-by :test [:some.attrs :unknown])
     (is false)
     (catch Exception e
       (is (= "could not parse OS sort DSL"
@@ -640,9 +678,12 @@
   (let [search
         [:attrs.creation-time :desc]
 
+        clause
+        (parser/sort->order-by :test search)
+
         result
         (honey/format {:select [:*]
-                       :order-by (parser/sort->order-by search)})]
+                       :order-by clause})]
 
     (is (= ["SELECT * ORDER BY created_at DESC"]
            result))))
@@ -652,9 +693,12 @@
   (let [search
         [:creation-time :desc-number]
 
+        clause
+        (parser/sort->order-by :test search)
+
         result
         (honey/format {:select [:*]
-                       :order-by (parser/sort->order-by search)})]
+                       :order-by clause})]
 
     (is (= ["SELECT * ORDER BY created_at DESC"]
            result))))

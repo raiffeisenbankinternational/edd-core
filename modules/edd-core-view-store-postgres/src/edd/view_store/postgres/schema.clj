@@ -208,6 +208,12 @@
                         [:predicate-simple [:ref ::PredicateSimple]]
                         [:predicate-wc [:ref ::PredicateWildcard]]]]]]]]]]
 
+      ;; Another weird case when UI sends broken expresions
+      ;; like [:and] or [:or] but nothing else. For now, cap-
+      ;; ture these and resolve to FALSE on a SQL level.
+      ::GroupBroken
+      [:tuple [:ref ::Condition]]
+
       ::GroupVariadic
       [:catn
        [:condition [:schema [:ref ::Condition]]]
@@ -229,6 +235,7 @@
        [:nested [:ref ::Nested]]
        [:group-variadic [:ref ::GroupVariadic]]
        [:group-array [:ref ::GroupArray]]
+       [:group-broken [:ref ::GroupBroken]]
        [:negation [:ref ::Negation]]]}}
 
     [:ref ::Query]]))
