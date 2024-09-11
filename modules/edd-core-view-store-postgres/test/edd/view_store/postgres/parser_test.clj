@@ -657,6 +657,36 @@
     (is (= ["SELECT * ORDER BY CAST((aggregate #>> ARRAY['attrs', 'application-id']) AS INT) ASC"]
            result))))
 
+(deftest test-sort-by-application-id-task-manager
+
+  (let [search
+        ["attrs.application.application-id" :asc-number]
+
+        clause
+        (parser/sort->order-by c/SVC_TASK_MANAGER search)
+
+        result
+        (honey/format {:select [:*]
+                       :order-by clause})]
+
+    (is (= ["SELECT * ORDER BY CAST((aggregate #>> ARRAY['attrs', 'application', 'application-id']) AS INT) ASC"]
+           result))))
+
+(deftest test-sort-by-application-id-non-task-manager-service
+
+  (let [search
+        ["attrs.application.application-id" :asc-number]
+
+        clause
+        (parser/sort->order-by :test search)
+
+        result
+        (honey/format {:select [:*]
+                       :order-by clause})]
+
+    (is (= ["SELECT * ORDER BY (aggregate #>> ARRAY['attrs', 'application', 'application-id']) ASC"]
+           result))))
+
 (deftest test-sort-by-empty
 
   (try

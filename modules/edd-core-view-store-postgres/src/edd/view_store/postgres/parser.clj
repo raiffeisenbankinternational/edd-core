@@ -131,13 +131,15 @@
              ;; service-dependent cases
              (case [service path]
 
-               ;; A special case for the application service:
-               ;; the rows must be sorted as integers but not strings.
-               ;; There is a special index in the application service.
-               [:glms-application-svc [:attrs :application-id]]
+               ;; A special case for the application ans task-manager
+               ;; services: when sorting by application-id, it must be
+               ;; coerced to integer for proper ordering. Both services
+               ;; have database indexes on these expressions.
+               ([:glms-application-svc [:attrs :application-id]]
+                [:glms-task-manager-svc [:attrs :application :application-id]])
                [:cast (honey/json-get-in-text c/COL_AGGREGATE path) :int]
 
-               ;; fallback
+                ;; fallback
                (honey/json-get-in-text c/COL_AGGREGATE path)))]
 
        [sort-field sql-order]))))
