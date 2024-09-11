@@ -4,8 +4,8 @@
 
  :deps
  {edd-core/edd-core                     {:local/root "../../"}
-  app-group-id/edd-core-io  {:local/root "../edd-core-io"}
-  app-group-id/edd-core-clj {:local/root "../edd-core-clj"}
+  app-group-id/edd-core-io  {:mvn/version "1.2045"}
+  app-group-id/edd-core-clj {:mvn/version "1.2045"}
   com.github.seancorfield/honeysql      {:mvn/version "2.6.1147"}}
 
  :paths
@@ -19,7 +19,9 @@
                  "-m" "lambda.core"
                  "-m" "--copy-source"]}
   :test
-  {:extra-deps  {lambdaisland/kaocha   {:mvn/version "1.75.1190"}}
+  {:extra-deps  {lambdaisland/kaocha   {:mvn/version "1.75.1190"}
+                 edd-core/edd-core-io  {:local/root "../edd-core-io"}
+                 edd-core/edd-core-clj {:local/root "../edd-core-clj"}}
    :extra-paths ["test"]}
 
   :dev
