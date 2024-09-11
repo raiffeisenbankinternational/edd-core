@@ -25,6 +25,7 @@
 (def SVC_DIMENSION :glms-dimension-svc)
 (def SVC_APPLICATION :glms-application-svc)
 (def SVC_CURRENCY :glms-currency-svc)
+(def SVC_TASK_MANAGER :glms-task-manager-svc)
 
 (def SERVICES
   #{:glms-access-rights-svc
@@ -54,7 +55,7 @@
     :glms-product-set-svc
     :glms-remarks-svc
     :glms-router-svc
-    :glms-task-manager-svc
+    SVC_TASK_MANAGER
     :glms-template-svc
     :glms-upload-svc
     :glms-user-import-svc
