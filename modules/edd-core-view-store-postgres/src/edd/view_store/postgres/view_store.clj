@@ -102,13 +102,38 @@
         conn
         (->conn ctx)
 
-        aggregates
-        (api/find-advanced-parsed conn realm service query-parsed)]
+        ;;
+        ;; A workaround for pagination: internally bump
+        ;; the limit value to get N+1 rows. Then decide
+        ;; if we have more rows in the database and drop
+        ;; the last row.
+        ;;
+        query-parsed-fix
+        (assoc query-parsed :size [:integer (inc limit)])
 
-    {:total (count aggregates)
+        aggregates
+        (api/find-advanced-parsed conn
+                                  realm
+                                  service
+                                  query-parsed-fix)
+
+        total
+        (count aggregates)
+
+        has-more?
+        (> total limit)
+
+        hits
+        (if has-more?
+          ;; subvec is O(1), no traverse
+          (subvec aggregates 0 (dec total))
+          aggregates)]
+
+    {:total total
      :size limit
      :from offset
-     :hits aggregates}))
+     :hits hits
+     :has-more? has-more?}))
 
 (defmethod get-snapshot
   :postgres

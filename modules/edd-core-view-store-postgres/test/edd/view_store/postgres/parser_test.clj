@@ -415,10 +415,10 @@
 (deftest test-filter-broken-group
   (let [filter
         [:or [:= :foo 1] [:and]]]
-    (is (= "(aggregate @@ '$.foo == 1') OR FALSE"
+    (is (= "(aggregate @@ '$.foo == 1')"
            (filter->result filter))))
   (let [filter [:and]]
-    (is (= "FALSE"
+    (is (= "NULL" ;; happens when nil is passed explicitly to :where
            (filter->result filter)))))
 
 (deftest test-parse-os-group-array

@@ -208,8 +208,9 @@
             content]
         [:not (filter-parsed->where service query)])
 
+      ;; just eliminate such a group
       :group-broken
-      false
+      nil
 
       (:group-variadic :group-array)
       (let [{:keys [condition

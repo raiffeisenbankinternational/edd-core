@@ -31,6 +31,16 @@
   fix-truncate-db
   (fix-import-entity :facility))
 
+(defn ->ctx
+  ([]
+   (->ctx nil))
+  ([overrides]
+   (merge {:con (delay *DB*)
+           :view-store :postgres
+           :service-name c/SVC_TEST
+           :meta {:realm c/TEST_REALM}}
+          overrides)))
+
 (deftest test-get-by-id-ok
 
   (let [uuid
@@ -638,7 +648,7 @@
                                     (assoc :query query)
                                     (with-conn)))]
 
-    (is (= {:total 1, :from 0, :size 50}
+    (is (= {:total 1, :from 0, :size 50 :has-more? false}
            (dissoc result :hits)))
 
     (is (= #uuid "9c86240b-64bf-4a7a-a48a-f27208194835"
@@ -677,7 +687,7 @@
                                     (assoc :query query)
                                     (with-conn)))]
 
-    (is (= {:total 50, :from 0, :size 50}
+    (is (= {:total 51, :from 0, :size 50 :has-more? true}
            (dissoc result :hits)))))
 
 (deftest test-list-options-for-one-field
@@ -815,3 +825,110 @@
     (is (= [app1] result4))
     (is (= [app1] result5))
     (is (= [] result6))))
+
+(deftest test-advanced-limit-has-more
+
+  (let [uuid1
+        (uuid/gen)
+
+        uuid2
+        (uuid/gen)
+
+        uuid3
+        (uuid/gen)
+
+        uuid4
+        (uuid/gen)
+
+        facility1
+        {:id uuid1
+         :attrs {:rank 1
+                 :foobar "AAA"}}
+
+        facility2
+        {:id uuid2
+         :attrs {:rank 2
+                 :foobar "AAA"}}
+
+        facility2
+        {:id uuid2
+         :attrs {:rank 2
+                 :foobar "AAA"}}
+
+        facility3
+        {:id uuid3
+         :attrs {:rank 3
+                 :foobar "AAA"}}
+
+        facility4
+        {:id uuid4
+         :attrs {:rank 4
+                 :foobar "AAA"}}
+        _
+        (api/upsert-many *DB* c/TEST_REALM c/SVC_TEST
+                         [facility1
+                          facility2
+                          facility3
+                          facility4])
+
+        query
+        {:filter [:= :attrs.foobar "AAA"]
+         :sort [:attrs.rank :asc]
+         :size 2
+         :from 0}
+
+        ctx (->ctx {:query query})
+
+        result1
+        (search/advanced-search ctx)
+
+        result2
+        (search/advanced-search (assoc-in ctx [:query :from] 2))
+
+        result3
+        (search/advanced-search (assoc-in ctx [:query :from] 4))
+
+        upd-result
+        (fn [result]
+          (update result :hits
+                  (fn [rows]
+                    (set (map :id rows)))))]
+
+    (testing "first two items, total is +1, has more rows"
+      (is (= {:total 3
+              :size 2
+              :from 0
+              :hits #{uuid1 uuid2}
+              :has-more? true}
+             (upd-result result1))))
+
+    (testing "last two items, total hasn't +1, no more rows"
+      (is (= {:total 2
+              :size 2
+              :from 2
+              :hits #{uuid3 uuid4}
+              :has-more? false}
+             (upd-result result2))))
+
+    (testing "completely empty"
+      (is (= {:total 0
+              :size 2
+              :from 4
+              :hits #{}
+              :has-more? false}
+             (upd-result result3))))))
+
+(deftest test-advanced-search-broken-group
+
+  (let [query
+        {:filter [:and]
+         :size 200
+         :from 0}
+
+        ctx (->ctx {:query query})
+
+        result
+        (search/advanced-search ctx)]
+
+    (testing "the broken group was ignored"
+      (is (= 200 (-> result :hits count))))))
