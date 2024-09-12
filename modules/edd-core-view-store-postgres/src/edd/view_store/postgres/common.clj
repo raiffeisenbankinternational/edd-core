@@ -56,3 +56,13 @@
   "
   [coll]
   (map-indexed vector coll))
+
+(defn vbutlast
+  "
+  Like butlast but for vector. As subvec is O(1),
+  we won't traverse the whole vector.
+  "
+  [vect]
+  (if (= 0 (count vect))
+    []
+    (subvec vect 0 (dec (count vect)))))

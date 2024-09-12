@@ -850,11 +850,6 @@
          :attrs {:rank 2
                  :foobar "AAA"}}
 
-        facility2
-        {:id uuid2
-         :attrs {:rank 2
-                 :foobar "AAA"}}
-
         facility3
         {:id uuid3
          :attrs {:rank 3
@@ -874,13 +869,12 @@
         query
         {:filter [:= :attrs.foobar "AAA"]
          :sort [:attrs.rank :asc]
-         :size 2
-         :from 0}
+         :size 2}
 
         ctx (->ctx {:query query})
 
         result1
-        (search/advanced-search ctx)
+        (search/advanced-search (assoc-in ctx [:query :from] 0))
 
         result2
         (search/advanced-search (assoc-in ctx [:query :from] 2))
@@ -903,7 +897,7 @@
              (upd-result result1))))
 
     (testing "last two items, total hasn't +1, no more rows"
-      (is (= {:total 2
+      (is (= {:total 4
               :size 2
               :from 2
               :hits #{uuid3 uuid4}
@@ -911,7 +905,7 @@
              (upd-result result2))))
 
     (testing "completely empty"
-      (is (= {:total 0
+      (is (= {:total 4
               :size 2
               :from 4
               :hits #{}

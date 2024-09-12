@@ -12,6 +12,7 @@
     :refer [->long!
             ->realm
             ->service
+            vbutlast
             flatten-paths]]
    [edd.view-store.postgres.const :as c]
    [edd.view-store.postgres.parser :as parser]
@@ -117,17 +118,19 @@
                                   service
                                   query-parsed-fix)
 
-        total
+        amount
         (count aggregates)
 
         has-more?
-        (> total limit)
+        (> amount limit)
 
         hits
         (if has-more?
-          ;; subvec is O(1), no traverse
-          (subvec aggregates 0 (dec total))
-          aggregates)]
+          (vbutlast aggregates)
+          aggregates)
+
+        total
+        (+ offset amount)]
 
     {:total total
      :size limit
