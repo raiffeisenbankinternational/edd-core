@@ -53,9 +53,14 @@
   "
   Build a lazy seq of pairs like [i, <item>],
   where `i` is the current number (from zero).
+  Can be initiated with index offset.
   "
-  [coll]
-  (map-indexed vector coll))
+  ([coll]
+   (map-indexed vector coll))
+  ([offset coll]
+   (map-indexed (fn [i item]
+                  [(+ offset i) item])
+                coll)))
 
 (defn vbutlast
   "

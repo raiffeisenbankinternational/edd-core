@@ -433,7 +433,11 @@
     (if search-parsed
 
       ;;
-      ;; TODO comment
+      ;; When search attributes are passed, compose a UNION query
+      ;; with explicit rank based on the index of an attribute in
+      ;; a list. This is to maintain the priority. At the moment,
+      ;; migth produce duplicates due to UNION cannot detect them
+      ;; by a certain row.
       ;;
 
       (let [{:keys [attrs value]}
@@ -447,25 +451,47 @@
               (->as-aggregates select-parsed)
               as-aggregates)
 
+            ;; Produce ORDER BY fields: the first is the priority
+            ;; column that comes from the attribute's index; the
+            ;; rest are custom order fields.
+            order-by-fields
+            (-> []
+                (conj [:1 :asc])
+                (into
+                 (for [[i [_ order]]
+                       (enumerate 2 order-by)]
+                   [(keyword (str i)) order])))
+
             sql-map
-            {:select-distinct [:sub.aggregate]
-             :from [[{:union
-                      (for [[i attr] (enumerate attrs)]
-                        (let [pred-wc
-                              [:wildcard attr value]
-                              where-wc
-                              (parser/filter->where service pred-wc)]
-                          {:select [:sub.order :sub.aggregate]
-                           :from [[(cond-> {:select [[[:inline i] :order] :aggregate]
-                                            :from [table]
-                                            :where [:and where-base where-wc]
-                                            :limit [:inline limit]
-                                            :offset [:inline offset]}
-                                     order-by
-                                     (assoc :order-by order-by))
-                                   :sub]]}))
-                      :order-by [[:1 :asc]]}
-                     :sub]]}]
+            {:union
+             (for [[i attr] (enumerate attrs)]
+               (let [pred-wc
+                     [:wildcard attr value]
+
+                     where-wc
+                     (parser/filter->where service pred-wc)
+
+                     where-full
+                     [:and where-base where-wc]
+
+                     ;; Produce SELECT fields: the first one is a priority
+                     ;; index; the rest are custom order fields; the last
+                     ;; is the aggregate itself.
+                     select-fields
+                     (-> []
+                         (conj [[:inline i] :order1])
+                         (into
+                          (for [[i [field _]] (enumerate 2 order-by)]
+                            [field (keyword (format "order%s" i))]))
+                         (conj :aggregate))]
+
+                 {:select select-fields
+                  :from [table]
+                  :where where-full}))
+
+             :order-by order-by-fields
+             :limit [:inline limit]
+             :offset [:inline offset]}]
 
         (honey/execute db sql-map {:builder-fn builder-fn}))
 

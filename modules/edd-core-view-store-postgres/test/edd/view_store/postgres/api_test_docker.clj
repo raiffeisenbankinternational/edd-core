@@ -762,8 +762,6 @@
 
 (deftest test-advanced-search-ccn-short-name-case
 
-  ;; TODO: add sort check
-
   (let [uuid1
         (uuid/gen)
 
@@ -819,12 +817,78 @@
                             [:fields [:attrs.cocunut :attrs.short-name]
                              :value "123-456/acme-inc"]})]
 
-    (is (= [app1] result1))
+    (is (= [app1 app1] result1))
     (is (= [app1] result2))
     (is (= [app1] result3))
     (is (= [app1] result4))
-    (is (= [app1] result5))
+    (is (= [app1 app1] result5))
     (is (= [] result6))))
+
+(deftest test-advanced-search-with-search-fields
+
+  (let [uuid1
+        #uuid "3b2fdaff-2bcc-4fea-86a0-e1a38c52876e"
+
+        uuid2
+        #uuid "c7a0a370-6101-457f-8a27-3409268025b4"
+
+        uuid3
+        #uuid "88be9b3c-ad63-484c-ae6a-1b2e4d95b55e"
+
+        ;; matches both cocunut and top-parent-id search fields
+        app1
+        {:id uuid1
+         :attrs
+         {:rank 3
+          :cocunut "123456789"
+          :top-parent-id "123456789"}}
+
+        app2
+        {:id uuid2
+         :attrs
+         {:rank 2
+          :cocunut "foo"
+          :top-parent-id "123456789"}}
+
+        app3
+        {:id uuid3
+         :attrs
+         {:rank 1
+          :cocunut "bar"
+          :top-parent-id "123456789"}}
+
+        _
+        (api/upsert-many *DB* c/TEST_REALM c/SVC_DIMENSION
+                         [app1 app2 app3])
+
+        result1
+        (api/find-advanced *DB*
+                           c/TEST_REALM c/SVC_DIMENSION
+                           {:search
+                            [:fields [:attrs.cocunut :attrs.short-name :attrs.top-parent-id]
+                             :value "123456789"]
+                            :sort [:attrs.rank :asc]})
+
+        result2
+        (api/find-advanced *DB*
+                           c/TEST_REALM c/SVC_DIMENSION
+                           {:search
+                            [:fields [:attrs.cocunut :attrs.short-name :attrs.top-parent-id]
+                             :value "123456789"]
+                            :from 1
+                            :size 1
+                            :sort [:attrs.rank :asc]})]
+
+    (testing "
+uuid1 is the first because of search priority: coconut match (even though the rank is 3)
+uuid3 is the second because rank is 1
+uuid2 is the third because rank is 2
+uuid1 is the fourth again because we don't remove UNION duplicates at the moment
+"
+      (is (= [uuid1 uuid3 uuid2 uuid1] (mapv :id result1))))
+
+    (testing "the same as above but shifted due to size/from"
+      (is (= [uuid3] (mapv :id result2))))))
 
 (deftest test-advanced-limit-has-more
 
