@@ -26,9 +26,11 @@ test: test-unit test-integration
 env ?= $(error Please specify the env=... argument, e.g. env=DEV99)
 ENV = $(shell echo $(env) | tr a-z A-Z)
 
-push:
+rebase:
 	git fetch
 	git rebase origin/master
+
+push:
 	git push origin HEAD:refs/for/master%topic=env/${ENV}
 
 .PHONY: repl
