@@ -1,17 +1,26 @@
 (ns lambda.elastic
+  (:import
+   clojure.lang.Keyword)
   (:require
    [lambda.http-client :as client]
    [lambda.util :as util]
    [clojure.tools.logging :as log]
-   [clojure.string :refer [join]]
+   [clojure.string :as str]
    [sdk.aws.common :as common]))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
 
-(defn get-env
-  [name & [default]]
-  (get (System/getenv) name default))
+(defmacro error! [template & args]
+  `(throw (new RuntimeException (format ~template ~@args))))
+
+(defn ->snake-case ^String [x]
+  (-> x name (str/replace #"-" "_")))
+
+(defn get-index-name ^Keyword [realm service-name]
+  (keyword (format "%s_%s"
+                   (->snake-case realm)
+                   (->snake-case service-name))))
 
 (defn query
   [{:keys [method path body query elastic-search aws]} & {:keys [ignored-status]}]
@@ -87,3 +96,33 @@
                          {:error {:message (:body response)
                                   :status  (:status response)}})
         :else (util/to-edn (:body response))))))
+
+(defn index-settings
+  "
+  Get a map of settings for the specified realm and service.
+  "
+  [ctx realm service]
+  (let [{:keys [aws
+                elastic-search]}
+        ctx
+
+        index
+        (get-index-name realm service)
+
+        params
+        {:method         "GET"
+         :path           (format "/%s/_settings" (name index))
+         :elastic-search elastic-search
+         :aws            aws}
+
+        {:keys [error] :as resp}
+        (query params)]
+
+    (if error
+      (error! "Error getting settings: %s" error)
+      (get resp index))))
+
+(defn read-only? [settings]
+  (-> settings
+      (get-in [:settings :index :blocks :read_only])
+      (= "true")))
