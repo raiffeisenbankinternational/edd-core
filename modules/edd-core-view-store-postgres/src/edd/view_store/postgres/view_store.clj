@@ -133,7 +133,7 @@
         (+ offset amount)]
 
     {:total total
-     :size limit
+     :size (count hits)
      :from offset
      :hits hits
      :has-more? has-more?}))

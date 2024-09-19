@@ -648,7 +648,7 @@
                                     (assoc :query query)
                                     (with-conn)))]
 
-    (is (= {:total 1, :from 0, :size 50 :has-more? false}
+    (is (= {:total 1, :from 0, :size 1 :has-more? false}
            (dissoc result :hits)))
 
     (is (= #uuid "9c86240b-64bf-4a7a-a48a-f27208194835"
@@ -970,7 +970,7 @@ uuid1 is the fourth again because we don't remove UNION duplicates at the moment
 
     (testing "completely empty"
       (is (= {:total 4
-              :size 2
+              :size 0
               :from 4
               :hits #{}
               :has-more? false}
