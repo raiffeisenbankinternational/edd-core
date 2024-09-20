@@ -188,6 +188,26 @@ drop index if exists %s.idx_aggregates_%s_btree;
         (println (frmt TEMPLATE_ADD_BTREE_INDEX column schema expression))
         (println)))))
 
+(defn generate-drop-flyway-history [realms services]
+  (println)
+  (doseq [realm realms
+          service services]
+    (let [schema
+          (->schema realm service)]
+      (println (format "delete from %s.global_flyway_schema_history where version in ('003', '004', '005');" schema)))))
+
+(comment
+
+  ;; dev
+  (generate-drop-flyway-history [:test]
+                                [:glms-application-svc])
+
+  ;; prod
+  (generate-drop-flyway-history [:dataload :prod :test :training]
+                                [:glms-application-svc])
+
+  nil)
+
 (def TEMPLATE_PREWARM "
 
 with indexes (index) as (values

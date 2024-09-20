@@ -17,7 +17,7 @@ where schemaname = '${flyway:defaultSchema}'
 order by 1 desc;
 
 select cron.schedule(
-    'cron_aggregates_index_prewarm',
+    '${flyway:defaultSchema}_mv_aggregates_index_prewarm',
     '*/15 * * * *', -- every 15 mintues
-    'refresh materialized view {flyway:defaultSchema}mv_aggregates_index_prewarm'
+    'refresh materialized view ${flyway:defaultSchema}.mv_aggregates_index_prewarm'
 );
