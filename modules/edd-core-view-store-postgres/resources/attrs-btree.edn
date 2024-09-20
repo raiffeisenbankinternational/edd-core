@@ -10,9 +10,16 @@
  #{:attrs.application-id}
 
  :glms-dimension-svc
- #{:state
+ #{;; search
+   :state
    :attrs.cocunut
-   :attrs.top-parent-id}
+   :attrs.top-parent-id
+
+   ;; sorting in UI
+   :attrs.top-parent-short-name
+   :attrs.asset-class.asset-class-code
+   :attrs.gics-level-1-short-name
+   :attrs.country-of-risk}
 
  :glms-notification-svc
  #{:attrs.status
