@@ -1,6 +1,14 @@
 
--- remove the previous broken cron job
-select cron.unschedule('cron_aggregates_index_prewarm');
+do $$
+declare
+    cron_job text = 'cron_aggregates_index_prewarm';
+begin
+    select cron.unschedule(cron_job);
+    exception
+        when others then -- don't know the exact error code
+            raise notice 'could not remove the cron job %s', cron_job;
+end;
+$$;
 
 -- ensure materialization works
 refresh materialized view ${flyway:defaultSchema}.mv_aggregates_index_prewarm;

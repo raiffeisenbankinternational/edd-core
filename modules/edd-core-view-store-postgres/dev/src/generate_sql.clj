@@ -72,7 +72,7 @@ drop index if exists %s.idx_created_at;
 
 (def TEMPLATE_ADD_WC_INDEX "
 
-create index if not exists idx_aggregates_%s_trgm on %s.aggregates using gist ((%s) gist_trgm_ops);
+create index if not exists idx_aggregates_%s_trgm on %s.aggregates using gin ((%s) gin_trgm_ops);
 
 ")
 
@@ -246,7 +246,7 @@ order by
       1)))
 
 (defn service->mig-dir ^File [service]
-  (io/file (format "../../../%s/ansible/deploy/edd-core-view-store-postgres/migrations"
+  (io/file (format "../../../%s/ansible/deploy/migrations"
                    (name service))))
 
 (defn make-mig-filename ^String [mig-id slug]
@@ -332,7 +332,7 @@ order by
                   expression
                   (format "aggregate #>> %s" array)]
 
-              (println (format "create index if not exists idx_aggregates_%s_trgm on aggregates\nusing gist ((%s) gist_trgm_ops);"
+              (println (format "create index if not exists idx_aggregates_%s_trgm on aggregates\nusing gin ((%s) gin_trgm_ops);"
                                column expression))
               (println)))
 
