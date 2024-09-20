@@ -630,6 +630,21 @@
     (is (= ["SELECT * ORDER BY (aggregate #>> ARRAY['attrs', 'cocunut']) ASC"]
            result))))
 
+(deftest test-sort-by-dimension-asset-class
+
+  (let [search
+        ["attrs.asset-class.asset-class-code" :asc]
+
+        order-by
+        (parser/sort->order-by c/SVC_DIMENSION search)
+
+        result
+        (honey/format {:select [:*]
+                       :order-by order-by})]
+
+    (is (= ["SELECT * ORDER BY (aggregate #>> ARRAY['attrs', 'asset-class', 'asset-class-code']) ASC"]
+           result))))
+
 (deftest test-sort-by-application-id-no-service
 
   (let [search
