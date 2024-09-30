@@ -46,29 +46,29 @@
         (->conn ctx)]
 
     (api/upsert conn realm service aggregate)
-    (s3.vs/store-to-s3 ctx))
+    (s3.vs/store-to-s3 ctx)))
 
-  (defmethod simple-search
-    :postgres
-    [{:as ctx :keys [query]}]
+(defmethod simple-search
+  :postgres
+  [{:as ctx :keys [query]}]
 
-    (log/infof "__PG SIMPLE SEARCH: %s" query)
+  (log/infof "__PG SIMPLE SEARCH: %s" query)
 
-    (let [realm
-          (->realm ctx)
+  (let [realm
+        (->realm ctx)
 
-          service
-          (->service ctx)
+        service
+        (->service ctx)
 
-          attrs
-          (-> query
-              (dissoc :query-id)
-              (parser/validate-simple-search!))
+        attrs
+        (-> query
+            (dissoc :query-id)
+            (parser/validate-simple-search!))
 
-          conn
-          (->conn ctx)]
+        conn
+        (->conn ctx)]
 
-      (api/find-by-attrs conn realm service attrs))))
+    (api/find-by-attrs conn realm service attrs)))
 
 (defmethod advanced-search
   :postgres
