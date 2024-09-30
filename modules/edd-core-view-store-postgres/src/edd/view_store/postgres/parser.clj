@@ -274,16 +274,20 @@
 
         (cond
 
+          ;; Problem: people keep sending broken predicates like
+          ;; [:in attrs.user.id []] (empty IN clause). To prevent
+          ;; failures on production, blindly return FALSE so the
+          ;; entire branch gets resolved into false (mimics Open
+          ;; Search behavior).
           (= 0 amount)
-          (error! "Empty IN predicate, attribute: %s" attr)
+          false
 
           (= 1 amount)
-          (recur
-           service
-           [:predicate-simple
-            {:op :=
-             :attr attr
-             :value (first value)}])
+          (recur service
+                 [:predicate-simple
+                  {:op :=
+                   :attr attr
+                   :value (first value)}])
 
           :else
           (let [json-path
@@ -324,12 +328,11 @@
       (let [{:keys [attr
                     value]}
             content]
-        (recur
-         service
-         [:predicate-in
-          {:op :in
-           :attr attr
-           :value (map str value)}]))
+        (recur service
+               [:predicate-in
+                {:op :in
+                 :attr attr
+                 :value (map str value)}]))
 
       ;;
       ;; Here and below: the datetime cases need some adjustment.
@@ -343,24 +346,22 @@
                     attr
                     value]}
             content]
-        (recur
-         service
-         [:predicate-simple
-          {:op op
-           :attr attr
-           :value (-> value parse-time-max util/date->string)}]))
+        (recur service
+               [:predicate-simple
+                {:op op
+                 :attr attr
+                 :value (-> value parse-time-max util/date->string)}]))
 
       :predicate-datetime-more
       (let [{:keys [op
                     attr
                     value]}
             content]
-        (recur
-         service
-         [:predicate-simple
-          {:op op
-           :attr attr
-           :value (-> value parse-time-min util/date->string)}]))
+        (recur service
+               [:predicate-simple
+                {:op op
+                 :attr attr
+                 :value (-> value parse-time-min util/date->string)}]))
 
       ;;
       ;; Correct the expression such that it hits the primary key
@@ -400,12 +401,11 @@
                     value1
                     value2]}
             content]
-        (recur
-         service
-         [:predicate-in
-          {:op :in
-           :attr attr
-           :value [value1 value2]}]))
+        (recur service
+               [:predicate-in
+                {:op :in
+                 :attr attr
+                 :value [value1 value2]}]))
 
       :predicate-wc
       (let [{:keys [attr
