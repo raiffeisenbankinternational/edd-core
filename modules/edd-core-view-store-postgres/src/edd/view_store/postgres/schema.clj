@@ -117,7 +117,9 @@
       [:catn
        [:op [:= :in]]
        [:attr [:schema [:ref ::Attr]]]
-       [:value ::ValueColl]]
+       [:value [:or
+                [:sequential ::Value]
+                [:set ::Value]]]]
 
       ;; A weird query that someone sends to facility service like:
       ;; [:wildcard "id" <UUID>]

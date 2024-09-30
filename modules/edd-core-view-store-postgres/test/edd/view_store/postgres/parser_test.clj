@@ -520,16 +520,12 @@
 (deftest test-in-empty-vector
 
   (let [filter
-        [:in :some.attr []]]
+        [:and
+         [:= :foo 42]
+         [:in :some.attr []]]]
 
-    (try
-      (filter->result filter)
-      (is false)
-      (catch clojure.lang.ExceptionInfo e
-        (is (= "could not parse OS filter DSL"
-               (ex-message e)))
-        (is (= {:message "could not parse OS filter DSL", :data [:in :some.attr []]}
-               (ex-data e)))))))
+    (is (= "(aggregate @@ '$.foo == 42') AND FALSE"
+           (filter->result :test filter)))))
 
 (deftest test-wildcard-application-id-uuid-case
   ;; feel free to drop this test once LSP-7606 is done
