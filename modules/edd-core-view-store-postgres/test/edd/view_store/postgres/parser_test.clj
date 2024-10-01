@@ -491,6 +491,17 @@
     (is (= "((aggregate #>> ARRAY['attrs', 'application-id']) = '123') OR ((aggregate #>> ARRAY['attrs', 'application-id']) = '456') OR ((aggregate #>> ARRAY['attrs', 'application-id']) ILIKE '%123%')"
            (filter->result c/SVC_APPLICATION filter)))))
 
+(deftest test-application-new-indexes
+
+  (let [filter
+        [:or
+         [:in :attrs.area ["foo" "bar"]]
+         [:= :attrs.booking-company 42]
+         [:> "attrs.status" "created"]]]
+
+    (is (= "((aggregate #>> ARRAY['attrs', 'area']) IN ('foo', 'bar')) OR ((aggregate #>> ARRAY['attrs', 'booking-company']) = '42') OR ((aggregate #>> ARRAY['attrs', 'status']) > 'created')"
+           (filter->result c/SVC_APPLICATION filter)))))
+
 (deftest test-wildcard-application-id-ui-case
 
   (let [filter
