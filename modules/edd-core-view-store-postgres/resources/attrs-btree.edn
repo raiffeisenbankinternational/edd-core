@@ -7,7 +7,13 @@
 ;;
 
 {:glms-application-svc
- #{:attrs.application-id}
+ #{;; initial
+   :attrs.application-id
+
+   ;; V005
+   :attrs.area
+   :attrs.booking-company
+   :attrs.status}
 
  :glms-dimension-svc
  #{;; search
