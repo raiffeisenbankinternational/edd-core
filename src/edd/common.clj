@@ -10,6 +10,17 @@
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
 
+(defn contains-keys
+  [m & expected-keys]
+  (reduce
+   (fn [_ item]
+     (if
+      (item m)
+       true
+       (reduced false)))
+   true
+   expected-keys))
+
 (defn parse-param
   [query]
   (if (or (uuid? query)
@@ -26,19 +37,76 @@
           (first)
           (second)))))
 
-(defn get-by-id
-  [ctx & [query]]
-  (if-let [id (cond
-                (:id query) (:id query)
-                (:id ctx) (:id ctx)
-                query (parse-param query)
-                :else nil)]
-    (let [aggregate (el-event/get-by-id ctx id)]
-      (if query
+(defn get-by-id-and-version-v2
+  [ctx query]
+  (let [{:keys [id ^int version]} query]
+    (when (> version 0)
+      (search/get-by-id-and-version ctx id version))))
+
+(defn -get-by-id-in-ctx
+  "Returns context with a aggregate response in it"
+  [ctx]
+  (let [{:keys [id]}
+        ctx
+
         aggregate
-        (assoc ctx
-               :aggregate aggregate)))
+        (el-event/get-by-id ctx id)]
+    (assoc ctx :aggregate aggregate)))
+
+(defn -get-by-query
+  "Returns aggregate"
+  [ctx query]
+  (let [id (parse-param query)]
+    (el-event/get-by-id ctx id)))
+
+(defn -get-by-id
+  "Returns aggregate"
+  [ctx query]
+  (let [{:keys [id]} query]
+    (el-event/get-by-id ctx id)))
+
+(defn -query-as-id?
+  [query]
+  (some? (parse-param query)))
+
+(defn get-by-id
+  "
+  Returns aggregate based on information provided in query and ctx.
+  if query contains `:version` attribute the historical value is returned!
+
+  !Caution!
+  Service should take care about compatibility with previous (historical) aggregate
+  structures to fulfill current client expectations!
+  "
+  [ctx & [query]]
+  ;; dispatch based on query and ctx
+  (cond
+    ;; if id and version both available in query
+    (contains-keys query :id :version)
+    (get-by-id-and-version-v2 ctx query)
+
+    ;; if only id available in query
+    (contains-keys query :id)
+    (-get-by-id ctx query)
+
+    ;; if ctx contains id
+    (contains-keys ctx :id)
+    (-get-by-id-in-ctx ctx)
+
+    ;; may query is an id?
+    (-query-as-id? query)
+    (-get-by-query ctx query)
+
+    :else
     (log/warn "Id is nil")))
+
+(defn get-by-id!
+  "
+  Returns aggregate based on information provided in query and ctx.
+  Only latest version of aggregate!.
+  "
+  [ctx & [query]]
+  (get-by-id ctx [(if (map? query) (dissoc query :id) query)]))
 
 (defn fetch-by-id
   [ctx & [query]]
@@ -124,9 +192,3 @@
         (when (> version upper-bound)
           (throw (ex-info "Version does not exist" {:error events})))
         (el-event/create-aggregate {} (take version events) (:def-apply ctx))))))
-
-(defn get-by-id-and-version-v2
-  [ctx query]
-  (let [{:keys [id ^int version]} query]
-    (when (> version 0)
-      (search/get-by-id-and-version ctx id version))))
