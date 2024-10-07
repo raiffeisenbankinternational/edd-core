@@ -13,6 +13,19 @@
           ignore_public_acls: true
           block_public_policy: true
           restrict_public_buckets: true
+        policy:
+          Version: 2012-10-17
+          Statement:
+            - Sid: OnlyHTTPS
+              Effect: Deny
+              Principal: "*"
+              Action: "s3:*"
+              Resource:
+                - 'arn:aws:s3:::{{ lookup("env", "AccountId") }}-{{ lookup("env", "EnvironmentNameLower") }}-it/*'
+                - 'arn:aws:s3:::{{ lookup("env", "AccountId") }}-{{ lookup("env", "EnvironmentNameLower") }}-it'
+              Condition:
+                Bool:
+                  "aws:SecureTransport": "false"
 
     - name: 'Create sqs bucket'
       amazon.aws.s3_bucket:
@@ -24,8 +37,21 @@
           ignore_public_acls: true
           block_public_policy: true
           restrict_public_buckets: true
+        policy:
+          Version: 2012-10-17
+          Statement:
+            - Sid: OnlyHTTPS
+              Effect: Deny
+              Principal: "*"
+              Action: "s3:*"
+              Resource:
+                - 'arn:aws:s3:::{{ lookup("env", "AccountId") }}-{{ lookup("env", "EnvironmentNameLower") }}-sqs/*'
+                - 'arn:aws:s3:::{{ lookup("env", "AccountId") }}-{{ lookup("env", "EnvironmentNameLower") }}-sqs'
+              Condition:
+                Bool:
+                  "aws:SecureTransport": "false"
 
-    - name: Create standard queueu
+    - name: 'Create standard queue'
       community.aws.sqs_queue:
         name: '{{ lookup("env", "AccountId") }}-{{ lookup("env", "EnvironmentNameLower") }}-it'
         region: '{{ lookup("env", "Region") }}'
@@ -43,8 +69,7 @@
                  - SQS:SendMessage
                Resource: 'arn:aws:sqs:*:*:{{ lookup("env", "AccountId") }}-{{ lookup("env", "EnvironmentNameLower") }}-it'
 
-
-    - name: Create fifo queue
+    - name: 'Create fifo queue'
       community.aws.sqs_queue:
         name: '{{ lookup("env", "AccountId") }}-{{ lookup("env", "EnvironmentNameLower") }}-it.fifo'
         region: '{{ lookup("env", "Region") }}'
@@ -62,4 +87,3 @@
                Action:
                  - SQS:SendMessage
                Resource: 'arn:aws:sqs:*:*:{{ lookup("env", "AccountId") }}-{{ lookup("env", "EnvironmentNameLower") }}-it'
-
