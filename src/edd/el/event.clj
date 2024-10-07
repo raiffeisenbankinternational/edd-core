@@ -44,17 +44,17 @@
                  (keyword (:event-id event))
 
                  aggregate
-                 (first acc)
-
-                 aggregate
-                 (assoc aggregate
-                        :version (:event-seq event)
-                        :id (:id event))]
+                 (first acc)]
 
              (if-let [apply-fn (event-id apply-functions)]
                (let [new-aggregate (apply-event aggregate event apply-fn)]
                  (cons new-aggregate acc))
-               (cons aggregate acc))))
+               (cons
+                (assoc aggregate
+                       :version (:event-seq event)
+                       :id (:id event))
+
+                acc))))
 
          (if snapshot (list snapshot) (list))
          events)]
