@@ -817,11 +817,11 @@
                             [:fields [:attrs.cocunut :attrs.short-name]
                              :value "123-456/acme-inc"]})]
 
-    (is (= [app1 app1] result1))
+    (is (= [app1] result1))
     (is (= [app1] result2))
     (is (= [app1] result3))
     (is (= [app1] result4))
-    (is (= [app1 app1] result5))
+    (is (= [app1] result5))
     (is (= [] result6))))
 
 (deftest test-advanced-search-with-search-fields
@@ -883,9 +883,8 @@
 uuid1 is the first because of search priority: coconut match (even though the rank is 3)
 uuid3 is the second because rank is 1
 uuid2 is the third because rank is 2
-uuid1 is the fourth again because we don't remove UNION duplicates at the moment
 "
-      (is (= [uuid1 uuid3 uuid2 uuid1] (mapv :id result1))))
+      (is (= [uuid1 uuid3 uuid2] (mapv :id result1))))
 
     (testing "the same as above but shifted due to size/from"
       (is (= [uuid3] (mapv :id result2))))))

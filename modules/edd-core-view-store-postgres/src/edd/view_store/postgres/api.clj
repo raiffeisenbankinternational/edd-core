@@ -433,11 +433,13 @@
     (if search-parsed
 
       ;;
-      ;; When search attributes are passed, compose a UNION query
-      ;; with explicit rank based on the index of an attribute in
-      ;; a list. This is to maintain the priority. At the moment,
-      ;; migth produce duplicates due to UNION cannot detect them
-      ;; by a certain row.
+      ;; When search attributes are passed, two things come into play.
+      ;; First, we add extra wildcard expressions into WHERE for each
+      ;; attribute. Second, the order of search attributes does matter:
+      ;; rows found within the first wildcard must precede rows found
+      ;; within the second and so on. For this, we generate a custom
+      ;; CASE ... END expression with weights and use it as a leading
+      ;; ORDER BY clause.
       ;;
 
       (let [{:keys [attrs value]}
@@ -451,45 +453,50 @@
               (->as-aggregates select-parsed)
               as-aggregates)
 
-            ;; Produce ORDER BY fields: the first is the priority
-            ;; column that comes from the attribute's index; the
-            ;; rest are custom order fields.
-            order-by-fields
-            (-> []
-                (conj [:1 :asc])
-                (into
-                 (for [[i [_ order]]
-                       (enumerate 2 order-by)]
-                   [(keyword (str i)) order])))
+            filter-wc
+            (into [:or]
+                  (for [attr attrs]
+                    [:wildcard attr value]))
+
+            where-wc
+            (parser/filter->where service filter-wc)
+
+            where-full
+            [:and where-base where-wc]
+
+            ;; generate [:case :field1 :value :fieldN :valueN :else :default], see
+            ;; https://github.com/seancorfield/honeysql/blob/develop/doc/special-syntax.md#case
+            order-search
+            (loop [form [:case]
+                   attrs attrs
+                   i 0]
+              (if (seq attrs)
+                (let [attr
+                      (first attrs)
+
+                      path
+                      (attrs/attr->path attr)
+
+                      field
+                      (honey/json-get-in-text :aggregate path)
+
+                      expr
+                      (honey/ilike field value)]
+
+                  (recur (conj form expr [:inline i])
+                         (next attrs)
+                         (inc i)))
+
+                (conj form :else [:inline 999])))
+
+            order-by-full
+            (cons [order-search :asc] order-by)
 
             sql-map
-            {:union
-             (for [[i attr] (enumerate attrs)]
-               (let [pred-wc
-                     [:wildcard attr value]
-
-                     where-wc
-                     (parser/filter->where service pred-wc)
-
-                     where-full
-                     [:and where-base where-wc]
-
-                     ;; Produce SELECT fields: the first one is a priority
-                     ;; index; the rest are custom order fields; the last
-                     ;; is the aggregate itself.
-                     select-fields
-                     (-> []
-                         (conj [[:inline i] :order1])
-                         (into
-                          (for [[i [field _]] (enumerate 2 order-by)]
-                            [field (keyword (format "order%s" i))]))
-                         (conj :aggregate))]
-
-                 {:select select-fields
-                  :from [table]
-                  :where where-full}))
-
-             :order-by order-by-fields
+            {:select [:aggregate]
+             :from [table]
+             :where where-full
+             :order-by order-by-full
              :limit [:inline limit]
              :offset [:inline offset]}]
 
