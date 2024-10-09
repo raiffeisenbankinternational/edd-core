@@ -130,7 +130,23 @@
         (sort-by :version aggregates)
 
         {:keys [id version]}
-        (last aggregates)]
+        (last aggregates)
 
-    (-insert-entries ctx aggregates)
-    (-invalidate-entries ctx id version)))
+        {:keys [service-configuration]}
+        ctx
+
+        {:keys [history]}
+        service-configuration
+
+        ;; by default history is turned on
+        history
+        (if (some? history) history :enabled)
+
+        service
+        (->service ctx)]
+
+    (log/infof "historisation for service %s is %s" service history)
+
+    (when (= :enabled history)
+      (-insert-entries ctx aggregates)
+      (-invalidate-entries ctx id version))))
