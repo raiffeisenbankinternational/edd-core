@@ -47,7 +47,7 @@
                        (assoc :invocation-id invocation-id))))
 
 (defn -cmd-and-apply
-  [cmd aggregate-id]
+  [ctx cmd aggregate-id]
   (let [invocation-id
         (uuid/gen)
 
@@ -58,7 +58,7 @@
         (uuid/gen)
 
         ctx
-        (get-ctx invocation-id)
+        (assoc ctx :invocation-id invocation-id)
 
         cmd
         (assoc cmd
@@ -74,11 +74,73 @@
     (edd/handler ctx cmd)
     (edd/handler ctx apply)))
 
-
 ;; This test is currently executed manually due to complexity of migrations
 ;; to setup the test `repl/local.sh` script must be executed in order to
 ;; spin postgres db with all migrations
 
+#_(deftest when-no-historisation-then-no-aggregates-returned
+    (with-redefs [s3.vs/store-to-s3 (fn [_ctx] nil)]
+      (let [agg-id
+            (uuid/gen)
+
+            interaction-id
+            (uuid/gen)
+
+            ctx
+            (get-ctx)
+
+            ctx
+            (assoc-in ctx [:service-configuration :history] :disabled)
+
+            cmds
+            {:request-id (uuid/gen)
+             :meta {:realm :test}
+             :commands [{:cmd-id :cmd-1 :id agg-id}
+                        {:cmd-id :cmd-2 :id agg-id}]}]
+
+        (-cmd-and-apply ctx cmds agg-id)
+
+        (let [{aggregate :result}
+              (edd/handler ctx
+                           {:request-id (uuid/gen)
+                            :interaction-id interaction-id
+                            :meta {:realm :test}
+                            :query {:query-id :get-by-id
+                                    :id agg-id}})
+              {aggregate-v2 :result}
+              (edd/handler ctx
+                           {:request-id (uuid/gen)
+                            :interaction-id interaction-id
+                            :meta {:realm :test}
+                            :query {:query-id :get-by-id
+                                    :id agg-id
+                                    :version 2}})
+
+              {aggregate-v3 :result}
+              (edd/handler ctx
+                           {:request-id (uuid/gen)
+                            :interaction-id interaction-id
+                            :meta {:realm :test}
+                            :query {:query-id :get-by-id
+                                    :id agg-id
+                                    :version 3}})
+
+              {aggregate-v1 :result}
+              (edd/handler ctx
+                           {:request-id (uuid/gen)
+                            :interaction-id interaction-id
+                            :meta {:realm :test}
+                            :query {:query-id :get-by-id
+                                    :id agg-id
+                                    :version 1}})]
+
+          (is (= {:value "2",
+                  :version 2,
+                  :id agg-id}
+                 aggregate))
+          (is (nil? aggregate-v1))
+          (is (nil? aggregate-v2))
+          (is (nil? aggregate-v3))))))
 
 #_(deftest when-query-for-aggregate-by-id-and-version
     (with-redefs [s3.vs/store-to-s3 (fn [_ctx] nil)]
@@ -97,7 +159,7 @@
              :commands [{:cmd-id :cmd-1 :id agg-id}
                         {:cmd-id :cmd-2 :id agg-id}]}]
 
-        (-cmd-and-apply cmds agg-id)
+        (-cmd-and-apply ctx cmds agg-id)
 
         (let [{aggregate :result}
               (edd/handler ctx
@@ -111,7 +173,7 @@
                            {:request-id (uuid/gen)
                             :interaction-id interaction-id
                             :meta {:realm :test}
-                            :query {:query-id :get-by-id-and-version-v2
+                            :query {:query-id :get-by-id
                                     :id agg-id
                                     :version 2}})
 
@@ -120,7 +182,7 @@
                            {:request-id (uuid/gen)
                             :interaction-id interaction-id
                             :meta {:realm :test}
-                            :query {:query-id :get-by-id-and-version-v2
+                            :query {:query-id :get-by-id
                                     :id agg-id
                                     :version 3}})
 
@@ -129,7 +191,7 @@
                            {:request-id (uuid/gen)
                             :interaction-id interaction-id
                             :meta {:realm :test}
-                            :query {:query-id :get-by-id-and-version-v2
+                            :query {:query-id :get-by-id
                                     :id agg-id
                                     :version 1}})]
 
@@ -171,8 +233,8 @@
                          :id agg-id}]}]
 
       ;; execute two commands to bump aggregate version to 2
-        (-cmd-and-apply cmd-1 agg-id)
-        (-cmd-and-apply cmd-2 agg-id)
+        (-cmd-and-apply ctx cmd-1 agg-id)
+        (-cmd-and-apply ctx cmd-2 agg-id)
 
         (let [{aggregate :result}
               (edd/handler ctx
@@ -186,7 +248,7 @@
                            {:request-id (uuid/gen)
                             :interaction-id interaction-id
                             :meta {:realm :test}
-                            :query {:query-id :get-by-id-and-version-v2
+                            :query {:query-id :get-by-id
                                     :id agg-id
                                     :version 2}})
 
@@ -195,7 +257,7 @@
                            {:request-id (uuid/gen)
                             :interaction-id interaction-id
                             :meta {:realm :test}
-                            :query {:query-id :get-by-id-and-version-v2
+                            :query {:query-id :get-by-id
                                     :id agg-id
                                     :version 3}})
 
@@ -204,7 +266,7 @@
                            {:request-id (uuid/gen)
                             :interaction-id interaction-id
                             :meta {:realm :test}
-                            :query {:query-id :get-by-id-and-version-v2
+                            :query {:query-id :get-by-id
                                     :id agg-id
                                     :version 1}})]
 
