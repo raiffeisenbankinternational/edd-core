@@ -11,8 +11,11 @@
             [lambda.core :as core]
             [edd.test.fixture.dal :as mock]
             [lambda.test.fixture.client :as mock-client]
+            [edd.memory.event-store :as memory]
             [sdk.aws.common :as common]
-            [sdk.aws.sqs :as sqs]))
+            [sdk.aws.sqs :as sqs]
+            [lambda.filters :as lambda-filters])
+  (:import (java.sql SQLTransientConnectionException)))
 
 (def agg-id (uuid/gen))
 
@@ -197,6 +200,7 @@
 
 (deftest test-command-handler-exception
   (let [messages (atom [])]
+
     (with-redefs [common/create-date (fn [] "20210322T232540Z")
                   sqs/sqs-publish (fn [{:keys [message]}]
                                     (swap! messages #(conj % message)))]
@@ -407,6 +411,89 @@
                (map
                 #(dissoc % :headers :keepalive)
                 (mock-client/traffic-edn))))))))
+
+(deftest test-exception-command-request-log
+  (let [messages (atom [])
+
+        exceptions (atom [(RuntimeException. "No connections 0")
+                          (ex-info "No connections 1" {:error "No connections 1"})
+                          (SQLTransientConnectionException. "No connections 2")
+                          (ex-info "No connections 1" {:error "No connections 3"})])]
+    (with-redefs [common/create-date
+                  (fn [] "20210322T232540Z")
+
+                  memory/log-request-impl
+                  (fn [_ctx _body-fn]
+                    (let [e (first @exceptions)]
+                      (swap! exceptions rest)
+                      (throw e)))
+
+                  sqs/delete-message-batch
+                  (fn [{:keys [message]}]
+                    (swap! messages conj message))
+
+                  sqs/sqs-publish
+                  (fn [{:keys [_message]}]
+                    (throw (RuntimeException. "Publihsing something")))]
+
+      (mock-core
+       :invocations [(util/to-json (req
+                                    [{:request-id     req-id1
+                                      :interaction-id int-id
+                                      :commands       [{:id     agg-id
+                                                        :cmd-id :cmd-1
+                                                        :name   "CMD1"}]}
+                                     {:request-id     req-id2
+                                      :interaction-id int-id
+                                      :commands       [{:id     agg-id
+                                                        :cmd-id :cmd-4
+                                                        :name   "CMD4"}]}
+                                     {:request-id     req-id3
+                                      :interaction-id int-id
+                                      :commands       [{:id     agg-id
+                                                        :cmd-id :cmd-1
+                                                        :name   "CMD3"}]}
+                                     {:request-id     req-id4
+                                      :interaction-id int-id
+                                      :commands       [{:id     agg-id
+                                                        :cmd-id :cmd-1
+                                                        :name   "CMD4"}]}]))]
+
+       :requests [{:post "https://sqs.eu-central-1.amazonaws.com/local/test-evets-queue"}]
+
+       (core/start
+        ctx
+        edd/handler
+        :post-filter lambda-filters/to-api)
+
+       (do
+         (is  (= [{:body   [{:request-id req-id1
+                             :exception "No connections 0"
+                             :interaction-id int-id
+                             :invocation-id 0}
+                            {:request-id req-id2
+                             :exception  "No connections 1",
+                             :interaction-id int-id
+                             :invocation-id 0}
+                            {:request-id req-id3
+                             :exception  "No connections 2",
+                             :interaction-id int-id
+                             :invocation-id 0}
+                            {:request-id req-id4
+                             :exception  "No connections 3",
+                             :interaction-id int-id
+                             :invocation-id 0}]
+                   :method :post
+                   :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
+
+                  {:method  :get
+                   :timeout 90000000
+                   :url     "http://mock/2018-06-01/runtime/invocation/next"}]
+                 (map
+                  #(dissoc % :headers :keepalive)
+                  (mock-client/traffic-edn))))
+         (is (= 0
+                (count @messages))))))))
 
 (deftest test-concurent-update
   (let [versions (atom 72)

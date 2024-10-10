@@ -103,8 +103,10 @@
 (deftest test-to-api-no-gzip
   (let [res
         (lambda-filter/to-api
-         {:resp {:message ["hello" :world]}})]
-    (is (= {:resp
+         {:from-api true
+          :resp {:message ["hello" :world]}})]
+    (is (= {:from-api true
+            :resp
             {:statusCode 200
              :headers
              {"Content-Type" "application/json"}
@@ -115,7 +117,8 @@
 (deftest test-to-api-gzip
   (let [res
         (lambda-filter/to-api
-         {:req {:headers {:Accept-Encoding "Foo; Gzip; Bar"}}
+         {:from-api true
+          :req {:headers {:Accept-Encoding "Foo; Gzip; Bar"}}
           :resp {:message ["hello" :world]}})
 
         expected-body
@@ -129,7 +132,8 @@
             codec/bytes->string
             util/to-edn)]
 
-    (is (= {:resp
+    (is (= {:from-api true
+            :resp
             {:statusCode 200
              :headers
              {"Content-Type" "application/json"
