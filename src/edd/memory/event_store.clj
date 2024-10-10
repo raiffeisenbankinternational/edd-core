@@ -227,12 +227,16 @@
            (first)
            :id))))
 
-(defmethod log-request
-  :memory
-  [ct body]
+(defn log-request-impl
+  [_ctx body]
   (log/info "Storing mock request" body)
   (swap! *dal-state*
          #(update % :command-log (fn [v] (conj v body)))))
+
+(defmethod log-request
+  :memory
+  [ctx body]
+  (log-request-impl ctx body))
 
 (defmethod log-request-error
   :memory

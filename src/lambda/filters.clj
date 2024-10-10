@@ -297,46 +297,50 @@
                :else (parse-api-request ctx))))})
 
 (defn to-api
-  [{:keys [req resp resp-content-type resp-serializer-fn]
+  [{:keys [from-api req resp resp-content-type resp-serializer-fn]
     :or   {resp-content-type  "application/json"
            resp-serializer-fn util/to-json}
     :as   ctx}]
   (log/debug "to-api" resp)
-  (let [{:keys [exception
-                error]}
-        resp
+  (if-not from-api
+    (do
+      (log/info "Request not from api!")
+      ctx)
+    (let [{:keys [exception
+                  error]}
+          resp
 
-        status
-        (if (or exception error)
-          500
-          200)
+          status
+          (if (or exception error)
+            500
+            200)
 
-        content
-        (resp-serializer-fn resp)
+          content
+          (resp-serializer-fn resp)
 
-        http-base
-        {:statusCode status
-         :headers {"Access-Control-Allow-Headers"  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-                   "Access-Control-Allow-Methods"  "OPTIONS,POST,PUT,GET"
-                   "Access-Control-Expose-Headers" "*"
-                   "Content-Type"                  resp-content-type
-                   "Access-Control-Allow-Origin"   "*"}}
+          http-base
+          {:statusCode status
+           :headers {"Access-Control-Allow-Headers"  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                     "Access-Control-Allow-Methods"  "OPTIONS,POST,PUT,GET"
+                     "Access-Control-Expose-Headers" "*"
+                     "Content-Type"                  resp-content-type
+                     "Access-Control-Allow-Origin"   "*"}}
 
-        gzip?
-        (gzip/accepts-gzip? req)
+          gzip?
+          (gzip/accepts-gzip? req)
 
-        http-data
-        (if gzip?
-          (gzip/sub-response-gzip content)
-          (gzip/sub-response content))
+          http-data
+          (if gzip?
+            (gzip/sub-response-gzip content)
+            (gzip/sub-response content))
 
-        http-response
-        (merge-with merge http-base http-data)]
+          http-response
+          (merge-with merge http-base http-data)]
 
-    (log/infof "HTTP response, status: %s, origin body size: %s, accepts gzip: %s, final payload size: %s"
-               status
-               (some-> content codec/string->bytes alength)
-               (boolean gzip?)
-               (some-> http-data :body codec/string->bytes alength))
+      (log/infof "HTTP response, status: %s, origin body size: %s, accepts gzip: %s, final payload size: %s"
+                 status
+                 (some-> content codec/string->bytes alength)
+                 (boolean gzip?)
+                 (some-> http-data :body codec/string->bytes alength))
 
-    (assoc ctx :resp http-response)))
+      (assoc ctx :resp http-response))))
