@@ -10,10 +10,27 @@
  #{;; initial
    :attrs.application-id
 
-   ;; V005
+   ;; V005, filtering in UI
    :attrs.area
    :attrs.booking-company
-   :attrs.status}
+   :attrs.status
+
+   ;; V005, sorting in UI
+   :attrs.risk-on.top-gcc-short-name
+   :attrs.risk-on.asset-class.asset-class-code
+   :attrs.applicant.id
+   :attrs.resolution-date}
+
+ :glms-task-manager-svc
+ #{;; V003, sorting in UI
+   :attrs.status
+   :attrs.due-date
+   :attrs.gcc.cocunut
+   :attrs.type
+   :attrs.created-by.id
+   ;; filtering in UI
+   :attrs.application.area
+   :attrs.application.booking-company}
 
  :glms-dimension-svc
  #{;; search
