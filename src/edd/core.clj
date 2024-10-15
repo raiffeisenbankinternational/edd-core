@@ -264,11 +264,49 @@
   [{:keys [body] :as ctx}]
   (util/d-time
    "Dispatching"
-   (assoc
-    ctx
-    :resp (mapv
-           #(dispatch-item (assoc ctx :item %))
-           body))))
+   (let [items
+         body
+
+         batch-size
+         (count items)
+
+         responses
+         (loop [items items
+                responses []
+                position 1]
+           (let [item
+                 (first items)
+
+                 {:keys [exception]
+                  :as response}
+                 (util/d-time
+                  (format "Dispatching batch item %s/%s"
+                          position batch-size)
+                  (dispatch-item (assoc ctx
+                                        :item item)))
+
+                 remaining
+                 (rest items)
+
+                 responses
+                 (conj responses response)]
+             (cond
+               exception
+               (do
+                 (log/infof "Got excepion from handling item. Skipping ramining %s messages"
+                            (count remaining))
+                 responses)
+
+               (seq remaining)
+               (recur remaining
+                      responses
+                      (inc position))
+
+               :else
+               responses)))]
+     (assoc
+      ctx
+      :resp responses))))
 
 (defn fetch-from-s3
   [ctx {:keys [s3]
@@ -291,6 +329,8 @@
                              (fetch-from-s3 ctx)))
                       (-> body
                           (:Records)))]
+      (log/infof "Request From queue with batch size %s"
+                 (count queue-body))
       (-> ctx
           (assoc :body queue-body
                  :queue-request true)))
@@ -301,6 +341,7 @@
 (defn prepare-response
   "Wrap non error result into :result keyword"
   [{:keys [resp] :as ctx}]
+  (log/infof "Preparing response. Is from queue: %s" (:queue-request ctx))
   (if (:queue-request ctx)
     resp
     (first resp)))

@@ -56,39 +56,67 @@
     (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/response")
     {:body (util/to-json body)})))
 
+(defn get-items-to-delete
+  [responses records]
+  (loop [responses responses
+         records records
+         to-delete []]
+
+    (let [{:keys [exception]
+           :as response}
+          (first responses)
+
+          record
+          (first records)]
+      (cond
+        (and response
+             record
+             (not exception))
+        (recur (rest responses)
+               (rest records)
+               (conj to-delete record))
+        :else
+        to-delete))))
+
 (defn send-error
   [{:keys [api
            invocation-id
            from-api
-           req] :as ctx} body]
+           req]
+    :as ctx}
+
+   responses]
+
   (let [target (if from-api
                  "response"
                  "error")]
     (when-not from-api
-      (let [items (interleave body
-                              (:Records req))
-            items-to-delete (->> (partition 2 items)
-                                 (filter (fn [[a _]]
-                                           (not (:exception a))))
-                                 (map
-                                  (fn [[_ b]]
-                                    b)))]
-        (when (and (> (count items-to-delete) 0)
-                   (= (count body)
-                      (count (:Records req))))
-          (let [queue (-> items-to-delete
+      (let [responses
+            (if (map? responses)
+              (do
+                (log/info "Got map as queu response :S")
+                [responses])
+              responses)
+
+            records
+            (:Records req)
+
+            to-delete
+            (get-items-to-delete responses
+                                 records)]
+        (when (> (count to-delete) 0)
+          (let [queue (-> to-delete
                           first
                           :eventSourceARN
                           (string/split #":")
                           last)]
             (sqs/delete-message-batch (assoc ctx
                                              :queue queue
-                                             :messages items-to-delete))))))
+                                             :messages to-delete))))))
 
-    (util/d-time "Distribute error"
-                 (enqueue-response ctx body))
-
-    (let [resp (util/to-json body)]
+    (let [resp (util/to-json responses)]
+      (util/d-time "Distribute error"
+                   (enqueue-response ctx responses))
       (log/error resp)
       (util/to-json
        (util/http-post

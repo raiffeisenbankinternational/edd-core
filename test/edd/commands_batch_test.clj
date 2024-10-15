@@ -1,30 +1,41 @@
 (ns edd.commands-batch-test
-  (:require [clojure.test :refer :all]
-            [lambda.util :as util]
-            [lambda.uuid :as uuid]
-            [lambda.test.fixture.core :refer [mock-core]]
-            [edd.core :as edd]
-            [edd.el.cmd :as edd-cmd]
-            [edd.common :as edd-common]
-            [edd.el.ctx :as el-ctx]
-            [edd.el.event :as edd-events]
-            [lambda.core :as core]
-            [edd.test.fixture.dal :as mock]
-            [lambda.test.fixture.client :as mock-client]
-            [edd.memory.event-store :as memory]
-            [sdk.aws.common :as common]
-            [sdk.aws.sqs :as sqs]
-            [lambda.filters :as lambda-filters])
-  (:import (java.sql SQLTransientConnectionException)))
+  (:require
+   [aws.aws :as aws]
+   [clojure.test :refer :all]
+   [edd.common :as edd-common]
+   [edd.core :as edd]
+   [edd.el.cmd :as edd-cmd]
+   [edd.el.ctx :as el-ctx]
+   [edd.el.event :as edd-events]
+   [edd.memory.event-store :as memory]
+   [edd.test.fixture.dal :as mock]
+   [lambda.core :as core]
+   [lambda.filters :as lambda-filters]
+   [lambda.test.fixture.client :as mock-client]
+   [lambda.test.fixture.core :refer [mock-core]]
+   [lambda.util :as util]
+   [lambda.uuid :as uuid]
+   [sdk.aws.common :as common]
+   [sdk.aws.sqs :as sqs])
+  (:import
+   (java.sql SQLTransientConnectionException)))
 
 (def agg-id (uuid/gen))
 
-(def req-id1 (uuid/gen))
-(def req-id2 (uuid/gen))
-(def req-id3 (uuid/gen)) 3
+(defn gen-req-uuid
+  [num]
+  (let [rid (uuid/gen)
+        rid (str rid)
+        rid (subs rid 3)
+        rid (str num rid)]
+    (uuid/parse rid)))
 
-(def req-id4 (uuid/gen)) 3
-(def req-id5 (uuid/gen)) 3
+(def req-id1 (gen-req-uuid "01a"))
+(def req-id2 (gen-req-uuid "02a"))
+(def req-id3 (gen-req-uuid "03a")) 3
+(def req-id4 (gen-req-uuid "04a")) 3
+(def req-id5 (gen-req-uuid "05a")) 3
+
 (def int-id (uuid/gen))
 
 (defn req
@@ -55,11 +66,11 @@
                             {:id       (:id cmd)
                              :event-id :event-1
                              :name     (:name cmd)}))
-      (edd/reg-cmd :cmd-2 (fn [ctx cmd]
-                            {:error "failed"}))
-      (edd/reg-cmd :cmd-3 (fn [ctx cmd]
-                            (throw (ex-info "OMG"
-                                            {:failed "have I!"}))))
+      (edd/reg-cmd :cmd-with-handler-error (fn [ctx cmd]
+                                             {:error "failed"}))
+      (edd/reg-cmd :cmd-with-handler-exception (fn [ctx cmd]
+                                                 (throw (ex-info "OMG"
+                                                                 {:failed "have I!"}))))
       (edd/reg-cmd :cmd-4 (fn [ctx cmd]
                             {:id       (:id cmd)
                              :event-id :event-4
@@ -92,7 +103,7 @@
                                      {:request-id     req-id2
                                       :interaction-id int-id
                                       :commands       [{:id     agg-id
-                                                        :cmd-id :cmd-2
+                                                        :cmd-id :cmd-with-handler-error
                                                         :name   "CMD2"}]}
                                      {:request-id     req-id3
                                       :interaction-id int-id
@@ -211,12 +222,18 @@
                                       :commands       [{:id     agg-id
                                                         :cmd-id :cmd-1
                                                         :name   "CMD1"}]}
+
                                      {:request-id     req-id2
                                       :interaction-id int-id
                                       :commands       [{:id     agg-id
-                                                        :cmd-id :cmd-3
+                                                        :cmd-id :cmd-with-handler-error
                                                         :name   "CMD2"}]}
                                      {:request-id     req-id3
+                                      :interaction-id int-id
+                                      :commands       [{:id     agg-id
+                                                        :cmd-id :cmd-with-handler-exception
+                                                        :name   "CMD2"}]}
+                                     {:request-id     req-id4
                                       :interaction-id int-id
                                       :commands       [{:id     agg-id
                                                         :cmd-id :cmd-1
@@ -235,26 +252,22 @@
                           :invocation-id  0
                           :request-id     req-id1
                           :interaction-id int-id}
-                         {:exception      {:failed "have I!"},
+                         {:error      [{:id agg-id
+                                        :error "failed"}]
                           :invocation-id  0
                           :request-id     req-id2
                           :interaction-id int-id}
-                         {:result         {:success    true,
-                                           :effects    [],
-                                           :events     1,
-                                           :meta       [{:cmd-1 {:id agg-id}}],
-                                           :identities 0,
-                                           :sequences  0}
-                          :invocation-id  0
-                          :request-id     req-id3
-                          :interaction-id int-id}]
+                         {:request-id req-id3
+                          :exception {:failed "have I!"},
+                          :interaction-id int-id,
+                          :invocation-id 0}]
                 :method :post
                 :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
                {:body            (str "Action=DeleteMessageBatch&QueueUrl=https://sqs.eu-central-1.amazonaws.com/local/test-evets-queue&"
                                       "DeleteMessageBatchRequestEntry.1.Id=id-1&"
                                       "DeleteMessageBatchRequestEntry.1.ReceiptHandle=handle-1&"
-                                      "DeleteMessageBatchRequestEntry.2.Id=id-3&"
-                                      "DeleteMessageBatchRequestEntry.2.ReceiptHandle=handle-3&"
+                                      "DeleteMessageBatchRequestEntry.2.Id=id-2&"
+                                      "DeleteMessageBatchRequestEntry.2.ReceiptHandle=handle-2&"
                                       "Expires=2020-04-18T22%3A52%3A43PST&Version=2012-11-05")
 
                 :method          :post
@@ -270,7 +283,7 @@
                #(dissoc % :headers :keepalive)
                (mock-client/traffic-edn)))))
       (is (= [{:Records [{:key (str "response/"
-                                    req-id3
+                                    req-id2
                                     "/0/local-test.json")}]}
               {:Records [{:key (str "response/"
                                     req-id1
@@ -318,23 +331,12 @@
                           {:exception      {:failed "yes"}
                            :invocation-id  0
                            :request-id     req-id2
-                           :interaction-id int-id}
-                          {:result         {:success    true,
-                                            :effects    [],
-                                            :events     1,
-                                            :meta       [{:cmd-1 {:id agg-id}}],
-                                            :identities 0,
-                                            :sequences  0}
-                           :invocation-id  0
-                           :request-id     req-id3
                            :interaction-id int-id}]
                  :method :post
                  :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
                 {:body            (str "Action=DeleteMessageBatch&QueueUrl=https://sqs.eu-central-1.amazonaws.com/local/test-evets-queue&"
                                        "DeleteMessageBatchRequestEntry.1.Id=id-1&"
                                        "DeleteMessageBatchRequestEntry.1.ReceiptHandle=handle-1&"
-                                       "DeleteMessageBatchRequestEntry.2.Id=id-3&"
-                                       "DeleteMessageBatchRequestEntry.2.ReceiptHandle=handle-3&"
                                        "Expires=2020-04-18T22%3A52%3A43PST&Version=2012-11-05")
                  :method          :post
                  :raw             true
@@ -349,9 +351,6 @@
                 #(dissoc % :headers :keepalive)
                 (mock-client/traffic-edn)))))
       (is (= [{:Records [{:key (str "response/"
-                                    req-id3
-                                    "/0/local-test.json")}]}
-              {:Records [{:key (str "response/"
                                     req-id1
                                     "/0/local-test.json")}]}]
              (map
@@ -393,14 +392,6 @@
        (is  (= [{:body   [{:request-id req-id1
                            :exception "Unable to parse exception",
                            :interaction-id int-id
-                           :invocation-id 0}
-                          {:request-id req-id2
-                           :exception "Unable to parse exception",
-                           :interaction-id int-id
-                           :invocation-id 0}
-                          {:request-id req-id3
-                           :exception "Unable to parse exception",
-                           :interaction-id int-id
                            :invocation-id 0}]
                  :method :post
                  :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
@@ -411,6 +402,91 @@
                (map
                 #(dissoc % :headers :keepalive)
                 (mock-client/traffic-edn))))))))
+
+(deftest test-get-items-to-delete
+  (testing "Function should stop at the first exception"
+    (is (= ["rec1" "rec2"]
+           (aws/get-items-to-delete
+            [{:data "data1"} {:data "data2"} {:exception true}]
+            ["rec1" "rec2" "rec3"]))))
+
+  (testing "Function should return all records associated with non-exceptional responses"
+    (is (= ["rec1" "rec2"]
+           (aws/get-items-to-delete
+            [{:data "data1"} {:data "data2"}]
+            ["rec1" "rec2"]))))
+
+  (testing "Function should also check if more record then responses"
+    (is (= ["rec1" "rec2"]
+           (aws/get-items-to-delete
+            [{:data "data1"} {:data "data2"}]
+            ["rec1" "rec2" "rec3"]))))
+
+  (testing "Function should not delete if record is missing"
+    (is (= ["rec1"]
+           (aws/get-items-to-delete
+            [{:data "data1"} {:data "data1"} {:exception true}]
+            ["rec1"]))))
+
+  (testing "Function should cope with empty lists"
+    (is (empty? (aws/get-items-to-delete [] []))))
+
+  (testing "The number of records returned should match the number of non-exceptional responses"
+    (is (let [responses [{} {} {:exception true}]
+              records [1 2 3 4]]
+          (and (= 2 (count (aws/get-items-to-delete responses records)))
+               (not= records (aws/get-items-to-delete responses records)))))))
+
+(deftest send-error-test
+  (let [responses (atom [])
+        deletes (atom [])]
+    (testing "send-error without from-api"
+      (with-redefs [util/http-post (fn [_url req]
+                                     (swap! responses conj req)
+                                     {:status 200})
+                    sqs/delete-message-batch (fn [{:keys [messages]}]
+                                               (swap! deletes concat messages))]
+        (let [ctx {:api "some-api"
+                   :invocation-id "123"
+                   :from-api false
+                   :req {:Records [{:receiptHandle "handle1"
+                                    :eventSourceARN "arn:aws:sqs:region:account-id:queue-name"}
+                                   {:receiptHandle "handle2"
+                                    :eventSourceARN "arn:aws:sqs:region:account-id:queue-name"}
+                                   {:receiptHandle "handle2"
+                                    :eventSourceARN "arn:aws:sqs:region:account-id:queue-name"}]}}
+              body [{:data {}}
+                    {:exception true}
+                    {:data {}}]]
+          (aws/send-error ctx body)))
+
+      (is (= [{:receiptHandle "handle1",
+               :eventSourceARN "arn:aws:sqs:region:account-id:queue-name"}]
+             @deletes))
+      (is (= 1
+             (count @deletes))))))
+
+(deftest send-error-when-single-request-test
+  (let [responses (atom [])
+        deletes (atom [])]
+    (testing "send-error without from-api"
+      (with-redefs [util/http-post (fn [_url req]
+                                     (swap! responses conj req)
+                                     {:status 200})
+                    sqs/delete-message-batch (fn [{:keys [messages]}]
+                                               (swap! deletes concat messages))]
+        (let [ctx {:api "some-api"
+                   :invocation-id "123"
+                   :from-api false
+                   :req {:Records [{:receiptHandle "handle1"
+                                    :eventSourceARN "arn:aws:sqs:region:account-id:queue-name"}]}}
+              body {:exception true}]
+          (aws/send-error ctx body)))
+
+      (is (= []
+             @deletes))
+      (is (= 0
+             (count @deletes))))))
 
 (deftest test-exception-command-request-log
   (let [messages (atom [])
@@ -469,18 +545,6 @@
        (do
          (is  (= [{:body   [{:request-id req-id1
                              :exception "No connections 0"
-                             :interaction-id int-id
-                             :invocation-id 0}
-                            {:request-id req-id2
-                             :exception  "No connections 1",
-                             :interaction-id int-id
-                             :invocation-id 0}
-                            {:request-id req-id3
-                             :exception  "No connections 2",
-                             :interaction-id int-id
-                             :invocation-id 0}
-                            {:request-id req-id4
-                             :exception  "No connections 3",
                              :interaction-id int-id
                              :invocation-id 0}]
                    :method :post
