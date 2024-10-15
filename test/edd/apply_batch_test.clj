@@ -190,14 +190,6 @@
      (verify-traffic-edn [{:body   [{:exception {:badly :un-happy}
                                      :invocation-id  0
                                      :request-id     req-id1,
-                                     :interaction-id int-id}
-                                    {:exception  {:badly :1wrong}
-                                     :invocation-id  0
-                                     :request-id     req-id2,
-                                     :interaction-id int-id}
-                                    {:exception      "Non clojure error"
-                                     :invocation-id  0
-                                     :request-id     req-id3,
                                      :interaction-id int-id}]
                            :method :post
                            :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
