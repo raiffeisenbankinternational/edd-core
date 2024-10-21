@@ -698,3 +698,30 @@
       {:source body
        :user   (:user ctx)}))
    (do)))
+
+(deftest test-to-api-serialization-exception
+
+  (let [ctx
+        {:from-api true
+         :resp
+         {:result
+          {:hits
+           (for [x [3 2 1 0]]
+             (/ 42 x))}}}
+
+        ctx-new
+        (fl/to-api ctx)]
+
+    (is (= {:from-api true
+            :resp
+            {:statusCode 500
+             :headers
+             {"Access-Control-Allow-Headers"
+              "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+              "Access-Control-Allow-Methods" "OPTIONS,POST,PUT,GET"
+              "Access-Control-Expose-Headers" "*"
+              "Content-Type" "application/json"
+              "Access-Control-Allow-Origin" "*"}
+             :isBase64Encoded false,
+             :body "{\"error\":\"could not serialize response, reason: Divide by zero (through reference chain: clojure.lang.PersistentArrayMap[\\\":result\\\"]->clojure.lang.PersistentArrayMap[\\\":hits\\\"])\"}"}}
+           ctx-new))))

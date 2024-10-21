@@ -310,13 +310,23 @@
                   error]}
           resp
 
+          ;; The `resp` data structure can easily have lazy elements.
+          ;; When serializing it, an exception pops up yet the current
+          ;; scope is not wrapped with try/catch. As a result, lambda
+          ;; crushes leaving (almost) no logs.
+          [serializer-error? content]
+          (try
+            [nil (resp-serializer-fn resp)]
+            (catch Exception e
+              (log/error e "serialization error, func: %s" resp-serializer-fn)
+              (let [message
+                    (format "could not serialize response, reason: %s" (ex-message e))]
+                [true (resp-serializer-fn {:error message})])))
+
           status
-          (if (or exception error)
+          (if (or exception error serializer-error?)
             500
             200)
-
-          content
-          (resp-serializer-fn resp)
 
           http-base
           {:statusCode status
