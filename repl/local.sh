@@ -7,7 +7,7 @@ if [[ "$(grep vm.max_map_count /etc/sysctl.conf)" == "" ]]; then
   sudo sysctl -w vm.max_map_count=262144
 fi
 
-docker compose up pstgres -d
+docker compose up postgres -d
 sleep 5
 
 docker compose run root-migration

@@ -53,13 +53,8 @@ RUN set -e &&\
     export AWS_SESSION_TOKEN=$(echo $cred | jq -r '.Credentials.SessionToken') &&\
     export AccountId=$TARGET_ACCOUNT_ID &&\
     export EnvironmentNameLower=pipeline &&\
-    export DatabasePassword="$(aws secretsmanager get-secret-value  \
-                                       --secret-id /pipeline/alpha-postgres-svc/password \
-                                       --query SecretString \
-                                       --output text)" &&\
-    export DatabaseEndpoint="$(aws rds describe-db-instances \
-                                       --query 'DBInstances[0].Endpoint.Address' \
-                                       --output text)" &&\
+    export DatabasePassword="no-secret" &&\
+    export DatabaseEndpoint="127.0.0.1" &&\
     domain_name=$(aws es list-domain-names  | jq -r '.DomainNames[0].DomainName') &&\
     echo "Found domain ${domain_name}" &&\
     domain_url=$(aws es describe-elasticsearch-domain --domain-name ${domain_name} | jq -r '.DomainStatus.Endpoints.vpc') &&\
@@ -142,10 +137,6 @@ RUN set -e &&\
     cd .. &&\
     echo "Running integration tests: $(pwd)" &&\
     env &&\
-    aws sqs purge-queue \
-          --queue-url "https://sqs.${AWS_DEFAULT_REGION}.amazonaws.com/${AccountId}/${AccountId}-${EnvironmentNameLower}-it" &&\
-    aws sqs purge-queue \
-          --queue-url "https://sqs.${AWS_DEFAULT_REGION}.amazonaws.com/${AccountId}/${AccountId}-${EnvironmentNameLower}-it.fifo" &&\
     clojure -M:test:it &&\
     rm -rf /home/build/.m2/repository &&\
     rm -rf target &&\

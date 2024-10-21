@@ -6,7 +6,7 @@ set -e
 mkdir -p modules
 
 cd repl
-docker compose down
+docker compose down --remove-orphans
 docker compose up -d
 cd ..
 
