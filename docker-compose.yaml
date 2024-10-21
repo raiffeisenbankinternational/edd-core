@@ -1,4 +1,5 @@
 services:
+
   opensearch-node1:
     image: literal:${DOCKER_URL}/opensearchproject/opensearch:1.2.0
     container_name: opensearch-node1
@@ -21,6 +22,7 @@ services:
       - 9600:9600 # required for Performance Analyzer
     networks:
       - opensearch-net
+
   opensearch-dashboards:
     image: literal:${DOCKER_URL}/opensearchproject/opensearch-dashboards:1.2.0
     container_name: opensearch-dashboards
@@ -33,8 +35,11 @@ services:
     networks:
       - opensearch-net
 
-  pstgres:
+  postgres:
     image: literal:${DOCKER_URL}/library/postgres:15
+    hostname: postgres
+    command: >
+      -E
     container_name: postgres
     ports:
       - 5432:5432
@@ -42,6 +47,7 @@ services:
       - "5432"
     environment:
       POSTGRES_PASSWORD: "no-secret"
+
     networks:
       - opensearch-net
 

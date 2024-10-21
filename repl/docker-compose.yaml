@@ -34,7 +34,7 @@ services:
     networks:
       - opensearch-net
 
-  pstgres:
+  postgres:
     build:
       context: .
       dockerfile: Dockerfile.pg
@@ -50,21 +50,21 @@ services:
 
   root-migration:
     image: literal:${DOCKER_URL}/flyway/flyway
-    command: -url=jdbc:postgresql://pstgres:5432/postgres -schemas=test -user=postgres -password="no-secret" -connectRetries=60 migrate
+    command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test -user=postgres -password="no-secret" -connectRetries=60 migrate
     volumes:
       - ../sql/files/edd:/flyway/sql
     depends_on:
-      - pstgres 
+      - postgres
     networks:
       - opensearch-net
 
   service-migration:
     image: literal:${DOCKER_URL}/flyway/flyway
-    command: -url=jdbc:postgresql://pstgres:5432/postgres -schemas=test_local_test -user=postgres -password="no-secret" -connectRetries=60 migrate
+    command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test_local_test -user=postgres -password="no-secret" -connectRetries=60 migrate
     volumes:
       - ../modules/edd-core-view-store-postgres/migrations:/flyway/sql
     depends_on:
-      - pstgres 
+      - postgres
     networks:
       - opensearch-net
 
