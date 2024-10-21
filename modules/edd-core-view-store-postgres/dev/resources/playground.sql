@@ -138,7 +138,6 @@ DECLARE
         'glms-consolidation-svc',
         'glms-content-svc',
         'glms-cpa-proxy-svc',
-        'glms-credit-risk-mitigation-svc',
         'glms-currency-svc',
         'glms-dataimport-svc',
         'glms-dimension-svc',

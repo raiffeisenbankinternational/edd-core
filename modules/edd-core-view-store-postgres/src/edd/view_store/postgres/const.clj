@@ -38,7 +38,6 @@
     :glms-consolidation-svc
     :glms-content-svc
     :glms-cpa-proxy-svc
-    :glms-credit-risk-mitigation-svc
     SVC_CURRENCY
     :glms-dataimport-svc
     SVC_DIMENSION
