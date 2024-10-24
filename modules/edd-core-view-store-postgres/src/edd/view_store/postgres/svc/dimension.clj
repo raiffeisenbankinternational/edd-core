@@ -3,7 +3,7 @@
   Dimension service-specific queries.
   "
   (:require
-   [edd.postgres.pool :refer [->conn]]
+   [edd.postgres.pool :refer [*DB*]]
    [edd.view-store.postgres.api :as api]
    [edd.view-store.postgres.common :refer [->realm]]
    [edd.view-store.postgres.const :as c]
@@ -71,12 +71,12 @@
         field2-kw field2_val})}))
 
 (defn ctx-list-options-one-field [ctx field]
-  (list-options-one-field (->conn ctx)
+  (list-options-one-field *DB*
                           (->realm ctx)
                           field))
 
 (defn ctx-list-options-two-fields [ctx field1 field2]
-  (list-options-two-fields (->conn ctx)
+  (list-options-two-fields *DB*
                            (->realm ctx)
                            field1
                            field2))

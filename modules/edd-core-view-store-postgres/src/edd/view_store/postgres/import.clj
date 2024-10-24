@@ -14,7 +14,7 @@
    [clojure.java.io :as io]
    [clojure.string :as str]
    [edd.io.core :as edd.io]
-   [edd.postgres.pool :as pool :refer [->conn]]
+   [edd.postgres.pool :as pool :refer [*DB*]]
    [edd.view-store.postgres.api :as api]
    [edd.view-store.postgres.common :refer [error!]]
    [lambda.elastic :as el]
@@ -210,21 +210,19 @@
   (log "Start OS import, realm: %s, service: %s, size: %s, lifetime: %s"
        realm service size lifetime)
 
-  (pool/with-init ctx
-    (fn [ctx]
+  (pool/start-db ctx)
 
-      (let [conn
-            (->conn ctx)
+  (log "Connection pool has been started")
 
-            {:keys [^File file total]}
-            (os-dump-to-csv ctx realm service size lifetime)]
+  (let [{:keys [^File file total]}
+        (os-dump-to-csv ctx realm service size lifetime)]
 
-        (log "OpenSearch was dumped into a file, rows: %s, path: %s"
-             total, file)
+    (log "OpenSearch was dumped into a file, rows: %s, path: %s"
+         total, file)
 
-        (with-open [in (edd.io/gzip-input-stream file)]
-          (api/copy-in-csv conn realm service in))
+    (with-open [in (edd.io/gzip-input-stream file)]
+      (api/copy-in-csv *DB* realm service in))
 
-        (log "Rows imported: %s" total)
+    (log "Rows imported: %s" total)
 
-        (.delete file)))))
+    (.delete file)))

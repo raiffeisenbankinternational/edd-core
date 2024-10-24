@@ -10,7 +10,6 @@
                                 get-snapshot
                                 get-by-id-and-version]]
             [edd.postgres.history :as history]
-            [edd.postgres.pool :refer [->conn]]
             [edd.postgres.common :refer [->realm ->service]]
             [lambda.util :as util]
             [lambda.elastic :as elastic]

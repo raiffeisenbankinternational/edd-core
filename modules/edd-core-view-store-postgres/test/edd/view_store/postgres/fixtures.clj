@@ -9,7 +9,7 @@
    [edd.view-store.postgres.api :as api]
    [edd.view-store.postgres.const :as c]
    [edd.view-store.postgres.honey :as honey]
-   [edd.postgres.pool :as pool]
+   [edd.postgres.pool :as pool :refer [*DB*]]
    [lambda.util :as util]
    [next.jdbc :as jdbc]))
 
@@ -32,8 +32,6 @@
    :username USER
    :password USER})
 
-(def ^:dynamic *DB* nil)
-
 (def TABLES-TO-DROP
   [c/SVC_TEST c/SVC_DIMENSION])
 
@@ -43,22 +41,12 @@
   (t))
 
 (defn fix-with-db [t]
-  (with-open [pool (pool/create-pool pool-opt)]
-    (binding [*DB* pool]
-      (t))))
+  (binding [*DB* (pool/create-pool pool-opt)]
+    (t)))
 
 (defn fix-with-db-init [t]
   (with-redefs [db/init (constantly pool-opt)]
     (t)))
-
-(defn with-conn
-  "
-  Assign a delayed connection to the context.
-  "
-  [ctx]
-  (assoc ctx :con (-> *DB*
-                      jdbc/get-connection
-                      delay)))
 
 (defn import-local-file [^String local-file]
   (let [reader

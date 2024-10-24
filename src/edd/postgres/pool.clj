@@ -18,47 +18,60 @@
 (defn create-pool ^HikariDataSource [ds-spec]
   (jdbc-conn/->pool HikariDataSource ds-spec))
 
-(def memoized-create-pool (memoize create-pool))
+(def create-pool-mem
+  "
+  A memoized version of `create-pool` that maintains
+  a number of pools per each `db-spec`.
+  "
+  (memoize create-pool))
 
-(defn with-init
+(def ^:dynamic *DB* nil)
+
+(defmacro with-pool
   "
-  A common init function for both event- and view- stores.
+  Bind the global *DB* variable to a connection pool
+  related to the current context (there might be more
+  than one pool). The function that creates a pool is
+  memoized.
   "
-  [ctx body-fn]
-  (let [connection (-> ctx
-                       db/init
-                       memoized-create-pool
-                       jdbc/get-connection
-                       delay)]
-    (let [ctx-with-conn
-          (if (contains? ctx :con)
-            ctx
-            (assoc ctx :con connection))]
-      (try
-        (body-fn ctx-with-conn)
-        (finally
-          (when (realized? connection)
-            (let [^HikariProxyConnection conn @connection]
-              (.close conn))))))))
+  [[ctx] & body]
+  `(binding [*DB* (-> ~ctx
+                      (db/init)
+                      (create-pool-mem))]
+     ~@body))
 
 (defmacro with-conn
   "
-  Execute a block of code binding the leading symbol
-  to the newly acquired connection from the pool.
+  Bind the global *DB* variable to a specific connection
+  taken from the pool. Useful when it's needed to share
+  the same connection across multiple functions.
   "
-  [[bind ctx] & body]
-  `(with-open [~bind (-> ~ctx
-                         db/init
-                         memoized-create-pool
-                         jdbc/get-connection)]
-     ~@body))
+  [[] & body]
+  `(with-open [conn# (jdbc/get-connection *DB*)]
+     (binding [*DB* conn#]
+       ~@body)))
 
-(defn ->conn
+(defmacro with-tx
   "
-  Get the current connection from the context.
+  Bind the global *DB* variablae to a transactional
+  connection. Any SQL executions made under the that
+  macro will be within the same transaction. Accepts
+  the standard `jdbc/with-transaction` options.
   "
-  [ctx]
-  (-> ctx :con deref))
+  [[& opt] & body]
+  `(jdbc/with-transaction [tx# *DB* ~@opt]
+     (binding [*DB* tx#]
+       ~@body)))
+
+(defn with-init
+  "
+  Implementation of the `with-init` multimethod.
+  Run the `body-fn` function while the `*DB*` var
+  is bound to a corresponding connection pool.
+  "
+  [ctx body-fn]
+  (with-pool [ctx]
+    (body-fn ctx)))
 
 ;;
 ;; Prevent (jdbc/get-connection src) from a failure
