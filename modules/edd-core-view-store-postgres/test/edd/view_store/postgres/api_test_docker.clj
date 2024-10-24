@@ -2,14 +2,13 @@
   (:require
    [clojure.java.io :as io]
    [clojure.test :refer [deftest is use-fixtures testing]]
+   [edd.postgres.pool :refer [*DB*]]
    [edd.search :as search]
    [edd.view-store.postgres.api :as api]
    [edd.view-store.postgres.const :as c]
    [edd.view-store.postgres.fixtures :as fix
     :refer
-    [*DB*
-     with-conn
-     fix-with-db
+    [fix-with-db
      fix-with-db-init
      fix-truncate-db
      fix-import-entity]]
@@ -35,8 +34,7 @@
   ([]
    (->ctx nil))
   ([overrides]
-   (merge {:con (delay *DB*)
-           :view-store :postgres
+   (merge {:view-store :postgres
            :service-name c/SVC_TEST
            :meta {:realm c/TEST_REALM}}
           overrides)))
@@ -645,8 +643,7 @@
 
         result
         (search/advanced-search (-> ctx
-                                    (assoc :query query)
-                                    (with-conn)))]
+                                    (assoc :query query)))]
 
     (is (= {:total 1, :from 0, :size 1 :has-more? false}
            (dissoc result :hits)))
@@ -684,9 +681,7 @@
 
         result
         (search/advanced-search (-> ctx
-                                    (assoc :query query)
-                                    (with-conn)))]
-
+                                    (assoc :query query)))]
     (is (= {:total 51, :from 0, :size 50 :has-more? true}
            (dissoc result :hits)))))
 
@@ -712,7 +707,7 @@
                         :field_val "FAT2"}])
 
         result
-        (dimension/ctx-list-options-one-field (with-conn ctx)
+        (dimension/ctx-list-options-one-field ctx
                                               :attrs.fat1)]
 
     (is (= {:options
@@ -751,7 +746,7 @@
                         :field2_val "BBB"}])
 
         result
-        (dimension/ctx-list-options-two-fields (with-conn ctx)
+        (dimension/ctx-list-options-two-fields ctx
                                                :attrs.fat1
                                                :attrs.fat2)]
 

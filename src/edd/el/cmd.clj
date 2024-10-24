@@ -1,5 +1,4 @@
 (ns edd.el.cmd
-
   (:require
    [edd.flow :refer :all]
    [clojure.tools.logging :as log]

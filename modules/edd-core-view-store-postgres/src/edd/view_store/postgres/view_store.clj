@@ -6,7 +6,7 @@
   (:require
    [clojure.tools.logging :as log]
    [edd.postgres.history :as history]
-   [edd.postgres.pool :refer [->conn]]
+   [edd.postgres.pool :as pool :refer [*DB*]]
    [edd.s3.view-store :as s3.vs]
    [edd.search :refer [with-init
                        simple-search
@@ -28,7 +28,7 @@
 (defmethod with-init
   :postgres
   [ctx body-fn]
-  (body-fn ctx))
+  (pool/with-init ctx body-fn))
 
 (defmethod update-aggregate
   :postgres
@@ -41,12 +41,9 @@
         (->realm ctx)
 
         service
-        (->service ctx)
+        (->service ctx)]
 
-        conn
-        (->conn ctx)]
-
-    (api/upsert conn realm service aggregate)
+    (api/upsert *DB* realm service aggregate)
     (s3.vs/store-to-s3 ctx)))
 
 (defmethod simple-search
@@ -64,12 +61,9 @@
         attrs
         (-> query
             (dissoc :query-id)
-            (parser/validate-simple-search!))
+            (parser/validate-simple-search!))]
 
-        conn
-        (->conn ctx)]
-
-    (api/find-by-attrs conn realm service attrs)))
+    (api/find-by-attrs *DB* realm service attrs)))
 
 (defmethod advanced-search
   :postgres
@@ -96,9 +90,6 @@
         service
         (->service ctx)
 
-        conn
-        (->conn ctx)
-
         ;;
         ;; A workaround for pagination: internally bump
         ;; the limit value to get N+1 rows. Then decide
@@ -109,7 +100,7 @@
         (assoc query-parsed :size [:integer (inc limit)])
 
         aggregates
-        (api/find-advanced-parsed conn
+        (api/find-advanced-parsed *DB*
                                   realm
                                   service
                                   query-parsed-fix)

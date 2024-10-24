@@ -8,7 +8,7 @@
             [clojure.string :as string]
             [edd.postgres.history :as history]
             [edd.core :as edd]
-            [edd.postgres.pool :as pool :refer [->conn]]
+            [edd.postgres.pool :as pool :refer [*DB*]]
             [edd.dal :refer [with-init
                              get-events
                              get-max-event-seq
@@ -73,7 +73,7 @@
   [ctx {:keys [events]}]
   (log/debug "Storing events: " events)
   (when (seq events)
-    (jdbc/execute-batch! (->conn ctx)
+    (jdbc/execute-batch! *DB*
                          (str "INSERT INTO " (->table ctx :event_store) " (id,
                                                   service_name,
                                                   invocation_id,
@@ -107,7 +107,7 @@
                        "-1")
         receive-count-int (Integer/parseInt receive-count)
         breadcrumbs (:breadcrumbs body)]
-    (jdbc/execute! (->conn ctx)
+    (jdbc/execute! *DB*
                    [(str "INSERT INTO " (->table ctx :command_request_log) " (
                                                          invocation_id,
                                                          request_id,
@@ -148,7 +148,7 @@
 (defn log-request-error-impl
   [{:keys [request-id] :as ctx} body data]
   (let [breadcrumbs (:breadcrumbs body)]
-    (jdbc/execute! (->conn ctx)
+    (jdbc/execute! *DB*
                    [(str "UPDATE " (->table ctx :command_request_log) "
                              SET error = ?,
                                  fx_exception = fx_exception + 1
@@ -181,7 +181,7 @@
            error]}]
   (log/debug "Storing response" summary)
   (when summary
-    (jdbc/execute! (->conn ctx)
+    (jdbc/execute! *DB*
                    [(str "INSERT INTO " (->table ctx :command_response_log) "
                                           (invocation_id,
                                            request_id,
@@ -221,7 +221,7 @@
 (defn store-identity
   [ctx identity]
   (log/debug "Storing identity" identity)
-  (jdbc/execute! (->conn ctx)
+  (jdbc/execute! *DB*
                  [(str "INSERT INTO " (->table ctx :identity_store) " (id,
                                                    invocation_id,
                                                    request_id,
@@ -245,7 +245,7 @@
    (str "Update sequence: " (:service-name ctx) ", " sequence)
    (let [service-name (:service-name ctx)
          aggregate-id (:id sequence)]
-     (jdbc/execute! (->conn ctx)
+     (jdbc/execute! *DB*
                     [(str "BEGIN WORK;
                        LOCK TABLE " (->table ctx :sequence_lastval) " IN ROW EXCLUSIVE MODE;
                        INSERT INTO " (->table ctx :sequence_lastval) " AS t
@@ -270,7 +270,7 @@
   (log/info "Prepare sequence" (:service-name ctx) sequence)
   (let [service-name (:service-name ctx)
         aggregate-id (:id sequence)]
-    (jdbc/execute! (->conn ctx)
+    (jdbc/execute! *DB*
                    [(str "INSERT INTO " (->table ctx :sequence_store) " (invocation_id,
                                                       request_id,
                                                       interaction_id,
@@ -291,7 +291,7 @@
   [{:keys [request-id breadcrumbs] :as ctx}]
   {:pre [(and request-id breadcrumbs)]}
   (let [result (jdbc/execute-one!
-                (->conn ctx)
+                *DB*
                 [(str "SELECT invocation_id,
                          interaction_id,
                          cmd_index,
@@ -311,7 +311,7 @@
   {:pre [id]}
   (let [service-name (:service-name ctx)
         value-fn #(-> (jdbc/execute-one!
-                       (->conn ctx)
+                       *DB*
                        [(str "SELECT value
                                FROM " (->table ctx :sequence_store) "
                               WHERE aggregate_id = ?
@@ -338,7 +338,7 @@
   {:pre [sequence]}
   (let [service-name (:service-name ctx)
         result (jdbc/execute-one!
-                (->conn ctx)
+                *DB*
                 [(str "SELECT aggregate_id
                      FROM " (->table ctx :sequence_store) "
                     WHERE value = ?
@@ -361,7 +361,7 @@
                        params)
          result (if (empty? params)
                   []
-                  (jdbc/execute! (->conn ctx)
+                  (jdbc/execute! *DB*
                                  (concat
                                   [(str "SELECT id, aggregate_id FROM " (->table ctx :identity_store) "
                                            WHERE id IN (" (string/join ", "
@@ -395,7 +395,7 @@
     (util/d-time
      (str "Fetching events for aggregate: "  {:id id
                                               :version version})
-     (let [data (jdbc/execute! (->conn ctx)
+     (let [data (jdbc/execute! *DB*
                                [(str "SELECT data
                                 FROM " (->table ctx :event_store) "
                                 WHERE aggregate_id=?
@@ -417,7 +417,7 @@
   [{:keys [id] :as ctx}]
   (log/debug "Fetching max event-seq for aggregate" id)
   (:max
-   (jdbc/execute-one! (->conn ctx)
+   (jdbc/execute-one! *DB*
                       [(str "SELECT COALESCE(MAX(event_seq), 0) AS max
                          FROM " (->table ctx :event_store) "
                          WHERE aggregate_id=?
@@ -439,7 +439,7 @@
            current 1]
       (util/d-time
        (str "Storing effects: " current "/" total)
-       (jdbc/execute-batch! (->conn ctx)
+       (jdbc/execute-batch! *DB*
                             (str "INSERT INTO " (->table ctx :command_store) " (id,
                                                     invocation_id,
                                                     request_id,
@@ -516,12 +516,8 @@
           sequences
           (:sequences resp)]
 
-      (jdbc/with-transaction
-        [tx (->conn ctx)]
-        (store-results-impl
-         (assoc ctx :con (delay tx))
-         resp)
-
+      (pool/with-tx []
+        (store-results-impl ctx resp)
         (doseq [i sequences]
           (prepare-store-sequence ctx i)))
       (doseq [i sequences]
@@ -545,13 +541,13 @@
   (log/info "Fetching response" invocation-id)
   (cond
     invocation-id (jdbc/execute!
-                   (->conn ctx)
+                   *DB*
                    [(str "SELECT *
                                 FROM " (->table ctx :command_response_log) "
                                 WHERE invocation_id=?") invocation-id]
                    {:builder-fn rs/as-unqualified-kebab-maps})
     request-id (jdbc/execute!
-                (->conn ctx)
+                *DB*
                 (if breadcrumbs
                   [(str "SELECT *
                                 FROM " (->table ctx :command_response_log) "
@@ -565,7 +561,7 @@
                    request-id])
                 {:builder-fn rs/as-unqualified-kebab-maps})
     interaction-id  (jdbc/execute!
-                     (->conn ctx)
+                     *DB*
                      [(str "SELECT *
                                 FROM " (->table ctx :command_response_log) "
                                 WHERE interaction_id=?
@@ -584,13 +580,13 @@
   (log/info "Fetching response" invocation-id)
   (cond
     invocation-id (jdbc/execute!
-                   (->conn ctx)
+                   *DB*
                    [(str "SELECT *
                                 FROM " (->table ctx :command_store) "
                                 WHERE invocation_id=?") invocation-id]
                    {:builder-fn rs/as-unqualified-kebab-maps})
     request-id (jdbc/execute!
-                (->conn ctx)
+                *DB*
                 [(str "SELECT *
                                 FROM " (->table ctx :command_store) "
                                 WHERE request_id=?
@@ -599,7 +595,7 @@
                  (breadcrumb-str breadcrumbs)]
                 {:builder-fn rs/as-unqualified-kebab-maps})
     interaction-id  (jdbc/execute!
-                     (->conn ctx)
+                     *DB*
                      [(str "SELECT *
                                 FROM " (->table ctx :command_store) "
                                 WHERE interaction_id=?
@@ -616,13 +612,13 @@
         :or {breadcrumbs [0]}}]
   (cond
     invocation-id (jdbc/execute!
-                   (->conn ctx)
+                   *DB*
                    [(str "SELECT *
                                 FROM " (->table ctx :command_request_log) "
                                 WHERE invocation_id=?") invocation-id]
                    {:builder-fn rs/as-unqualified-kebab-maps})
     request-id (jdbc/execute!
-                (->conn ctx)
+                *DB*
                 [(str "SELECT *
                                 FROM " (->table ctx :command_request_log) "
                                 WHERE request_id=?
@@ -631,7 +627,7 @@
                  (breadcrumb-str breadcrumbs)]
                 {:builder-fn rs/as-unqualified-kebab-maps})
     interaction-id  (jdbc/execute!
-                     (->conn ctx)
+                     *DB*
                      [(str "SELECT *
                                 FROM " (->table ctx :command_request_log) "
                                 WHERE interaction_id=?
@@ -652,13 +648,13 @@
                 SUM(fx_created) - SUM(fx_processed) - SUM(fx_error) AS fx_remaining"]
     (cond
       invocation-id (jdbc/execute!
-                     (->conn ctx)
+                     *DB*
                      [(str "SELECT " select  "
                                  FROM " (->table ctx :command_response_log) "
                                  WHERE invocation_id=?") invocation-id]
                      {:builder-fn rs/as-unqualified-kebab-maps})
       request-id (jdbc/execute!
-                  (->conn ctx)
+                  *DB*
                   (if breadcrumbs
                     [(str "SELECT " select  "
                                 FROM " (->table ctx :command_response_log) "
@@ -672,7 +668,7 @@
                      request-id])
                   {:builder-fn rs/as-unqualified-kebab-maps})
       interaction-id  (jdbc/execute!
-                       (->conn ctx)
+                       *DB*
                        [(str "SELECT " select  "
                                    FROM " (->table ctx :command_response_log) "
                                    WHERE interaction_id=?
@@ -691,13 +687,13 @@
   (let [select "SUM(fx_exception) AS fx_exception"]
     (cond
       invocation-id (jdbc/execute!
-                     (->conn ctx)
+                     *DB*
                      [(str "SELECT " select  "
                                  FROM " (->table ctx :command_request_log) "
                                  WHERE invocation_id=?") invocation-id]
                      {:builder-fn rs/as-unqualified-kebab-maps})
       request-id (jdbc/execute!
-                  (->conn ctx)
+                  *DB*
                   (if breadcrumbs
                     [(str "SELECT " select  "
                                 FROM " (->table ctx :command_request_log) "
@@ -711,7 +707,7 @@
                      request-id])
                   {:builder-fn rs/as-unqualified-kebab-maps})
       interaction-id  (jdbc/execute!
-                       (->conn ctx)
+                       *DB*
                        [(str "SELECT " select  "
                                    FROM " (->table ctx :command_request_log) "
                                    WHERE interaction_id=?
@@ -729,10 +725,10 @@
                     ORDER BY event_seq")
          result# (edd/with-stores
                    ~ctx
-                   #(-> (jdbc/execute! (->conn %)
-                                       [query#
-                                        ~interaction-id]
-                                       {:builder-fn rs/as-unqualified-kebab-maps})))
+                   (fn [_#]
+                     (jdbc/execute! *DB*
+                                    [query# ~interaction-id]
+                                    {:builder-fn rs/as-unqualified-kebab-maps})))
          result# (mapv
                   #(get % :data)
                   result#)]

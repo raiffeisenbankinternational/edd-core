@@ -2,7 +2,7 @@
   (:require
    [edd.postgres.const :as c]
    [edd.postgres.honey :as honey]
-   [edd.postgres.pool :refer [->conn]]
+   [edd.postgres.pool :refer [*DB*]]
    [lambda.util :as util]
    [edd.postgres.common
     :refer [->realm
@@ -25,10 +25,7 @@
   "
   [ctx aggregate-id version]
 
-  (let [conn
-        (->conn ctx)
-
-        realm
+  (let [realm
         (->realm ctx)
 
         table
@@ -50,7 +47,7 @@
                  [:= :version version]
                  [:= :service-name service-name]]}]
 
-    (when-let [result (honey/execute-one conn sql-map)]
+    (when-let [result (honey/execute-one *DB* sql-map)]
       (update result :aggregate util/to-edn))))
 
 (defn -insert-entries
@@ -66,9 +63,6 @@
 
         service
         (->service ctx)
-
-        conn
-        (->conn ctx)
 
         ref-date
         (->ref-date ctx)
@@ -93,7 +87,7 @@
     (doseq [{:keys [id version]} entries]
       (log/infof "insert history entry id=%s, version=%d" id version))
 
-    (honey/execute conn sql-map)))
+    (honey/execute *DB* sql-map)))
 
 (defn -invalidate-entries
   "
@@ -106,9 +100,6 @@
         ref-date
         (->ref-date ctx)
 
-        conn
-        (->conn ctx)
-
         table
         (->table realm)
 
@@ -118,7 +109,7 @@
          :where [:and [:= :id id] [:< :version version] [:= :valid-until nil]]}]
 
     (log/infof "invalidate history up to id=%s, version=%d" id version)
-    (honey/execute conn sql-map)))
+    (honey/execute *DB* sql-map)))
 
 (defn new-entries
   "
