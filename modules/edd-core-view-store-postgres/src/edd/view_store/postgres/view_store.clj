@@ -5,8 +5,16 @@
 
   (:require
    [clojure.tools.logging :as log]
-   [edd.view-store.postgres.api :as api]
    [edd.postgres.history :as history]
+   [edd.postgres.pool :refer [->conn]]
+   [edd.s3.view-store :as s3.vs]
+   [edd.search :refer [with-init
+                       simple-search
+                       advanced-search
+                       update-aggregate
+                       get-snapshot
+                       get-by-id-and-version]]
+   [edd.view-store.postgres.api :as api]
    [edd.view-store.postgres.common
     :refer [->long!
             ->realm
@@ -15,14 +23,7 @@
             flatten-paths]]
    [edd.view-store.postgres.const :as c]
    [edd.view-store.postgres.parser :as parser]
-   [edd.postgres.pool :refer [->conn]]
-   [edd.s3.view-store :as s3.vs]
-   [edd.search :refer [with-init
-                       simple-search
-                       advanced-search
-                       update-aggregate
-                       get-snapshot
-                       get-by-id-and-version]]))
+   [lambda.util :as util]))
 
 (defmethod with-init
   :postgres
