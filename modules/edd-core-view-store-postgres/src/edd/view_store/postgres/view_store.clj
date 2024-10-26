@@ -136,16 +136,20 @@
 (defmethod get-snapshot
   :postgres
   [ctx id]
-  (let [conn
-        (->conn ctx)
-
-        realm
+  (let [realm
         (->realm ctx)
 
         service
         (->service ctx)]
 
-    (api/get-by-id conn realm service id)))
+    ;; Read from S3 but *not* Postgres because:
+    ;; 1) it helps to reduce stress on the database;
+    ;; 2) some aggregates might be missing in the database,
+    ;; so querying them triggers their reconstruction from
+    ;; source events.
+    (util/d-time
+     (format "fetching aggregate by id, service: %s, realm: %s, id: %s" service realm id)
+     (s3.vs/get-from-s3 ctx id))))
 
 (defmethod get-by-id-and-version
   :postgres
