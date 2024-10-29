@@ -20,7 +20,6 @@
    [edd.view-store.postgres.common
     :refer [->realm
             ->service
-            enumerate
             flatten-paths]]
    [edd.view-store.postgres.const :as c]
    [edd.view-store.postgres.honey :as honey]
@@ -445,6 +444,12 @@
       (let [{:keys [attrs value]}
             search-parsed
 
+            search-pairs
+            (parser/correct-search-expression service attrs value)
+
+            conditions
+            (parser/get-search-conditions search-pairs)
+
             table
             (->table realm service)
 
@@ -453,44 +458,17 @@
               (->as-aggregates select-parsed)
               as-aggregates)
 
-            filter-wc
-            (into [:or]
-                  (for [attr attrs]
-                    [:wildcard attr value]))
-
-            where-wc
-            (parser/filter->where service filter-wc)
+            where-search
+            (parser/filter->where service (cons :or conditions))
 
             where-full
-            [:and where-base where-wc]
+            [:and where-base where-search]
 
-            ;; generate [:case :field1 :value :fieldN :valueN :else :default], see
-            ;; https://github.com/seancorfield/honeysql/blob/develop/doc/special-syntax.md#case
-            order-search
-            (loop [form [:case]
-                   attrs attrs
-                   i 0]
-              (if (seq attrs)
-                (let [attr
-                      (first attrs)
-
-                      path
-                      (attrs/attr->path attr)
-
-                      field
-                      (honey/json-get-in-text :aggregate path)
-
-                      expr
-                      (honey/ilike field value)]
-
-                  (recur (conj form expr [:inline i])
-                         (next attrs)
-                         (inc i)))
-
-                (conj form :else [:inline 999])))
+            order-case
+            (parser/search-conditions->case service conditions)
 
             order-by-full
-            (cons [order-search :asc] order-by)
+            (cons [order-case :asc] order-by)
 
             sql-map
             {:select [:aggregate]

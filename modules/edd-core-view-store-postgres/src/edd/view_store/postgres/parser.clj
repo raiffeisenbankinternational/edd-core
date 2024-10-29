@@ -13,8 +13,10 @@
    [clojure.string :as str]
    [clojure.tools.logging :as log]
    [edd.view-store.postgres.attrs :as attrs]
-   [edd.view-store.postgres.common :refer [->long!
-                                           error!]]
+   [edd.view-store.postgres.common
+    :refer [->long!
+            enumerate
+            error!]]
    [edd.view-store.postgres.const :as c]
    [edd.view-store.postgres.honey :as honey]
    [edd.view-store.postgres.schema :as schema]
@@ -421,28 +423,12 @@
             wildcard?
             (attrs/path-wildcard? service path)]
 
-        (cond
-
-          ;;
-          ;; Custom cases for the dimension service
-          ;; plus <cocunut>/<short-name> input
-          ;;
-          (attrs/dimension-cocunut? service attr)
-          (let [cocunut (attrs/term->cocunut value)]
-            (honey/ilike field cocunut))
-
-          (attrs/dimension-short-name? service attr)
-          (let [short-name (attrs/term->short-name value)]
-            (honey/ilike field short-name))
-
-          ;; Try to hit the wildcard index
-          wildcard?
+        (if wildcard?
           (honey/ilike field value)
 
           ;; Otherwise, produce the jsonpath expression with the regex_like
           ;; operator. This operator doens't support the GIN/jsonb_path_ops
           ;; index and thus is slow (the last resort).
-          :else
           (let [field
                 (path->root-attr path)
 
@@ -601,3 +587,60 @@
        (conj acc [op attr value])))
    [:and]
    attrs))
+
+(defn correct-search-expression
+  "
+  For a given service, a set of search attributes
+  and a search term, return a seq of pairs like
+  [attr, term]. Depending on some corner cases,
+  the term might be transformed, for example when
+  <CCN>/<ShortName> pattern becomes just <CCN> or
+  <ShortName>.
+  "
+  [service attrs term]
+  (for [attr attrs]
+    (cond
+
+      (attrs/dimension-cocunut? service attr)
+      [attr (attrs/term->cocunut term)]
+
+      (attrs/dimension-short-name? service attr)
+      [attr (attrs/term->short-name term)]
+
+      :else
+      [attr term])))
+
+(defn get-search-conditions
+  "
+  For a list of pairs produced by the function above,
+  make a seq of search predicates. Exact matches go
+  first, then there are wildcard predicates (the order
+  matters).
+  "
+  [search-pairs]
+  (let [len (* 2 (count search-pairs))
+        result (new java.util.ArrayList len)]
+    (doseq [[attr value] search-pairs]
+      (.add result [:= attr value]))
+    (doseq [[attr value] search-pairs]
+      (.add result [:wildcard attr value]))
+    result))
+
+(defn search-conditions->case
+  "
+  Having a seq of condition predicates, generate a CASE expression
+  which is used as a leading ORDER BY form. Each branch has an integer
+  weight. The default branch has weight 999.
+
+  https://github.com/seancorfield/honeysql/blob/develop/doc/special-syntax.md#case
+  "
+  [service conditions]
+  (let [inner
+        (reduce
+         (fn [acc [i condition]]
+           (conj acc
+                 (filter->where service condition)
+                 [:inline i]))
+         [:case]
+         (enumerate conditions))]
+    (conj inner :else [:inline 999])))

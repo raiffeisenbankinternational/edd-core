@@ -188,6 +188,25 @@
               :from [:string "123"]}
              query-parsed)))))
 
+(deftest test-search-case-order-form
+  (let [conditions
+        [[:= :fieldA 1]
+         [:= :fieldB 2]
+         [:wildcard :fieldA "abc"]
+         [:wildcard :fieldB "xyz"]]]
+    (is (= [:case
+            [(keyword "@@") :aggregate [:inline "$.fieldA == 1"]]
+            [:inline 0]
+            [(keyword "@@") :aggregate [:inline "$.fieldB == 2"]]
+            [:inline 1]
+            [(keyword "@@") :aggregate [:inline "($.fieldA like_regex \"abc\" flag \"iq\")"]]
+            [:inline 2]
+            [(keyword "@@") :aggregate [:inline "($.fieldB like_regex \"xyz\" flag \"iq\")"]]
+            [:inline 3]
+            :else
+            [:inline 999]]
+           (parser/search-conditions->case :test conditions)))))
+
 (deftest test-parse-dimension-attrs-cocunut
 
   (testing "filter part"
@@ -777,5 +796,5 @@
          [:wildcard :attrs.short-name "123/abc/test"]
          [:wildcard :attrs.top-parent-id "123/abc/test"]]]
 
-    (is (= "((aggregate #>> ARRAY['attrs', 'cocunut']) = '123/abc/test') OR (aggregate @@ '$.attrs.\"short-name\" == \"123/abc/test\"') OR ((aggregate #>> ARRAY['attrs', 'top-parent-id']) = '123/abc/test') OR ((aggregate #>> ARRAY['attrs', 'cocunut']) ILIKE '%123%') OR ((aggregate #>> ARRAY['attrs', 'short-name']) ILIKE '%abc/test%') OR ((aggregate #>> ARRAY['attrs', 'top-parent-id']) ILIKE '%123/abc/test%')"
+    (is (= "((aggregate #>> ARRAY['attrs', 'cocunut']) = '123/abc/test') OR (aggregate @@ '$.attrs.\"short-name\" == \"123/abc/test\"') OR ((aggregate #>> ARRAY['attrs', 'top-parent-id']) = '123/abc/test') OR ((aggregate #>> ARRAY['attrs', 'cocunut']) ILIKE '%123/abc/test%') OR ((aggregate #>> ARRAY['attrs', 'short-name']) ILIKE '%123/abc/test%') OR ((aggregate #>> ARRAY['attrs', 'top-parent-id']) ILIKE '%123/abc/test%')"
            (filter->result c/SVC_DIMENSION filter)))))
