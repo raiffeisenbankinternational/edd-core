@@ -182,6 +182,7 @@
   all Exceptions thrown by handler in to data. Afterwards we want only ex-info"
   [handler cmd ctx]
   (try
+    (log/info "invoke-handler cmd" cmd)
     (handler ctx cmd)
     (catch Exception e
       (let [data (ex-data e)]
@@ -245,6 +246,7 @@
 (defn handle-command
   [ctx {:keys [cmd-id] :as cmd}]
   (log/info "Requst meta: " (:meta ctx))
+  (log/info "Requst cmd: " cmd)
   (util/d-time
    (str "handling-command: " cmd-id)
    (let [{:keys [handler]} (edd-ctx/get-cmd ctx cmd-id)
@@ -253,6 +255,7 @@
          {:keys [id] :as cmd} (resolve-command-id-with-id-fn ctx cmd)
          {:keys [error]
           :as validation} (validate-single-command ctx cmd)]
+     (log/info "Resolved cmd" cmd)
      (when-not handler
        (throw (ex-info "Missing command handler"
                        {:cmd-id (:cmd-id cmd)})))
@@ -483,11 +486,13 @@
                        :breadcrumbs (or (get body :breadcrumbs)
                                         [0]))
                 (s3-cache/register))]
+    (log/info "****process-commands ctx" commands)
 
     (log-request ctx body)
 
     (if-let [resp (:data (dal/get-command-response ctx))]
       (do
+        (log/info "got resp from (dal/get-command-response ctx)" resp)
         (swap! request/*request*
                update
                :cache-keys
