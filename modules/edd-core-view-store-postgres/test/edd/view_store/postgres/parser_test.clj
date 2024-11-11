@@ -273,6 +273,14 @@
                     [:predicate-simple {:op :=, :attr :name, :value "foo"}]]}}]]}]
              result)))))
 
+(deftest test-attrs-appication-btree-indexes
+  (let [filter
+        [:and
+         [:= :attrs.top-gcc.cocunut "foo"]
+         [:= :attrs.applicant.id "bar"]]]
+    (is (= "((aggregate #>> ARRAY['attrs', 'top-gcc', 'cocunut']) = 'foo') AND ((aggregate #>> ARRAY['attrs', 'applicant', 'id']) = 'bar')"
+           (filter->result c/SVC_APPLICATION filter)))))
+
 (deftest test-attrs-appication-id=string
 
   (let [filter
@@ -631,6 +639,13 @@
     (is (= "(aggregate @@ '$.attrs.\"risk-on\".\"asset-class\".\"asset-class-code\" == \"42\"') AND (aggregate @?? '$.attrs.\"risk-on\".\"asset-class\".\"asset-class-code\"  ?  ((@ == \"1\") || (@ == \"2\") || (@ == \"3\"))')"
            (filter->result filter)))))
 
+(deftest test-task-manager-btree-indexes
+  (let [filter
+        [:and
+         [:= :attrs.application.id "test"]]]
+    (is (= "((aggregate #>> ARRAY['attrs', 'application', 'id']) = 'test')"
+           (filter->result c/SVC_TASK_MANAGER filter)))))
+
 (deftest test-sort-by
 
   (let [search
@@ -783,6 +798,12 @@
          [:wildcard :attrs.top-parent-id "123"]]]
 
     (is (= "((aggregate #>> ARRAY['attrs', 'cocunut']) ILIKE '%123%') OR ((aggregate #>> ARRAY['attrs', 'short-name']) ILIKE '%123%') OR ((aggregate #>> ARRAY['attrs', 'top-parent-id']) ILIKE '%123%')"
+           (filter->result c/SVC_DIMENSION filter)))))
+
+(deftest test-dimension-attrs-top-parent-cocunut-btree
+  (let [filter
+        [:= :attrs.top-parent-cocunut "hello"]]
+    (is (= "(aggregate #>> ARRAY['attrs', 'top-parent-cocunut']) = 'hello'"
            (filter->result c/SVC_DIMENSION filter)))))
 
 (deftest test-dimension-wildcard-with-slash

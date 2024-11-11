@@ -15,11 +15,14 @@
    :attrs.booking-company
    :attrs.status
 
-   ;; V005, sorting in UI
+   ;; V006, sorting in UI
    :attrs.risk-on.top-gcc-short-name
    :attrs.risk-on.asset-class.asset-class-code
    :attrs.applicant.id
-   :attrs.resolution-date}
+   :attrs.resolution-date
+
+   ;; V007, UI search
+   :attrs.top-gcc.cocunut}
 
  :glms-task-manager-svc
  #{;; V003, sorting in UI
@@ -28,9 +31,13 @@
    :attrs.gcc.cocunut
    :attrs.type
    :attrs.created-by.id
+
    ;; filtering in UI
    :attrs.application.area
-   :attrs.application.booking-company}
+   :attrs.application.booking-company
+
+   ;; V004, tweak performance
+   :attrs.application.id}
 
  :glms-dimension-svc
  #{;; search
@@ -42,7 +49,10 @@
    :attrs.top-parent-short-name
    :attrs.asset-class.asset-class-code
    :attrs.gics-level-1-short-name
-   :attrs.country-of-risk}
+   :attrs.country-of-risk
+
+   ;; V006, UI search
+   :attrs.top-parent-cocunut}
 
  :glms-notification-svc
  #{:attrs.status
