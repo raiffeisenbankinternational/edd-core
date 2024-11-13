@@ -111,3 +111,20 @@
         (is true)
         (is (= "Athena execution has been terminated, id: 123, state: FAILED, message: TABLE_NOT_FOUND: line 1:23: Table 'awsdatacatalog.test_limit_review_db.test_applicationaaaa' does not exist"
                (ex-message e)))))))
+
+(def S3-URL-WITH-SPACE
+  "s3://055194627518-foo-athena-query/Matched Exposure/2024/11/12/xxx.csv")
+
+(deftest test-execution->bucket
+  (let [data
+        {:ResultConfiguration
+         {:OutputLocation S3-URL-WITH-SPACE}}]
+    (is (= "055194627518-foo-athena-query"
+           (athena/execution->bucket data)))))
+
+(deftest test-execution->key-path
+  (let [data
+        {:ResultConfiguration
+         {:OutputLocation S3-URL-WITH-SPACE}}]
+    (is (= "Matched Exposure/2024/11/12/xxx.csv"
+           (athena/execution->key-path data)))))

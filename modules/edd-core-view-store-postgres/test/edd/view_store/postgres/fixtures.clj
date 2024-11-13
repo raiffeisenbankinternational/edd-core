@@ -32,14 +32,6 @@
    :username USER
    :password USER})
 
-(def db-opt
-  {:dbtype "postgres"
-   :dbname USER
-   :port PORT
-   :host HOST
-   :user USER
-   :password USER})
-
 (def ^:dynamic *DB* nil)
 
 (def TABLES-TO-DROP
