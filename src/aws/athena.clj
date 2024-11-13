@@ -4,6 +4,7 @@
   https://docs.aws.amazon.com/athena/latest/APIReference/API_Operations.html
   See the data samples captured on dev19 in test/resources/athena/ directory.
   "
+  (:import java.net.URL)
   (:require
    [clojure.string :as str]
    [clojure.tools.logging :as log]
@@ -211,11 +212,28 @@
           :AthenaError
           :ErrorMessage))
 
+(defn ->URL
+  "
+  Get an instance of `java.net.URL` from a string like:
+  s3://some.bucket/path/to/some special/file.txt
+                              ^^^
+  Pay attention to the space above. With a space, the
+  `java.net.URI` class fails parsing it. The `java.net.URL`
+  class feels better but it accepts only `http(s)://`
+  protocol.
+
+  Thus, change the protocol first, then parse.
+  "
+  ^URL [^String s3-url]
+  (-> s3-url
+      (str/replace #"^s3://" "https://")
+      (java.net.URL.)))
+
 (defn execution->bucket ^String [QueryExecution]
   (some-> QueryExecution
           :ResultConfiguration
           :OutputLocation
-          java.net.URI.
+          ->URL
           .getHost))
 
 (defn execution->key-path ^String [QueryExecution]
@@ -223,7 +241,7 @@
              (some-> QueryExecution
                      :ResultConfiguration
                      :OutputLocation
-                     java.net.URI.
+                     ->URL
                      .getPath)]
     (if (str/starts-with? key-path "/")
       (subs key-path 1)
