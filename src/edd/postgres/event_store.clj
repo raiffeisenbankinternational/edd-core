@@ -473,11 +473,23 @@
                total
                (inc current))))))
 
+(defn -compare-version
+  [aggregate snapshot]
+  (letfn [(get-version [agg] (:version agg))]
+    (log/infof "compare aggregate version %d to snapshot version %d"
+               (get-version aggregate)
+               (get-version snapshot))
+    (compare (get-version aggregate) (get-version snapshot))))
+
 (defn store-history
   [ctx resp]
-  (let [{:keys [aggregates]} resp]
-    (when (seq aggregates)
-      (history/new-entries ctx aggregates))))
+  (let [{:keys [history]}
+        resp
+
+        {:keys [aggregate snapshot]}
+        history]
+    (when (pos? (-compare-version aggregate snapshot))
+      (history/new-entries ctx [aggregate]))))
 
 (defn store-results-impl
   [ctx resp]

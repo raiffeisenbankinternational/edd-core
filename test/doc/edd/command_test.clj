@@ -72,8 +72,7 @@
                             :request-id     nil}]
               :identities []
               :meta       [{:test-cmd {:id cmd-id}}]
-              :sequences  []
-              :aggregates [{:version 2, :id cmd-id}]}
+              :sequences  []}
              (el-cmd/handle-commands
               (assoc ctx :no-summary true)
               {:commands [request]}))))
@@ -115,10 +114,7 @@
                 :identities []
                 :meta       [{:test-cmd-1 {:id cmd-id-1}}
                              {:test-cmd-2 {:id cmd-id-2}}]
-                :sequences  []
-                :aggregates [{:version 1, :id cmd-id-1}
-                             {:version 1, :id cmd-id-2}
-                             {:version 2, :id cmd-id-2}]}
+                :sequences  []}
                (el-cmd/handle-commands
                 (assoc ctx :no-summary true)
                 {:commands [{:id     cmd-id-1
@@ -162,8 +158,7 @@
                             :request-id     nil}]
               :identities []
               :meta       [{:test-cmd {:id cmd-id}}]
-              :sequences  []
-              :aggregates [{:version 2, :id cmd-id}]}
+              :sequences  []}
              (el-cmd/handle-commands
               (assoc ctx :no-summary true)
               {:commands [request]}))))))

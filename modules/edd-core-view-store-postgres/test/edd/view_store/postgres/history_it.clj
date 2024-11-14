@@ -77,9 +77,12 @@
 ;; This test is currently executed manually due to complexity of migrations
 ;; to setup the test `repl/local.sh` script must be executed in order to
 ;; spin postgres db with all migrations
-
 #_(deftest when-no-historisation-then-no-aggregates-returned
-    (with-redefs [s3.vs/store-to-s3 (fn [_ctx] nil)]
+    (with-redefs [s3.vs/store-to-s3
+                  (fn [_ctx] nil)
+
+                  s3.vs/get-from-s3
+                  (fn [_ctx _id] nil)]
       (let [agg-id
             (uuid/gen)
 
@@ -141,9 +144,12 @@
           (is (nil? aggregate-v1))
           (is (nil? aggregate-v2))
           (is (nil? aggregate-v3))))))
-
 #_(deftest when-query-for-aggregate-by-id-and-version
-    (with-redefs [s3.vs/store-to-s3 (fn [_ctx] nil)]
+    (with-redefs [s3.vs/store-to-s3
+                  (fn [_ctx] nil)
+
+                  s3.vs/get-from-s3
+                  (fn [_ctx _id] nil)]
       (let [agg-id
             (uuid/gen)
 
@@ -199,18 +205,21 @@
                   :version 2,
                   :id agg-id}
                  aggregate))
-          (is (= {:value "1",
-                  :version 1,
-                  :id agg-id}
-                 aggregate-v1))
+        ;; no intermediate version of aggregate is stored
+          (is (= nil aggregate-v1))
           (is (= {:value "2",
                   :version 2,
                   :id agg-id}
                  aggregate-v2))
           (is (= nil aggregate-v3))))))
 
-#_(deftest when-two-commands-in-same-tx
-    (with-redefs [s3.vs/store-to-s3 (fn [_ctx] nil)]
+#_(deftest when-two-commands-in-different-tx
+    (with-redefs [s3.vs/store-to-s3
+                  (fn [_ctx] nil)
+
+                  s3.vs/get-from-s3
+                  (fn [_ctx _id] nil)]
+
       (let [agg-id
             (uuid/gen)
 
@@ -274,6 +283,8 @@
                   :version 2,
                   :id agg-id}
                  aggregate))
+        ;; second command is done in different tx
+        ;; version one is obtainable
           (is (= {:value "1",
                   :version 1,
                   :id agg-id}
@@ -283,3 +294,5 @@
                   :id agg-id}
                  aggregate-v2))
           (is (= nil aggregate-v3))))))
+
+
