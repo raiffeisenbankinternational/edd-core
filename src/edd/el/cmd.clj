@@ -258,14 +258,14 @@
                        {:cmd-id (:cmd-id cmd)})))
      (if error
        validation
-       (let [aggregate
+       (let [snapshot
              (common/get-by-id ctx id)
 
              _
-             (with-aggregate aggregate)
+             (with-aggregate snapshot)
 
              ctx
-             (el-ctx/put-aggregate ctx aggregate)
+             (el-ctx/put-aggregate ctx snapshot)
 
              resp
              (->> (get-response-from-command-handler
@@ -274,18 +274,20 @@
                    :command-handler handler)
                   (resp->add-user-to-events ctx)
                   (resp->assign-event-seq ctx))
+
              resp
              (assoc resp :meta [{cmd-id {:id id}}])
 
              aggregate-schema
              (edd-ctx/get-service-schema ctx)
 
-             {:keys [aggregate aggregates]}
-             (event/get-state-for-each-event
+             aggregate
+             (event/get-current-state
               ctx
               {:id id
                :events (:events resp [])
-               :snapshot aggregate})
+               :snapshot snapshot})
+
              _
              (with-aggregate aggregate)]
 
@@ -297,7 +299,11 @@
                            {:error (me/humanize
                                     (m/explain aggregate-schema aggregate))})))
 
-         (let [resp
+         (let [history-entry
+               {:snapshot snapshot
+                :aggregate aggregate}
+
+               resp
                (handle-effects ctx
                                :resp resp
                                :aggregate aggregate)
@@ -306,7 +312,7 @@
                (resp->add-meta-to-events ctx resp)
 
                resp
-               (assoc resp :aggregates (-> aggregates reverse vec))]
+               (assoc resp :history history-entry)]
 
            (request-cache/update-aggregate ctx aggregate)
            (request-cache/store-identities ctx (:identities resp))
@@ -329,7 +335,9 @@
 (defn resp->response-summary
   [{:keys [no-summary]} resp]
 
-  (let [sample (take 11 (:effects resp))
+  (let [;; history should not be a part of response to the client
+        resp (dissoc resp :history)
+        sample (take 11 (:effects resp))
         sample (if (> (count sample) 10)
                  []
                  sample)]
@@ -437,9 +445,6 @@
                  (resp->store-cache-partition ctx part))
                parts))
 
-             ;cache-result
-             ;(do-execute jobs)
-
              parts
              (map :effects parts)
 
@@ -530,6 +535,7 @@
               (util/d-time
                "store-final-result"
                (store-results ctx resp))]
+
           result)))))
 
 (defn handle-commands

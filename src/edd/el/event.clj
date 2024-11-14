@@ -34,36 +34,6 @@
    snapshot
    events))
 
-(defn create-aggregates
-  [snapshot events apply-functions]
-  (let [result
-        (reduce
-         (fn [acc event]
-           (log/debug "Attempting to apply" event)
-           (let [event-id
-                 (keyword (:event-id event))
-
-                 aggregate
-                 (first acc)]
-
-             (if-let [apply-fn (event-id apply-functions)]
-               (let [new-aggregate (apply-event aggregate event apply-fn)]
-                 (cons new-aggregate acc))
-               (cons
-                (assoc aggregate
-                       :version (:event-seq event)
-                       :id (:id event))
-
-                acc))))
-
-         (if snapshot (list snapshot) (list))
-         events)]
-    ;; if snapshot was provided we dont return it
-    ;; returned only history which need to be stored
-    (if (some? snapshot)
-      (-> result butlast vec)
-      (vec result))))
-
 (defn apply-agg-filter
   [ctx aggregate]
   (reduce
@@ -88,34 +58,6 @@
                            result-agg)
     :else (or snapshot
               nil)))
-
-(defn get-state-for-each-event
-  "Returns state of aggregate for each event"
-  [ctx {:keys [id events snapshot]}]
-  {:pre [id events]}
-  (log/debug "Updating aggregates" id)
-  (log/debug "Events: " events)
-  (log/debug "Snapshot: " snapshot)
-
-  (cond
-    (:error events)
-    (throw (ex-info "Error fetching events" {:error events}))
-
-    (> (count events) 0)
-    (let [aggregates
-          (create-aggregates snapshot events (:def-apply ctx))
-
-          last-aggregate
-          (first aggregates)
-
-          result-agg
-          (apply-agg-filter ctx last-aggregate)]
-      {:aggregates (vec aggregates)
-       :current-state last-aggregate
-       :aggregate result-agg})
-
-    :else
-    (or snapshot nil)))
 
 (defn fetch-snapshot
   [ctx id]

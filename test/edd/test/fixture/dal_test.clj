@@ -441,8 +441,7 @@
                             :id        id}]
               :identities []
               :meta       [{:test-cmd {:id id}}]
-              :sequences  []
-              :aggregates [{:version 3, :id id}]}
+              :sequences  []}
              (mock/get-commands-response ctx {:cmd-id :test-cmd
                                               :id     id})))
       (let [request-id (uuid/gen)
@@ -465,8 +464,7 @@
                                 :interaction-id interaction-id}]
                   :identities []
                   :meta       [{:test-cmd-fx {:id id}}]
-                  :sequences  []
-                  :aggregates [{:id id, :version 4}]}
+                  :sequences  []}
                  (mock/get-commands-response (assoc ctx :include-meta true
                                                     :request-id request-id
                                                     :interaction-id interaction-id)
@@ -492,8 +490,7 @@
                                 :id        id}]
                   :identities []
                   :meta       [{:test-cmd-fx {:id id}}]
-                  :sequences  []
-                  :aggregates [{:id id :version 5}]}
+                  :sequences  []}
                  (mock/get-commands-response (assoc ctx :request-id request-id
                                                     :interaction-id interaction-id)
                                              {:commands       [{:cmd-id :test-cmd-fx
