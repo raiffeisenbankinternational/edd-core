@@ -175,22 +175,25 @@
    (:meta ctx {})))
 
 (defn- add-log-level
-  [attrs ctx item]
+  [mdc ctx item]
   (if-let [level (:log-level (get-meta ctx item))]
-    (assoc attrs :log-level level)
-    attrs))
+    (assoc mdc :log-level level)
+    mdc))
 
 (defn update-mdc-for-request
   [ctx item]
-  (swap! request/*request* #(update % :mdc
-                                    (fn [mdc]
-                                      (-> (assoc mdc
-                                                 :invocation-id (:invocation-id ctx)
-                                                 :realm (:realm (get-meta ctx item))
-                                                 :request-id (:request-id item)
-                                                 :breadcrumbs (or (get item :breadcrumbs) [0])
-                                                 :interaction-id (:interaction-id item))
-                                          (add-log-level ctx item))))))
+  (let [meta (get-meta ctx item)]
+    (swap! request/*request* update :mdc
+           (fn [mdc]
+             (-> mdc
+                 (assoc :invocation-id  (:invocation-id ctx)
+                        :realm          (:realm meta)
+                        :from-service   (:from-service meta)
+                        :to-service     (:to-service meta)
+                        :request-id     (:request-id item)
+                        :breadcrumbs    (get item :breadcrumbs [0])
+                        :interaction-id (:interaction-id item))
+                 (add-log-level ctx item))))))
 
 (defn try-parse-exception
   [^Throwable e]
