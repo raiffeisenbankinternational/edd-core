@@ -210,8 +210,6 @@
   (log "Start OS import, realm: %s, service: %s, size: %s, lifetime: %s"
        realm service size lifetime)
 
-  (pool/start-db ctx)
-
   (log "Connection pool has been started")
 
   (let [{:keys [^File file total]}
@@ -220,8 +218,9 @@
     (log "OpenSearch was dumped into a file, rows: %s, path: %s"
          total, file)
 
-    (with-open [in (edd.io/gzip-input-stream file)]
-      (api/copy-in-csv *DB* realm service in))
+    (pool/with-pool [ctx]
+      (with-open [in (edd.io/gzip-input-stream file)]
+        (api/copy-in-csv *DB* realm service in)))
 
     (log "Rows imported: %s" total)
 

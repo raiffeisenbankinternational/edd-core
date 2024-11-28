@@ -1,0 +1,11 @@
+FROM literal:${DOCKER_URL}/library/postgres:15
+
+RUN apt-get update \
+    && apt-get install -y postgresql-15-cron \
+    && rm -rf /var/lib/apt/lists/*
+
+# A special case to bypass the following issue on CI:
+# cannot open directory '/docker-entrypoint-initdb.d/': Permission denied
+COPY --chown=build:build --chmod=777 ./modules/edd-core-view-store-postgres/test/resources/migrations /docker-entrypoint-initdb.d/
+
+CMD ["postgres", "-E", "-c", "shared_preload_libraries=pg_cron", "-c", "cron.database_name=postgres"]
