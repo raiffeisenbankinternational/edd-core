@@ -32,8 +32,8 @@
   :unit
   {:main-opts ["-m" "kaocha.runner" "unit"]}
 
-  :docker
-  {:main-opts ["-m" "kaocha.runner" "docker"]}
+  :it
+  {:main-opts ["-m" "kaocha.runner" "it"]}
 
   :outdated
   {:extra-deps {olical/depot {:mvn/version "1.8.4"}}

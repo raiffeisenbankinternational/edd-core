@@ -1,4 +1,4 @@
-(ns ^:docker edd.view-store.postgres.api-test-docker
+(ns edd.view-store.postgres.api-test-it
   (:require
    [clojure.java.io :as io]
    [clojure.test :refer [deftest is use-fixtures testing]]

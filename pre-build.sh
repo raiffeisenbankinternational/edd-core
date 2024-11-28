@@ -3,12 +3,12 @@
 set -exo pipefail
 set -e
 
+docker container prune --force
+
 mkdir -p modules
 
-cd repl
 docker compose down --remove-orphans
 docker compose up -d
-cd ..
 
 host="https://admin:admin@127.0.0.1:9200"
 response="null"
@@ -20,5 +20,7 @@ until [[ "$response" = "200" ]] || [[ $count -gt 15 ]]; do
     ((count++))
 done
 
+docker ps
+docker compose logs postgres
 
 echo "Continue"

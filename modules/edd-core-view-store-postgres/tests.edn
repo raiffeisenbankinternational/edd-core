@@ -3,7 +3,7 @@
           :source-paths ["src"]
           :test-paths   ["test"]
           :ns-patterns  ["-test$"]}
-         {:id           :docker
+         {:id           :it
           :source-paths ["src"]
           :test-paths   ["test"]
-          :ns-patterns  ["-docker$"]}]}
+          :ns-patterns  ["-it$"]}]}

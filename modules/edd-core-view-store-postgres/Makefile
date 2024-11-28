@@ -12,10 +12,10 @@ repl:
 test-unit:
 	clojure -M:test:unit
 
-test-docker:
-	clojure -M:test:docker
+test-it:
+	clojure -M:test:it
 
-test: test-unit test-docker
+test: test-unit test-it
 
 .PHONY: test
 

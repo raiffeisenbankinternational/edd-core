@@ -13,16 +13,17 @@
    [lambda.util :as util]
    [next.jdbc :as jdbc]))
 
-(def CI?
-  (System/getenv "CI"))
+(def DOCKER?
+  (System/getenv "CHANGE_ID"))
 
-(def USER "test")
+(def USER "postgres")
+
+(def PASS "no-secret")
 
 (def HOST
-  (if CI? "postgres" "127.0.0.1"))
+  (if DOCKER? "postgres" "127.0.0.1"))
 
-(def PORT
-  (if CI? 5432 55432))
+(def PORT 5432)
 
 (def pool-opt
   {:dbtype "postgres"
@@ -30,7 +31,7 @@
    :port PORT
    :host HOST
    :username USER
-   :password USER})
+   :password PASS})
 
 (def TABLES-TO-DROP
   [c/SVC_TEST c/SVC_DIMENSION])
@@ -41,8 +42,9 @@
   (t))
 
 (defn fix-with-db [t]
-  (binding [*DB* (pool/create-pool pool-opt)]
-    (t)))
+  (with-open [pool (pool/create-pool pool-opt)]
+    (binding [*DB* pool]
+      (t))))
 
 (defn fix-with-db-init [t]
   (with-redefs [db/init (constantly pool-opt)]
