@@ -281,6 +281,14 @@
     (is (= "((aggregate #>> ARRAY['attrs', 'top-gcc', 'cocunut']) = 'foo') AND ((aggregate #>> ARRAY['attrs', 'applicant', 'id']) = 'bar')"
            (filter->result c/SVC_APPLICATION filter)))))
 
+(deftest test-attrs-exposure-btree
+  (let [filter
+        [:and
+         [:= :attrs.risk-on "foo"]
+         [:= :attrs.foo-bar "bar"]]]
+    (is (= "((aggregate #>> ARRAY['attrs', 'risk-on']) = 'foo') AND (aggregate @@ '$.attrs.\"foo-bar\" == \"bar\"')"
+           (filter->result c/SVC_EXPOSURE filter)))))
+
 (deftest test-attrs-appication-id=string
 
   (let [filter

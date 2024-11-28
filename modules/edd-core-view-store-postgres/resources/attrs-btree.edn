@@ -59,6 +59,9 @@
    :attrs.user.id
    :attrs.user.role}
 
+ :glms-exposure-svc
+ #{:attrs.risk-on}
+
  :glms-currency-svc
  #{:business-date
    :batch-number}}

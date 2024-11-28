@@ -23,6 +23,7 @@
 
 (def SVC_TEST :edd-core)
 (def SVC_DIMENSION :glms-dimension-svc)
+(def SVC_EXPOSURE :glms-exposure-svc)
 (def SVC_APPLICATION :glms-application-svc)
 (def SVC_CURRENCY :glms-currency-svc)
 (def SVC_TASK_MANAGER :glms-task-manager-svc)
@@ -42,7 +43,7 @@
     :glms-dataimport-svc
     SVC_DIMENSION
     :glms-document-svc
-    :glms-exposure-svc
+    SVC_EXPOSURE
     :glms-facility-svc
     :glms-group-limitations-svc
     :glms-limit-review-report
