@@ -54,7 +54,7 @@
                        (edd-util/try-parse-exception-data e)))]
       (if (or
            (:error response)
-           (> (:status response 0) 499))
+           (> (long (:status response 0)) 499))
         (do
           (log/warnf
            "Retrying %s/%s, because: %s"

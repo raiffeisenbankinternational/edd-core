@@ -479,7 +479,7 @@
     (log/infof "compare aggregate version %d to snapshot version %d"
                (get-version aggregate)
                (get-version snapshot))
-    (compare (get-version aggregate) (get-version snapshot))))
+    (long (compare (get-version aggregate) (get-version snapshot)))))
 
 (defn store-history
   [ctx resp]
