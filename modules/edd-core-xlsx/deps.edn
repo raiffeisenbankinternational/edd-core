@@ -1,36 +1,24 @@
 {:deps
- {org.clojure/clojure {:mvn/version "1.11.1"}
-  org.dhatim/fastexcel {:mvn/version "0.18.0"}
+ {org.dhatim/fastexcel        {:mvn/version "0.18.0"}
   org.dhatim/fastexcel-reader {:mvn/version "0.18.0"}}
  :paths ["src" "resources" "api/src"]
  :aliases
- {:jar
-  {:extra-paths ["resources"]
-   :extra-deps  {luchiniatwork/cambada {:mvn/version "1.0.5"}},
-   :main-opts   ["-m" "cambada.jar"
-                 "-m" "lambda.core"
-                 "-m" "--copy-source "]}
+ {:build  {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.6"}}
+           :ns-default build}
 
-  :test
-  {:extra-paths ["test"],
-   :extra-deps  {org.clojure/test.check {:mvn/version "1.1.1"}}},
+  :test   {:extra-paths ["test"],
+           :extra-deps  {org.clojure/test.check {:mvn/version "1.1.1"}}},
 
-  :it
-  {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}},
-   :main-opts ["-m" "kaocha.runner" "it"]}
+  :it     {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}},
+           :main-opts  ["-m" "kaocha.runner" "it"]}
 
-  :unit
-  {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}},
-   :main-opts ["-m" "kaocha.runner" "unit"]}
+  :unit   {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}},
+           :main-opts  ["-m" "kaocha.runner" "unit"]}
 
-  :dev
-  {:extra-paths ["dev" "dev/resources"]}
+  :dev    {:extra-paths ["dev" "dev/resources"]}
 
-  :lint
-  {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2023.01.20"}}
-   :main-opts  ["-m" "clj-kondo.main" "--lint" "."]}
+  :lint   {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2023.01.20"}}
+           :main-opts  ["-m" "clj-kondo.main" "--lint" "."]}
 
-  :format
-  {:extra-deps
-   {dev.weavejester/cljfmt {:mvn/version "0.11.2"}}
-   :main-opts  ["-m" "cljfmt.main" "fix" "src" "test" "--config" "cljfmt.edn"]}}}
+  :format {:extra-deps {dev.weavejester/cljfmt {:mvn/version "0.11.2"}}
+           :main-opts  ["-m" "cljfmt.main" "fix" "src" "test" "--config" "cljfmt.edn"]}}}

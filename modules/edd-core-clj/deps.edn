@@ -1,13 +1,8 @@
-{:deps
- {org.clojure/clojure {:mvn/version "1.10.3"}}
+{:deps {}
  :paths ["src" "resources" "api/src"]
  :aliases
- {:jar
-  {:extra-paths ["resources"]
-   :extra-deps  {luchiniatwork/cambada {:mvn/version "1.0.5"}},
-   :main-opts   ["-m" "cambada.jar"
-                 "-m" "lambda.core"
-                 "-m" "--copy-source "]}
+ {:build {:deps {io.github.clojure/tools.build {:mvn/version "0.10.6"}}
+          :ns-default build}
 
   :test
   {:extra-paths ["test"]

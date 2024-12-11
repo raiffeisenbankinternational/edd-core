@@ -403,4 +403,22 @@
 
 (defn -main
   [& _args]
-  (log/info "Native Image testing"))
+  (let [ctx {}
+        cmd-schema (m/schema
+                    [:map {:closed true}
+                     [:cmd-id [:= :test-native-cmd]]
+                     [:id uuid?]])
+        get-risk-on-dep {:service :glms-dimension-svc
+                         :query   (fn [deps cmd]
+                                    {:query-id :get-risk-on-by-id
+                                     :id       (or (-> cmd :request :attrs :risk-on-id)
+                                                   (-> cmd :request :attrs :consolidation-point :risk-on-id)
+                                                   (-> deps :facility :attrs :risk-on-id))})}
+        ctx (-> ctx
+                (reg-cmd :test-native-cmd (fn [_ _]
+                                            (log/info "Native test command")
+                                            {:result {:status :ok}})
+                         :consumes cmd-schema
+                         :deps {:risk-on get-risk-on-dep}))]
+    (log/info "Native image test")
+    (log/warn "CTX" ctx)))

@@ -1,8 +1,5 @@
 [
   {
-    "name": "[Lclojure.asm.Type;"
-  },
-  {
     "name": "[Lcom.fasterxml.jackson.databind.deser.Deserializers;"
   },
   {
@@ -1122,69 +1119,6 @@
     ]
   },
   {
-    "name": "clojure.asm.ClassVisitor"
-  },
-  {
-    "name": "clojure.asm.ClassWriter"
-  },
-  {
-    "name": "clojure.asm.Opcodes"
-  },
-  {
-    "name": "clojure.asm.Type"
-  },
-  {
-    "name": "clojure.asm.commons.GeneratorAdapter"
-  },
-  {
-    "name": "clojure.asm.commons.Method"
-  },
-  {
-    "name": "clojure.core.ArrayChunk"
-  },
-  {
-    "name": "clojure.core.ArrayManager"
-  },
-  {
-    "name": "clojure.core.Eduction"
-  },
-  {
-    "name": "clojure.core.IVecImpl"
-  },
-  {
-    "name": "clojure.core.Inst"
-  },
-  {
-    "name": "clojure.core.Vec"
-  },
-  {
-    "name": "clojure.core.VecNode"
-  },
-  {
-    "name": "clojure.core.VecSeq"
-  },
-  {
-    "name": "clojure.core.protocols.CollReduce"
-  },
-  {
-    "name": "clojure.core.protocols.Datafiable"
-  },
-  {
-    "name": "clojure.core.protocols.IKVReduce"
-  },
-  {
-    "name": "clojure.core.protocols.InternalReduce"
-  },
-  {
-    "name": "clojure.core.protocols.Navigable"
-  },
-  {
-    "name": "clojure.java.io.Coercions"
-  },
-  {
-    "name": "clojure.java.io.IOFactory"
-  },
-  {
     "name": "clojure.lang.AFn",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true
@@ -1201,15 +1135,6 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "clojure.lang.APersistentMap$KeySeq"
-  },
-  {
-    "name": "clojure.lang.APersistentMap$ValSeq"
-  },
-  {
-    "name": "clojure.lang.ASeq"
-  },
-  {
     "name": "clojure.lang.Associative",
     "queryAllDeclaredMethods": true
   },
@@ -1220,24 +1145,10 @@
     "name": "clojure.lang.ChunkBuffer"
   },
   {
-    "name": "clojure.lang.Compiler",
-    "allPublicFields": true
-  },
-  {
-    "name": "clojure.lang.Compiler$CompilerException"
-  },
-  {
-    "name": "clojure.lang.Counted",
-    "queryAllDeclaredMethods": true
-  },
-  {
     "name": "clojure.lang.Delay",
     "allPublicFields": true,
     "allPublicMethods": true,
     "allPublicConstructors": true
-  },
-  {
-    "name": "clojure.lang.DynamicClassLoader"
   },
   {
     "name": "clojure.lang.ExceptionInfo",
@@ -1247,223 +1158,6 @@
     "allPublicConstructors": true,
     "allDeclaredClasses": true,
     "allPublicClasses": true
-  },
-  {
-    "name": "clojure.lang.Fn"
-  },
-  {
-    "name": "clojure.lang.IChunk",
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "clojure.lang.IChunkedSeq"
-  },
-  {
-    "name": "clojure.lang.IDeref"
-  },
-  {
-    "name": "clojure.lang.IEditableCollection",
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "clojure.lang.IExceptionInfo"
-  },
-  {
-    "name": "clojure.lang.IFn",
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "clojure.lang.IHashEq",
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "clojure.lang.IKVReduce",
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "clojure.lang.IKeywordLookup",
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "clojure.lang.ILookup",
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "clojure.lang.ILookupThunk",
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "clojure.lang.IMapIterable",
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "clojure.lang.IMeta",
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "clojure.lang.IObj",
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "clojure.lang.IPersistentCollection",
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "clojure.lang.IPersistentList"
-  },
-  {
-    "name": "clojure.lang.IPersistentMap",
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "clojure.lang.IPersistentSet"
-  },
-  {
-    "name": "clojure.lang.IPersistentVector"
-  },
-  {
-    "name": "clojure.lang.IProxy"
-  },
-  {
-    "name": "clojure.lang.IRecord",
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "clojure.lang.IReduceInit"
-  },
-  {
-    "name": "clojure.lang.ISeq"
-  },
-  {
-    "name": "clojure.lang.IType",
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "clojure.lang.LazilyPersistentVector"
-  },
-  {
-    "name": "clojure.lang.LazySeq",
-    "queryAllPublicConstructors": true
-  },
-  {
-    "name": "clojure.lang.LineNumberingPushbackReader",
-    "allPublicFields": true,
-    "allPublicMethods": true,
-    "allPublicConstructors": true
-  },
-  {
-    "name": "clojure.lang.LispReader$ReaderException"
-  },
-  {
-    "name": "clojure.lang.LockingTransaction",
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "clojure.lang.MapEntry",
-    "queryAllPublicMethods": true,
-    "queryAllPublicConstructors": true
-  },
-  {
-    "name": "clojure.lang.MapEquivalence",
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "clojure.lang.MethodImplCache",
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "clojure.lang.MultiFn",
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "clojure.lang.Murmur3"
-  },
-  {
-    "name": "clojure.lang.Namespace",
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "clojure.lang.Numbers",
-    "queryAllPublicMethods": true,
-    "methods": [
-      {
-        "name": "char_array",
-        "parameterTypes": [
-          "java.lang.Object"
-        ]
-      },
-      {
-        "name": "inc",
-        "parameterTypes": [
-          "long"
-        ]
-      }
-    ]
-  },
-  {
-    "name": "clojure.lang.PersistentArrayMap",
-    "allDeclaredFields": true,
-    "allPublicFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "clojure.lang.PersistentHashMap"
-  },
-  {
-    "name": "clojure.lang.PersistentHashSet"
-  },
-  {
-    "name": "clojure.lang.PersistentQueue"
-  },
-  {
-    "name": "clojure.lang.PersistentVector"
-  },
-  {
-    "name": "clojure.lang.RT",
-    "queryAllPublicMethods": true,
-    "methods": [
-      {
-        "name": "intCast",
-        "parameterTypes": [
-          "java.lang.Object"
-        ]
-      }
-    ]
-  },
-  {
-    "name": "clojure.lang.Ratio",
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "clojure.lang.ReaderConditional"
-  },
-  {
-    "name": "clojure.lang.RecordIterator",
-    "queryAllPublicConstructors": true
-  },
-  {
-    "name": "clojure.lang.Reflector"
-  },
-  {
-    "name": "clojure.lang.SeqIterator"
-  },
-  {
-    "name": "clojure.lang.Seqable",
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "clojure.lang.Sequential"
   },
   {
     "name": "clojure.lang.StringSeq",
@@ -1493,15 +1187,16 @@
     "name": "clojure.lang.Volatile"
   },
   {
+    "name": "clojure.main__init"
+  },
+  {
     "name": "clojure.pprint.PrettyFlush"
   },
   {
     "name": "clojure.tools.logging.impl.Logger"
   },
   {
-    "name": "clojure.tools.logging.impl.LoggerFactory",
-    "queryAllDeclaredMethods":true,
-    "queryAllPublicMethods":true
+    "name": "clojure.tools.logging.impl.LoggerFactory"
   },
   {
     "name": "com.fasterxml.jackson.annotation.JsonInclude$Include"
@@ -1632,506 +1327,58 @@
     ]
   },
   {
-    "condition": {
-      "typeReachable": "com.zaxxer.hikari.HikariConfig"
-    },
-    "name": "com.zaxxer.hikari.HikariConfig",
-    "allDeclaredFields": true,
-    "queryAllPublicMethods": true,
-    "methods": [
-      {
-        "name": "setAutoCommit",
-        "parameterTypes": [
-          "boolean"
-        ]
-      },
-      {
-        "name": "setConnectionTestQuery",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setDataSourceClassName",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setMinimumIdle",
-        "parameterTypes": [
-          "int"
-        ]
-      }
-    ]
+    "name": "com.zaxxer.hikari.util.ConcurrentBag",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredClasses": true,
+    "allPublicClasses": true
   },
   {
-    "condition": {
-      "typeReachable": "com.zaxxer.hikari.HikariJNDIFactory"
-    },
-    "name": "com.zaxxer.hikari.HikariConfig",
-    "queryAllPublicMethods": true,
-    "methods": [
-      {
-        "name": "setDataSourceJNDI",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setDriverClassName",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setJdbcUrl",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setMaxLifetime",
-        "parameterTypes": [
-          "long"
-        ]
-      },
-      {
-        "name": "setMaximumPoolSize",
-        "parameterTypes": [
-          "int"
-        ]
-      },
-      {
-        "name": "setPassword",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setUsername",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      }
-    ]
+    "name": "com.zaxxer.hikari.pool.PoolEntry",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredClasses": true,
+    "allPublicClasses": true
   },
   {
-    "condition": {
-      "typeReachable": "com.zaxxer.hikari.hibernate.HikariConfigurationUtil"
-    },
-    "name": "com.zaxxer.hikari.HikariConfig",
-    "queryAllPublicMethods": true,
-    "methods": [
-      {
-        "name": "setAutoCommit",
-        "parameterTypes": [
-          "boolean"
-        ]
-      },
-      {
-        "name": "setConnectionTestQuery",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setDataSourceClassName",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      }
-    ]
+    "name": "ch.qos.logback.classic.spi.LogbackServiceProvider",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredClasses": true,
+    "allPublicClasses": true
   },
   {
-    "condition": {
-      "typeReachable": "com.zaxxer.hikari.util.PropertyElf"
-    },
     "name": "com.zaxxer.hikari.HikariConfig",
-    "methods": [
-      {
-        "name": "getCatalog",
-        "parameterTypes": []
-      },
-      {
-        "name": "getConnectionInitSql",
-        "parameterTypes": []
-      },
-      {
-        "name": "getConnectionTestQuery",
-        "parameterTypes": []
-      },
-      {
-        "name": "getConnectionTimeout",
-        "parameterTypes": []
-      },
-      {
-        "name": "getDataSource",
-        "parameterTypes": []
-      },
-      {
-        "name": "getDataSourceClassName",
-        "parameterTypes": []
-      },
-      {
-        "name": "getDataSourceJNDI",
-        "parameterTypes": []
-      },
-      {
-        "name": "getDataSourceProperties",
-        "parameterTypes": []
-      },
-      {
-        "name": "getDriverClassName",
-        "parameterTypes": []
-      },
-      {
-        "name": "getExceptionOverrideClassName",
-        "parameterTypes": []
-      },
-      {
-        "name": "getHealthCheckProperties",
-        "parameterTypes": []
-      },
-      {
-        "name": "getHealthCheckRegistry",
-        "parameterTypes": []
-      },
-      {
-        "name": "getIdleTimeout",
-        "parameterTypes": []
-      },
-      {
-        "name": "getInitializationFailTimeout",
-        "parameterTypes": []
-      },
-      {
-        "name": "getJdbcUrl",
-        "parameterTypes": []
-      },
-      {
-        "name": "getKeepaliveTime",
-        "parameterTypes": []
-      },
-      {
-        "name": "getLeakDetectionThreshold",
-        "parameterTypes": []
-      },
-      {
-        "name": "getMaxLifetime",
-        "parameterTypes": []
-      },
-      {
-        "name": "getMaximumPoolSize",
-        "parameterTypes": []
-      },
-      {
-        "name": "getMetricRegistry",
-        "parameterTypes": []
-      },
-      {
-        "name": "getMetricsTrackerFactory",
-        "parameterTypes": []
-      },
-      {
-        "name": "getMinimumIdle",
-        "parameterTypes": []
-      },
-      {
-        "name": "getPassword",
-        "parameterTypes": []
-      },
-      {
-        "name": "getPoolName",
-        "parameterTypes": []
-      },
-      {
-        "name": "getScheduledExecutor",
-        "parameterTypes": []
-      },
-      {
-        "name": "getScheduledExecutorService",
-        "parameterTypes": []
-      },
-      {
-        "name": "getSchema",
-        "parameterTypes": []
-      },
-      {
-        "name": "getThreadFactory",
-        "parameterTypes": []
-      },
-      {
-        "name": "getTransactionIsolation",
-        "parameterTypes": []
-      },
-      {
-        "name": "getUsername",
-        "parameterTypes": []
-      },
-      {
-        "name": "getValidationTimeout",
-        "parameterTypes": []
-      },
-      {
-        "name": "isAllowPoolSuspension",
-        "parameterTypes": []
-      },
-      {
-        "name": "isAutoCommit",
-        "parameterTypes": []
-      },
-      {
-        "name": "isInitializationFailFast",
-        "parameterTypes": []
-      },
-      {
-        "name": "isIsolateInternalQueries",
-        "parameterTypes": []
-      },
-      {
-        "name": "isJdbc4ConnectionTest",
-        "parameterTypes": []
-      },
-      {
-        "name": "isReadOnly",
-        "parameterTypes": []
-      },
-      {
-        "name": "isRegisterMbeans",
-        "parameterTypes": []
-      }
-    ],
-    "queriedMethods": [
-      {
-        "name": "setAllowPoolSuspension",
-        "parameterTypes": [
-          "boolean"
-        ]
-      },
-      {
-        "name": "setAutoCommit",
-        "parameterTypes": [
-          "boolean"
-        ]
-      },
-      {
-        "name": "setCatalog",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setConnectionInitSql",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setConnectionTestQuery",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setConnectionTimeout",
-        "parameterTypes": [
-          "long"
-        ]
-      },
-      {
-        "name": "setDataSource",
-        "parameterTypes": [
-          "javax.sql.DataSource"
-        ]
-      },
-      {
-        "name": "setDataSourceClassName",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setDataSourceJNDI",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setDataSourceProperties",
-        "parameterTypes": [
-          "java.util.Properties"
-        ]
-      },
-      {
-        "name": "setDriverClassName",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setExceptionOverrideClassName",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setHealthCheckProperties",
-        "parameterTypes": [
-          "java.util.Properties"
-        ]
-      },
-      {
-        "name": "setHealthCheckRegistry",
-        "parameterTypes": [
-          "java.lang.Object"
-        ]
-      },
-      {
-        "name": "setIdleTimeout",
-        "parameterTypes": [
-          "long"
-        ]
-      },
-      {
-        "name": "setInitializationFailFast",
-        "parameterTypes": [
-          "boolean"
-        ]
-      },
-      {
-        "name": "setInitializationFailTimeout",
-        "parameterTypes": [
-          "long"
-        ]
-      },
-      {
-        "name": "setIsolateInternalQueries",
-        "parameterTypes": [
-          "boolean"
-        ]
-      },
-      {
-        "name": "setJdbc4ConnectionTest",
-        "parameterTypes": [
-          "boolean"
-        ]
-      },
-      {
-        "name": "setJdbcUrl",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setKeepaliveTime",
-        "parameterTypes": [
-          "long"
-        ]
-      },
-      {
-        "name": "setLeakDetectionThreshold",
-        "parameterTypes": [
-          "long"
-        ]
-      },
-      {
-        "name": "setMaxLifetime",
-        "parameterTypes": [
-          "long"
-        ]
-      },
-      {
-        "name": "setMaximumPoolSize",
-        "parameterTypes": [
-          "int"
-        ]
-      },
-      {
-        "name": "setMetricRegistry",
-        "parameterTypes": [
-          "java.lang.Object"
-        ]
-      },
-      {
-        "name": "setMetricsTrackerFactory",
-        "parameterTypes": [
-          "com.zaxxer.hikari.metrics.MetricsTrackerFactory"
-        ]
-      },
-      {
-        "name": "setMinimumIdle",
-        "parameterTypes": [
-          "int"
-        ]
-      },
-      {
-        "name": "setPassword",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setPoolName",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setReadOnly",
-        "parameterTypes": [
-          "boolean"
-        ]
-      },
-      {
-        "name": "setRegisterMbeans",
-        "parameterTypes": [
-          "boolean"
-        ]
-      },
-      {
-        "name": "setScheduledExecutor",
-        "parameterTypes": [
-          "java.util.concurrent.ScheduledExecutorService"
-        ]
-      },
-      {
-        "name": "setScheduledExecutorService",
-        "parameterTypes": [
-          "java.util.concurrent.ScheduledThreadPoolExecutor"
-        ]
-      },
-      {
-        "name": "setSchema",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setThreadFactory",
-        "parameterTypes": [
-          "java.util.concurrent.ThreadFactory"
-        ]
-      },
-      {
-        "name": "setTransactionIsolation",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setUsername",
-        "parameterTypes": [
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "setValidationTimeout",
-        "parameterTypes": [
-          "long"
-        ]
-      }
-    ]
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredClasses": true,
+    "allPublicClasses": true
+  },
+  {
+    "name": "com.zaxxer.hikari.pool.HikariPool",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredClasses": true,
+    "allPublicClasses": true
+  },
+  {
+    "name": "com.zaxxer.hikari.HikariDataSource",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredClasses": true,
+    "allPublicClasses": true
   },
   {
     "name": "java.io.BufferedInputStream"
@@ -2902,75 +2149,6 @@
     "name": "jsonista.jackson.SymbolSerializer"
   },
   {
-    "name": "logger"
-  },
-  {
-    "name": "malli.core.AST"
-  },
-  {
-    "name": "malli.core.Cached"
-  },
-  {
-    "name": "malli.core.EntryParser"
-  },
-  {
-    "name": "malli.core.EntrySchema"
-  },
-  {
-    "name": "malli.core.IntoSchema"
-  },
-  {
-    "name": "malli.core.LensSchema"
-  },
-  {
-    "name": "malli.core.RefSchema"
-  },
-  {
-    "name": "malli.core.RegexSchema"
-  },
-  {
-    "name": "malli.core.Schema"
-  },
-  {
-    "name": "malli.core.Transformer"
-  },
-  {
-    "name": "malli.core.Walker"
-  },
-  {
-    "name": "malli.impl.regex.Cache"
-  },
-  {
-    "name": "malli.impl.regex.CacheEntry"
-  },
-  {
-    "name": "malli.impl.regex.CheckDriver"
-  },
-  {
-    "name": "malli.impl.regex.Driver"
-  },
-  {
-    "name": "malli.impl.regex.ExplanationDriver"
-  },
-  {
-    "name": "malli.impl.regex.ICache"
-  },
-  {
-    "name": "malli.impl.regex.IExplanationDriver"
-  },
-  {
-    "name": "malli.impl.regex.IParseDriver"
-  },
-  {
-    "name": "malli.impl.regex.IValidationDriver"
-  },
-  {
-    "name": "malli.impl.regex.ParseDriver"
-  },
-  {
-    "name": "malli.registry.Registry"
-  },
-  {
     "name": "mikera.vectorz.AVector"
   },
   {
@@ -3073,16 +2251,7 @@
     "name": "org.slf4j.Logger"
   },
   {
-    "name":"org.slf4j.ILoggerFactory",
-    "queryAllPublicMethods":true
-  },
-  {
-    "name":"org.slf4j.Logger",
-    "queryAllPublicMethods":true
-  },
-  {
-    "name":"org.slf4j.LoggerFactory",
-    "queryAllPublicMethods":true
+    "name": "org.slf4j.LoggerFactory"
   },
   {
     "name": "ring.util.codec.FormEncodeable"
@@ -3110,5 +2279,8 @@
         "parameterTypes": []
       }
     ]
+  },
+  {
+    "name": "thread-local-utc-date-format"
   }
 ]

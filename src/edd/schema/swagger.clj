@@ -33,36 +33,36 @@
 (defn cmd-schemas->swagger
   [m]
   (reduce-kv
-    (fn [acc k {:keys [consumes]}]
-      (let [full-schema [:map
-                         [:command consumes]]]
-        (assoc acc k
-                   (swagger/transform
-                     (mu/merge
-                       schema-core/EddCoreRequest
-                       (mu/merge (schema-core/EddCoreSingleCommandRequest k)
-                                 full-schema))))))
-    {} m))
+   (fn [acc k {:keys [consumes]}]
+     (let [full-schema [:map
+                        [:command consumes]]]
+       (assoc acc k
+              (swagger/transform
+               (mu/merge
+                schema-core/EddCoreRequest
+                (mu/merge (schema-core/EddCoreSingleCommandRequest k)
+                          full-schema))))))
+   {} m))
 
 (defn query-schemas->swagger
   [m]
   (reduce-kv
-    (fn [acc k {:keys [produces consumes]}]
-      (assoc acc (str (name k) "-consumes") (swagger/transform
-                                              (mu/merge consumes
-                                                        schema-core/EddCoreRequest))
-                 (str (name k) "-produces") (swagger/transform
-                                              (mu/merge produces
-                                                        schema-core/EddCoreResponse))))
-    {}
-    m))
+   (fn [acc k {:keys [produces consumes]}]
+     (assoc acc (str (name k) "-consumes") (swagger/transform
+                                            (mu/merge consumes
+                                                      schema-core/EddCoreRequest))
+            (str (name k) "-produces") (swagger/transform
+                                        (mu/merge produces
+                                                  schema-core/EddCoreResponse))))
+   {}
+   m))
+
 (defn cmd->all-commands-schema
   []
   (swagger/transform
-    (mu/merge
-      schema-core/EddCoreRequest
-      schema-core/EddCoreCommandRequest)))
-
+   (mu/merge
+    schema-core/EddCoreRequest
+    schema-core/EddCoreCommandRequest)))
 
 (defn cmd->all-commands
   []
@@ -141,28 +141,26 @@
       (update-in [:paths]
                  (fn [paths]
                    (reduce
-                     (fn [s cmd]
-                       (assoc s (str "/command/" (name cmd))
-                                (cmd->swagger-path definitions cmd)))
-                     paths
-                     (-> definitions :commands keys))))
+                    (fn [s cmd]
+                      (assoc s (str "/command/" (name cmd))
+                             (cmd->swagger-path definitions cmd)))
+                    paths
+                    (-> definitions :commands keys))))
       (update-in [:paths]
                  (fn [paths]
                    (reduce
-                     (fn [s query]
-                       (assoc s (str "/query/" (name query))
-                                (query->swagger-path definitions query)))
-                     paths
-                     (-> definitions :queries keys))))))
-
-
+                    (fn [s query]
+                      (assoc s (str "/query/" (name query))
+                             (query->swagger-path definitions query)))
+                    paths
+                    (-> definitions :queries keys))))))
 
 (defn generate
   [ctx {:keys [service] :as _options}]
   (let [schema (read-schema ctx)]
     (merge {:info {:title       (or service "api")
                    :description @(get ctx :description (delay
-                                                         (or service "api")))
+                                                        (or service "api")))
                    :version     "1.0"}}
            (generate-swagger schema template))))
 
@@ -174,8 +172,8 @@
   [ctx & [_]]
   (log/info "Started swagger runtime")
   (let [result (->> (generate
-                      ctx
-                      {:service (System/getenv "PROJECT_NAME")}))
+                     ctx
+                     {:service (System/getenv "PROJECT_NAME")}))
         result (if (= (:edd/schema-format ctx) "json")
                  (json/write-value-as-string result)
                  (yaml/generate-string result))]
