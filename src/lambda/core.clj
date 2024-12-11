@@ -10,18 +10,24 @@
 
 (defn start
   [& params]
-  (let [ctx (first params)
-        startup-milis (Long/parseLong
-                       (str
-                        (util/get-property "edd.startup-milis" 0)))]
-    (log/info "Server started: " (- (System/currentTimeMillis)
-                                    startup-milis))
-    (if-let [runtime-handler (or (:edd/runtime ctx)
-                                 (System/getProperty "edd.runtime"))]
-      (do
-        (log/info "Custom runtime: " runtime-handler)
-        (require (-> (str/split runtime-handler #"/")
-                     (first)
-                     (symbol)))
-        (apply (resolve (symbol runtime-handler)) params))
-      (apply lambda/lambda-custom-runtime params))))
+  (try
+    (let [ctx (first params)
+          startup-milis (Long/parseLong
+                         (str
+                          (util/get-property "edd.startup-milis" 0)))]
+      (log/info "Server started: " (- (System/currentTimeMillis)
+                                      startup-milis))
+      (if-let [runtime-handler (or (:edd/runtime ctx)
+                                   (System/getProperty "edd.runtime"))]
+        (do
+          (log/info "Custom runtime: " runtime-handler)
+          (require (-> (str/split runtime-handler #"/")
+                       (first)
+                       (symbol)))
+          (apply (resolve (symbol runtime-handler)) params))
+        (apply lambda/lambda-custom-runtime params)))
+    (catch Exception ex
+      ;; log via println, since Init error can also come from the logger,
+      ;; and we want to make sure we can see it
+      (println "Error starting custom runtime. Potentially Init Phase error" ex)
+      (throw ex))))

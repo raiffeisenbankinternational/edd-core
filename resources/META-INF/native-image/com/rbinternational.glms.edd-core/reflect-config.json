@@ -1,0 +1,3114 @@
+[
+  {
+    "name": "[Lclojure.asm.Type;"
+  },
+  {
+    "name": "[Lcom.fasterxml.jackson.databind.deser.Deserializers;"
+  },
+  {
+    "name": "[Lcom.fasterxml.jackson.databind.deser.KeyDeserializers;"
+  },
+  {
+    "name": "[Lcom.fasterxml.jackson.databind.deser.ValueInstantiators;"
+  },
+  {
+    "name": "[Lcom.fasterxml.jackson.databind.ser.Serializers;"
+  },
+  {
+    "condition": {
+      "typeReachable": "com.zaxxer.hikari.util.ConcurrentBag"
+    },
+    "name": "[Lcom.zaxxer.hikari.util.ConcurrentBag$IConcurrentBagEntry;"
+  },
+  {
+    "name": "[Ljava.lang.Object;"
+  },
+  {
+    "name": "[Ljava.lang.String;"
+  },
+  {
+    "condition": {
+      "typeReachable": "com.zaxxer.hikari.pool.PoolEntry"
+    },
+    "name": "[Ljava.sql.Statement;"
+  },
+  {
+    "condition": {
+      "typeReachable": "com.zaxxer.hikari.util.FastList"
+    },
+    "name": "[Ljava.sql.Statement;"
+  },
+  {
+    "name": "borkdude.dynaload.LazyVar"
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.classic.util.ContextInitializer"
+    },
+    "name": "ch.qos.logback.classic.BasicConfigurator",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.LayoutBase"
+    },
+    "name": "ch.qos.logback.classic.PatternLayout",
+    "queryAllPublicMethods": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.model.processor.ImplicitModelHandler"
+    },
+    "name": "ch.qos.logback.classic.encoder.PatternLayoutEncoder",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "ch.qos.logback.classic.encoder.PatternLayoutEncoder",
+    "queryAllPublicMethods": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.classic.util.ContextInitializer"
+    },
+    "name": "ch.qos.logback.classic.joran.SerializedModelConfigurator",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "ch.qos.logback.classic.joran.SerializedModelConfigurator",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.LayoutBase"
+    },
+    "name": "ch.qos.logback.classic.log4j.XMLLayout",
+    "queryAllPublicMethods": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      },
+      {
+        "name": "setLocationInfo",
+        "parameterTypes": [
+          "boolean"
+        ]
+      },
+      {
+        "name": "setProperties",
+        "parameterTypes": [
+          "boolean"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.CallerDataConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.ClassOfCallerConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.ContextNameConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.DateConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.ExtendedThrowableProxyConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.FileOfCallerConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.KeyValuePairConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.LevelConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.LineOfCallerConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.pattern.parser.Compiler"
+    },
+    "name": "ch.qos.logback.classic.pattern.LineSeparatorConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "ch.qos.logback.classic.pattern.LineSeparatorConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.LocalSequenceNumberConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.LoggerConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.MDCConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.MarkerConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.pattern.parser.Compiler"
+    },
+    "name": "ch.qos.logback.classic.pattern.MessageConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "ch.qos.logback.classic.pattern.MessageConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.MethodOfCallerConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.MicrosecondConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.NopThrowableInformationConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.PrefixCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.PropertyConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.RelativeTimeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.RootCauseFirstThrowableProxyConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.SequenceNumberConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.ThreadConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.ThrowableProxyConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.classic.pattern.color.HighlightingCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "ch.qos.logback.classic.spi.LogbackServiceProvider"
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.classic.util.ContextInitializer"
+    },
+    "name": "ch.qos.logback.classic.util.DefaultJoranConfigurator",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "ch.qos.logback.classic.util.DefaultJoranConfigurator",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.model.processor.AppenderModelHandler"
+    },
+    "name": "ch.qos.logback.core.ConsoleAppender",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.ConsoleAppender",
+    "queryAllPublicMethods": true,
+    "methods": [
+      {
+        "name": "setWithJansi",
+        "parameterTypes": [
+          "boolean"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ch.qos.logback.core.ConsoleAppender",
+    "queryAllPublicMethods": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.FileAppender",
+    "queryAllPublicMethods": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      },
+      {
+        "name": "setAppend",
+        "parameterTypes": [
+          "boolean"
+        ]
+      },
+      {
+        "name": "setFile",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setPrudent",
+        "parameterTypes": [
+          "boolean"
+        ]
+      },
+      {
+        "name": "valueOf",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.LayoutBase"
+    },
+    "name": "ch.qos.logback.core.Layout",
+    "methods": [
+      {
+        "name": "valueOf",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.joran.util.PropertySetter"
+    },
+    "name": "ch.qos.logback.core.OutputStreamAppender",
+    "methods": [
+      {
+        "name": "setEncoder",
+        "parameterTypes": [
+          "ch.qos.logback.core.encoder.Encoder"
+        ]
+      },
+      {
+        "name": "setImmediateFlush",
+        "parameterTypes": [
+          "boolean"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ch.qos.logback.core.OutputStreamAppender",
+    "methods": [
+      {
+        "name": "setEncoder",
+        "parameterTypes": [
+          "ch.qos.logback.core.encoder.Encoder"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ch.qos.logback.core.encoder.Encoder",
+    "methods": [
+      {
+        "name": "valueOf",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.joran.util.PropertySetter"
+    },
+    "name": "ch.qos.logback.core.encoder.LayoutWrappingEncoder",
+    "queryAllPublicMethods": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      },
+      {
+        "name": "setLayout",
+        "parameterTypes": [
+          "ch.qos.logback.core.Layout"
+        ]
+      },
+      {
+        "name": "setParent",
+        "parameterTypes": [
+          "ch.qos.logback.core.spi.ContextAware"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ch.qos.logback.core.encoder.LayoutWrappingEncoder",
+    "methods": [
+      {
+        "name": "setParent",
+        "parameterTypes": [
+          "ch.qos.logback.core.spi.ContextAware"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.IdentityCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.model.processor.ImplicitModelHandler"
+    },
+    "name": "ch.qos.logback.core.pattern.PatternLayoutBase",
+    "methods": [
+      {
+        "name": "setOutputPatternAsHeader",
+        "parameterTypes": [
+          "boolean"
+        ]
+      },
+      {
+        "name": "setPattern",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.model.processor.ImplicitModelHandler"
+    },
+    "name": "ch.qos.logback.core.pattern.PatternLayoutEncoderBase",
+    "methods": [
+      {
+        "name": "setPattern",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ch.qos.logback.core.pattern.PatternLayoutEncoderBase",
+    "methods": [
+      {
+        "name": "setPattern",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.ReplacingCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.color.BlackCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.color.BlueCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.color.BoldBlueCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.color.BoldCyanCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.color.BoldGreenCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.color.BoldMagentaCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.color.BoldRedCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.color.BoldWhiteCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.color.BoldYellowCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.color.CyanCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.color.GrayCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.color.GreenCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.color.MagentaCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.color.RedCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.color.WhiteCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.pattern.color.YellowCompositeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.rolling.RollingFileAppender",
+    "queryAllPublicMethods": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      },
+      {
+        "name": "setFile",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setRollingPolicy",
+        "parameterTypes": [
+          "ch.qos.logback.core.rolling.RollingPolicy"
+        ]
+      },
+      {
+        "name": "setTriggeringPolicy",
+        "parameterTypes": [
+          "ch.qos.logback.core.rolling.TriggeringPolicy"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.rolling.RollingPolicy",
+    "methods": [
+      {
+        "name": "valueOf",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.rolling.RollingPolicyBase",
+    "methods": [
+      {
+        "name": "setFileNamePattern",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setParent",
+        "parameterTypes": [
+          "ch.qos.logback.core.FileAppender"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy",
+    "queryAllPublicMethods": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      },
+      {
+        "name": "setMaxFileSize",
+        "parameterTypes": [
+          "ch.qos.logback.core.util.FileSize"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy",
+    "queryAllPublicMethods": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      },
+      {
+        "name": "setMaxFileSize",
+        "parameterTypes": [
+          "ch.qos.logback.core.util.FileSize"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.rolling.TimeBasedRollingPolicy",
+    "methods": [
+      {
+        "name": "setCleanHistoryOnStart",
+        "parameterTypes": [
+          "boolean"
+        ]
+      },
+      {
+        "name": "setMaxHistory",
+        "parameterTypes": [
+          "int"
+        ]
+      },
+      {
+        "name": "setTotalSizeCap",
+        "parameterTypes": [
+          "ch.qos.logback.core.util.FileSize"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.rolling.TriggeringPolicy",
+    "methods": [
+      {
+        "name": "valueOf",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.rolling.helper.DateTokenConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.rolling.helper.IntegerTokenConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.spi.ContextAware",
+    "methods": [
+      {
+        "name": "valueOf",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ch.qos.logback.core.spi.ContextAware",
+    "methods": [
+      {
+        "name": "valueOf",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "ch.qos.logback.core.util.OptionHelper"
+    },
+    "name": "ch.qos.logback.core.util.FileSize",
+    "methods": [
+      {
+        "name": "valueOf",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "clojure.asm.ClassVisitor"
+  },
+  {
+    "name": "clojure.asm.ClassWriter"
+  },
+  {
+    "name": "clojure.asm.Opcodes"
+  },
+  {
+    "name": "clojure.asm.Type"
+  },
+  {
+    "name": "clojure.asm.commons.GeneratorAdapter"
+  },
+  {
+    "name": "clojure.asm.commons.Method"
+  },
+  {
+    "name": "clojure.core.ArrayChunk"
+  },
+  {
+    "name": "clojure.core.ArrayManager"
+  },
+  {
+    "name": "clojure.core.Eduction"
+  },
+  {
+    "name": "clojure.core.IVecImpl"
+  },
+  {
+    "name": "clojure.core.Inst"
+  },
+  {
+    "name": "clojure.core.Vec"
+  },
+  {
+    "name": "clojure.core.VecNode"
+  },
+  {
+    "name": "clojure.core.VecSeq"
+  },
+  {
+    "name": "clojure.core.protocols.CollReduce"
+  },
+  {
+    "name": "clojure.core.protocols.Datafiable"
+  },
+  {
+    "name": "clojure.core.protocols.IKVReduce"
+  },
+  {
+    "name": "clojure.core.protocols.InternalReduce"
+  },
+  {
+    "name": "clojure.core.protocols.Navigable"
+  },
+  {
+    "name": "clojure.java.io.Coercions"
+  },
+  {
+    "name": "clojure.java.io.IOFactory"
+  },
+  {
+    "name": "clojure.lang.AFn",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "clojure.lang.AFunction",
+    "allPublicFields": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.APersistentMap",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.APersistentMap$KeySeq"
+  },
+  {
+    "name": "clojure.lang.APersistentMap$ValSeq"
+  },
+  {
+    "name": "clojure.lang.ASeq"
+  },
+  {
+    "name": "clojure.lang.Associative",
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "clojure.lang.BigInt"
+  },
+  {
+    "name": "clojure.lang.ChunkBuffer"
+  },
+  {
+    "name": "clojure.lang.Compiler",
+    "allPublicFields": true
+  },
+  {
+    "name": "clojure.lang.Compiler$CompilerException"
+  },
+  {
+    "name": "clojure.lang.Counted",
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "clojure.lang.Delay",
+    "allPublicFields": true,
+    "allPublicMethods": true,
+    "allPublicConstructors": true
+  },
+  {
+    "name": "clojure.lang.DynamicClassLoader"
+  },
+  {
+    "name": "clojure.lang.ExceptionInfo",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredClasses": true,
+    "allPublicClasses": true
+  },
+  {
+    "name": "clojure.lang.Fn"
+  },
+  {
+    "name": "clojure.lang.IChunk",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.IChunkedSeq"
+  },
+  {
+    "name": "clojure.lang.IDeref"
+  },
+  {
+    "name": "clojure.lang.IEditableCollection",
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "clojure.lang.IExceptionInfo"
+  },
+  {
+    "name": "clojure.lang.IFn",
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "clojure.lang.IHashEq",
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.IKVReduce",
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "clojure.lang.IKeywordLookup",
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.ILookup",
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.ILookupThunk",
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.IMapIterable",
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "clojure.lang.IMeta",
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "clojure.lang.IObj",
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.IPersistentCollection",
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "clojure.lang.IPersistentList"
+  },
+  {
+    "name": "clojure.lang.IPersistentMap",
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.IPersistentSet"
+  },
+  {
+    "name": "clojure.lang.IPersistentVector"
+  },
+  {
+    "name": "clojure.lang.IProxy"
+  },
+  {
+    "name": "clojure.lang.IRecord",
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.IReduceInit"
+  },
+  {
+    "name": "clojure.lang.ISeq"
+  },
+  {
+    "name": "clojure.lang.IType",
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.LazilyPersistentVector"
+  },
+  {
+    "name": "clojure.lang.LazySeq",
+    "queryAllPublicConstructors": true
+  },
+  {
+    "name": "clojure.lang.LineNumberingPushbackReader",
+    "allPublicFields": true,
+    "allPublicMethods": true,
+    "allPublicConstructors": true
+  },
+  {
+    "name": "clojure.lang.LispReader$ReaderException"
+  },
+  {
+    "name": "clojure.lang.LockingTransaction",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.MapEntry",
+    "queryAllPublicMethods": true,
+    "queryAllPublicConstructors": true
+  },
+  {
+    "name": "clojure.lang.MapEquivalence",
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.MethodImplCache",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.MultiFn",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.Murmur3"
+  },
+  {
+    "name": "clojure.lang.Namespace",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.Numbers",
+    "queryAllPublicMethods": true,
+    "methods": [
+      {
+        "name": "char_array",
+        "parameterTypes": [
+          "java.lang.Object"
+        ]
+      },
+      {
+        "name": "inc",
+        "parameterTypes": [
+          "long"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "clojure.lang.PersistentArrayMap",
+    "allDeclaredFields": true,
+    "allPublicFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "clojure.lang.PersistentHashMap"
+  },
+  {
+    "name": "clojure.lang.PersistentHashSet"
+  },
+  {
+    "name": "clojure.lang.PersistentQueue"
+  },
+  {
+    "name": "clojure.lang.PersistentVector"
+  },
+  {
+    "name": "clojure.lang.RT",
+    "queryAllPublicMethods": true,
+    "methods": [
+      {
+        "name": "intCast",
+        "parameterTypes": [
+          "java.lang.Object"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "clojure.lang.Ratio",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.ReaderConditional"
+  },
+  {
+    "name": "clojure.lang.RecordIterator",
+    "queryAllPublicConstructors": true
+  },
+  {
+    "name": "clojure.lang.Reflector"
+  },
+  {
+    "name": "clojure.lang.SeqIterator"
+  },
+  {
+    "name": "clojure.lang.Seqable",
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "clojure.lang.Sequential"
+  },
+  {
+    "name": "clojure.lang.StringSeq",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredClasses": true,
+    "allPublicClasses": true
+  },
+  {
+    "name": "clojure.lang.Symbol",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.TaggedLiteral"
+  },
+  {
+    "name": "clojure.lang.Util",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.Var",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "clojure.lang.Volatile"
+  },
+  {
+    "name": "clojure.pprint.PrettyFlush"
+  },
+  {
+    "name": "clojure.tools.logging.impl.Logger"
+  },
+  {
+    "name": "clojure.tools.logging.impl.LoggerFactory",
+    "queryAllDeclaredMethods":true,
+    "queryAllPublicMethods":true
+  },
+  {
+    "name": "com.fasterxml.jackson.annotation.JsonInclude$Include"
+  },
+  {
+    "name": "com.fasterxml.jackson.core.JsonFactory"
+  },
+  {
+    "name": "com.fasterxml.jackson.core.JsonGenerator"
+  },
+  {
+    "name": "com.fasterxml.jackson.core.JsonGenerator$Feature"
+  },
+  {
+    "name": "com.fasterxml.jackson.databind.DeserializationFeature"
+  },
+  {
+    "name": "com.fasterxml.jackson.databind.JsonSerializer"
+  },
+  {
+    "name": "com.fasterxml.jackson.databind.Module"
+  },
+  {
+    "name": "com.fasterxml.jackson.databind.ObjectMapper"
+  },
+  {
+    "name": "com.fasterxml.jackson.databind.SerializationFeature"
+  },
+  {
+    "condition": {
+      "typeReachable": "java.sql.Date"
+    },
+    "name": "com.fasterxml.jackson.databind.deser.std.DateDeserializers$SqlDateDeserializer",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "java.sql.Timestamp"
+    },
+    "name": "com.fasterxml.jackson.databind.deser.std.DateDeserializers$TimestampDeserializer",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "javax.xml.datatype.XMLGregorianCalendar"
+    },
+    "name": "com.fasterxml.jackson.databind.ext.CoreXMLDeserializers",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "javax.xml.datatype.XMLGregorianCalendar"
+    },
+    "name": "com.fasterxml.jackson.databind.ext.CoreXMLSerializers",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "org.w3c.dom.Document"
+    },
+    "name": "com.fasterxml.jackson.databind.ext.DOMDeserializer$DocumentDeserializer",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "org.w3c.dom.Node"
+    },
+    "name": "com.fasterxml.jackson.databind.ext.DOMDeserializer$NodeDeserializer",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "org.w3c.dom.Node"
+    },
+    "name": "com.fasterxml.jackson.databind.ext.DOMSerializer",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "com.fasterxml.jackson.databind.ext.Java7Support"
+    },
+    "name": "com.fasterxml.jackson.databind.ext.Java7SupportImpl",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.fasterxml.jackson.databind.ext.Java7SupportImpl",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "java.sql.Blob"
+    },
+    "name": "com.fasterxml.jackson.databind.ext.SqlBlobSerializer",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.fasterxml.jackson.databind.module.SimpleModule"
+  },
+  {
+    "condition": {
+      "typeReachable": "java.sql.Date"
+    },
+    "name": "com.fasterxml.jackson.databind.ser.std.SqlDateSerializer",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "java.sql.Time"
+    },
+    "name": "com.fasterxml.jackson.databind.ser.std.SqlTimeSerializer",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule"
+  },
+  {
+    "name": "com.sun.org.apache.xerces.internal.jaxp.SAXParserFactoryImpl",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "com.zaxxer.hikari.HikariConfig"
+    },
+    "name": "com.zaxxer.hikari.HikariConfig",
+    "allDeclaredFields": true,
+    "queryAllPublicMethods": true,
+    "methods": [
+      {
+        "name": "setAutoCommit",
+        "parameterTypes": [
+          "boolean"
+        ]
+      },
+      {
+        "name": "setConnectionTestQuery",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setDataSourceClassName",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setMinimumIdle",
+        "parameterTypes": [
+          "int"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "com.zaxxer.hikari.HikariJNDIFactory"
+    },
+    "name": "com.zaxxer.hikari.HikariConfig",
+    "queryAllPublicMethods": true,
+    "methods": [
+      {
+        "name": "setDataSourceJNDI",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setDriverClassName",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setJdbcUrl",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setMaxLifetime",
+        "parameterTypes": [
+          "long"
+        ]
+      },
+      {
+        "name": "setMaximumPoolSize",
+        "parameterTypes": [
+          "int"
+        ]
+      },
+      {
+        "name": "setPassword",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setUsername",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "com.zaxxer.hikari.hibernate.HikariConfigurationUtil"
+    },
+    "name": "com.zaxxer.hikari.HikariConfig",
+    "queryAllPublicMethods": true,
+    "methods": [
+      {
+        "name": "setAutoCommit",
+        "parameterTypes": [
+          "boolean"
+        ]
+      },
+      {
+        "name": "setConnectionTestQuery",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setDataSourceClassName",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "com.zaxxer.hikari.util.PropertyElf"
+    },
+    "name": "com.zaxxer.hikari.HikariConfig",
+    "methods": [
+      {
+        "name": "getCatalog",
+        "parameterTypes": []
+      },
+      {
+        "name": "getConnectionInitSql",
+        "parameterTypes": []
+      },
+      {
+        "name": "getConnectionTestQuery",
+        "parameterTypes": []
+      },
+      {
+        "name": "getConnectionTimeout",
+        "parameterTypes": []
+      },
+      {
+        "name": "getDataSource",
+        "parameterTypes": []
+      },
+      {
+        "name": "getDataSourceClassName",
+        "parameterTypes": []
+      },
+      {
+        "name": "getDataSourceJNDI",
+        "parameterTypes": []
+      },
+      {
+        "name": "getDataSourceProperties",
+        "parameterTypes": []
+      },
+      {
+        "name": "getDriverClassName",
+        "parameterTypes": []
+      },
+      {
+        "name": "getExceptionOverrideClassName",
+        "parameterTypes": []
+      },
+      {
+        "name": "getHealthCheckProperties",
+        "parameterTypes": []
+      },
+      {
+        "name": "getHealthCheckRegistry",
+        "parameterTypes": []
+      },
+      {
+        "name": "getIdleTimeout",
+        "parameterTypes": []
+      },
+      {
+        "name": "getInitializationFailTimeout",
+        "parameterTypes": []
+      },
+      {
+        "name": "getJdbcUrl",
+        "parameterTypes": []
+      },
+      {
+        "name": "getKeepaliveTime",
+        "parameterTypes": []
+      },
+      {
+        "name": "getLeakDetectionThreshold",
+        "parameterTypes": []
+      },
+      {
+        "name": "getMaxLifetime",
+        "parameterTypes": []
+      },
+      {
+        "name": "getMaximumPoolSize",
+        "parameterTypes": []
+      },
+      {
+        "name": "getMetricRegistry",
+        "parameterTypes": []
+      },
+      {
+        "name": "getMetricsTrackerFactory",
+        "parameterTypes": []
+      },
+      {
+        "name": "getMinimumIdle",
+        "parameterTypes": []
+      },
+      {
+        "name": "getPassword",
+        "parameterTypes": []
+      },
+      {
+        "name": "getPoolName",
+        "parameterTypes": []
+      },
+      {
+        "name": "getScheduledExecutor",
+        "parameterTypes": []
+      },
+      {
+        "name": "getScheduledExecutorService",
+        "parameterTypes": []
+      },
+      {
+        "name": "getSchema",
+        "parameterTypes": []
+      },
+      {
+        "name": "getThreadFactory",
+        "parameterTypes": []
+      },
+      {
+        "name": "getTransactionIsolation",
+        "parameterTypes": []
+      },
+      {
+        "name": "getUsername",
+        "parameterTypes": []
+      },
+      {
+        "name": "getValidationTimeout",
+        "parameterTypes": []
+      },
+      {
+        "name": "isAllowPoolSuspension",
+        "parameterTypes": []
+      },
+      {
+        "name": "isAutoCommit",
+        "parameterTypes": []
+      },
+      {
+        "name": "isInitializationFailFast",
+        "parameterTypes": []
+      },
+      {
+        "name": "isIsolateInternalQueries",
+        "parameterTypes": []
+      },
+      {
+        "name": "isJdbc4ConnectionTest",
+        "parameterTypes": []
+      },
+      {
+        "name": "isReadOnly",
+        "parameterTypes": []
+      },
+      {
+        "name": "isRegisterMbeans",
+        "parameterTypes": []
+      }
+    ],
+    "queriedMethods": [
+      {
+        "name": "setAllowPoolSuspension",
+        "parameterTypes": [
+          "boolean"
+        ]
+      },
+      {
+        "name": "setAutoCommit",
+        "parameterTypes": [
+          "boolean"
+        ]
+      },
+      {
+        "name": "setCatalog",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setConnectionInitSql",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setConnectionTestQuery",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setConnectionTimeout",
+        "parameterTypes": [
+          "long"
+        ]
+      },
+      {
+        "name": "setDataSource",
+        "parameterTypes": [
+          "javax.sql.DataSource"
+        ]
+      },
+      {
+        "name": "setDataSourceClassName",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setDataSourceJNDI",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setDataSourceProperties",
+        "parameterTypes": [
+          "java.util.Properties"
+        ]
+      },
+      {
+        "name": "setDriverClassName",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setExceptionOverrideClassName",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setHealthCheckProperties",
+        "parameterTypes": [
+          "java.util.Properties"
+        ]
+      },
+      {
+        "name": "setHealthCheckRegistry",
+        "parameterTypes": [
+          "java.lang.Object"
+        ]
+      },
+      {
+        "name": "setIdleTimeout",
+        "parameterTypes": [
+          "long"
+        ]
+      },
+      {
+        "name": "setInitializationFailFast",
+        "parameterTypes": [
+          "boolean"
+        ]
+      },
+      {
+        "name": "setInitializationFailTimeout",
+        "parameterTypes": [
+          "long"
+        ]
+      },
+      {
+        "name": "setIsolateInternalQueries",
+        "parameterTypes": [
+          "boolean"
+        ]
+      },
+      {
+        "name": "setJdbc4ConnectionTest",
+        "parameterTypes": [
+          "boolean"
+        ]
+      },
+      {
+        "name": "setJdbcUrl",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setKeepaliveTime",
+        "parameterTypes": [
+          "long"
+        ]
+      },
+      {
+        "name": "setLeakDetectionThreshold",
+        "parameterTypes": [
+          "long"
+        ]
+      },
+      {
+        "name": "setMaxLifetime",
+        "parameterTypes": [
+          "long"
+        ]
+      },
+      {
+        "name": "setMaximumPoolSize",
+        "parameterTypes": [
+          "int"
+        ]
+      },
+      {
+        "name": "setMetricRegistry",
+        "parameterTypes": [
+          "java.lang.Object"
+        ]
+      },
+      {
+        "name": "setMetricsTrackerFactory",
+        "parameterTypes": [
+          "com.zaxxer.hikari.metrics.MetricsTrackerFactory"
+        ]
+      },
+      {
+        "name": "setMinimumIdle",
+        "parameterTypes": [
+          "int"
+        ]
+      },
+      {
+        "name": "setPassword",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setPoolName",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setReadOnly",
+        "parameterTypes": [
+          "boolean"
+        ]
+      },
+      {
+        "name": "setRegisterMbeans",
+        "parameterTypes": [
+          "boolean"
+        ]
+      },
+      {
+        "name": "setScheduledExecutor",
+        "parameterTypes": [
+          "java.util.concurrent.ScheduledExecutorService"
+        ]
+      },
+      {
+        "name": "setScheduledExecutorService",
+        "parameterTypes": [
+          "java.util.concurrent.ScheduledThreadPoolExecutor"
+        ]
+      },
+      {
+        "name": "setSchema",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setThreadFactory",
+        "parameterTypes": [
+          "java.util.concurrent.ThreadFactory"
+        ]
+      },
+      {
+        "name": "setTransactionIsolation",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setUsername",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setValidationTimeout",
+        "parameterTypes": [
+          "long"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.io.BufferedInputStream"
+  },
+  {
+    "name": "java.io.BufferedOutputStream"
+  },
+  {
+    "name": "java.io.BufferedReader"
+  },
+  {
+    "name": "java.io.BufferedWriter"
+  },
+  {
+    "name": "java.io.ByteArrayInputStream"
+  },
+  {
+    "name": "java.io.ByteArrayOutputStream"
+  },
+  {
+    "name": "java.io.CharArrayReader"
+  },
+  {
+    "name": "java.io.Closeable"
+  },
+  {
+    "name": "java.io.DataOutput"
+  },
+  {
+    "name": "java.io.File"
+  },
+  {
+    "name": "java.io.FileInputStream"
+  },
+  {
+    "name": "java.io.FileOutputStream"
+  },
+  {
+    "name": "java.io.FilePermission"
+  },
+  {
+    "name": "java.io.FileWriter"
+  },
+  {
+    "name": "java.io.InputStream"
+  },
+  {
+    "name": "java.io.InputStreamReader"
+  },
+  {
+    "name": "java.io.NotSerializableException"
+  },
+  {
+    "name": "java.io.OutputStream"
+  },
+  {
+    "name": "java.io.OutputStreamWriter",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "java.io.PrintWriter"
+  },
+  {
+    "name": "java.io.PushbackReader"
+  },
+  {
+    "name": "java.io.Reader"
+  },
+  {
+    "name": "java.io.Serializable",
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "java.io.StringReader",
+    "allPublicFields": true,
+    "allPublicMethods": true,
+    "allPublicConstructors": true
+  },
+  {
+    "name": "java.io.StringWriter",
+    "allPublicFields": true,
+    "allPublicMethods": true,
+    "allPublicConstructors": true
+  },
+  {
+    "name": "java.io.Writer",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "java.lang.AssertionError",
+    "allPublicFields": true,
+    "allPublicMethods": true,
+    "allPublicConstructors": true
+  },
+  {
+    "name": "java.lang.Boolean"
+  },
+  {
+    "name": "java.lang.Byte"
+  },
+  {
+    "name": "java.lang.CharSequence",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "java.lang.Character"
+  },
+  {
+    "name": "java.lang.Class",
+    "allPublicFields": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allPublicClasses": true
+  },
+  {
+    "name": "java.lang.Double",
+    "allPublicFields": true,
+    "allPublicMethods": true,
+    "allPublicConstructors": true
+  },
+  {
+    "name": "java.lang.Exception",
+    "allPublicFields": true,
+    "allPublicMethods": true,
+    "allPublicConstructors": true
+  },
+  {
+    "name": "java.lang.Float"
+  },
+  {
+    "name": "java.lang.IllegalArgumentException",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredClasses": true,
+    "allPublicClasses": true
+  },
+  {
+    "name": "java.lang.Integer"
+  },
+  {
+    "name": "java.lang.Iterable",
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "java.lang.Long"
+  },
+  {
+    "name": "java.lang.NullPointerException",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredClasses": true,
+    "allPublicClasses": true
+  },
+  {
+    "name": "java.lang.Number"
+  },
+  {
+    "name": "java.lang.Object",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredClasses": true,
+    "allPublicClasses": true
+  },
+  {
+    "name": "java.lang.Runnable",
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "java.lang.RuntimePermission"
+  },
+  {
+    "name": "java.lang.Short"
+  },
+  {
+    "name": "java.lang.StackTraceElement"
+  },
+  {
+    "name": "java.lang.String",
+    "queryAllPublicMethods": true,
+    "queryAllPublicConstructors": true
+  },
+  {
+    "name": "java.lang.StringBuilder",
+    "queryAllPublicMethods": true,
+    "queryAllPublicConstructors": true,
+    "methods": [
+      {
+        "name": "append",
+        "parameterTypes": [
+          "char"
+        ]
+      },
+      {
+        "name": "append",
+        "parameterTypes": [
+          "double"
+        ]
+      },
+      {
+        "name": "append",
+        "parameterTypes": [
+          "float"
+        ]
+      },
+      {
+        "name": "append",
+        "parameterTypes": [
+          "int"
+        ]
+      },
+      {
+        "name": "append",
+        "parameterTypes": [
+          "long"
+        ]
+      },
+      {
+        "name": "append",
+        "parameterTypes": [
+          "java.lang.CharSequence"
+        ]
+      },
+      {
+        "name": "append",
+        "parameterTypes": [
+          "java.lang.Object"
+        ]
+      },
+      {
+        "name": "append",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "append",
+        "parameterTypes": [
+          "java.lang.StringBuffer"
+        ]
+      },
+      {
+        "name": "append",
+        "parameterTypes": [
+          "boolean"
+        ]
+      },
+      {
+        "name": "append",
+        "parameterTypes": [
+          "char[]"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.lang.ThreadLocal",
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "java.lang.Throwable"
+  },
+  {
+    "name": "java.lang.UnsupportedOperationException",
+    "queryAllPublicConstructors": true
+  },
+  {
+    "name": "java.lang.annotation.Annotation"
+  },
+  {
+    "name": "java.lang.annotation.Retention"
+  },
+  {
+    "name": "java.lang.reflect.AccessibleObject",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredClasses": true,
+    "allPublicClasses": true
+  },
+  {
+    "name": "java.lang.reflect.Array"
+  },
+  {
+    "name": "java.lang.reflect.Constructor"
+  },
+  {
+    "name": "java.lang.reflect.Field"
+  },
+  {
+    "name": "java.lang.reflect.Method",
+    "queryAllPublicMethods": true,
+    "methods": [
+      {
+        "name": "canAccess",
+        "parameterTypes": [
+          "java.lang.Object"
+        ]
+      },
+      {
+        "name": "getModifiers",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "java.lang.reflect.Modifier"
+  },
+  {
+    "name": "java.math.BigDecimal"
+  },
+  {
+    "name": "java.math.BigInteger"
+  },
+  {
+    "name": "java.net.InetAddress"
+  },
+  {
+    "name": "java.net.MalformedURLException"
+  },
+  {
+    "name": "java.net.NetPermission"
+  },
+  {
+    "name": "java.net.ServerSocket"
+  },
+  {
+    "name": "java.net.Socket"
+  },
+  {
+    "name": "java.net.SocketException"
+  },
+  {
+    "name": "java.net.SocketPermission"
+  },
+  {
+    "name": "java.net.URI"
+  },
+  {
+    "name": "java.net.URL"
+  },
+  {
+    "name": "java.net.URLDecoder",
+    "allDeclaredFields": true,
+    "allPublicFields": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredClasses": true,
+    "allPublicClasses": true
+  },
+  {
+    "name": "java.net.URLEncoder",
+    "allDeclaredFields": true,
+    "allPublicFields": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredClasses": true,
+    "allPublicClasses": true
+  },
+  {
+    "name": "java.net.URLPermission",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.net.http.HttpClient"
+  },
+  {
+    "name": "java.net.http.HttpClient$Builder"
+  },
+  {
+    "name": "java.net.http.HttpClient$Redirect"
+  },
+  {
+    "name": "java.net.http.HttpClient$Version"
+  },
+  {
+    "name": "java.net.http.HttpRequest"
+  },
+  {
+    "name": "java.net.http.HttpRequest$BodyPublishers"
+  },
+  {
+    "name": "java.net.http.HttpRequest$Builder"
+  },
+  {
+    "name": "java.net.http.HttpResponse"
+  },
+  {
+    "name": "java.net.http.HttpResponse$BodyHandlers"
+  },
+  {
+    "name": "java.nio.charset.Charset",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "java.nio.charset.StandardCharsets",
+    "allPublicFields": true
+  },
+  {
+    "name": "java.nio.file.Files"
+  },
+  {
+    "name": "java.nio.file.attribute.FileAttribute"
+  },
+  {
+    "name": "java.security.AllPermission"
+  },
+  {
+    "name": "java.security.Key"
+  },
+  {
+    "name": "java.security.MessageDigest"
+  },
+  {
+    "name": "java.security.SecureRandomParameters"
+  },
+  {
+    "name": "java.security.SecurityPermission"
+  },
+  {
+    "condition": {
+      "typeReachable": "com.zaxxer.hikari.util.UtilityElf"
+    },
+    "name": "java.sql.Connection"
+  },
+  {
+    "name": "java.sql.Timestamp"
+  },
+  {
+    "name": "java.text.DateFormat",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "java.text.SimpleDateFormat",
+    "queryAllPublicMethods": true,
+    "queryAllPublicConstructors": true
+  },
+  {
+    "name": "java.time.Duration"
+  },
+  {
+    "name": "java.time.Instant"
+  },
+  {
+    "name": "java.time.LocalDateTime"
+  },
+  {
+    "name": "java.time.OffsetDateTime"
+  },
+  {
+    "name": "java.time.ZoneId"
+  },
+  {
+    "name": "java.time.ZoneOffset"
+  },
+  {
+    "name": "java.time.format.DateTimeFormatter"
+  },
+  {
+    "name": "java.time.format.DateTimeFormatterBuilder"
+  },
+  {
+    "name": "java.time.temporal.ChronoField"
+  },
+  {
+    "name": "java.util.ArrayDeque"
+  },
+  {
+    "name": "java.util.Arrays"
+  },
+  {
+    "name": "java.util.Base64",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "java.util.Base64$Encoder",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "java.util.Calendar"
+  },
+  {
+    "name": "java.util.Collection"
+  },
+  {
+    "name": "java.util.Date",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "java.util.GregorianCalendar"
+  },
+  {
+    "name": "java.util.HashMap"
+  },
+  {
+    "name": "java.util.Iterator",
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "java.util.List"
+  },
+  {
+    "name": "java.util.Map",
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "java.util.PropertyPermission"
+  },
+  {
+    "name": "java.util.RandomAccess"
+  },
+  {
+    "name": "java.util.Set"
+  },
+  {
+    "name": "java.util.StringTokenizer"
+  },
+  {
+    "name": "java.util.TimeZone",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "java.util.concurrent.ArrayBlockingQueue"
+  },
+  {
+    "name": "java.util.concurrent.BlockingQueue"
+  },
+  {
+    "name": "java.util.concurrent.Callable",
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "java.util.concurrent.CompletableFuture"
+  },
+  {
+    "name": "java.util.concurrent.ExecutorService"
+  },
+  {
+    "name": "java.util.concurrent.Executors"
+  },
+  {
+    "name": "java.util.concurrent.Future"
+  },
+  {
+    "name": "java.util.concurrent.FutureTask"
+  },
+  {
+    "name": "java.util.concurrent.LinkedBlockingQueue"
+  },
+  {
+    "name": "java.util.concurrent.TimeUnit"
+  },
+  {
+    "name": "java.util.concurrent.TimeoutException"
+  },
+  {
+    "name": "java.util.concurrent.atomic.AtomicBoolean",
+    "fields": [
+      {
+        "name": "value"
+      }
+    ]
+  },
+  {
+    "name": "java.util.concurrent.atomic.AtomicReference",
+    "fields": [
+      {
+        "name": "value"
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "com.zaxxer.hikari.util.Sequence$Factory"
+    },
+    "name": "java.util.concurrent.atomic.LongAdder"
+  },
+  {
+    "name": "java.util.concurrent.locks.ReentrantLock"
+  },
+  {
+    "name": "java.util.function.Function"
+  },
+  {
+    "name": "java.util.function.Supplier"
+  },
+  {
+    "name": "java.util.logging.Level",
+    "allPublicFields": true
+  },
+  {
+    "name": "java.util.logging.Logger",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredClasses": true,
+    "allPublicClasses": true,
+    "methods": [
+      {
+        "name": "getLogger",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.util.regex.Matcher"
+  },
+  {
+    "name": "java.util.regex.Pattern"
+  },
+  {
+    "name": "java.util.zip.GZIPInputStream"
+  },
+  {
+    "name": "java.util.zip.GZIPOutputStream"
+  },
+  {
+    "name": "javax.crypto.Cipher"
+  },
+  {
+    "name": "javax.crypto.Mac"
+  },
+  {
+    "name": "javax.crypto.SecretKeyFactory"
+  },
+  {
+    "name": "javax.crypto.spec.IvParameterSpec"
+  },
+  {
+    "name": "javax.crypto.spec.PBEKeySpec"
+  },
+  {
+    "name": "javax.crypto.spec.SecretKeySpec"
+  },
+  {
+    "name": "javax.smartcardio.CardPermission"
+  },
+  {
+    "name": "javax.xml.namespace.NamespaceContext"
+  },
+  {
+    "name": "javax.xml.namespace.QName",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "javax.xml.stream.Location",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "javax.xml.stream.XMLInputFactory",
+    "allPublicFields": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "javax.xml.stream.XMLOutputFactory",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "javax.xml.stream.XMLStreamConstants",
+    "allPublicFields": true
+  },
+  {
+    "name": "javax.xml.stream.XMLStreamReader",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "javax.xml.stream.XMLStreamWriter",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "javax.xml.transform.OutputKeys",
+    "allPublicFields": true
+  },
+  {
+    "name": "javax.xml.transform.Transformer",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "javax.xml.transform.TransformerFactory",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "javax.xml.transform.stream.StreamResult",
+    "queryAllPublicConstructors": true
+  },
+  {
+    "name": "javax.xml.transform.stream.StreamSource",
+    "queryAllPublicConstructors": true
+  },
+  {
+    "name": "jsonista.core.ReadValue"
+  },
+  {
+    "name": "jsonista.core.WriteValue"
+  },
+  {
+    "name": "jsonista.jackson.ArrayListDeserializer"
+  },
+  {
+    "name": "jsonista.jackson.DateSerializer"
+  },
+  {
+    "name": "jsonista.jackson.FunctionalKeyDeserializer"
+  },
+  {
+    "name": "jsonista.jackson.FunctionalKeywordSerializer"
+  },
+  {
+    "name": "jsonista.jackson.FunctionalPersistentHashMapDeserializer"
+  },
+  {
+    "name": "jsonista.jackson.FunctionalPersistentVectorDeserializer"
+  },
+  {
+    "name": "jsonista.jackson.FunctionalSerializer"
+  },
+  {
+    "name": "jsonista.jackson.FunctionalUUIDKeySerializer"
+  },
+  {
+    "name": "jsonista.jackson.HashMapDeserializer"
+  },
+  {
+    "name": "jsonista.jackson.KeywordKeyDeserializer"
+  },
+  {
+    "name": "jsonista.jackson.KeywordSerializer"
+  },
+  {
+    "name": "jsonista.jackson.PersistentHashMapDeserializer"
+  },
+  {
+    "name": "jsonista.jackson.PersistentVectorDeserializer"
+  },
+  {
+    "name": "jsonista.jackson.RatioSerializer"
+  },
+  {
+    "name": "jsonista.jackson.SymbolSerializer"
+  },
+  {
+    "name": "logger"
+  },
+  {
+    "name": "malli.core.AST"
+  },
+  {
+    "name": "malli.core.Cached"
+  },
+  {
+    "name": "malli.core.EntryParser"
+  },
+  {
+    "name": "malli.core.EntrySchema"
+  },
+  {
+    "name": "malli.core.IntoSchema"
+  },
+  {
+    "name": "malli.core.LensSchema"
+  },
+  {
+    "name": "malli.core.RefSchema"
+  },
+  {
+    "name": "malli.core.RegexSchema"
+  },
+  {
+    "name": "malli.core.Schema"
+  },
+  {
+    "name": "malli.core.Transformer"
+  },
+  {
+    "name": "malli.core.Walker"
+  },
+  {
+    "name": "malli.impl.regex.Cache"
+  },
+  {
+    "name": "malli.impl.regex.CacheEntry"
+  },
+  {
+    "name": "malli.impl.regex.CheckDriver"
+  },
+  {
+    "name": "malli.impl.regex.Driver"
+  },
+  {
+    "name": "malli.impl.regex.ExplanationDriver"
+  },
+  {
+    "name": "malli.impl.regex.ICache"
+  },
+  {
+    "name": "malli.impl.regex.IExplanationDriver"
+  },
+  {
+    "name": "malli.impl.regex.IParseDriver"
+  },
+  {
+    "name": "malli.impl.regex.IValidationDriver"
+  },
+  {
+    "name": "malli.impl.regex.ParseDriver"
+  },
+  {
+    "name": "malli.registry.Registry"
+  },
+  {
+    "name": "mikera.vectorz.AVector"
+  },
+  {
+    "condition": {
+      "typeReachable": "org.postgresql.jdbc.PgConnection"
+    },
+    "name": "org.postgresql.geometric.PGbox",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "org.postgresql.jdbc.PgConnection"
+    },
+    "name": "org.postgresql.geometric.PGcircle",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "org.postgresql.jdbc.PgConnection"
+    },
+    "name": "org.postgresql.geometric.PGline",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "org.postgresql.jdbc.PgConnection"
+    },
+    "name": "org.postgresql.geometric.PGlseg",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "org.postgresql.jdbc.PgConnection"
+    },
+    "name": "org.postgresql.geometric.PGpath",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "org.postgresql.jdbc.PgConnection"
+    },
+    "name": "org.postgresql.geometric.PGpoint",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "org.postgresql.jdbc.PgConnection"
+    },
+    "name": "org.postgresql.geometric.PGpolygon",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "org.postgresql.jdbc.PgConnection"
+    },
+    "name": "org.postgresql.util.PGInterval",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "org.slf4j.Logger"
+  },
+  {
+    "name":"org.slf4j.ILoggerFactory",
+    "queryAllPublicMethods":true
+  },
+  {
+    "name":"org.slf4j.Logger",
+    "queryAllPublicMethods":true
+  },
+  {
+    "name":"org.slf4j.LoggerFactory",
+    "queryAllPublicMethods":true
+  },
+  {
+    "name": "ring.util.codec.FormEncodeable"
+  },
+  {
+    "name": "sun.security.provider.NativePRNG",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.security.SecureRandomParameters"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "sun.security.provider.SHA",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  }
+]
