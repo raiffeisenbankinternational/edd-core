@@ -1,16 +1,12 @@
-{:deps
- {org.clojure/clojure {:mvn/version "1.11.1"}
-  edd-core/edd-core {:local/root "../../"}
-  com.amazonaws/aws-lambda-java-core {:mvn/version "1.2.2"}}
+{:deps {com.amazonaws/aws-lambda-java-core {:mvn/version "1.2.2"}
+        app-group-id/edd-core {:local/root "../../"}}
  :paths ["src" "resources" "api/src"]
  :aliases
- {:jar {:extra-paths ["resources"]
-        :extra-deps  {luchiniatwork/cambada {:mvn/version "1.0.5"}},
-        :main-opts   ["-m" "cambada.jar"
-                      "-m" "lambda.core"
-                      "-m" "--copy-source "]},
+ {:build {:deps {io.github.clojure/tools.build {:mvn/version "0.10.6"}}
+          :ns-default build}
   :test {:extra-paths ["test"],
          :extra-deps  {org.clojure/test.check     {:mvn/version "1.1.1"}
                        com.gfredericks/test.chuck {:mvn/version "0.2.14"}}},
   :unit {:extra-deps {lambdaisland/kaocha {:mvn/version "1.82.1306"}},
-         :main-opts  ["-m" "kaocha.runner"]} :dev {:extra-paths ["dev" "dev/resources"]}}}
+         :main-opts  ["-m" "kaocha.runner"]}
+  :dev {:extra-paths ["dev" "dev/resources"]}}}

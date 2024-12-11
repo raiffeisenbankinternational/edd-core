@@ -12,11 +12,11 @@ ENV ARTIFACT_ORG ${ARTIFACT_ORG}
 
 COPY --chown=build:build resources resources
 COPY --chown=build:build src src
-COPY --chown=build:build features features
 COPY --chown=build:build test test
 COPY --chown=build:build modules modules
 COPY --chown=build:build deps.edn deps.edn
 COPY --chown=build:build tests.edn tests.edn
+COPY --chown=build:build build.clj build.clj
 COPY --chown=build:build format.sh format.sh
 COPY --chown=build:build ansible ansible
 
@@ -39,7 +39,7 @@ ARG BUILD_ID
 
 RUN set -e &&\
     echo "Org: ${ARTIFACT_ORG}" &&\
-    clojure -M:test:unit &&\
+    PROJECT_NAME="api" clojure -M:test:unit &&\
     export AWS_DEFAULT_REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region) &&\
     export AWS_REGION=$AWS_DEFAULT_REGION &&\
     TARGET_ACCOUNT_ID="$(aws sts get-caller-identity | jq -r '.Account')" &&\
@@ -79,56 +79,26 @@ RUN set -e &&\
     echo "Run ansible stuff" &&\
     ansible-playbook ansible/deploy/deploy.yaml &&\
     echo "Building b${BUILD_ID}" &&\
-    clojure -M:jar  \
-       --aot "clojure.java.io" \
-       --app-group-id ${ARTIFACT_ORG} \
-       --app-artifact-id ${PROJECT_NAME} \
-       --app-version "1.${BUILD_ID}" &&\
+    clojure -T:build jar+install \
+       :app-group-id ${ARTIFACT_ORG} \
+       :app-artifact-id ${PROJECT_NAME} \
+       :app-version $(printf '"1.%s"' ${BUILD_ID})  &&\
     cp pom.xml /dist/release-libs/${PROJECT_NAME}-1.${BUILD_ID}.jar.pom.xml &&\
     ls -la target &&\
     cp target/${PROJECT_NAME}-1.${BUILD_ID}.jar /dist/release-libs/${PROJECT_NAME}-1.${BUILD_ID}.jar &&\
-    mvn install:install-file \
-         -Dfile=target/${PROJECT_NAME}-1.${BUILD_ID}.jar \
-         -DgroupId=${ARTIFACT_ORG} \
-         -DartifactId=${PROJECT_NAME} \
-         -DpomFile=pom.xml \
-         -Dversion="1.${BUILD_ID}" \
-         -Dpackaging=jar &&\
     echo "Building modules" &&\
     env &&\
     cd modules &&\
-    for i in $(ls); do \
+    for i in $(ls -1 | sort); do \
        cd $i &&\
-       echo "Building module $i" &&\
-       bb -i '(let [build-id "'${BUILD_ID}'" \
-                    lib (symbol `edd-core/edd-core) \
-                    new-lib (symbol "'${ARTIFACT_ORG}/${PROJECT_NAME}'") \
-                    deps (read-string \
-                          (slurp (io/file "deps.edn"))) \
-                    global (get-in deps [:deps lib]) \
-                    deps (if global \
-                           (assoc-in deps [:deps new-lib] {:mvn/version (str "1." build-id)}) \
-                           deps) \
-                    aliases [:test] \
-                    deps (reduce \
-                           (fn [p alias] \
-                             (if (get-in p [:aliases alias :extra-deps new-lib]) \
-                               (assoc-in p [:aliases alias :extra-deps new-lib] \
-                                         {:mvn/version (str "1." build-id)}) \
-                               p)) \
-                           deps \
-                           aliases)] \
-                (spit "deps.edn" (with-out-str \
-                                   (clojure.pprint/pprint deps))))' &&\
        cat deps.edn &&\
        clojure -Stree &&\
        clojure -M:test:it &&\
        clojure -M:test:unit &&\
-       clojure -M:jar  \
-             --aot "clojure.java.io" \
-             --app-group-id ${ARTIFACT_ORG} \
-             --app-artifact-id ${i} \
-             --app-version "1.${BUILD_ID}" &&\
+       clojure -J-Dedd-core.override=1.${BUILD_ID} -T:build jar+install  \
+          :app-group-id ${ARTIFACT_ORG} \
+          :app-artifact-id ${i} \
+          :app-version $(printf '"1.%s"' ${BUILD_ID}) &&\
        cp pom.xml /dist/release-libs/${i}-1.${BUILD_ID}.jar.pom.xml &&\
        cp target/${i}-1.${BUILD_ID}.jar /dist/release-libs/${i}-1.${BUILD_ID}.jar; \
        if [[ $? -gt 0 ]]; then exit 1; fi &&\

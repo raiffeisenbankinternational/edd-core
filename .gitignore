@@ -4,6 +4,7 @@ target
 target
 pom.xml
 *.iml
+classes/
 .idea
 .nrepl-port
 lambda-apigw-lib.iml
@@ -20,3 +21,6 @@ lambda-apigw-lib.iml
 src/lambda/log.clj
 edd.core
 .DS_Store
+classes/
+null/
+pom.properties

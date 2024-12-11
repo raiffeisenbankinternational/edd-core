@@ -473,7 +473,7 @@
                total
                (inc current))))))
 
-(defn -compare-version
+(defn -compare-version ^long
   [aggregate snapshot]
   (letfn [(get-version [agg] (:version agg))]
     (log/infof "compare aggregate version %d to snapshot version %d"

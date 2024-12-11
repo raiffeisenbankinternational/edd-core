@@ -1,6 +1,11 @@
 
 MIGRATIONS = ./test/resources/migrations
 PG_VIEW_STORE = modules/edd-core-view-store-postgres
+CLASSPATH = $(shell clojure -Spath):classes:resources
+APP_VERSION = "1.0.0"
+APP_GROUP_ID = "app-group-id"
+APP_ARTIFACT_ID = "edd-core"
+MODULES = $(shell cd modules && ls -1 | sort)
 
 all: lint-fix test-unit test-view-store-postgres test-docker
 
@@ -70,19 +75,36 @@ docker-rm:
 docker-psql:
 	psql --port 5432 --host localhost -U test test
 
-native-test:
-	rm -Rf target edd.core
-	clojure -J-Dclojure.tools.logging.factory=lambda.logging/slf4j-json-factory -M:jar-native-test
-	# This produces pretty bloated config - remove manually all of the _init and $eval classes
-	# @java -Dclojure.tools.logging.factory=lambda.logging/slf4j-json-factory -agentlib:native-image-agent=config-merge-dir=resources/META-INF/native-image/com/rbinternational.glms.edd-core -jar target/edd-core-1.0.0-SNAPSHOT-standalone.jar || exit 1
-	native-image -jar target/edd-core-1.0.0-SNAPSHOT-standalone.jar edd.core \
+local-install:
+	# EDD Core Installation
+	clojure -T:build jar+install  \
+    	:app-group-id ${APP_GROUP_ID} \
+        :app-artifact-id ${APP_ARTIFACT_ID} \
+        :app-version '${APP_VERSION}'
+
+	# Modules
+	cd modules && \
+	for i in ${MODULES}; do \
+		cd $$i && \
+		clojure -J-Dedd-core.override=${APP_VERSION} -T:build jar+install  \
+			:app-group-id ${APP_GROUP_ID} \
+			:app-artifact-id $$i \
+			:app-version '${APP_VERSION}' && \
+		cd ..; \
+	done
+
+test-native:
+	@rm -Rf target edd.core classes
+	@mkdir -p classes
+	@clojure -J-Dclojure.tools.logging.factory=lambda.logging/slf4j-json-factory -e "(compile 'edd.core)"
+	@native-image -cp ${CLASSPATH} edd.core \
 		--report-unsupported-elements-at-runtime \
 	    --no-fallback \
         --enable-https \
 		--no-server \
 		--features=clj_easy.graal_build_time.InitClojureClasses \
         -J-Xmx24g \
-		 -H:+UnlockExperimentalVMOptions \
+		-H:+UnlockExperimentalVMOptions \
         -Dcom.zaxxer.hikari.useWeakReferences=false \
         -Dborkdude.dynaload.aot=true \
         -Dclojure.tools.logging.factory=lambda.logging/slf4j-json-factory

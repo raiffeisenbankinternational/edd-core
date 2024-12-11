@@ -1,11 +1,8 @@
 {:deps    {info.sunng/ring-jetty9-adapter {:mvn/version "0.14.3"}
-           edd-core/edd-core              {:local/root "../../"}}
+           app-group-id/edd-core {:local/root "../../"}}
  :paths   ["src" "resources"],
- :aliases {:jar      {:extra-paths ["resources"]
-                      :extra-deps  #:luchiniatwork{cambada {:mvn/version "1.0.2"}},
-                      :main-opts   ["-m" "cambada.jar"
-                                    "-m" "lambda.core"
-                                    "-m" "--copy-source "]},
+ :aliases {:build {:deps {io.github.clojure/tools.build {:mvn/version "0.10.6"}}
+                   :ns-default build}
            :test     {:extra-paths ["test"],
                       :extra-deps  {org.clojure/test.check     {:mvn/version "1.0.0"}
                                     com.gfredericks/test.chuck {:mvn/version "0.2.11"}}},
