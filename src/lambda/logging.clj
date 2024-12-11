@@ -1,6 +1,7 @@
 (ns lambda.logging
   (:require [jsonista.core :as json]
             [clojure.string :as str]
+            [clojure.tools.logging.impl]
             [lambda.request :as request]
             [clojure.stacktrace :as cst])
   (:import (java.time LocalDateTime)

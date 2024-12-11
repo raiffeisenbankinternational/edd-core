@@ -18,3 +18,5 @@ lambda-apigw-lib.iml
 *~
 .docker
 src/lambda/log.clj
+edd.core
+.DS_Store

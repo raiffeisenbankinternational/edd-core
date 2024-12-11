@@ -1,4 +1,5 @@
 (ns edd.core
+  (:gen-class)
   (:require [clojure.tools.logging :as log]
             [lambda.request :as request]
             [edd.el.cmd :as cmd]
@@ -399,3 +400,7 @@
            (validate-request)
            (dispatch-request)
            (prepare-response)))))
+
+(defn -main
+  [& _args]
+  (log/info "Native Image testing"))

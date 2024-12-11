@@ -69,3 +69,21 @@ docker-rm:
 
 docker-psql:
 	psql --port 5432 --host localhost -U test test
+
+native-test:
+	rm -Rf target edd.core
+	clojure -J-Dclojure.tools.logging.factory=lambda.logging/slf4j-json-factory -M:jar-native-test
+	# This produces pretty bloated config - remove manually all of the _init and $eval classes
+	# @java -Dclojure.tools.logging.factory=lambda.logging/slf4j-json-factory -agentlib:native-image-agent=config-merge-dir=resources/META-INF/native-image/com/rbinternational.glms.edd-core -jar target/edd-core-1.0.0-SNAPSHOT-standalone.jar || exit 1
+	native-image -jar target/edd-core-1.0.0-SNAPSHOT-standalone.jar edd.core \
+		--report-unsupported-elements-at-runtime \
+	    --no-fallback \
+        --enable-https \
+		--no-server \
+		--features=clj_easy.graal_build_time.InitClojureClasses \
+        -J-Xmx24g \
+		 -H:+UnlockExperimentalVMOptions \
+        -Dcom.zaxxer.hikari.useWeakReferences=false \
+        -Dborkdude.dynaload.aot=true \
+        -Dclojure.tools.logging.factory=lambda.logging/slf4j-json-factory
+	chmod +x edd.core && ./edd.core
