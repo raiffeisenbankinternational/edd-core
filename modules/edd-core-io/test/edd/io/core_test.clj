@@ -64,3 +64,33 @@
       (is (io/file-exists? file))
       (is (not (io/is-directory? file))))
     (is (not (io/file-exists? @capture!)))))
+
+(deftest test-read-bytes
+
+  (let [file
+        (io/get-temp-file "foo" "bar")
+
+        _
+        (spit file "hello")
+
+        buf
+        (io/read-bytes file)]
+
+    (is (= [104 101 108 108 111]
+           (-> file io/read-bytes vec)))))
+
+(deftest test-with-pipe
+
+  (let [fut
+        (io/with-pipe [o i]
+          (let [fut
+                (future
+                  (with-open [in-gzip (io/gzip-input-stream i)]
+                    (.readAllBytes in-gzip)))]
+            (with-open [out-gzip (io/gzip-output-stream o)]
+              (.write out-gzip (.getBytes "hello world")))
+            fut))]
+
+    (is (future? fut))
+    (is (= "hello world"
+           (-> fut deref (String.))))))
