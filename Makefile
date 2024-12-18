@@ -59,7 +59,7 @@ docker-up:
 
 # Rebuild the docker image from scratch. Useful when CMD changes.
 docker-build-pg:
-	docker compose build postgres --cache
+	docker compose build postgres --no-cache
 
 docker-down:
 	docker compose down --remove-orphans

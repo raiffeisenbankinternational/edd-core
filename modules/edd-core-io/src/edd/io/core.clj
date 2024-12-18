@@ -7,6 +7,8 @@
    [clojure.java.io :as io])
   (:import java.io.File
            java.io.InputStream
+           java.io.PipedInputStream
+           java.io.PipedOutputStream
            java.io.PushbackReader
            java.io.Reader
            java.nio.file.Files
@@ -172,3 +174,45 @@
   "
   [^File file]
   (.delete file))
+
+(defn read-bytes
+  "
+  Read all bytes from a source into a byte array.
+  "
+  ^bytes [src]
+  (with-open [in (io/input-stream src)]
+    (.readAllBytes in)))
+
+(defmacro with-pipe
+  "
+  A macro to manage piped writing/reading across two threads.
+  The idea is to write bytes into an output but not exhaust
+  disk and memory, while another thread is consuming the
+  connected input stream.
+
+  - `out` is bound to a new instance of PipedOutputStream
+  - `in` is bound to a new instance of PipedInputStream
+  - `size` is an optional size for the in.
+
+  The in is connected to the out meaning everything written
+  to the out is available from in again. The out gets closed
+  when exiting the macro. The in does not because it is used
+  in another thread. You spawn a future that reads from
+  the in, write anything you want to the out, and return
+  the future. Example:
+
+  (with-pipe [o i 0xFF]
+    (let [fut (future
+                (.readAllBytes i))]
+      (doseq [x (range 0 3)]
+        (.write o x))
+      fut))
+
+  Both out and in can be wrapped with Gzip in/output streams,
+  writers/readers, etc.
+  "
+  [[out in size] & body]
+  `(with-open [~out (new PipedOutputStream)]
+     (let [~in (new PipedInputStream ~@(when size [size]))]
+       (.connect ~out ~in)
+       ~@body)))
