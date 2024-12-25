@@ -10,7 +10,8 @@
             [mikera.vectorz.core :as v])
 
   (:import (java.time OffsetDateTime)
-           (java.io InputStream)))
+           (java.io InputStream
+                    ByteArrayOutputStream)))
 
 ;; Dear security guy! All tokens and JWKS information here
 ;; is from non existing user pools
@@ -145,6 +146,24 @@
                     :bla :ble,
                     :blo ":bli",
                     :li  ["a" :a ":a"]}}))))
+
+(deftest test-json-output-write-and-read
+  (let [data-old
+        {:foo {:test 42}}
+
+        out
+        (new ByteArrayOutputStream)
+
+        result
+        (util/to-json-out out data-old)
+
+        data-new
+        (-> out
+            .toByteArray
+            io/input-stream
+            util/to-edn)]
+
+    (is (= data-old data-new))))
 
 (deftest test-parser-array-keys-serialization
   (let [result (util/to-edn

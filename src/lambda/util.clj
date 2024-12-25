@@ -110,6 +110,14 @@
   ^bytes [edn]
   (json/write-value-as-bytes edn json-mapper))
 
+(defn to-json-out
+  "
+  Write a value into a destination that can be
+  a file, an output stream, a writer, etc.
+  "
+  [dest edn]
+  (json/write-value dest edn json-mapper))
+
 (defn wrap-body [request]
   (cond
     (:body request) request
