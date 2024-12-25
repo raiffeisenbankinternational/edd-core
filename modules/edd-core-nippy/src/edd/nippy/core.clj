@@ -1,6 +1,7 @@
 (ns edd.nippy.core
   "
-  A custom nippy-based binary encoder and decoder.
+  A custom nippy-based binary encoder and decoder, also
+  called as 'nippy-stream' in PLC3.
 
   In PLC3, we had troubles when serializing vast Clojure
   collections. Apparently, we faced an issue when nippy
@@ -53,6 +54,10 @@
 
 (set! *warn-on-reflection* true)
 
+;;
+;; Encoding
+;;
+
 (defn encode-seq
   "
   Encode a (lazy) sequence of items into a destination
@@ -71,20 +76,47 @@
             (recur (inc total)))
           total)))))
 
-(defn encode-seq-gzip
+(defn encode-val
   "
-  Like `encode-seq` but wraps the destination with
-  GZIPOutputStream.
+  Encode a single value into a destination (a file,
+  a byte array, an output stream, etc).
   "
-  ^Long [dest coll]
+  [dest x]
+  (with-open [out (-> dest
+                      io/output-stream
+                      DataOutputStream.)]
+    (nippy/freeze-to-out! out x)))
+
+(defn encode
+  "
+  A general encode function that accepts any value
+  end uses a corresponding encoding method depending
+  whether it's sequential or not.
+  "
+  [dest x]
+  (if (sequential? x)
+    (encode-seq dest x)
+    (encode-val dest x)))
+
+(defn encode-gzip
+  "
+  Like `encode` but with GZIP compression.
+  "
+  [dest x]
   (with-open [out (-> dest
                       io/output-stream
                       GZIPOutputStream.)]
-    (encode-seq out coll)))
+    (if (sequential? x)
+      (encode-seq out x)
+      (encode-val out x))))
 
-(defn decode-seq
+;;
+;; Decoding
+;;
+
+(defn decode
   "
-  For a input stream produced by the `encode-seq` function,
+  For a input stream produced by the `encode` function,
   return a *lazy* sequence of decoded items. Use it under
   the `(with-open ...)` macro.
   "
@@ -103,66 +135,21 @@
 
     (step (new DataInputStream input-stream))))
 
-(defn decode-seq-gzip
+(defn decode-gzip
   "
-  Like `decode-seq` but wraps the input with
-  GZIPInputStream.
+  Like `decode` but wraps the input with GZIPInputStream.
   "
   [^InputStream input-stream]
-  (let [in (-> input-stream
-               GZIPInputStream.)]
-    (decode-seq in)))
-
-(defn encode-val
-  "
-  Encode a single value in a destination (file, byte array,
-  output stream, etc).
-  "
-  [dest x]
-  (with-open [out (-> dest
-                      io/output-stream
-                      DataOutputStream.)]
-    (nippy/freeze-to-out! out x)))
-
-(defn decode-val
-  "
-  Decode a single value from a source (file, byte array,
-  input stream, etc).
-  "
-  [src]
-  (with-open [in (-> src
-                     io/input-stream
-                     DataInputStream.)]
-    (nippy/thaw-from-in! in)))
-
-(defn encode-val-gzip
-  "
-  Like `encode-val` but compress the output with Gzip.
-  "
-  [dest x]
-  (with-open [out (-> dest
-                      io/output-stream
-                      GZIPOutputStream.)]
-    (encode-val out x)))
-
-(defn decode-val-gzip
-  "
-  Like `decode-val` but wraps the input with Gzip.
-  "
-  [src]
-  (with-open [in (-> src
-                     io/input-stream
-                     GZIPInputStream.)]
-    (decode-val in)))
+  (decode (new GZIPInputStream input-stream)))
 
 (comment
 
-  (encode-seq "test.nippy"
-              (for [x (range 0 20)]
-                {:x x :foo "hello"}))
+  (encode "test.nippy"
+          (for [x (range 0 20)]
+            {:x x :foo "hello"}))
 
   (with-open [in (io/input-stream "test.nippy")]
-    (doseq [item (decode-seq in)]
+    (doseq [item (decode in)]
       (println item)))
 
   nil)
