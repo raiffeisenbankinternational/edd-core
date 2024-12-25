@@ -19,8 +19,8 @@
 
     (testing "test encode"
       (let [amount
-            (nippy/encode-seq file
-                              (range 1 6))
+            (nippy/encode file
+                          (range 1 6))
 
             out
             (new ByteArrayOutputStream)
@@ -39,7 +39,7 @@
     (testing "test decode"
       (let [items
             (with-open [in (io/input-stream file)]
-              (vec (nippy/decode-seq in)))]
+              (vec (nippy/decode in)))]
         (is (= [1 2 3 4 5]
                (vec items)))))))
 
@@ -49,8 +49,8 @@
 
     (testing "test encode"
       (let [amount
-            (nippy/encode-seq-gzip file
-                                   (range 1 6))
+            (nippy/encode-gzip file
+                               (range 1 6))
 
             buf
             (-> file io/input-stream .readAllBytes)]
@@ -62,7 +62,7 @@
     (testing "test decode"
       (let [items
             (with-open [in (io/input-stream file)]
-              (vec (nippy/decode-seq-gzip in)))]
+              (vec (nippy/decode-gzip in)))]
         (is (= [1 2 3 4 5]
                (vec items)))))))
 
@@ -70,7 +70,7 @@
   (with-open [in (-> [-1 -1 -1 -1 -1]
                      (byte-array)
                      io/input-stream)]
-    (let [items (nippy/decode-seq in)]
+    (let [items (nippy/decode in)]
       (is true "no exception")
       (is (instance? clojure.lang.LazySeq items))
       (try
@@ -83,17 +83,21 @@
 
 (deftest test-encode-decode-val-ok
   (let [file (get-temp-file "tmp" ".nippy")]
-    (let [res (nippy/encode-val file {:foo 42})]
+    (let [res (nippy/encode file {:foo 42})]
       (is (nil? res)))
-    (let [res (nippy/decode-val file)]
-      (is (= {:foo 42} res)))))
+    (let [res
+          (with-open [in (io/input-stream file)]
+            (vec (nippy/decode in)))]
+      (is (= [{:foo 42}] res)))))
 
 (deftest test-encode-decode-val-gzip-ok
   (let [file (get-temp-file "tmp" ".nippy")]
-    (let [res (nippy/encode-val-gzip file {:foo 42})]
+    (let [res (nippy/encode-gzip file {:foo 42})]
       (is (nil? res)))
     (let [buf (-> file io/input-stream .readAllBytes)]
       (is (= [31 -117 8 0 0 0 0 0 0 -1 43 96 -52 98 78 -53 -49 79 -47 2 0 48 56 -60 -97 9 0 0 0]
              (vec buf))))
-    (let [res (nippy/decode-val-gzip file)]
-      (is (= {:foo 42} res)))))
+    (let [res
+          (with-open [in (io/input-stream file)]
+            (vec (nippy/decode-gzip in)))]
+      (is (= [{:foo 42}] res)))))
