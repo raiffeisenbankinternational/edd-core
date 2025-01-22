@@ -1,6 +1,5 @@
 (ns edd.dal-it
-  (:import (java.time LocalDateTime))
-  (:require [clojure.test :refer [deftest testing is]]
+  (:require [clojure.test :refer [deftest is]]
             [clojure.tools.logging :as log]
             [lambda.util :as util]
             [lambda.uuid :as uuid]
@@ -8,7 +7,6 @@
             [edd.memory.event-store :as memory]
             [edd.postgres.event-store :as postgres]
             [edd.dynamodb.event-store :as dynamodb]
-            [lambda.test.fixture.state :as state]
             [edd.core :as edd]
             [edd.common :as common]))
 
@@ -19,7 +17,7 @@
    :interaction-id (uuid/gen)
    :invocation-id (uuid/gen)
    :meta {:realm :test}
-   :ref-date (LocalDateTime/now)
+   :ref-date (util/date-time)
    :environment-name-lower "pipeline"
    :elastic-search {:url (util/get-env "IndexDomainEndpoint")}
    :db {:endpoint (util/get-env "DatabaseEndpoint")
