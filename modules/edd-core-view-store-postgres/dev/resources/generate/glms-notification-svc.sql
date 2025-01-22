@@ -11,8 +11,8 @@ select
         'attrs', jsonb_build_object(
             'arguments', jsonb_build_object(
                 'gcc', jsonb_build_object(
-                    'short-name', format('Some Name %s', x),
-                    'cocunut', format('123%s', x)
+                    'short-name', format('Some Name %s', x % 1000),
+                    'cocunut', format('123%s', x % 1000)
                 ),
                 'application', jsonb_build_object(
                     'sequence-id', x,
@@ -20,24 +20,35 @@ select
                 )
             ),
             'type', ':application-approved',
-            'status', ':created',
+            'status', (array[
+                        ':created',
+                        ':acknowledged'
+                      ])[x % 2 + 1],
             'user', jsonb_build_object(
-                'role', ':lime-tcm-releaser',
-                'given_name', format('Name-%s', x),
-                'department', format('Some Department %s', x),
-                'department-code', format('DEP%s', x),
+                'role', (array[
+                            ':lime-account-managers',
+                            ':lime-limit-managers',
+                            ':lime-product-managers',
+                            ':lime-risk-managers',
+                            ':lime-tcm-releaser',
+                            ':lime-verifiers',
+                            ':lime-workout-managers'
+                        ])[x % 7 + 1],
+                'given_name', format('Name-%s', x % 1000),
+                'department', format('Some Department %s', x % 1000),
+                'department-code', format('DEP%s', x % 1000),
                 'roles', jsonb_build_array(
                     ':lime-tcm-releaser',
                     ':lime-limit-managers'
                 ),
-                'username', format('user-%s@rbinternational.com', x),
+                'username', format('user-%s@rbinternational.com', x % 1000),
                 'user-attributes', jsonb_build_object(
                     'sub', gen_random_uuid(),
                     'email_verified', 'false',
                     'cognito:user_status', 'EXTERNAL_PROVIDER',
                     'custom:user_id', format('#%s', gen_random_uuid()),
                     'identities', jsonb_build_array(jsonb_build_object(
-                        'userId', format('user-%s@rbinternational.com', x),
+                        'userId', format('user-%s@rbinternational.com', x % 1000),
                         'providerName', 'PingFederate',
                         'providerType', 'OIDC',
                         'issuer', null,
@@ -71,12 +82,12 @@ select
                         'RBI-GLMS-P-Lime-Limit-Managers'
                     )
                 )::text,
-                'family_name', format('FooBar%s', x),
-                'department_code', format('RMO%s', x),
-                'id', format('user-%s@rbinternational.com', x),
-                'code', format('CODE%s', x),
-                'full_name', format('Test User %s', x),
-                'full_name_lower', format('test user %s', x)
+                'family_name', format('FooBar%s', x % 1000),
+                'department_code', format('RMO%s', x % 1000),
+                'id', format('user-%s@rbinternational.com', x % 1000),
+                'code', format('CODE%s', x % 1000),
+                'full_name', format('Test User %s', x % 1000),
+                'full_name_lower', format('test user %s', x % 1000)
             ),
             'creation-time', format('2023-09-15T09:40:04.%sZ', x),
             'send-email?', true
@@ -84,5 +95,5 @@ select
         'version', 1
     ) as aggregate
 from
-    generate_series(1, 150000) as gen(x)
+    generate_series(1, 250000) as gen(x)
 returning id;
