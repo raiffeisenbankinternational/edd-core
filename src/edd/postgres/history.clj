@@ -103,10 +103,22 @@
         table
         (->table realm)
 
+        service
+        (->service ctx)
+
+        service-name
+        (if (keyword? service)
+          (name service)
+          service)
+
         sql-map
         {:update table
          :set {:valid-until ref-date}
-         :where [:and [:= :id id] [:< :version version] [:= :valid-until nil]]}]
+         :where [:and
+                 [:= :id id]
+                 [:= :service-name service-name]
+                 [:< :version version]
+                 [:= :valid-until nil]]}]
 
     (log/infof "invalidate history up to id=%s, version=%d" id version)
     (honey/execute *DB* sql-map)))

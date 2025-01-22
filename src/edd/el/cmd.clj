@@ -544,7 +544,7 @@
 (defn handle-commands
   [ctx body]
   (let [ref-date
-        (LocalDateTime/now)
+        (util/date-time)
 
         ctx
         (assoc ctx
