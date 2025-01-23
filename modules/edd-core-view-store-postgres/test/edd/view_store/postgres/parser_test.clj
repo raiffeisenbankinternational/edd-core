@@ -526,6 +526,20 @@
     (is (= "((aggregate #>> ARRAY['attrs', 'application-id']) = '123') OR ((aggregate #>> ARRAY['attrs', 'application-id']) = '456') OR ((aggregate #>> ARRAY['attrs', 'application-id']) ILIKE '%123%')"
            (filter->result c/SVC_APPLICATION filter)))))
 
+(deftest test-wildcard-application-id-short-term
+
+  (let [filter
+        [:or
+         [:= :attrs.application-id "ab"]
+         [:wildcard :attrs.application-id "ab"]]]
+    (is (= "((aggregate #>> ARRAY['attrs', 'application-id']) = 'ab')"
+           (filter->result c/SVC_APPLICATION filter))))
+
+  (let [filter
+        [:wildcard :attrs.application-id "ab"]]
+    (is (= "NULL"
+           (filter->result c/SVC_APPLICATION filter)))))
+
 (deftest test-application-new-indexes
 
   (let [filter

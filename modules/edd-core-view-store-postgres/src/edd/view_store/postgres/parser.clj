@@ -187,6 +187,15 @@
     :else
     (str value)))
 
+(defn long-enough?
+  "
+  Whether a string value has enough characters to participate
+  in trigram search. Must have at least 3 character, otherwise
+  the index doesn't apply.
+  "
+  ^Boolean [^String value]
+  (-> value count (> 2)))
+
 (defn filter-parsed->where
   "
   Having a service name and a parsed `:filter` expression,
@@ -424,7 +433,12 @@
             (attrs/path-wildcard? service path)]
 
         (if wildcard?
-          (honey/ilike field value)
+          ;; Ensure the value is long enough for a trigram index.
+          ;; When it's not, just ignore the condition. Search terms
+          ;; that are less than 3 characters produce *ridiculously*
+          ;; slow queries (up to 60 seconds).
+          (when (long-enough? value)
+            (honey/ilike field value))
 
           ;; Otherwise, produce the jsonpath expression with the regex_like
           ;; operator. This operator doens't support the GIN/jsonb_path_ops
