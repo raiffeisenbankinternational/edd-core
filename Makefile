@@ -7,7 +7,7 @@ APP_GROUP_ID = "app-group-id"
 APP_ARTIFACT_ID = "edd-core"
 MODULES = $(shell cd modules && ls -1 | sort)
 
-all: lint-fix test-unit test-view-store-postgres test-docker
+all: lint-fix test-unit test-view-store-postgres
 
 test-unit:
 	clojure -M:test:unit
@@ -56,14 +56,16 @@ clean:
 docker-clean:
 	rm -rf .docker
 
-docker-pg:
+# run Postgres only in docker
+docker-postgres:
 	docker compose up postgres
 
+# run everything in docker
 docker-up:
 	docker compose up
 
 # Rebuild the docker image from scratch. Useful when CMD changes.
-docker-build-pg:
+docker-postgres-build:
 	docker compose build postgres --no-cache
 
 docker-down:
@@ -73,16 +75,22 @@ docker-rm:
 	docker compose rm --force
 
 docker-psql:
-	psql --port 5432 --host localhost -U test test
+	psql --port 5432 --host localhost -U postgres postgres
+
+docker-migrate:
+	docker compose run root-migration
+	docker compose run service-migration
+	docker compose run migration-test-edd-core
+	docker compose run migration-test-dimension
 
 local-install:
-	# EDD Core Installation
+    # EDD Core Installation
 	clojure -T:build jar+install  \
-    	:app-group-id ${APP_GROUP_ID} \
+		:app-group-id ${APP_GROUP_ID} \
         :app-artifact-id ${APP_ARTIFACT_ID} \
         :app-version '${APP_VERSION}'
 
-	# Modules
+    # Modules
 	cd modules && \
 	for i in ${MODULES}; do \
 		cd $$i && \

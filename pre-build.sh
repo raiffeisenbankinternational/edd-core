@@ -23,4 +23,11 @@ done
 docker ps
 docker compose logs postgres
 
+echo "Running Postgres migrations"
+
+docker compose run root-migration
+docker compose run service-migration
+docker compose run migration-test-edd-core
+docker compose run migration-test-dimension
+
 echo "Continue"

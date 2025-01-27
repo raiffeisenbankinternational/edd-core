@@ -15,17 +15,8 @@ test-unit:
 test-it:
 	clojure -M:test:it
 
-test: test-unit test-it
-
 .PHONY: test
-
-slug ?= $(error Please specify the slug=... argument)
-migration_id = $(shell date +'%Y%m%d%H%M%S')
-
-MIGRATIONS = ./test/resources/migrations
-
-create-migration:
-	touch ${MIGRATIONS}/${migration_id}-${slug}.up.sql
+test: test-unit test-it
 
 agg_file ?= $(error Please specify the agg_file=... argument)
 

@@ -51,11 +51,16 @@ services:
     networks:
       - opensearch-net
 
+  #
+  # We apply schemas one by one because of a bug (a limitation?)
+  # in flyway. See https://stackoverflow.com/questions/60436650/
+  # TL;DR: for schemas=foo,bar,baz, it creates stuff only in foo.
+  #
   root-migration:
     image: literal:${DOCKER_URL}/flyway/flyway
-    command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test -user=postgres -password="no-secret" -connectRetries=60 migrate
+    command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test -user=postgres -password="no-secret" -connectRetries=60 -skipCheckForUpdate migrate
     volumes:
-      - ../sql/files/edd:/flyway/sql
+      - ./sql/files/edd:/flyway/sql
     depends_on:
       - postgres
     networks:
@@ -63,13 +68,34 @@ services:
 
   service-migration:
     image: literal:${DOCKER_URL}/flyway/flyway
-    command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test_local_test -user=postgres -password="no-secret" -connectRetries=60 migrate
+    command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test_local_test -user=postgres -password="no-secret" -connectRetries=60 -skipCheckForUpdate migrate
     volumes:
-      - ../modules/edd-core-view-store-postgres/migrations:/flyway/sql
+      - ./modules/edd-core-view-store-postgres/migrations:/flyway/sql
     depends_on:
       - postgres
     networks:
       - opensearch-net
+
+  migration-test-edd-core:
+    image: literal:${DOCKER_URL}/flyway/flyway
+    command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test_edd_core -user=postgres -password="no-secret" -connectRetries=60 -skipCheckForUpdate migrate
+    volumes:
+       - ./modules/edd-core-view-store-postgres/test/resources/migrations:/flyway/sql
+    depends_on:
+      - postgres
+    networks:
+      - opensearch-net
+
+  migration-test-dimension:
+    image: flyway/flyway
+    command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test_glms_dimension_svc -user=postgres -password="no-secret" -connectRetries=60 -skipCheckForUpdate migrate
+    volumes:
+       - ./modules/edd-core-view-store-postgres/test/resources/migrations:/flyway/sql
+    depends_on:
+      - postgres
+    networks:
+      - opensearch-net
+
 
 networks:
   opensearch-net:

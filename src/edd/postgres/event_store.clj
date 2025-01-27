@@ -486,10 +486,23 @@
   (let [{:keys [history]}
         resp
 
-        {:keys [aggregate snapshot]}
-        history]
-    (when (pos? (-compare-version aggregate snapshot))
-      (history/new-entries ctx [aggregate]))))
+        tx
+        (comp
+         (filter
+          (fn [item]
+            (let [{:keys [aggregate snapshot]} item
+                  {:keys [id]} aggregate
+                  cmp (-compare-version aggregate snapshot)]
+              (or (pos? cmp)
+                  (log/infof "Removing aggregate due to -compare-version result: %s, id: %s, snapshot: %s"
+                             cmp id snapshot)))))
+         (map :aggregate))
+
+        aggregates
+        (into [] tx history)]
+
+    (when (seq aggregates)
+      (history/new-entries ctx aggregates))))
 
 (defn store-results-impl
   [ctx resp]
