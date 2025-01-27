@@ -10,5 +10,4 @@ fi
 docker compose up postgres -d
 sleep 5
 
-docker compose run root-migration
-docker compose run service-migration
+make docker-migrate

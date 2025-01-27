@@ -310,8 +310,11 @@
                resp
                (resp->add-meta-to-events ctx resp)
 
+               conjv
+               (fnil conj [])
+
                resp
-               (assoc resp :history history-entry)]
+               (update resp :history conjv history-entry)]
 
            (request-cache/update-aggregate ctx aggregate)
            (request-cache/store-identities ctx (:identities resp))
@@ -322,6 +325,7 @@
    :events     []
    :effects    []
    :sequences  []
+   :history    []
    :identities []})
 
 (defn validate-commands
