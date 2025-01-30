@@ -495,8 +495,7 @@
                   cmp (-compare-version aggregate snapshot)]
               (or (pos? cmp)
                   (log/infof "Removing aggregate due to -compare-version result: %s, id: %s, snapshot: %s"
-                             cmp id snapshot)))))
-         (map :aggregate))
+                             cmp id snapshot))))))
 
         aggregates
         (into [] tx history)]

@@ -8,7 +8,8 @@
     :refer [->realm
             ->service
             ->ref-date]]
-   [clojure.tools.logging :as log]))
+   [clojure.tools.logging :as log]
+   [edd.postgres.history :as history]))
 
 (set! *warn-on-reflection* true)
 
@@ -93,7 +94,7 @@
   "
   Invalidates history entry by setting :valid-until field up to provided version
   "
-  [ctx id version]
+  [ctx snapshots]
   (let [realm
         (->realm ctx)
 
@@ -111,29 +112,33 @@
           (name service)
           service)
 
-        sql-map
-        {:update table
-         :set {:valid-until ref-date}
-         :where [:and
-                 [:= :id id]
-                 [:= :service-name service-name]
-                 [:< :version version]
-                 [:= :valid-until nil]]}]
+        sql-maps
+        (for [snapshot snapshots]
+          (let [{:keys [id version]} snapshot]
+            (log/infof "invalidate history entry id=%s, version=%d" id version)
 
-    (log/infof "invalidate history up to id=%s, version=%d" id version)
-    (honey/execute *DB* sql-map)))
+            {:update table
+             :set {:valid-until ref-date}
+             :where [:and
+                     [:= :id id]
+                     [:= :service-name service-name]
+                     [:= :version version]]}))]
+
+    (run! #(honey/execute *DB* %) sql-maps)))
 
 (defn new-entries
   "
   Function inserts new history entries for each aggregate version into db
   and invalidate previous one if any
   "
-  [ctx aggregates]
-  (let [aggregates
-        (sort-by :version aggregates)
+  [ctx history-entries]
+  (let [new-aggregates
+        (mapv :aggregate history-entries)
 
-        {:keys [id version]}
-        (last aggregates)
+        snapshots
+        (->> history-entries
+             (mapv :snapshot)
+             (remove nil?))
 
         {:keys [service-configuration]}
         ctx
@@ -151,5 +156,5 @@
     (log/infof "historisation for service %s is %s" service history)
 
     (when (= :enabled history)
-      (-insert-entries ctx aggregates)
-      (-invalidate-entries ctx id version))))
+      (-insert-entries ctx new-aggregates)
+      (-invalidate-entries ctx snapshots))))
