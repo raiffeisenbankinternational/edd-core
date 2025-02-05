@@ -363,20 +363,28 @@
                              :identities (count (:identities resp))
                              :sequences  (count (:sequences resp))})))
 
+(defn e-concurrent-modification?
+  "
+  Given an exception, check if was triggered
+  by a concurrent modification case.
+  "
+  ^Boolean [^ExceptionInfo e]
+  (some-> e ex-data :error :key (= :concurrent-modification)))
+
 (defn retry [f ^long n]
   (try
     (f)
     (catch ExceptionInfo e
-      (let [data (ex-data e)]
-        (request-cache/clear)
-        (if (and (= (get-in data [:error :key])
-                    :concurrent-modification)
-                 (not (zero? n)))
-          (do
-            (log/warn (str "Failed handling attempt: " n) e)
-            (Thread/sleep (+ 1000 (long (rand-int 1000))))
-            (retry f (dec n)))
-          (throw e))))))
+      (request-cache/clear)
+      (if (and (e-concurrent-modification? e)
+               (> n 1))
+        (do
+          (log/warnf e
+                     "retry has failed, attempts left: %s, function: %s"
+                     n f)
+          (Thread/sleep (+ 1000 (long (rand-int 1000))))
+          (retry f (dec n)))
+        (throw e)))))
 
 (defn- log-request [ctx body]
   (dal/log-request ctx body)

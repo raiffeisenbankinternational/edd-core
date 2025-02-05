@@ -1,5 +1,5 @@
 (ns edd.el.cmd-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is testing]]
             [edd.el.cmd :as el-cmd]
             [edd.core :as edd]
             [lambda.core :as core]
@@ -180,3 +180,29 @@
                (map
                 #(util/to-edn %)
                 @messages)))))))
+
+(deftest test-retry-logic
+  (testing "regular exception"
+    (let [capture! (atom 0)]
+      (try
+        (el-cmd/retry (fn []
+                        (swap! capture! inc)
+                        (/ 0 0))
+                      3)
+        (is false)
+        (catch Exception e
+          (is (= 1 @capture!))))))
+
+  (testing "special exception"
+    (let [capture! (atom 0)]
+      (try
+        (el-cmd/retry
+         (fn []
+           (swap! capture! inc)
+           (throw (ex-info "boom" {:error {:key :concurrent-modification}})))
+         3)
+        (is false)
+        (catch Exception e
+          (is (= 3 @capture!))
+          (is (= "boom"
+                 (ex-message e))))))))
