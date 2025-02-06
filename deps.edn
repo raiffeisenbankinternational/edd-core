@@ -8,7 +8,7 @@
   compojure/compojure                  {:mvn/version "1.7.0"},
   ring-cors/ring-cors                  {:mvn/version "0.1.13"},
   com.alpha-prosoft/jsonista           {:mvn/version "0.3.8.11"},
-  org.postgresql/postgresql            {:mvn/version "42.6.0"},
+  org.postgresql/postgresql            {:mvn/version "42.7.5"},
   com.github.seancorfield/honeysql     {:mvn/version "2.6.1147"},
   seancorfield/next.jdbc               {:mvn/version "1.2.659"},
   org.clojure/data.xml                 {:mvn/version "0.2.0-alpha8"},
@@ -21,7 +21,7 @@
   com.alpha-prosoft/clj-aws-sign       {:mvn/version "0.1.1.18"},
   io.forward/yaml                      {:mvn/version "1.0.11"},
   com.github.clj-easy/graal-build-time {:mvn/version "1.0.5"}
-  com.auth0/jwks-rsa                   {:mvn/version "0.22.0"},
+  com.auth0/jwks-rsa                   {:mvn/version "0.22.1"},
   org.clojure/core.async               {:mvn/version "1.6.673"}},
  :paths
  ["src" "resources"],
