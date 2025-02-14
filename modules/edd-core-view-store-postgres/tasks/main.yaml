@@ -41,29 +41,23 @@
     delete: true
 
 - set_fact:
-    other_realms: [ ]
-  tags:
-    - dev
+    other_realms: "{{ lookup('amazon.aws.aws_ssm', '/config/realms') | from_json | reject('equalto', 'test') | list }}"
 
+- debug:
+    msg: 'Other relams {{ other_realms }}'
 
-- set_fact:
-    other_realms:
-      - prod
-  tags:
-    - dev01
-    - test01
-
-- set_fact:
-    other_realms:
-      - prod
-      - dataload
-      - training
-  tags:
-    - prod01
+- debug:
+    msg: 'Migrating test'
 
 - include_tasks: migrate.yaml
   loop:
     - test
 
+- debug:
+    msg: 'Migrating other realms'
+
 - include_tasks: migrate.yaml
   loop: '{{ other_realms }}'
+
+- debug:
+    msg: 'Obviously done :)'
