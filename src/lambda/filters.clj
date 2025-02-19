@@ -306,7 +306,12 @@
     (do
       (log/info "Request not from api!")
       ctx)
-    (let [{:keys [exception
+    (let [origin
+          (or
+           (get-in req [:headers :Origin])
+           (get-in req [:headers :origin]))
+
+          {:keys [exception
                   error]}
           resp
 
@@ -330,11 +335,12 @@
 
           http-base
           {:statusCode status
-           :headers {"Access-Control-Allow-Headers"  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-                     "Access-Control-Allow-Methods"  "OPTIONS,POST,PUT,GET"
-                     "Access-Control-Expose-Headers" "*"
-                     "Content-Type"                  resp-content-type
-                     "Access-Control-Allow-Origin"   "*"}}
+           :headers (cond-> {"Access-Control-Allow-Headers"  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                             "Access-Control-Allow-Methods"  "OPTIONS,POST,PUT,GET"
+                             "Access-Control-Expose-Headers" "*"
+                             "Content-Type"                  resp-content-type
+                             "Access-Control-Allow-Origin"   (or origin "*")}
+                      origin (assoc "Access-Control-Allow-Credentials" "true"))}
 
           gzip?
           (gzip/accepts-gzip? req)
