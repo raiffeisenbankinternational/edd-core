@@ -7,6 +7,7 @@
                                 simple-search
                                 advanced-search
                                 update-aggregate
+                                get-by-id-and-version
                                 get-snapshot]]
             [lambda.util :as util]))
 
@@ -70,15 +71,27 @@
     (binding [*dal-state* (atom {})]
       (body-fn ctx))))
 
+(defn- aggregates-matching-id
+  [id]
+  (->> @*dal-state*
+       (:aggregate-store)
+       (filter #(= (:id %) id))))
+
 (defmethod get-snapshot
   :memory
   [ctx id]
   (log/info "Fetching snapshot aggregate: " id)
-  (->> @*dal-state*
-       (:aggregate-store)
-       (filter
-        #(= (:id %) id))
-       (first)))
+  (->> (aggregates-matching-id id)
+       (sort-by :version (fnil > 0 0))
+       first))
+
+(defmethod get-by-id-and-version
+  :memory
+  [ctx id version]
+  (log/info "Fetching aggregate by id:" id ", and version:" version)
+  (->> (aggregates-matching-id id)
+       (filter #(= (:version %) version))
+       first))
 
 (defn register
   [ctx]

@@ -384,6 +384,23 @@
               :id      nil}
              (:aggregate agg))))))
 
+(deftest test-get-by-id-and-version
+  (mock/with-mock-dal
+    {:aggregate-store [{:id      "1"
+                        :version 1}
+                       {:id      "2"
+                        :version 2}
+                       {:id      "1"
+                        :version 3}
+                       {:id      "2"
+                        :version 1}]}
+    (testing "get without version should return the latest aggregate"
+      (is (= 3 (:version (common/get-by-id mock/ctx {:id "1"}))))
+      (is (= 2 (:version (common/get-by-id mock/ctx {:id "2"})))))
+    (testing "otherwise the aggregate with specified version should be returned"
+      (is (= 1 (:version (common/get-by-id mock/ctx {:id "2" :version 1}))))
+      (is (= 2 (:version (common/get-by-id mock/ctx {:id "2" :version 2})))))))
+
 (deftest test-get-by-id-from-shapshot
 
   (mock/with-mock-dal
