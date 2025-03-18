@@ -16,11 +16,11 @@
    [edd.request-cache :as request-cache]
    [edd.schema.core :as edd-schema]
    [edd.el.query :as query])
-  (:import (clojure.lang ExceptionInfo)
-           (java.time LocalDateTime)
-           (java.util.concurrent Executors
-                                 ExecutorService
-                                 Future)))
+  (:import
+   (clojure.lang ExceptionInfo)
+   (java.util.concurrent Executors
+                         ExecutorService
+                         Future)))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
