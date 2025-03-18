@@ -1,0 +1,11 @@
+{:deps {com.amazonaws/aws-lambda-java-core              {:mvn/version "1.2.3"}
+        app-group-id/edd-core               {:local/root "../../"}
+        org.crac/crac                                   {:mvn/version "1.5.0"}}
+ :paths ["src"]
+ :aliases {:build {:deps {io.github.clojure/tools.build {:mvn/version "0.10.6"}}
+                   :ns-default build}
+           :test {:extra-paths ["test"]}
+           :unit {:main-opts ["-m" "kaocha.runner" "unit"]
+                  :extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}}}
+           :it {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}},
+                :main-opts ["-m" "kaocha.runner" "it"]}}}
