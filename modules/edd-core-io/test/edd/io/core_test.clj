@@ -26,7 +26,7 @@
             (ByteArrayInputStream.))
 
         file
-        (io/stream->gzip-temp-file in)
+        (io/write-temp-file-gzip in)
 
         size
         (io/file-size file)
@@ -45,7 +45,7 @@
             (ByteArrayInputStream.))
 
         file
-        (io/stream->temp-file in)
+        (io/write-temp-file in)
 
         size
         (io/file-size file)
@@ -66,21 +66,13 @@
     (is (not (io/file-exists? @capture!)))))
 
 (deftest test-read-bytes
-
   (let [file
-        (io/get-temp-file "foo" "bar")
-
-        _
-        (spit file "hello")
-
-        buf
-        (io/read-bytes file)]
-
+        (io/get-temp-file "foo" "bar")]
+    (spit file "hello")
     (is (= [104 101 108 108 111]
            (-> file io/read-bytes vec)))))
 
 (deftest test-with-pipe
-
   (let [fut
         (io/with-pipe [o i]
           (let [fut
@@ -90,7 +82,6 @@
             (with-open [out-gzip (io/gzip-output-stream o)]
               (.write out-gzip (.getBytes "hello world")))
             fut))]
-
     (is (future? fut))
     (is (= "hello world"
            (-> fut deref (String.))))))

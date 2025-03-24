@@ -1,21 +1,32 @@
 (ns edd.io.core
   "
-  Basic IO utilities for streams and files.
+  Basic IO utilities for streams, files, GZIP encoding
+  and decoding, MIME detection, and similar things.
   "
   (:require
    [clojure.edn :as edn]
-   [clojure.java.io :as io])
-  (:import java.io.File
-           java.io.InputStream
-           java.io.PipedInputStream
-           java.io.PipedOutputStream
-           java.io.PushbackReader
-           java.io.Reader
-           java.nio.file.Files
-           java.util.zip.GZIPInputStream
-           java.util.zip.GZIPOutputStream))
+   [clojure.java.io :as io]
+   [clojure.string :as str])
+  (:import (java.io File
+                    PipedInputStream
+                    PipedOutputStream
+                    PushbackReader
+                    Reader)
+           (java.net URL)
+           (java.nio.file Files)
+           (java.util.zip GZIPInputStream
+                          GZIPOutputStream)))
 
 (set! *warn-on-reflection* true)
+
+(defn resource!
+  "
+  Get a resource throwing an exception when it's missing.
+  "
+  ^URL [^String path]
+  (or (io/resource path)
+      (throw (new RuntimeException
+                  (format "missing resource: %s" path)))))
 
 (defn pushback-reader ^PushbackReader [src]
   (new PushbackReader src))
@@ -75,70 +86,83 @@
       (io/input-stream)
       (GZIPInputStream.)))
 
-(defn stream->file
+(defn write-file
   "
-  Dump a stream in to a file. Return a number of
-  bytes transferred as Long.
+  Write src into a given File instance.
   "
-  ^Long [^InputStream input-stream
-         ^File file]
-  (with-open [in input-stream
+  ^File [src ^File file]
+  (with-open [in (io/input-stream src)
               out (io/output-stream file)]
-    (.transferTo in out)))
+    (.transferTo in out))
+  file)
 
-(defn stream->temp-file
+(defn write-temp-file
   "
-  Create a temporal file and transfer the stream
-  into it. Return the file instance.
+  Write src into temp file and return it.
   "
-  (^File [^InputStream input-stream]
+  (^File [src]
    (let [tmp (get-temp-file)]
-     (stream->file input-stream tmp)
-     tmp))
+     (write-file src tmp)))
 
-  (^File [^InputStream input-stream prefix suffix]
+  (^File [src prefix suffix]
    (let [tmp (get-temp-file prefix suffix)]
-     (stream->file input-stream tmp)
-     tmp)))
+     (write-file src tmp))))
 
-(defn stream->gzip-temp-file
+(defn write-temp-file-gzip
   "
-  Like stream->temp-file but additionally compress
-  the payload with Gzip.
+  Write src into a gzipped temp file and return it.
   "
-  ^File [^InputStream input-stream]
-
-  (let [tmp (get-temp-file)]
+  ^File [src]
+  (let [file (get-temp-file)]
     (with-open [in
-                input-stream
+                (io/input-stream src)
 
                 out
-                (-> tmp
-                    (io/output-stream)
-                    (gzip-output-stream))]
+                (->> file
+                     io/output-stream
+                     (new GZIPOutputStream))]
+      (.transferTo in out)
+      (.finish out))
+    file))
 
-      (.transferTo in out))
+(defn gzip-reader ^Reader [src]
+  (-> src
+      io/input-stream
+      GZIPInputStream.
+      io/reader))
 
-    tmp))
+(defn file->extension
+  "
+  Given a file instance, return if extension detected
+  as everything after the last dot.
+  "
+  ^String [^File file]
+  (some-> file
+          (str)
+          (str/split #"\.")
+          (last)))
 
-(defn file->gzip-stream
+(defn file->mime-type
   "
-  Turn a Gzip-compressed file into a stream.
+  Given a file instance, guess its MIME type by an extension.
+  Only basic types are supported. Default is application/octet-stream.
   "
-  ^InputStream [^File file]
-  (-> file
-      (io/input-stream)
-      (gzip-input-stream)))
-
-(defn file->gzip-reader
-  "
-  Turn a Gzip-compressed file into a reader.
-  "
-  ^Reader [^File file]
-  (-> file
-      (io/input-stream)
-      (gzip-input-stream)
-      (io/reader)))
+  ^String [^File file]
+  (case (-> file file->extension str/lower-case)
+    ("jpg" "jpeg") "image/jpeg"
+    "png"          "image/png"
+    "csv"          "text/csv"
+    "xlsx"         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    "xls"          "application/vnd.ms-excel"
+    "doc"          "application/msword"
+    "docx"         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    "txt"          "text/plain"
+    "pdf"          "application/pdf"
+    ("gz" "gzip")  "application/gzip"
+    "xml"          "application/xml"
+    "json"         "application/json"
+    "nippy"        "application/nippy"
+    "application/octet-stream"))
 
 (defn file-size
   "
