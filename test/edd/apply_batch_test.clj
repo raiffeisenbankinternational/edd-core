@@ -140,7 +140,7 @@
                              :headers
                              {"Authorization"
                               "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=b4cd223d1e2593c779cc5bececcf4921363eb3d889708f54eb30163e7a5b12a0"
-                              "x-amz-security-token" nil,
+                              "x-amz-security-token" "",
                               "x-amz-date" "20210322T232540Z",
                               "x-amz-content-sha256" "UNSIGNED-PAYLOAD"},
                              :as :stream}
@@ -196,10 +196,3 @@
                           {:method  :get
                            :timeout 90000000
                            :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
-
-
-
-
-
-
-

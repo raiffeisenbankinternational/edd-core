@@ -268,8 +268,10 @@
              :body (to-edn (:body resp))))))
 
 (defn get-env
-  [name & [default]]
-  (get (System/getenv) name default))
+  ([name]
+   (System/getenv name))
+  ([name default]
+   (or (System/getenv name) default)))
 
 (defn get-property
   [name & [default]]
