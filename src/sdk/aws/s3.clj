@@ -1,8 +1,9 @@
 (ns sdk.aws.s3
   (:import
-   java.time.OffsetDateTime
-   java.time.ZoneOffset
-   java.time.format.DateTimeFormatter)
+   (java.time ZoneOffset
+              OffsetDateTime)
+   (java.net URL)
+   (java.time.format DateTimeFormatter))
   (:require
    [clj-aws-sign.core :as sign]
    [clojure.data.xml :as xml]
@@ -18,10 +19,16 @@
 (set! *unchecked-math* :warn-on-boxed)
 
 (defn get-host
-  [ctx]
-  (str "s3."
-       (get-in ctx [:aws :region])
-       ".amazonaws.com"))
+  "
+  Derive a host name in various ways: either from a custom
+  endpoint, if passed, or using a region + the standard
+  AWS host naming rule.
+  "
+  ^String [ctx]
+  (or (some-> ctx :aws :endpoint (URL.) (.getHost))
+      (when-let [region (get-in ctx [:aws :region])]
+        (format "s3.%s.amazonaws.com" region))
+      (throw (new Exception "cannot derive a host name"))))
 
 (defn convert-query-params
   [params]
@@ -73,21 +80,41 @@
       :else response)))
 
 (defn get-aws-token [{:keys [aws]}]
-  (let [token (:aws-session-token aws)]
-    (if (empty? token)
+  (or (:aws-session-token aws)
       (System/getenv "AWS_SESSION_TOKEN")
-      token)))
+      (throw (new Exception "aws session token not set"))))
+
+(defn get-path
+  "
+  Get an S3 path starting with /bucket/...
+  "
+  [s3-object]
+  (str "/"
+       (get-in s3-object [:s3 :bucket :name])
+       "/"
+       (get-in s3-object [:s3 :object :key])))
+
+(defn get-url
+  "
+  Get a full S3 URL starting with http(s)://...
+  "
+  [{:keys [endpoint uri]}]
+  (str endpoint uri))
 
 (defn s3-request-helper [{:keys [aws] :as ctx} object]
-  {:headers    (merge {"Host"                 (get-host ctx)
-                       "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                       "x-amz-date"           (common/create-date)
-                       "x-amz-security-token" (get-aws-token ctx)}
-                      (get-in object [:s3 :headers]))
-   :service    "s3"
-   :region     (:region aws)
-   :access-key (:aws-access-key-id aws)
-   :secret-key (:aws-secret-access-key aws)})
+  (let [host (get-host ctx)
+        endpoint (or (:endpoint aws)
+                     (format "https://%s" host))]
+    {:headers    (merge {"Host"                 host
+                         "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                         "x-amz-date"           (common/create-date)
+                         "x-amz-security-token" (get-aws-token ctx)}
+                        (get-in object [:s3 :headers]))
+     :service    "s3"
+     :region     (:region aws)
+     :access-key (:aws-access-key-id aws)
+     :secret-key (:aws-secret-access-key aws)
+     :endpoint   endpoint}))
 
 (defn put-object
   "puts object.content (should be plain string) into object.s3.bucket.name under object.s3.bucket.key"
@@ -95,15 +122,11 @@
   (let [req
         (merge (s3-request-helper ctx object)
                {:method     "PUT"
-                :uri        (str "/"
-                                 (get-in object [:s3 :bucket :name])
-                                 "/"
-                                 (get-in object [:s3 :object :key]))})
+                :uri        (get-path object)})
         common (common/authorize req)
+        url    (get-url req)
         response (client/retry-n #(-> (util/http-put
-                                       (str "https://"
-                                            (get (:headers req) "Host")
-                                            (:uri req))
+                                       url
                                        (client/request->with-timeouts
                                         %
                                         {:as      :stream
@@ -141,21 +164,17 @@
 (defn get-object
   ([ctx object]
    (get-object ctx object {:retries client/retry-count}))
-  ([{:keys [_aws] :as ctx}
+  ([ctx
     object
-    {:keys [retries binary] :as _params}]
+    {:keys [retries binary]}]
    (let [req
          (merge (s3-request-helper ctx object)
                 {:method     "GET"
-                 :uri        (str "/"
-                                  (get-in object [:s3 :bucket :name])
-                                  "/"
-                                  (get-in object [:s3 :object :key]))})
+                 :uri        (get-path object)})
+         url    (get-url req)
          common (common/authorize req)
          response (client/retry-n #(-> (util/http-get
-                                        (str "https://"
-                                             (get (:headers req) "Host")
-                                             (:uri req))
+                                        url
                                         (client/request->with-timeouts
                                          %
                                          {:as      :stream
@@ -178,16 +197,11 @@
   (let [req
         (merge (s3-request-helper ctx object)
                {:method     "DELETE"
-                :uri        (str "/"
-                                 (get-in object [:s3 :bucket :name])
-                                 "/"
-                                 (get-in object [:s3 :object :key]))})
-
+                :uri        (get-path object)})
+        url    (get-url req)
         common (common/authorize req)
         response (client/retry-n #(-> (util/http-delete
-                                       (str "https://"
-                                            (get (:headers req) "Host")
-                                            (:uri req))
+                                       url
                                        (client/request->with-timeouts
                                         %
                                         {:as      :stream
@@ -355,15 +369,12 @@
          req
          (merge (s3-request-helper ctx object)
                 {:method     "GET"
-                 :uri        (str "/"
-                                  bucket)
+                 :uri        (str "/" bucket)
                  :query      [["list-type" "2"]
                               ["prefix" prefix]]})
 
          common (common/authorize req)
-         url (str "https://"
-                  (get (:headers req) "Host")
-                  (:uri req)
+         url (str (get-url req)
                   "?list-type=2"
                   "&prefix=" prefix)
          response (client/retry-n #(-> (util/http-get
@@ -374,7 +385,7 @@
                                           :headers (-> (:headers req)
                                                        (dissoc "Host")
                                                        (assoc "Authorization" common)
-                                                       (assoc "Accept" "application/json"))})
+                                                       (assoc "Accept" "application/xml"))})
                                         :raw true)
                                        (parse-response  object))
                                   :retries retries)

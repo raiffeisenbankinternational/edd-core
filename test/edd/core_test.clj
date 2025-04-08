@@ -229,7 +229,7 @@
                              :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=a574e8bfe0d25d8565c3cc47a17f225ec5c1e246c9a7b8646c44b80ba4c50e5c"
                                                "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
                                                "x-amz-date"           "20200426T061823Z"
-                                               "x-amz-security-token" nil}
+                                               "x-amz-security-token" ""}
                              :idle-timeout    5000
                              :method          :get
                              :url             "https://s3.eu-central-1.amazonaws.com/example-bucket/test/2021-12-27/2222b7b5-9f50-4dc4-86d1-2e4fe1f6d491/1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"}
@@ -416,51 +416,53 @@
 (deftest test-get-by-id-missing-snapshot
   "Test combinations of get-by. If aggregate snapshot return nil we apply events"
   "If no events we return nil"
-  (mock/with-mock-dal
-    (with-redefs [dal/get-events (fn [_]
-                                   [])
-                  util/http-get (fn [url request & {:keys [raw]}]
-                                  {:status 404})]
-      (let [response (query/handle-query
-                      (-> (prepare {})
+  (let [CTX {:aws {:region "test"
+                   :aws-session-token "test"}}]
+    (mock/with-mock-dal
+      (with-redefs [dal/get-events (fn [_]
+                                     [])
+                    util/http-get (fn [url request & {:keys [raw]}]
+                                    {:status 404})]
+        (let [response (query/handle-query
+                        (-> (prepare CTX)
+                            (elastic-view-store/register))
+                        {:query
+                         {:query-id :get-by-id
+                          :id       "bla"}})]
+          (is (contains? response :aggregate))
+          (is (= nil
+                 (:aggregate response))))))
+    (mock/with-mock-dal
+      (with-redefs [dal/get-events (fn [_]
+                                     [{:event-id  :e7
+                                       :event-seq 1}])
+                    util/http-get (fn [url request & {:keys [raw]}]
+                                    {:status 403})]
+        (is (thrown? ExceptionInfo
+                     (query/handle-query
+                      (-> (prepare CTX)
                           (elastic-view-store/register))
                       {:query
                        {:query-id :get-by-id
-                        :id       "bla"}})]
-        (is (contains? response :aggregate))
-        (is (= nil
-               (:aggregate response))))))
-  (mock/with-mock-dal
-    (with-redefs [dal/get-events (fn [_]
-                                   [{:event-id  :e7
-                                     :event-seq 1}])
-                  util/http-get (fn [url request & {:keys [raw]}]
-                                  {:status 403})]
-      (is (thrown? ExceptionInfo
-                   (query/handle-query
-                    (-> (prepare {})
-                        (elastic-view-store/register))
-                    {:query
-                     {:query-id :get-by-id
-                      :id       "bla"}})))))
-  (mock/with-mock-dal
-    (with-redefs [dal/get-events (fn [_]
-                                   [{:event-id  :e7
-                                     :event-seq 1
-                                     :id        "bla"}])
-                  util/http-get (fn [url request & {:keys [raw]}]
-                                  {:status 404})]
-      (let [response (query/handle-query
-                      (-> (prepare {})
-                          (elastic-view-store/register))
-                      {:query
-                       {:query-id :get-by-id
-                        :id       "bla"}})]
-        (is (contains? response :aggregate))
-        (is (= {:id      "bla"
-                :name    :e7
-                :version 1}
-               (:aggregate response)))))))
+                        :id       "bla"}})))))
+    (mock/with-mock-dal
+      (with-redefs [dal/get-events (fn [_]
+                                     [{:event-id  :e7
+                                       :event-seq 1
+                                       :id        "bla"}])
+                    util/http-get (fn [url request & {:keys [raw]}]
+                                    {:status 404})]
+        (let [response (query/handle-query
+                        (-> (prepare CTX)
+                            (elastic-view-store/register))
+                        {:query
+                         {:query-id :get-by-id
+                          :id       "bla"}})]
+          (is (contains? response :aggregate))
+          (is (= {:id      "bla"
+                  :name    :e7
+                  :version 1}
+                 (:aggregate response))))))))
 
 (deftest test-wrap-global-not-list
   (let [result (cmd/wrap-commands {:service-name "a"}

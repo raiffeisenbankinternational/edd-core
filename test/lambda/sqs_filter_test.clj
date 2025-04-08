@@ -125,7 +125,7 @@
                              :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=4228a5c1f0c90c90944df7658346fc5f2f0a3e365f7352b24991c6f1be6863d0"
                                                "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
                                                "x-amz-date"           "20200426T061823Z"
-                                               "x-amz-security-token" nil}
+                                               "x-amz-security-token" ""}
                              :idle-timeout    5000
                              :method          :get
                              :url             "https://s3.eu-central-1.amazonaws.com/s3-bucket/test/2021-12-27/0000b7b5-9f50-4dc4-86d1-2e4fe1f6d491/1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491.limedocu.txt"}

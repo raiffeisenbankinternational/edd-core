@@ -88,7 +88,7 @@
           :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=2c0a385a8728aff9742fb81f8b86bb8635ca11599ad58c856607900e528d1d32"
                             "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
                             "x-amz-date"           "20200426T061823Z"
-                            "x-amz-security-token" nil}
+                            "x-amz-security-token" ""}
           :method          :get
           :connect-timeout 300
           :idle-timeout    5000
