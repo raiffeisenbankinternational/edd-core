@@ -1,0 +1,16 @@
+name: gitleaks-secret-scan
+
+on:
+  push:
+    branches: [staging]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  gitleaks-action: 
+    uses: raiffeisen-group-open-source/rbi-opensource-actions/.github/workflows/gitleaks.yml@master
+    secrets:
+      PUBLIC_TOKEN: ${{ secrets.PUBLIC_TOKEN }}
+      PUBLIC_USERNAME: ${{ secrets.PUBLIC_USERNAME }}
+
+
