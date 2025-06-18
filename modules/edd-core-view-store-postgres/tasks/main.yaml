@@ -1,0 +1,63 @@
+- debug:
+    msg: "Role path: {{ role_path }}"
+
+- debug:
+    msg: "Playbook dir: {{ playbook_dir }}"
+
+- shell: |
+    mkdir -p "{{ role_path }}/migrations"
+    ls -la "{{ role_path }}/migrations"
+  register: global_migrations
+
+- debug:
+    var: global_migrations
+
+- shell: |
+    mkdir -p ""{{ playbook_dir }}/migrations""
+    ls -la "{{ playbook_dir }}/migrations"
+  register: local_migrations
+
+- debug:
+    var: local_migrations
+
+- name: 'Copy migrations from edd-core as global migrations'
+  environment: "{{ parameters }}"
+  s3_sync:
+    region: "{{ parameters['Region'] }}"
+    bucket: "{{ parameters['DeploymentS3BucketName'] }}"
+    file_root: "{{ role_path }}/migrations"
+    key_prefix: "migrations/postgres/{{ parameters['ServiceName'] }}/global"
+    file_change_strategy: force
+    delete: true
+
+- name: 'Copy migration from service project as local migrations'
+  environment: "{{ parameters }}"
+  s3_sync:
+    region: "{{ parameters['Region'] }}"
+    bucket: "{{ parameters['DeploymentS3BucketName'] }}"
+    file_root: "{{ playbook_dir }}/migrations"
+    key_prefix: "migrations/postgres/{{ parameters['ServiceName'] }}/local"
+    file_change_strategy: force
+    delete: true
+
+- set_fact:
+    other_realms: "{{ lookup('amazon.aws.aws_ssm', '/config/realms') | from_json | reject('equalto', 'test') | list }}"
+
+- debug:
+    msg: 'Other relams {{ other_realms }}'
+
+- debug:
+    msg: 'Migrating test'
+
+- include_tasks: migrate.yaml
+  loop:
+    - test
+
+- debug:
+    msg: 'Migrating other realms'
+
+- include_tasks: migrate.yaml
+  loop: '{{ other_realms }}'
+
+- debug:
+    msg: 'Obviously done :)'

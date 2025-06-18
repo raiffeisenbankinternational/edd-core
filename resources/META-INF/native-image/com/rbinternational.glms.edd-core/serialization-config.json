@@ -1,0 +1,14 @@
+{
+  "types":[
+    {
+      "name":"java.time.LocalDate"
+    },
+    {
+      "name":"java.time.Ser"
+    }
+  ],
+  "lambdaCapturingTypes":[
+  ],
+  "proxies":[
+  ]
+}

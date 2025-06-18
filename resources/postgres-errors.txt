@@ -1,0 +1,2 @@
+org.postgresql.util.PSQLException: ERROR: null value in column "event_seq" violates not-null constraint
+  Detail: Failing row contains (2efcf617-45c9-4c43-89b6-3dd737151238, 2020-11-24 19:27:53.042521+01, null, null, null, null, null, 6ecc85e1-9d12-4f36-90cf-0b2820d35e73, {"id": "#6ecc85e1-9d12-4f36-90cf-0b2820d35e73", "event-id": ":e1...).

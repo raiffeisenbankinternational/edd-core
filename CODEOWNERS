@@ -1,0 +1,3 @@
+# .github/CODEOWNERS
+.github/workflows/*  @open-source-admins
+

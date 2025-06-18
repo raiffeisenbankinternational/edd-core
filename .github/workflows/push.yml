@@ -1,0 +1,14 @@
+name: push-public
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  call-workflow-passing-data:
+    uses: raiffeisen-group-open-source/rbi-opensource-actions/.github/workflows/push.yml@master
+    secrets:
+      PUBLIC_TOKEN: ${{ secrets.PUBLIC_TOKEN }}
+      PUBLIC_USERNAME: ${{ secrets.PUBLIC_USERNAME }}
+
+
