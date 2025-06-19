@@ -4,6 +4,7 @@
             [lambda.emf :as emf]
             [lambda.request :as request]
             [lambda.uuid :as uuid]
+            [aws.ctx :as aws-ctx]
             [clojure.tools.logging :as log]))
 
 (set! *warn-on-reflection* true)
@@ -26,15 +27,15 @@
   (post-filter ctx))
 
 (defn send-response
-  [{:keys [resp] :as ctx}]
+  [{:keys [resp] :as ctx} & params]
   (let [exception (if (vector? resp)
                     (-> (filter #(contains? % :exception) resp)
                         (first))
                     (:exception resp))
         filtered (:resp (apply-post-filter ctx))]
     (if exception
-      (aws/send-error ctx filtered)
-      (aws/send-success ctx filtered))))
+      (aws/send-error ctx filtered params)
+      (aws/send-success ctx filtered params))))
 
 (defn invoke-handler
   [{:keys [body handler] :as ctx}]
@@ -103,26 +104,16 @@
           (handle-error (assoc ctx
                                :req body) e))))))
 
-(defn fetch-aws-config
-  []
-  {:region                (util/get-env "Region"
-                                        (util/get-env "AWS_DEFAULT_REGION" "local"))
-   :account-id            (util/get-env "AccountId" "local")
-   :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID" "")
-   :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY" "")
-   :aws-session-token     (util/get-env "AWS_SESSION_TOKEN" "")})
-
 (defn initalize-context
   [ctx]
   (-> ctx
       (merge (util/load-config "secret.json"))
       (merge (util/to-edn
               (util/get-env "CustomConfig" "{}")))
+      (aws-ctx/init)
       (assoc :service-name (keyword (util/get-env
                                      "ServiceName"
                                      "local-test"))
-             :aws (merge (fetch-aws-config)
-                         (get ctx :aws {}))
              :hosted-zone-name (util/get-env
                                 "PublicHostedZoneName"
                                 "example.com")

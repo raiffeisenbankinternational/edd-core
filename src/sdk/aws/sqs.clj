@@ -188,7 +188,7 @@
      :id id}))
 
 (defn sqs-publish-batch
-  [{:keys [queue messages aws] :as ctx}]
+  [{:keys [queue messages aws] :as _ctx}]
   (let [req {:method "POST"
              :uri (str "/"
                        (:account-id aws)

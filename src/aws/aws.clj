@@ -24,10 +24,6 @@
       (update-in req [:body :body] util/base64decode)
       req)))
 
-(def response
-  {:statusCode 200
-   :headers    {"Content-Type" "application/json"}})
-
 (defn enqueue-response
   [ctx _]
   (let [resp (get @request/*request* :cache-keys)]
@@ -44,17 +40,24 @@
              (throw (ex-info "Distribution failed" error))))
         (flatten resp))))))
 
-(defn send-success
+(defn send-loop-runtime-success
   [{:keys [api
-           invocation-id
-           from-api] :as ctx} body]
+           invocation-id]
+    :as _ctx}
+   response]
+  (util/http-post
+   (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/response")
+   {:body (util/to-json response)}))
+
+(defn send-success
+  [{:keys [from-api] :as ctx}
+   response
+   & [{:keys [on-success-fn]
+       :or {on-success-fn send-loop-runtime-success}}]]
 
   (util/d-time (str "Distributing success (from-api? " from-api ")")
-               (enqueue-response ctx body))
-  (util/to-json
-   (util/http-post
-    (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/response")
-    {:body (util/to-json body)})))
+               (enqueue-response ctx response))
+  (on-success-fn ctx response))
 
 (defn get-items-to-delete
   [responses records]
@@ -78,50 +81,56 @@
         :else
         to-delete))))
 
-(defn send-error
+(defn send-loop-runtime-error
   [{:keys [api
-           invocation-id
            from-api
+           invocation-id]
+    :as _ctx}
+   response]
+  (let [target
+        (if from-api
+          "response"
+          "error")]
+    (util/http-post
+     (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/" target)
+     {:body (util/to-json response)})))
+
+(defn send-error
+  [{:keys [from-api
            req]
     :as ctx}
+   response
 
-   responses]
+   & [{:keys [on-error-fn]
+       :or {on-error-fn send-loop-runtime-error}}]]
 
-  (let [target (if from-api
-                 "response"
-                 "error")]
-    (when-not from-api
-      (let [responses
-            (if (map? responses)
-              (do
-                (log/info "Got map as queu response :S")
-                [responses])
-              responses)
+  (when-not from-api
+    (let [responses
+          (if (map? response)
+            (do
+              (log/info "Got map as queu response :S")
+              [response])
+            response)
 
-            records
-            (:Records req)
+          records
+          (:Records req)
 
-            to-delete
-            (get-items-to-delete responses
-                                 records)]
-        (when (> (count to-delete) 0)
-          (let [queue (-> to-delete
-                          first
-                          :eventSourceARN
-                          (string/split #":")
-                          last)]
-            (sqs/delete-message-batch (assoc ctx
-                                             :queue queue
-                                             :messages to-delete))))))
-
-    (let [resp (util/to-json responses)]
-      (util/d-time "Distribute error"
-                   (enqueue-response ctx responses))
-      (log/error resp)
-      (util/to-json
-       (util/http-post
-        (str "http://" api "/2018-06-01/runtime/invocation/" invocation-id "/" target)
-        {:body resp})))))
+          to-delete
+          (get-items-to-delete responses
+                               records)]
+      (when (> (count to-delete) 0)
+        (let [queue (-> to-delete
+                        first
+                        :eventSourceARN
+                        (string/split #":")
+                        last)]
+          (sqs/delete-message-batch (assoc ctx
+                                           :queue queue
+                                           :messages to-delete))))))
+  (util/d-time "Distribute error"
+               (enqueue-response ctx response))
+  (log/error response)
+  (on-error-fn ctx response))
 
 (defn get-or-set
   [cache key get-fn]

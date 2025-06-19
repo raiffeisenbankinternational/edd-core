@@ -56,6 +56,10 @@ RUN set -e &&\
     export DatabasePassword="no-secret" &&\
     export DatabaseEndpoint="127.0.0.1" &&\
     domain_name=$(aws es list-domain-names  | jq -r '.DomainNames[0].DomainName') &&\
+    echo "Purging all SQS" &&\
+    for queue in $(aws sqs list-queues --query 'QueueUrls[]' --output text); do \
+      aws sqs purge-queue --queue-url $queue; \
+    done &&\
     echo "Found domain ${domain_name}" &&\
     domain_url=$(aws es describe-elasticsearch-domain --domain-name ${domain_name} | jq -r '.DomainStatus.Endpoints.vpc') &&\
     export IndexDomainScheme=https &&\

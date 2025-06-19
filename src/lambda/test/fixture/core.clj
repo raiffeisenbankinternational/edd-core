@@ -16,7 +16,9 @@
   [base e & [def]]
   (let [sysenv (System/getenv)
         env (merge
-             {"AWS_LAMBDA_RUNTIME_API" "mock"
+             {"AWS_ACCESS_KEY_ID" ""
+              "AWS_SECRET_ACCESS_KEY" ""
+              "AWS_LAMBDA_RUNTIME_API" "mock"
               "Region"                 region}
              base)]
     (get env e (get sysenv e def))))

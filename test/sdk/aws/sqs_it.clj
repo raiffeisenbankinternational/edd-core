@@ -13,7 +13,7 @@
 (deftest test-send-and-receive
   (testing "Test simple single send and receive from it quque"
     (let [ctx (aws-ctx/init {:environment-name-lower (util/get-env "EnvironmentNameLower")})
-          message "test-message"
+          message (util/to-json "test-message")
           queue (str (util/get-env "AccountId")
                      "-"
                      (util/get-env "EnvironmentNameLower")
