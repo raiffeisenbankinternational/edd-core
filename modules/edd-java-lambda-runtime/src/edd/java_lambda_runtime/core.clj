@@ -10,45 +10,46 @@
   (:import
    [com.amazonaws.services.lambda.runtime Context]))
 
+(defonce init-cache
+  (atom {}))
+
 (defn java-request-handler
   [init-ctx handler & {:keys [filters post-filter]
                        :or   {filters     []
                               post-filter (fn [ctx] ctx)}}]
   (emf/start-metrics-publishing!)
-  (let [cache
-        (atom {})]
-    (fn [_this input output ^Context context]
-      (binding [util/*cache* cache]
-        (let [request
-              {:body
-               (util/to-edn
-                (slurp input))}
+  (fn [_this input output ^Context context]
+    (binding [util/*cache* init-cache]
+      (let [request
+            {:body
+             (util/to-edn
+              (slurp input))}
 
-              invocation-id
-              (.getAwsRequestId context)]
-          (lambda/send-response
-           (lambda/handle-request
-            (-> init-ctx
-                (aws-ctx/init)
-                (assoc :filters filters
-                       :handler handler
-                       :post-filter post-filter)
-                (lambda/initalize-context)
-                (assoc :from-api (lambda/is-from-api request))
-                (assoc :invocation-id (if-not (int? invocation-id)
-                                        (uuid/parse invocation-id)
-                                        invocation-id)))
-            request)
-           {:on-success-fn
-            (fn [_ctx
-                 response]
-              (with-open [o (io/writer output)]
-                (.write o (util/to-json response))))
-            :on-error-fn
-            (fn [_ctx
-                 response]
-              (with-open [o (io/writer output)]
-                (.write o (util/to-json response))))}))))))
+            invocation-id
+            (.getAwsRequestId context)]
+        (lambda/send-response
+         (lambda/handle-request
+          (-> init-ctx
+              (aws-ctx/init)
+              (assoc :filters filters
+                     :handler handler
+                     :post-filter post-filter)
+              (lambda/initalize-context)
+              (assoc :from-api (lambda/is-from-api request))
+              (assoc :invocation-id (if-not (int? invocation-id)
+                                      (uuid/parse invocation-id)
+                                      invocation-id)))
+          request)
+         {:on-success-fn
+          (fn [_ctx
+               response]
+            (with-open [o (io/writer output)]
+              (.write o (util/to-json response))))
+          :on-error-fn
+          (fn [_ctx
+               response]
+            (with-open [o (io/writer output)]
+              (.write o (util/to-json response))))})))))
 
 (defmacro start
   [ctx handler & other]
