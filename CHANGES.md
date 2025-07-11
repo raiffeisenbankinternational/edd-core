@@ -2,6 +2,9 @@
 
 ## Changes
 
+- [LSO-15805] Initialitize runtime only once
+
+
 - [LSO-15727] Fix cache creation for CRAC Java Runtime
 
 

@@ -32,9 +32,13 @@
              :access-key aws-access-key-id
              :secret-key aws-secret-access-key}
         auth (common/authorize req)
+
+        url
+        (str "https://" (get (:headers req) "Host"))
+
         response (client/retry-n
                   #(util/http-post
-                    (str "https://" (get (:headers req) "Host"))
+                    url
                     (client/request->with-timeouts
                      %
                      {:body    (:payload req)
@@ -53,7 +57,9 @@
                        (log/error "Auth failure response"
                                   status
                                   (:body response))
-                       {:error {:status status}})
+                       {:error {:status status
+                                :url url
+                                :message (:body response)}})
       :else response)))
 
 (defn admin-initiate-auth

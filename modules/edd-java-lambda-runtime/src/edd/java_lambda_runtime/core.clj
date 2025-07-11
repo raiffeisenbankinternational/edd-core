@@ -10,27 +10,47 @@
   (:import
    [com.amazonaws.services.lambda.runtime Context]))
 
-(defonce init-cache
+(defn initialize-system
+  []
+  (emf/start-metrics-publishing!)
   (atom {}))
+
+(defonce init-cache
+  (initialize-system))
 
 (defn java-request-handler
   [init-ctx handler & {:keys [filters post-filter]
                        :or   {filters     []
                               post-filter (fn [ctx] ctx)}}]
-  (emf/start-metrics-publishing!)
+
   (fn [_this input output ^Context context]
     (binding [util/*cache* init-cache]
-      (let [request
+      (let [init-ctx
+            (if (:aws @init-cache)
+              (assoc  init-ctx
+                      :aws
+                      (:aws @init-cache))
+              init-ctx)
+
+            request
             {:body
              (util/to-edn
               (slurp input))}
 
             invocation-id
-            (.getAwsRequestId context)]
+            (.getAwsRequestId context)
+
+            init-ctx
+            (aws-ctx/init init-ctx)]
+
+        (swap! init-cache
+               assoc
+               :aws
+               (:aws init-ctx))
+
         (lambda/send-response
          (lambda/handle-request
           (-> init-ctx
-              (aws-ctx/init)
               (assoc :filters filters
                      :handler handler
                      :post-filter post-filter)
@@ -40,6 +60,7 @@
                                       (uuid/parse invocation-id)
                                       invocation-id)))
           request)
+
          {:on-success-fn
           (fn [_ctx
                response]
