@@ -2,6 +2,12 @@
 
 ## Changes
 
+- [LSO-15825] Update compojure to 1.7.1
+- move compojure to edd-core-dev/deps.edn
+- leave explicit requirement for ring-codec in main deps.edn
+
+
+
 - [LSO-15805] Initialitize runtime only once
 
 

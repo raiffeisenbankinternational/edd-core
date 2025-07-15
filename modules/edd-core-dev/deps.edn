@@ -1,8 +1,9 @@
-{:deps    {info.sunng/ring-jetty9-adapter {:mvn/version "0.14.3"}
+{:deps    {info.sunng/ring-jetty9-adapter    {:mvn/version "0.14.3"}
+           compojure/compojure               {:mvn/version "1.7.1"},
            app-group-id/edd-core {:local/root "../../"}}
  :paths   ["src" "resources"],
- :aliases {:build {:deps {io.github.clojure/tools.build {:mvn/version "0.10.6"}}
-                   :ns-default build}
+ :aliases {:build    {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.6"}}
+                      :ns-default build}
            :test     {:extra-paths ["test"],
                       :extra-deps  {org.clojure/test.check     {:mvn/version "1.0.0"}
                                     com.gfredericks/test.chuck {:mvn/version "0.2.11"}}},
