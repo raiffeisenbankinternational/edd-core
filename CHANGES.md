@@ -2,6 +2,15 @@
 
 ## Changes
 
+- [LSO-15555] Remove deps to ring
+We dont need ring and want to use URLEncoder from
+JVM. But there are special requirements for AWS
+url encoding:
+
+https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sigv-create-signed-request.html#sigv4-create-canonical-request-steps
+
+
+
 - [LSO-15825] Update compojure to 1.7.1
 - move compojure to edd-core-dev/deps.edn
 - leave explicit requirement for ring-codec in main deps.edn

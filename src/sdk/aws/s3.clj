@@ -12,7 +12,6 @@
    [clojure.tools.logging :as log]
    [lambda.http-client :as client]
    [lambda.util :as util]
-   [ring.util.codec :as codec]
    [sdk.aws.common :as common]))
 
 (set! *warn-on-reflection* true)
@@ -433,6 +432,11 @@
                  aws-session-token]}
          aws
 
+         ;; Remove leading slash from path to avoid double slashes
+         path (if (string/starts-with? path "/")
+                (subs path 1)
+                path)
+
          timestamp-full
          (get-aws-timestamp)
 
@@ -465,7 +469,7 @@
          string-to-sign
          (sign/string-to-sign {:timestamp timestamp-full
                                :method method-norm
-                               :uri path
+                               :uri (str "/" path)
                                :query query-params
                                :payload sign/UNSIGNED_PAYLOD
                                :short-timestamp timestamp-short
@@ -487,7 +491,7 @@
              base-url
              (-> query-params
                  (assoc "X-Amz-Signature" signature)
-                 (codec/form-encode))))))
+                 (common/aws-form-encode))))))
 
 (comment
 

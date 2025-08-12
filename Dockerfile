@@ -42,7 +42,7 @@ RUN set -e &&\
     PROJECT_NAME="api" clojure -M:test:unit &&\
     export AWS_DEFAULT_REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region) &&\
     export AWS_REGION=$AWS_DEFAULT_REGION &&\
-    TARGET_ACCOUNT_ID="$(aws sts get-caller-identity | jq -r '.Account')" &&\
+    export TARGET_ACCOUNT_ID="$(aws sts get-caller-identity | jq -r '.Account')" &&\
     cred=$(aws sts assume-role \
                 --role-arn arn:aws:iam::${TARGET_ACCOUNT_ID}:role/PipelineRole \
                 --role-session-name "${PROJECT_NAME}-deployment-${RANDOM}" \
