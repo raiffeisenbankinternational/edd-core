@@ -10,13 +10,17 @@
 
 (shutdown-agents)
 
+(def VERSION_OVERRIDE
+  (System/getProperty "edd-core.override"))
+
 (defn override-deps-with-static-build-id
   [deps]
   (reduce-kv
    (fn [acc k v]
      (assoc acc k (if (and (str/includes? (str k) "app-group-id")
-                           (contains? v :local/root))
-                    {:mvn/version (System/getProperty "edd-core.override")}
+                           (contains? v :local/root)
+                           (some? VERSION_OVERRIDE))
+                    {:mvn/version VERSION_OVERRIDE}
                     v)))
    deps
    deps))

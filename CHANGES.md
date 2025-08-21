@@ -2,6 +2,9 @@
 
 ## Changes
 
+- [LSP-10680] Create edd-json module
+
+
 - [LSO-15555] Remove deps to ring
 We dont need ring and want to use URLEncoder from
 JVM. But there are special requirements for AWS

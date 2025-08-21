@@ -1,0 +1,23 @@
+{:deps
+ {com.alpha-prosoft/jsonista {:mvn/version "0.3.8.11"}
+  net.mikera/vectorz {:mvn/version "0.66.0"}}
+ :paths ["src" "resources"]
+ :aliases
+ {:build  {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.6"}}
+           :ns-default build}
+
+  :test   {:extra-paths ["test", "test/resources"],
+           :extra-deps  {org.clojure/test.check {:mvn/version "1.1.1"}}},
+
+  :unit   {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}},
+           :main-opts  ["-m" "kaocha.runner" "unit"]}
+
+  :dev    {:extra-paths ["dev" "dev/resources"]
+           :extra-deps
+           {org.clojure/clojure {:mvn/version "1.12.0"}}}
+
+  :lint   {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2023.01.20"}}
+           :main-opts  ["-m" "clj-kondo.main" "--lint" "src" "test"]}
+
+  :format {:extra-deps {dev.weavejester/cljfmt {:mvn/version "0.11.2"}}
+           :main-opts  ["-m" "cljfmt.main" "fix" "src" "test" "--config" "cljfmt.edn"]}}}

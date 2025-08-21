@@ -5,82 +5,36 @@
             [clojure.string :as str]
             [clojure.tools.logging :as log]
             [clojure.walk :as walk]
+            [edd.json.core :as json]
             [java-http-clj.core :as http]
-            [jsonista.core :as json]
             [lambda.aes :as aes]
             [lambda.gzip :as gzip]
             [lambda.request :as request])
-  (:import (clojure.lang Keyword)
-           (com.fasterxml.jackson.core JsonGenerator)
-           (com.fasterxml.jackson.databind ObjectMapper)
-           (com.fasterxml.jackson.databind.module SimpleModule)
-           (java.io File BufferedReader InputStream)
+  (:import (java.io File InputStream)
            (java.net URLEncoder)
            (java.nio.charset Charset)
            (java.nio.charset StandardCharsets)
            (java.time OffsetDateTime)
            (java.time.format DateTimeFormatter)
-           (java.util UUID Date Base64)
+           (java.util Date Base64)
            (javax.crypto Mac)
-           (javax.crypto.spec SecretKeySpec)
-           (jsonista.jackson FunctionalUUIDKeySerializer)
-           (mikera.vectorz AVector)))
+           (javax.crypto.spec SecretKeySpec)))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
 
 (def offset-date-time-format "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
 
-(defn decode-json-special
-  [^String v]
-  (case (first v)
-    \: (if (str/starts-with? v "::")
-         (subs v 1)
-         (keyword (subs v 1)))
-    \# (if (str/starts-with? v "##")
-         (subs v 1)
-         (UUID/fromString (subs v 1)))
-    v))
+;;
+;; Proxy JSON-related functions from a submodule.
+;;
 
-(def edd-core-module
-  (doto (SimpleModule. "EddCore")
-    (.addKeySerializer
-     UUID
-     (FunctionalUUIDKeySerializer. (partial str "#")))))
-
-(def ^ObjectMapper json-mapper
-  (json/object-mapper
-   {:modules [edd-core-module]
-    :decode-key-fn
-    (fn [v]
-      (case (first v)
-        \# (if (str/starts-with? v "##")
-             (subs v 1)
-             (UUID/fromString (subs v 1)))
-        (keyword v)))
-    :decode-fn
-    (fn [v]
-      (condp instance? v
-        String (decode-json-special v)
-        v))
-    :encoders      {String         (fn [^String v ^JsonGenerator jg]
-                                     (cond
-                                       (str/starts-with? v ":")
-                                       (.writeString jg (str ":" v))
-                                       (str/starts-with? v "#")
-                                       (.writeString jg (str "#" v))
-                                       :else (.writeString jg v)))
-                    BufferedReader (fn [^BufferedReader v ^JsonGenerator jg]
-                                     (.writeString jg "BufferedReader"))
-                    UUID           (fn [^UUID v ^JsonGenerator jg]
-                                     (.writeString jg (str "#" v)))
-                    Keyword        (fn [^Keyword v ^JsonGenerator jg]
-                                     (.writeString jg (str ":" (name v))))
-                    AVector        (fn [^AVector v ^JsonGenerator jg]
-                                     (.writeStartArray jg)
-                                     (doseq [n v]
-                                       (.writeNumber jg (str n)))
-                                     (.writeEndArray jg))}}))
+(def decode-json-special json/decode-json-special)
+(def json-mapper json/json-mapper)
+(def to-edn json/to-edn)
+(def to-json json/to-json)
+(def to-json-bytes json/to-json-bytes)
+(def to-json-out json/to-json-out)
 
 (defn date-time
   (^OffsetDateTime [] (OffsetDateTime/now))
@@ -97,26 +51,6 @@
 (defn is-in-past
   [^Date date]
   (.before date (new Date)))
-
-(defn to-edn
-  [json]
-  (json/read-value json json-mapper))
-
-(defn to-json
-  ^String [edn]
-  (json/write-value-as-string edn json-mapper))
-
-(defn to-json-bytes
-  ^bytes [edn]
-  (json/write-value-as-bytes edn json-mapper))
-
-(defn to-json-out
-  "
-  Write a value into a destination that can be
-  a file, an output stream, a writer, etc.
-  "
-  [dest edn]
-  (json/write-value dest edn json-mapper))
 
 (defn wrap-body [request]
   (cond
