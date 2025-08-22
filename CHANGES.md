@@ -2,6 +2,13 @@
 
 ## Changes
 
+- [LSP-10688] Reduce dependencies in json module
+- exclude external libraries from the net.mikera/vectorz library
+- additional make targets
+- run the changes script earlier in pre-build.sh
+
+
+
 - [LSP-10680] Create edd-json module
 
 

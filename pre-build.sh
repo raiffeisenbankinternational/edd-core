@@ -3,6 +3,19 @@
 set -exo pipefail
 set -e
 
+### Let's deal with the changes before stepping further.
+
+# Run changes.sh to update CHANGES.md
+./changes.sh
+
+# Check if CHANGES.md has changes
+if [[ -n $(git diff --name-only CHANGES.md) ]]; then
+    echo "CHANGES.md has been updated. Please review the changes and commit them."
+    exit 1
+fi
+
+### end changes
+
 docker container prune --force
 
 mkdir -p modules
@@ -31,12 +44,3 @@ docker compose run migration-test-edd-core
 docker compose run migration-test-dimension
 
 echo "Continue"
-
-# Run changes.sh to update CHANGES.md
-./changes.sh
-
-# Check if CHANGES.md has changes
-if [[ -n $(git diff --name-only CHANGES.md) ]]; then
-    echo "CHANGES.md has been updated. Please review the changes and commit them."
-    exit 1
-fi

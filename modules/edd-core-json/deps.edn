@@ -1,6 +1,11 @@
 {:deps
  {com.alpha-prosoft/jsonista {:mvn/version "0.3.8.11"}
-  net.mikera/vectorz {:mvn/version "0.66.0"}}
+  net.mikera/vectorz {:mvn/version "0.66.0"
+                      ;; We need a single class to extend a protocol
+                      ;; but not the whole Mikera stuff. Excluding.
+                      :exclusions [us.bpsm/edn-java
+                                   net.mikera/randomz
+                                   net.mikera/mathz]}}
  :paths ["src" "resources"]
  :aliases
  {:build  {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.6"}}

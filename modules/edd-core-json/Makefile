@@ -1,5 +1,5 @@
 
-all: lint test
+all: lint test deps-tree
 
 .PHONY: test
 test:
@@ -12,3 +12,6 @@ lint:
 repl:
 	rm -rf .cpcache
 	clj -M:local:dev:test:nrepl
+
+deps-tree:
+	clojure -Stree
