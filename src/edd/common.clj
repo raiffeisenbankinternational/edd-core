@@ -144,9 +144,9 @@
   [ctx & [query]]
   {:pre [(or (:identity ctx)
              query)]}
-  (let [identity (or (:identitiy ctx)
+  (let [identity (or (:identity ctx)
                      (parse-param query))
-        resp (request-cache/get-identitiy ctx identity)]
+        resp (request-cache/get-identity ctx identity)]
     (if resp
       resp
       (dal/get-aggregate-id-by-identity
@@ -156,7 +156,7 @@
   [ctx & [query]]
   {:pre [(or (:identity ctx)
              query)]}
-  (let [id (get-aggregate-id-by-identity query)]
+  (let [id (get-aggregate-id-by-identity ctx query)]
     (when id
       (merge {:id id}
              (get-by-id ctx id)))))

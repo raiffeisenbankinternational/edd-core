@@ -35,7 +35,7 @@
                        id]
                     (clojure-walk/keywordize-keys aggregate))))
 
-(defn get-identitiy
+(defn get-identity
   [ctx id]
   (get-in @request/*request* [:edd-core
                               :cache

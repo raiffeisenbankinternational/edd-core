@@ -2,6 +2,8 @@
 
 ## Changes
 
+- [LSO-16349] Fix typo in identity query
+
 - [CARS-4101] Add better logging to have durations
 This way we can see what is bottleneck.
 

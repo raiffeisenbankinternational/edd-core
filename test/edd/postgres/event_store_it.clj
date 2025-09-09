@@ -696,6 +696,10 @@
         (fn [ctx]
           (is (= nil
                  (common/get-aggregate-id-by-identity ctx {:ccn nil})))
+          (is (thrown? java.lang.AssertionError
+                       (common/get-aggregate-id-by-identity ctx nil)))
+          (is (= agg-id
+                 (common/get-aggregate-id-by-identity (assoc ctx :identity ccn1) nil)))
           (is (= {}
                  (common/get-aggregate-id-by-identity ctx {:ccn []})))
           (is (= {ccn1 agg-id
