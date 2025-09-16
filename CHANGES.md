@@ -2,6 +2,16 @@
 
 ## Changes
 
+- [LSP-10813] Improve edd-core (errors, logs, metrics)
+FEATURE:
+- disable metrics then an env var set
+- detailed log in command handler
+
+FIX:
+- for java runtime we need new *request* atom for each request
+
+
+
 - [LSP-10688] Reduce dependencies in json module
 - exclude external libraries from the net.mikera/vectorz library
 - additional make targets

@@ -95,6 +95,7 @@ RUN set -e &&\
     cd modules &&\
     for i in $(ls -1 | sort); do \
        cd $i &&\
+       echo "Building module: ${i}" &&\
        cat deps.edn &&\
        clojure -Stree &&\
        clojure -M:test:it &&\

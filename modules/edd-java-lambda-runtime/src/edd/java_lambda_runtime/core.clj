@@ -6,7 +6,8 @@
    [clojure.tools.logging :as log]
    [lambda.emf :as emf]
    [lambda.util :as util]
-   [lambda.uuid :as uuid])
+   [lambda.uuid :as uuid]
+   [lambda.request :as request])
   (:import
    [com.amazonaws.services.lambda.runtime Context]))
 
@@ -24,7 +25,8 @@
                               post-filter (fn [ctx] ctx)}}]
 
   (fn [_this input output ^Context context]
-    (binding [util/*cache* init-cache]
+    (binding [util/*cache* init-cache
+              request/*request* (atom {})]
       (let [init-ctx
             (if (:aws @init-cache)
               (assoc  init-ctx

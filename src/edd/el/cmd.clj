@@ -183,12 +183,20 @@
   (try
     (handler ctx cmd)
     (catch Exception e
-      (let [data (ex-data e)]
-        (when data
-          (throw e))
-        (log/warn "Command handler failed" e)
-        (throw (ex-info "Command handler failed"
-                        {:message "Command handler failed"}))))))
+      (let [msg
+            (format
+             "Command handler has failed, cmd-id: %s, id: %s"
+             (-> cmd :cmd-id)
+             (-> cmd :id))]
+        (log/warnf e
+                   msg
+                   (-> cmd :cmd-id)
+                   (-> cmd :id))
+        (if (ex-data e)
+          (throw e)
+          (throw (ex-info msg
+                          {:message msg}
+                          e)))))))
 
 (defn get-response-from-command-handler
   [ctx & {:keys [command-handler cmd]}]

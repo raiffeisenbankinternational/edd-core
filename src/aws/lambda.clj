@@ -126,7 +126,8 @@
   [init-ctx handler & {:keys [filters post-filter]
                        :or   {filters     []
                               post-filter (fn [ctx] ctx)}}]
-  (emf/start-metrics-publishing!)
+  (when-not (util/get-env "AWS_LAMBDA_DISABLE_METRICS")
+    (emf/start-metrics-publishing!))
   (with-cache
     #(let [api (util/get-env "AWS_LAMBDA_RUNTIME_API")
            ctx (-> init-ctx
@@ -152,5 +153,3 @@
                                             (uuid/parse invocation-id)
                                             invocation-id)))
                 request)))))))))
-
-
