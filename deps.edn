@@ -46,4 +46,5 @@
    :main-opts ["-m" "seancorfield.readme"]}
   :outdated
   {:extra-deps {olical/depot {:mvn/version "2.3.0"}}
-   :main-opts ["-m" "depot.outdated.main"]}}}
+   :main-opts ["-m" "depot.outdated.main"]}
+  :local {:jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}}}

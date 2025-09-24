@@ -2,6 +2,12 @@
 
 ## Changes
 
+- [LSO-16510] Implement logging for local de
+Add simple hierarchical loogger. Each d-time will be logged in its on
+ident
+
+
+
 - [LSO-16507] Add a comment to the parser module
 - add a comment to the parser module about malli
 - update makefile

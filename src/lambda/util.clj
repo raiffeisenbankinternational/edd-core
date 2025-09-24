@@ -285,31 +285,36 @@
          (.doFinal mac)
          (.encodeToString (Base64/getEncoder)))))
 
+(def ^:dynamic *d-time-depth*)
+
 (defmacro d-time
   "Evaluates expr and logs time it took.  Returns the value of
  expr."
   {:added "1.0"}
   [message & expr]
-  `(do
-     (let [start# (. System (nanoTime))
-           mem# (long
-                 (/ (long (- (.totalMemory (Runtime/getRuntime))
-                             (.freeMemory (Runtime/getRuntime))))
-                    1048576.0))
+  `(let [current-depth#
+         (int
+          (if (bound? #'*d-time-depth*) *d-time-depth* 0))]
+     (binding [*d-time-depth* (+ current-depth# 1)]
+       (let [start# (. System (nanoTime))
+             mem# (long
+                   (/ (long (- (.totalMemory (Runtime/getRuntime))
+                               (.freeMemory (Runtime/getRuntime))))
+                      1048576.0))
 
-           ignore# (log/info (str "START " ~message "; memory(mb): " mem#))
-           ret# (do
-                  ~@expr)]
-       (log/info (str
-                  "END " ~message "; "
-                  "elapsed(msec): " (/ (double (- (. System (nanoTime)) start#)) 1000000.0) "; "
-                  "memory(mb): " (str mem#
-                                      " -> "
-                                      (long
-                                       (/ (long (- (.totalMemory (Runtime/getRuntime))
-                                                   (.freeMemory (Runtime/getRuntime))))
-                                          1048576.0)))))
-       ret#)))
+             ignore# (log/info (str "START " ~message "; memory(mb): " mem#))
+             ret# (do
+                    ~@expr)]
+         (log/info (str
+                    "END " ~message "; "
+                    "elapsed(msec): " (/ (double (- (. System (nanoTime)) start#)) 1000000.0) "; "
+                    "memory(mb): " (str mem#
+                                        " -> "
+                                        (long
+                                         (/ (long (- (.totalMemory (Runtime/getRuntime))
+                                                     (.freeMemory (Runtime/getRuntime))))
+                                            1048576.0)))))
+         ret#))))
 
 (defn fix-keys
   "This is used to represent as close as possible when we store

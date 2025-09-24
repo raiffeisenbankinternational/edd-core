@@ -297,3 +297,44 @@ Sample values:
 - '0:1' second effect command triggered on original svc
 - '0:1:0' first effect command on transitive svc
 - ...
+
+
+# Logging
+
+## Local logging setup 
+
+For local logger user follwing alias: 
+```
+ :local {:jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}}
+```
+
+Example output 
+```
+INFO Storing mock request {:commands [{:type :application, :id #uuid "3cd53114-1a56-427f-99a1-a5512c8e15c1", :cmd-id :folder->initialize}]}
+INFO Emulating get-command-response-log nil [0]
+  INFO START handle-request; memory(mb): 193
+  INFO Requst meta:  {:user {:id john.smith@rbinternational.com, :email john.smith@rbinternational.com, :role :lime-account-managers}}
+    INFO START handling-command: :folder->initialize; memory(mb): 193
+      INFO START Fetching all deps for :folder->initialize; memory(mb): 193
+      INFO Query for dependency :folder locally
+        INFO START handling-query: :get-by-id; memory(mb): 193
+        INFO Fetching snapshot aggregate:  #uuid "3cd53114-1a56-427f-99a1-a5512c8e15c1"
+        INFO Snapshot not found
+        INFO Emulated 'get-events' dal function
+        INFO Events to apply: 0
+        INFO END handling-query: :get-by-id; elapsed(msec): 0.206019; memory(mb): 193 -> 193
+      INFO END Fetching all deps for :folder->initialize; elapsed(msec): 0.475349; memory(mb): 193 -> 193
+    INFO Fetching snapshot aggregate:  #uuid "3cd53114-1a56-427f-99a1-a5512c8e15c1"
+    INFO Snapshot not found
+    INFO Emulated 'get-events' dal function
+    INFO Events to apply: 0
+    INFO END handling-command: :folder->initialize; elapsed(msec): 1.607723; memory(mb): 193 -> 193
+  INFO END handle-request; elapsed(msec): 2.174456; memory(mb): 193 -> 193
+  INFO START assign-breadcumbts; memory(mb): 193
+  INFO END assign-breadcumbts; elapsed(msec): 0.049571; memory(mb): 193 -> 193
+  INFO START summarize-response; memory(mb): 193
+  INFO END summarize-response; elapsed(msec): 0.050909; memory(mb): 193 -> 193
+
+```
+
+
