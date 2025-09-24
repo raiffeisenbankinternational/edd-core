@@ -2,6 +2,12 @@
 
 ## Changes
 
+- [LSO-16507] Add a comment to the parser module
+- add a comment to the parser module about malli
+- update makefile
+
+
+
 - [LSP-10813] Improve edd-core (errors, logs, metrics)
 FEATURE:
 - disable metrics then an env var set

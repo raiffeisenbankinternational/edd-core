@@ -2,6 +2,15 @@
   "
   DSL parser and transformer. Mostly used to transcode
   Open Search DSL into HoneySQL.
+
+  UPD 2025-09-24 Warning: the parser below works with
+  malli version 0.17.0 and below. The version 0.18.0
+  has brought a breaking change into all parsing schemas.
+  See:
+  - https://github.com/metosin/malli/pull/1150
+  - https://github.com/metosin/malli/releases/tag/0.18.0
+  There is a PR to fix this weird change:
+  - https://github.com/metosin/malli/pull/1223
   "
   (:import
    clojure.lang.Keyword

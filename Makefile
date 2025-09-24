@@ -117,3 +117,6 @@ test-native:
         -Dborkdude.dynaload.aot=true \
         -Dclojure.tools.logging.factory=lambda.logging/slf4j-json-factory
 	chmod +x edd.core && ./edd.core
+
+changes:
+	./changes.sh
