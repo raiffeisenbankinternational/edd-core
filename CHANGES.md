@@ -2,6 +2,12 @@
 
 ## Changes
 
+- [LSP-10872] Fix malli parser in edd-postgres module
+- bump malli to the latest version
+- mitigate new parsing response (remove tags)
+
+
+
 - [LSO-16510] Implement logging for local de
 Add simple hierarchical loogger. Each d-time will be logged in its on
 ident

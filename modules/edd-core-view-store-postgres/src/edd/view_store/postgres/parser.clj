@@ -2,15 +2,6 @@
   "
   DSL parser and transformer. Mostly used to transcode
   Open Search DSL into HoneySQL.
-
-  UPD 2025-09-24 Warning: the parser below works with
-  malli version 0.17.0 and below. The version 0.18.0
-  has brought a breaking change into all parsing schemas.
-  See:
-  - https://github.com/metosin/malli/pull/1150
-  - https://github.com/metosin/malli/releases/tag/0.18.0
-  There is a PR to fix this weird change:
-  - https://github.com/metosin/malli/pull/1223
   "
   (:import
    clojure.lang.Keyword
@@ -21,6 +12,7 @@
   (:require
    [clojure.string :as str]
    [clojure.tools.logging :as log]
+   [clojure.walk :as walk]
    [edd.view-store.postgres.attrs :as attrs]
    [edd.view-store.postgres.common
     :refer [->long!
@@ -33,8 +25,8 @@
    [honey.sql.pg-ops :refer [at?
                              atat
                              tilde*]]
-   [lambda.uuid :as uuid]
    [lambda.util :as util]
+   [lambda.uuid :as uuid]
    [malli.core :as malli]))
 
 (defn parse-time-min ^OffsetDateTime [^String yyyy-mm-dd]
@@ -47,13 +39,30 @@
       LocalDate/parse
       (OffsetDateTime/of LocalTime/MAX ZoneOffset/UTC)))
 
+(defn remap-tags
+  "
+  Thank you metosin for breaking malli's parsing facilities:
+  - https://github.com/metosin/malli/releases/tag/0.18.0
+  - https://github.com/metosin/malli/pull/1223
+  - https://github.com/metosin/malli/issues/1224
+  The function restores the old structure of a parsing result.
+  "
+  [parsed]
+  (walk/postwalk
+   (fn [x]
+     (cond
+       (malli/tag? x) [(:key x) (:value x)]
+       (malli/tags? x) (:values x)
+       :else x))
+   parsed))
+
 (defn malli-parse! [data Parser error-message]
   (let [result (Parser data)]
     (if (= result ::malli/invalid)
       (throw (ex-info error-message
                       {:message error-message
                        :data data}))
-      result)))
+      (remap-tags result))))
 
 (defn malli-validate! [data Schema error-message]
   (if (malli/validate Schema data)
