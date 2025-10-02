@@ -1,6 +1,6 @@
 # Event Driven Design Elements (edd-el)
 
-Simple lib to support building Event-Sourcing applications. 
+Simple lib to support building Event-Sourcing applications.
 
 
 ## Philosophy
@@ -10,13 +10,13 @@ Simple lib to support building Event-Sourcing applications.
 
 The main idea behind this library was not to be a framework,
 but rather usefull set of function that will express our target
-architecture design. 
+architecture design.
 
-It is designed with freedom. Library expresses desire to have 
+It is designed with freedom. Library expresses desire to have
 stat pushed to the edge of the system and to help engineers
 develop mathematically pure functions. But it has no limitations
-on what you can do (i.e. You can use directly DB connection at 
-any time and make stuff dirty). 
+on what you can do (i.e. You can use directly DB connection at
+any time and make stuff dirty).
 
 ## Bootstraping
 
@@ -27,7 +27,7 @@ Entire system is build around 2 main components:
 2. Aggregate store
 
 # Supported event store implementation
-Currently, implementations supports following event store implementation: 
+Currently, implementations supports following event store implementation:
 * PostgreSQL
 * DynamoDB
 
@@ -39,25 +39,25 @@ Currently, only one aggregate store is supported:
 To register commands user `reg-cmd`
 
 ```
-==>(:require 
+==>(:require
        [edd.]))
 ```
 
 ## Register effects
-Output of each individual command are events. Based on events we can determine 
+Output of each individual command are events. Based on events we can determine
 if there are any other actions needed to be executed it he system. This can be
-triggering another service or calling same service recursively (i.e Send email 
+triggering another service or calling same service recursively (i.e Send email
 after user was created). Commands that are created based on events are called
 `effects`. Effects are stores together with events in a database transactionaly
-and are executed as commands on target services asynchronously. 
+and are executed as commands on target services asynchronously.
 
 Effects are stored transactionally to make sure that we are not triggering any
-action that is not valid (i.e. Send email when creating user if user creation 
-has failed or rolled-back). 
+action that is not valid (i.e. Send email when creating user if user creation
+has failed or rolled-back).
 
-Effect handlers are registered declarative using `edd-core/reg-event-fx`. 
+Effect handlers are registered declarative using `edd-core/reg-event-fx`.
 
-Example of effect registration: 
+Example of effect registration:
 
 ``` clojure
 
@@ -76,20 +76,20 @@ Example of effect registration:
                        :meta {}}]))
 ```
 
-Output of fx handler can be either vector or map. If output is map it can contain `:service` 
+Output of fx handler can be either vector or map. If output is map it can contain `:service`
 keyword which would indicate that target is another service. In that case we have to have
 actual commands inside `:commands` vector
 
 ## JSON Serialization and De-Serialization
 
-Serialization is implemented using `metosin/jsonista` (Crrently using 
-fork of metosin `alpha-prosoft/jsonista`). Implementation is actually 
-using jackson. Special metion here is required because there is some 
-customization done for serializing keyword values and uuid data type. 
+Serialization is implemented using `metosin/jsonista` (Crrently using
+fork of metosin `alpha-prosoft/jsonista`). Implementation is actually
+using jackson. Special metion here is required because there is some
+customization done for serializing keyword values and uuid data type.
 
-All keyward **values** are prefixed with ":". If value is already 
+All keyward **values** are prefixed with ":". If value is already
 containing ":" it will duplicate first ":". All uuid values will be
-serialized prefixed with "#". 
+serialized prefixed with "#".
 
 ```clojure
 => (:require  [lambda.util :as util])
@@ -100,7 +100,7 @@ serialized prefixed with "#".
 => (util/to-json {:a "#some"})
 "{\"a\":\"##some\"}"
 ```
- 
+
 ```clojure
 => (:require  [lambda.util :as util])
 => (util/to-edn "{\"a\":\":b\"}")
@@ -113,19 +113,19 @@ serialized prefixed with "#".
 
 ## Building modules
 
-All handlers are easily composable. Handler registration is just currently just adding 
-keys to map. Modules are not feature of library. It is just way how to structure code. 
+All handlers are easily composable. Handler registration is just currently just adding
+keys to map. Modules are not feature of library. It is just way how to structure code.
 
-Following is example of project structure with module: 
+Following is example of project structure with module:
 
-``` clojue 
+``` clojue
 
 ```
 
-## Mocking external dependecies 
+## Mocking external dependecies
 
 When testing code against edd test fixtures you can declare how dependencies to external
-services will be resolved. Example: 
+services will be resolved. Example:
 
 ``` clojure
 (mock/with-mock-dal
@@ -143,18 +143,18 @@ services will be resolved. Example:
 
 ## UUID Gen
 In namespce `lambda/uuid` there is helper function `gen` which can be used
-got generating uuid's. 
+got generating uuid's.
 
 UUID generation is tricky from testing perspective. To help with that there
 is implementation of with-state mock is provided. Example of usage:
 
-```clojure 
+```clojure
 => (:require [clojure.test :refer :all]
              [lambda.test.fixture.state :as state]
              [lambda.uuid :as uuid])
 => (deftest test-input
     (let [uuid1 (uuid/gen)
-          uuid2 (uuid/gen)  
+          uuid2 (uuid/gen)
           uuid3 (uuid/gen)]
       (state/with-state
         (with-redefs [uuid/gen (fn []
@@ -173,25 +173,25 @@ is implementation of with-state mock is provided. Example of usage:
 ```
 
 ## Authentication
-I hearby declare authentication quite unflexible. When using 
-from-api filter then user each request is being checked for 
-X-Authorization header (X-Authorization is used instead of 
+I hearby declare authentication quite unflexible. When using
+from-api filter then user each request is being checked for
+X-Authorization header (X-Authorization is used instead of
 standard because AWS LB and API Gateway sometimes take it over).
-Header should contain signed JWT token. 
+Header should contain signed JWT token.
 
 You can expect to get structure like:
 ```
-(def ctx 
+(def ctx
   {:user {:id "user-id"
           :email "user@email"
           :role :user-role}}
 ```
 User role will be slected based on roles present in JWT token. Currently
 only cognito is supported. If there are more than one role possible, it is
-expected to receive `{:selected-role :user-role}` as part of request body. 
+expected to receive `{:selected-role :user-role}` as part of request body.
 If this is not the case then user wil receive anonymous role:
 ```
-(def ctx 
+(def ctx
   {:user {:id "anonymous"
           :email "anonymous"
           :role :anonymous}}
@@ -301,14 +301,14 @@ Sample values:
 
 # Logging
 
-## Local logging setup 
+## Local logging setup
 
-For local logger user follwing alias: 
+For local logger user follwing alias:
 ```
  :local {:jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}}
 ```
 
-Example output 
+Example output
 ```
 INFO Storing mock request {:commands [{:type :application, :id #uuid "3cd53114-1a56-427f-99a1-a5512c8e15c1", :cmd-id :folder->initialize}]}
 INFO Emulating get-command-response-log nil [0]
@@ -334,7 +334,15 @@ INFO Emulating get-command-response-log nil [0]
   INFO END assign-breadcumbts; elapsed(msec): 0.049571; memory(mb): 193 -> 193
   INFO START summarize-response; memory(mb): 193
   INFO END summarize-response; elapsed(msec): 0.050909; memory(mb): 193 -> 193
-
 ```
 
+## Disable printing metrics
 
+To prevent edd-core from printing metrics every 10 seconds, set the following
+env var when bootstrapping REPL:
+
+~~~clojure
+AWS_LAMBDA_DISABLE_METRICS=false clojure -M:foo:bar
+~~~
+
+This is for local development only.

@@ -2,6 +2,12 @@
 
 ## Changes
 
+- [CARS-3085] Disable metrics locally with an env var
+- add env var condition in lambda core
+- update readme
+
+
+
 - [CARS-3081] Handle exceptions properly
 To tel lambnda function that message was not successfully
 processes we need to throw exception because it will

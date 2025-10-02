@@ -126,6 +126,7 @@
   [init-ctx handler & {:keys [filters post-filter]
                        :or   {filters     []
                               post-filter (fn [ctx] ctx)}}]
+  ;; a way to disable metrics locally to keep REPL clear
   (when-not (util/get-env "AWS_LAMBDA_DISABLE_METRICS")
     (emf/start-metrics-publishing!))
   (with-cache

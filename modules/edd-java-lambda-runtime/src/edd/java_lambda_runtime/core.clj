@@ -13,7 +13,9 @@
 
 (defn initialize-system
   []
-  (emf/start-metrics-publishing!)
+  ;; a way to disable metrics locally to keep REPL clear
+  (when-not (util/get-env "AWS_LAMBDA_DISABLE_METRICS")
+    (emf/start-metrics-publishing!))
   (atom {}))
 
 (defonce init-cache
