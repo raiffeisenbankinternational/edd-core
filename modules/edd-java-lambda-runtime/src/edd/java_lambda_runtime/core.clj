@@ -66,13 +66,16 @@
          {:on-success-fn
           (fn [_ctx
                response]
+            (log/info "OnSuccessFn writing success")
             (with-open [o (io/writer output)]
               (.write o (util/to-json response))))
           :on-error-fn
           (fn [_ctx
                response]
+            (log/info "OnErrorFn writing error")
             (with-open [o (io/writer output)]
-              (.write o (util/to-json response))))})))))
+              (.write o (util/to-json response)))
+            (throw (RuntimeException. (util/to-json response))))})))))
 
 (defmacro start
   [ctx handler & other]

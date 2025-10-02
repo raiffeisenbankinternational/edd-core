@@ -2,6 +2,13 @@
 
 ## Changes
 
+- [CARS-3081] Handle exceptions properly
+To tel lambnda function that message was not successfully
+processes we need to throw exception because it will
+not bre re-tried.
+
+
+
 - [LSP-10872] Fix malli parser in edd-postgres module
 - bump malli to the latest version
 - mitigate new parsing response (remove tags)
