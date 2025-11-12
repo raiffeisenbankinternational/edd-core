@@ -5,7 +5,8 @@
             [lambda.request :as request]
             [lambda.uuid :as uuid]
             [aws.ctx :as aws-ctx]
-            [clojure.tools.logging :as log]))
+            [clojure.tools.logging :as log]
+            [lambda.logging]))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)

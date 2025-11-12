@@ -5,6 +5,7 @@
    [clojure.java.io :as io]
    [clojure.tools.logging :as log]
    [lambda.emf :as emf]
+   [lambda.logging]
    [lambda.util :as util]
    [lambda.uuid :as uuid]
    [lambda.request :as request])

@@ -119,4 +119,4 @@ test-native:
 	chmod +x edd.core && ./edd.core
 
 changes:
-	./changes.sh
+	./changes.py
