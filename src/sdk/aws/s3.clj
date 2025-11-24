@@ -18,16 +18,18 @@
 (set! *unchecked-math* :warn-on-boxed)
 
 (defn get-host
-  "
-  Derive a host name in various ways: either from a custom
-  endpoint, if passed, or using a region + the standard
-  AWS host naming rule.
-  "
-  ^String [ctx]
-  (or (some-> ctx :aws :endpoint (URL.) (.getHost))
-      (when-let [region (get-in ctx [:aws :region])]
-        (format "s3.%s.amazonaws.com" region))
-      (throw (new Exception "cannot derive a host name"))))
+  ^String [ctx object]
+  (str
+   (get-in object [:s3 :bucket :name])
+   "."
+   (or (get-in ctx [:aws :endpoint])
+       (when-let [region (get-in ctx [:aws :region])]
+         (format "s3.%s.amazonaws.com" region))
+       (throw (new Exception "cannot derive a host name")))))
+
+(defn get-base-url
+  ^String [host]
+  (format "https://%s" host))
 
 (defn convert-query-params
   [params]
@@ -85,12 +87,10 @@
 
 (defn get-path
   "
-  Get an S3 path starting with /bucket/...
+  Get an S3 path starting with /key (bucket is in host now)
   "
   [s3-object]
   (str "/"
-       (get-in s3-object [:s3 :bucket :name])
-       "/"
        (get-in s3-object [:s3 :object :key])))
 
 (defn get-url
@@ -101,9 +101,8 @@
   (str endpoint uri))
 
 (defn s3-request-helper [{:keys [aws] :as ctx} object]
-  (let [host (get-host ctx)
-        endpoint (or (:endpoint aws)
-                     (format "https://%s" host))]
+  (let [host (get-host ctx object)
+        endpoint (get-base-url host)]
     {:headers    (merge {"Host"                 host
                          "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
                          "x-amz-date"           (common/create-date)
@@ -216,14 +215,16 @@
 
 (defn get-object-tagging
   [{:keys [aws] :as ctx} object]
-  (let [req {:method     "GET"
+  (let [host
+        (get-host ctx object)
+
+        base-url
+        (get-base-url host)
+
+        req {:method     "GET"
              :uri        (str "/" (get-in object [:s3 :object :key]))
              :query      [["tagging" "True"]]
-             :headers    {"Host"                 (str
-                                                  (get-in object [:s3 :bucket :name])
-                                                  ".s3."
-                                                  (:region aws)
-                                                  ".amazonaws.com")
+             :headers    {"Host"                 host
                           "Content-Type"         "application/json"
                           "Accept"               "application/json"
                           "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
@@ -236,8 +237,7 @@
         common (common/authorize req)]
 
     (let [response (client/retry-n #(-> (util/http-get
-                                         (str "https://"
-                                              (get (:headers req) "Host")
+                                         (str base-url
                                               (:uri req))
                                          (client/request->with-timeouts
                                           %
@@ -280,7 +280,13 @@
 
 (defn put-object-tagging
   [{:keys [aws] :as ctx} {:keys [object tags]}]
-  (let [tags (xml/emit-str
+  (let [host
+        (get-host ctx object)
+
+        base-url
+        (get-base-url host)
+
+        tags (xml/emit-str
               {:tag     "Tagging"
                :content [{:tag     "TagSet"
                           :content (mapv
@@ -294,11 +300,7 @@
         req {:method     "PUT"
              :uri        (str "/" (get-in object [:s3 :object :key]))
              :query      [["tagging" "True"]]
-             :headers    {"Host"                 (str
-                                                  (get-in object [:s3 :bucket :name])
-                                                  ".s3."
-                                                  (:region aws)
-                                                  ".amazonaws.com")
+             :headers    {"Host"                 host
                           "Content-Type"         "application/json"
                           "Accept"               "application/json"
                           "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
@@ -311,8 +313,7 @@
              :secret-key (:aws-secret-access-key aws)}
         common (common/authorize req)]
     (let [response (client/retry-n #(-> (util/http-put
-                                         (str "https://"
-                                              (get (:headers req) "Host")
+                                         (str base-url
                                               (:uri req))
                                          (client/request->with-timeouts
                                           %
@@ -368,7 +369,7 @@
          req
          (merge (s3-request-helper ctx object)
                 {:method     "GET"
-                 :uri        (str "/" bucket)
+                 :uri        "/"
                  :query      [["list-type" "2"]
                               ["prefix" prefix]]})
 
@@ -432,10 +433,15 @@
                  aws-session-token]}
          aws
 
-         ;; Remove leading slash from path to avoid double slashes
+          ;; Remove leading slash from path to avoid double slashes
          path (if (string/starts-with? path "/")
                 (subs path 1)
                 path)
+
+          ;; Create object structure for get-host
+         object {:s3 {:bucket {:name bucket}}}
+         ctx {:aws aws}
+         host (get-host ctx object)
 
          timestamp-full
          (get-aws-timestamp)
@@ -448,9 +454,6 @@
                  aws-access-key-id
                  timestamp-short
                  region)
-
-         host
-         (format "%s.s3.%s.amazonaws.com" bucket region)
 
          headers
          {"host" host}

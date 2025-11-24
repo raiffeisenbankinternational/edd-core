@@ -51,7 +51,7 @@
                    ".csv")]
       (mock-core
        :invocations [(records key)]
-       :requests [{:get  (str "https://s3.eu-central-1.amazonaws.com/example-bucket/"
+       :requests [{:get  (str "https://example-bucket.s3.eu-central-1.amazonaws.com/"
                               key)
                    :body (char-array "Of something")}]
        (core/start
@@ -85,14 +85,14 @@
           :method :post
           :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
          {:as              :stream
-          :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=2c0a385a8728aff9742fb81f8b86bb8635ca11599ad58c856607900e528d1d32"
+          :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=1983cbe2d83869f5933974856f030f5e99b510ed3f88be163cd5aa50ca468dd7"
                             "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
                             "x-amz-date"           "20200426T061823Z"
                             "x-amz-security-token" ""}
           :method          :get
           :connect-timeout 300
           :idle-timeout    5000
-          :url             (str "https://s3.eu-central-1.amazonaws.com/example-bucket/" key)}
+          :url             (str "https://example-bucket.s3.eu-central-1.amazonaws.com/" key)}
          {:method  :get
           :timeout 90000000
           :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
@@ -104,7 +104,7 @@
                    "/")]
       (mock-core
        :invocations [(records key)]
-       :requests [{:get  (str "https://s3.eu-central-1.amazonaws.com/example-bucket/"
+       :requests [{:get  (str "https://example-bucket.s3.eu-central-1.amazonaws.com/"
                               key)
                    :body (char-array "Of something")}]
        (core/start

@@ -95,7 +95,7 @@
                    :status 200}
                   {:post   (str "http://127.0.0.1:9200/test_local_test/_doc/" agg-id)
                    :status 200}
-                  {:put (str "https://s3.eu-central-1.amazonaws.com/--aggregates/aggregates/test/latest/local-test/1110/"
+                  {:put (str "https://--aggregates.s3.eu-central-1.amazonaws.com/aggregates/test/latest/local-test/1110/"
                              agg-id
                              ".json")
                    :status 200
@@ -128,7 +128,7 @@
                              :connect-timeout 300
                              :url             "https://127.0.0.1:9200/test_local_test/_doc/05120289-90f3-423c-ad9f-c46f9927a53e"}
                             {:url
-                             (str "https://s3.eu-central-1.amazonaws.com/--aggregates/aggregates/test/latest/local-test/1110/"
+                             (str "https://--aggregates.s3.eu-central-1.amazonaws.com/aggregates/test/latest/local-test/1110/"
                                   agg-id
                                   ".json")
                              :idle-timeout 5000,
@@ -139,7 +139,7 @@
                                     :aggregate {:id agg-id}}
                              :headers
                              {"Authorization"
-                              "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=b4cd223d1e2593c779cc5bececcf4921363eb3d889708f54eb30163e7a5b12a0"
+                              "AWS4-HMAC-SHA256 Credential=/20210322/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=75ece56904b670de5ab2b4500627b2f1800c39fa83b56dfe952aae892b37a48f"
                               "x-amz-security-token" "",
                               "x-amz-date" "20210322T232540Z",
                               "x-amz-content-sha256" "UNSIGNED-PAYLOAD"},

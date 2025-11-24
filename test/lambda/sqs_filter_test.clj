@@ -92,7 +92,7 @@
                    ".limedocu.txt")]
       (mock-core
        :invocations [(records key)]
-       :requests [{:get  (str "https://s3.eu-central-1.amazonaws.com/s3-bucket/"
+       :requests [{:get  (str "https://s3-bucket.s3.eu-central-1.amazonaws.com/"
                               key)
                    :body (char-array "Of something")}]
        (core/start
@@ -122,13 +122,13 @@
                              :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
                             {:as              :stream
                              :connect-timeout 300
-                             :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=4228a5c1f0c90c90944df7658346fc5f2f0a3e365f7352b24991c6f1be6863d0"
+                             :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=9cbc8f4c6d50e016febea5aaacca9571fa33246c40d100e7385179fb93282e56"
                                                "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
                                                "x-amz-date"           "20200426T061823Z"
                                                "x-amz-security-token" ""}
                              :idle-timeout    5000
                              :method          :get
-                             :url             "https://s3.eu-central-1.amazonaws.com/s3-bucket/test/2021-12-27/0000b7b5-9f50-4dc4-86d1-2e4fe1f6d491/1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491.limedocu.txt"}
+                             :url             "https://s3-bucket.s3.eu-central-1.amazonaws.com/test/2021-12-27/0000b7b5-9f50-4dc4-86d1-2e4fe1f6d491/1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491.limedocu.txt"}
 
                             {:method  :get
                              :timeout 90000000
@@ -175,9 +175,9 @@
           (mock-core
            :invocations [(util/to-json (sqs-commands {:s3 {:bucket {:name bucket}
                                                            :object {:key key}}}))]
-           :requests [{:get  (str "https://s3.eu-central-1.amazonaws.com/"
+           :requests [{:get  (str "https://"
                                   bucket
-                                  "/"
+                                  ".s3.eu-central-1.amazonaws.com/"
                                   key)
                        :body (char-array (util/to-json
                                           payload))}]

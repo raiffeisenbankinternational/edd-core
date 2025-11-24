@@ -2,6 +2,8 @@
 
 ## Changes
 
+- [CARS-3906] Allow endpoint override for all operations
+
 - [LSP-10890] Load lambda.logging explicitly
 We should ensure it is AOT compiled if needed on runtime
 
