@@ -161,8 +161,9 @@
 (defmethod log-request-error
   :postgres
   [ctx body error]
-  (log/info "Storing request error")
-  (log-request-error-impl ctx body error))
+  (util/d-time
+   (format "Postgres storing request error, request-id: %s" (:request-id ctx))
+   (log-request-error-impl ctx body error)))
 
 (defmethod log-dps
   :postgres
@@ -267,24 +268,25 @@
 (defn prepare-store-sequence
   [ctx sequence]
   {:pre [(:id sequence)]}
-  (log/info "Prepare sequence" (:service-name ctx) sequence)
-  (let [service-name (:service-name ctx)
-        aggregate-id (:id sequence)]
-    (jdbc/execute! *DB*
-                   [(str "INSERT INTO " (->table ctx :sequence_store) " (invocation_id,
-                                                      request_id,
-                                                      interaction_id,
-                                                      breadcrumbs,
-                                                      aggregate_id,
-                                                      service_name,
-                                                      value)
-                            VALUES (?, ?, ?, ?, ?, ?, 0);")
-                    (:invocation-id ctx)
-                    (:request-id ctx)
-                    (:interaction-id ctx)
-                    (breadcrumb-str (:breadcrumbs ctx))
-                    aggregate-id
-                    service-name])))
+  (util/d-time
+   (format "Postgres prepare-sequence, service: %s, id: %s" (:service-name ctx) (:id sequence))
+   (let [service-name (:service-name ctx)
+         aggregate-id (:id sequence)]
+     (jdbc/execute! *DB*
+                    [(str "INSERT INTO " (->table ctx :sequence_store) " (invocation_id,
+                                                       request_id,
+                                                       interaction_id,
+                                                       breadcrumbs,
+                                                       aggregate_id,
+                                                       service_name,
+                                                       value)
+                             VALUES (?, ?, ?, ?, ?, ?, 0);")
+                     (:invocation-id ctx)
+                     (:request-id ctx)
+                     (:interaction-id ctx)
+                     (breadcrumb-str (:breadcrumbs ctx))
+                     aggregate-id
+                     service-name]))))
 
 (defmethod get-command-response
   :postgres
@@ -550,38 +552,48 @@
                invocation-id
                breadcrumbs
                interaction-id]}]
-  (log/info "Fetching response" invocation-id)
   (cond
-    invocation-id (jdbc/execute!
+    invocation-id (util/d-time
+                   (format "Postgres get-response-log by invocation-id: %s" invocation-id)
+                   (jdbc/execute!
+                    *DB*
+                    [(str "SELECT *
+                                 FROM " (->table ctx :command_response_log) "
+                                 WHERE invocation_id=?") invocation-id]
+                    {:builder-fn rs/as-unqualified-kebab-maps}))
+    request-id (if breadcrumbs
+                 (util/d-time
+                  (format "Postgres get-response-log by request-id: %s, breadcrumbs: %s" request-id breadcrumbs)
+                  (jdbc/execute!
                    *DB*
                    [(str "SELECT *
-                                FROM " (->table ctx :command_response_log) "
-                                WHERE invocation_id=?") invocation-id]
-                   {:builder-fn rs/as-unqualified-kebab-maps})
-    request-id (jdbc/execute!
-                *DB*
-                (if breadcrumbs
-                  [(str "SELECT *
-                                FROM " (->table ctx :command_response_log) "
-                                WHERE request_id=?
-                                AND breadcrumbs=?")
-                   request-id,
-                   (breadcrumb-str breadcrumbs)]
-                  [(str "SELECT *
-                                FROM " (->table ctx :command_response_log) "
-                                WHERE request_id=?")
-                   request-id])
-                {:builder-fn rs/as-unqualified-kebab-maps})
-    interaction-id  (jdbc/execute!
+                                 FROM " (->table ctx :command_response_log) "
+                                 WHERE request_id=?
+                                 AND breadcrumbs=?")
+                    request-id,
+                    (breadcrumb-str breadcrumbs)]
+                   {:builder-fn rs/as-unqualified-kebab-maps}))
+                 (util/d-time
+                  (format "Postgres get-response-log by request-id: %s" request-id)
+                  (jdbc/execute!
+                   *DB*
+                   [(str "SELECT *
+                                 FROM " (->table ctx :command_response_log) "
+                                 WHERE request_id=?")
+                    request-id]
+                   {:builder-fn rs/as-unqualified-kebab-maps})))
+    interaction-id (util/d-time
+                    (format "Postgres get-response-log by interaction-id: %s" interaction-id)
+                    (jdbc/execute!
                      *DB*
                      [(str "SELECT *
-                                FROM " (->table ctx :command_response_log) "
-                                WHERE interaction_id=?
-                                AND breadcrumbs=?")
+                                 FROM " (->table ctx :command_response_log) "
+                                 WHERE interaction_id=?
+                                 AND breadcrumbs=?")
                       interaction-id,
                       (breadcrumb-str (or breadcrumbs
                                           [0]))]
-                     {:builder-fn rs/as-unqualified-kebab-maps})))
+                     {:builder-fn rs/as-unqualified-kebab-maps}))))
 
 (defn get-command-store
   [ctx {:keys [request-id
@@ -589,32 +601,37 @@
                breadcrumbs
                interaction-id]
         :or {breadcrumbs [0]}}]
-  (log/info "Fetching response" invocation-id)
   (cond
-    invocation-id (jdbc/execute!
-                   *DB*
-                   [(str "SELECT *
-                                FROM " (->table ctx :command_store) "
-                                WHERE invocation_id=?") invocation-id]
-                   {:builder-fn rs/as-unqualified-kebab-maps})
-    request-id (jdbc/execute!
-                *DB*
-                [(str "SELECT *
-                                FROM " (->table ctx :command_store) "
-                                WHERE request_id=?
-                                AND breadcrumbs=?")
-                 request-id,
-                 (breadcrumb-str breadcrumbs)]
-                {:builder-fn rs/as-unqualified-kebab-maps})
-    interaction-id  (jdbc/execute!
+    invocation-id (util/d-time
+                   (format "Postgres get-command-store by invocation-id: %s" invocation-id)
+                   (jdbc/execute!
+                    *DB*
+                    [(str "SELECT *
+                                 FROM " (->table ctx :command_store) "
+                                 WHERE invocation_id=?") invocation-id]
+                    {:builder-fn rs/as-unqualified-kebab-maps}))
+    request-id (util/d-time
+                (format "Postgres get-command-store by request-id: %s, breadcrumbs: %s" request-id breadcrumbs)
+                (jdbc/execute!
+                 *DB*
+                 [(str "SELECT *
+                                 FROM " (->table ctx :command_store) "
+                                 WHERE request_id=?
+                                 AND breadcrumbs=?")
+                  request-id,
+                  (breadcrumb-str breadcrumbs)]
+                 {:builder-fn rs/as-unqualified-kebab-maps}))
+    interaction-id (util/d-time
+                    (format "Postgres get-command-store by interaction-id: %s" interaction-id)
+                    (jdbc/execute!
                      *DB*
                      [(str "SELECT *
-                                FROM " (->table ctx :command_store) "
-                                WHERE interaction_id=?
-                                AND breadcrumbs=?")
+                                 FROM " (->table ctx :command_store) "
+                                 WHERE interaction_id=?
+                                 AND breadcrumbs=?")
                       interaction-id,
                       (breadcrumb-str breadcrumbs)]
-                     {:builder-fn rs/as-unqualified-kebab-maps})))
+                     {:builder-fn rs/as-unqualified-kebab-maps}))))
 
 (defn get-request-log
   [ctx {:keys [request-id
@@ -653,81 +670,101 @@
                invocation-id
                breadcrumbs
                interaction-id]}]
-  (log/info "Fetching response" invocation-id)
   (let [select "SUM(fx_created) AS fx_created,
                 SUM(fx_processed) AS fx_processed,
                 SUM(fx_error) AS fx_error,
                 SUM(fx_created) - SUM(fx_processed) - SUM(fx_error) AS fx_remaining"]
     (cond
-      invocation-id (jdbc/execute!
+      invocation-id (util/d-time
+                     (format "Postgres get-response-trace-log by invocation-id: %s" invocation-id)
+                     (jdbc/execute!
+                      *DB*
+                      [(str "SELECT " select  "
+                                  FROM " (->table ctx :command_response_log) "
+                                  WHERE invocation_id=?") invocation-id]
+                      {:builder-fn rs/as-unqualified-kebab-maps}))
+      request-id (if breadcrumbs
+                   (util/d-time
+                    (format "Postgres get-response-trace-log by request-id: %s, breadcrumbs: %s" request-id breadcrumbs)
+                    (jdbc/execute!
                      *DB*
                      [(str "SELECT " select  "
                                  FROM " (->table ctx :command_response_log) "
-                                 WHERE invocation_id=?") invocation-id]
-                     {:builder-fn rs/as-unqualified-kebab-maps})
-      request-id (jdbc/execute!
-                  *DB*
-                  (if breadcrumbs
-                    [(str "SELECT " select  "
-                                FROM " (->table ctx :command_response_log) "
-                                WHERE request_id=?
-                                AND breadcrumbs=?")
-                     request-id,
-                     (breadcrumb-str breadcrumbs)]
-                    [(str "SELECT " select  "
-                                FROM " (->table ctx :command_response_log) "
-                                WHERE request_id=?")
-                     request-id])
-                  {:builder-fn rs/as-unqualified-kebab-maps})
-      interaction-id  (jdbc/execute!
+                                 WHERE request_id=?
+                                 AND breadcrumbs=?")
+                      request-id,
+                      (breadcrumb-str breadcrumbs)]
+                     {:builder-fn rs/as-unqualified-kebab-maps}))
+                   (util/d-time
+                    (format "Postgres get-response-trace-log by request-id: %s" request-id)
+                    (jdbc/execute!
+                     *DB*
+                     [(str "SELECT " select  "
+                                 FROM " (->table ctx :command_response_log) "
+                                 WHERE request_id=?")
+                      request-id]
+                     {:builder-fn rs/as-unqualified-kebab-maps})))
+      interaction-id (util/d-time
+                      (format "Postgres get-response-trace-log by interaction-id: %s" interaction-id)
+                      (jdbc/execute!
                        *DB*
                        [(str "SELECT " select  "
-                                   FROM " (->table ctx :command_response_log) "
-                                   WHERE interaction_id=?
-                                   AND breadcrumbs=?")
+                                    FROM " (->table ctx :command_response_log) "
+                                    WHERE interaction_id=?
+                                    AND breadcrumbs=?")
                         interaction-id,
                         (breadcrumb-str (or breadcrumbs
                                             [0]))]
-                       {:builder-fn rs/as-unqualified-kebab-maps}))))
+                       {:builder-fn rs/as-unqualified-kebab-maps})))))
 
 (defn get-request-trace-log
   [ctx {:keys [request-id
                invocation-id
                breadcrumbs
                interaction-id]}]
-  (log/info "Fetching response" invocation-id)
   (let [select "SUM(fx_exception) AS fx_exception"]
     (cond
-      invocation-id (jdbc/execute!
+      invocation-id (util/d-time
+                     (format "Postgres get-request-trace-log by invocation-id: %s" invocation-id)
+                     (jdbc/execute!
+                      *DB*
+                      [(str "SELECT " select  "
+                                  FROM " (->table ctx :command_request_log) "
+                                  WHERE invocation_id=?") invocation-id]
+                      {:builder-fn rs/as-unqualified-kebab-maps}))
+      request-id (if breadcrumbs
+                   (util/d-time
+                    (format "Postgres get-request-trace-log by request-id: %s, breadcrumbs: %s" request-id breadcrumbs)
+                    (jdbc/execute!
                      *DB*
                      [(str "SELECT " select  "
                                  FROM " (->table ctx :command_request_log) "
-                                 WHERE invocation_id=?") invocation-id]
-                     {:builder-fn rs/as-unqualified-kebab-maps})
-      request-id (jdbc/execute!
-                  *DB*
-                  (if breadcrumbs
-                    [(str "SELECT " select  "
-                                FROM " (->table ctx :command_request_log) "
-                                WHERE request_id=?
-                                AND breadcrumbs=?")
-                     request-id,
-                     (breadcrumb-str breadcrumbs)]
-                    [(str "SELECT " select  "
-                                FROM " (->table ctx :command_request_log) "
-                                WHERE request_id=?")
-                     request-id])
-                  {:builder-fn rs/as-unqualified-kebab-maps})
-      interaction-id  (jdbc/execute!
+                                 WHERE request_id=?
+                                 AND breadcrumbs=?")
+                      request-id,
+                      (breadcrumb-str breadcrumbs)]
+                     {:builder-fn rs/as-unqualified-kebab-maps}))
+                   (util/d-time
+                    (format "Postgres get-request-trace-log by request-id: %s" request-id)
+                    (jdbc/execute!
+                     *DB*
+                     [(str "SELECT " select  "
+                                 FROM " (->table ctx :command_request_log) "
+                                 WHERE request_id=?")
+                      request-id]
+                     {:builder-fn rs/as-unqualified-kebab-maps})))
+      interaction-id (util/d-time
+                      (format "Postgres get-request-trace-log by interaction-id: %s" interaction-id)
+                      (jdbc/execute!
                        *DB*
                        [(str "SELECT " select  "
-                                   FROM " (->table ctx :command_request_log) "
-                                   WHERE interaction_id=?
-                                   AND breadcrumbs=?")
+                                    FROM " (->table ctx :command_request_log) "
+                                    WHERE interaction_id=?
+                                    AND breadcrumbs=?")
                         interaction-id,
                         (breadcrumb-str (or breadcrumbs
                                             [0]))]
-                       {:builder-fn rs/as-unqualified-kebab-maps}))))
+                       {:builder-fn rs/as-unqualified-kebab-maps})))))
 
 (defmacro verify-state
   [ctx interaction-id x y]

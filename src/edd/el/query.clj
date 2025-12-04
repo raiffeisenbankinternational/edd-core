@@ -124,56 +124,57 @@
 
 (defn resolve-remote-dependency
   [ctx cmd {:keys [service query]} deps]
-  (log/info "Resolving remote dependency: "
-            service
-            (or (:cmd-id cmd)
-                (:cmd-id cmd)))
-  (let [query-fn query
-        service-name (:service-name ctx)
-        resolved-query (call-query-fn ctx cmd query-fn deps)
-        request
-        {:service service
-         :query resolved-query}
-        response (-http-call ctx request)]
+  (util/d-time
+   (format "Resolving remote dependency: %s %s"
+           service
+           (or (:cmd-id cmd)
+               (:cmd-id cmd)))
+   (let [query-fn query
+         service-name (:service-name ctx)
+         resolved-query (call-query-fn ctx cmd query-fn deps)
+         request
+         {:service service
+          :query resolved-query}
+         response (-http-call ctx request)]
 
-    (when-not (or (service-query? resolved-query) (service-rtf? resolved-query))
-      (log/info "Skiping resolving remote dependency because query-id and ref are nil")
-      nil)
-    (when (:error response)
-      (throw (ex-info (str "Request error fetching dependency" service)
-                      {:error {:to-service   service
-                               :from-service service-name
-                               :query-id     (:query-id resolved-query)
-                               :ref          (:ref resolved-query)
-                               :message      (:error response)}})))
-    (when (:error (get response :body))
-      (throw (ex-info (str "Error response from service " service)
-                      {:error {:to-service   service
-                               :from-service service-name
-                               :query-id     (:query-id resolved-query)
-                               :ref          (:ref resolved-query)
-                               :message      {:response     (get response :body)
-                                              :error-source service}}})))
-    (when (:exception (get response :body))
-      (throw (ex-info (str "Exception response from service " service)
-                      {:error {:to-service   service
-                               :from-service service-name
-                               :query-id     (:query-id resolved-query)
-                               :ref          (:ref resolved-query)
-                               :message      {:response     (get response :body)
-                                              :error-source service}}})))
-    (if (> (:status response 0) 299)
-      (throw (ex-info (str "Deps request error for " service)
-                      {:error {:to-service   service
-                               :from-service service-name
-                               :service      service
-                               :query-id     (:query-id resolved-query)
-                               :ref          (:ref resolved-query)
-                               :status       (:status response)
-                               :message      (str "Response status:" (:status response))}}))
-      (cond
-        (service-query? resolved-query) (get-in response [:body :result])
-        (service-rtf? resolved-query) (get response :body)))))
+     (when-not (or (service-query? resolved-query) (service-rtf? resolved-query))
+       (log/info "Skiping resolving remote dependency because query-id and ref are nil")
+       nil)
+     (when (:error response)
+       (throw (ex-info (str "Request error fetching dependency" service)
+                       {:error {:to-service   service
+                                :from-service service-name
+                                :query-id     (:query-id resolved-query)
+                                :ref          (:ref resolved-query)
+                                :message      (:error response)}})))
+     (when (:error (get response :body))
+       (throw (ex-info (str "Error response from service " service)
+                       {:error {:to-service   service
+                                :from-service service-name
+                                :query-id     (:query-id resolved-query)
+                                :ref          (:ref resolved-query)
+                                :message      {:response     (get response :body)
+                                               :error-source service}}})))
+     (when (:exception (get response :body))
+       (throw (ex-info (str "Exception response from service " service)
+                       {:error {:to-service   service
+                                :from-service service-name
+                                :query-id     (:query-id resolved-query)
+                                :ref          (:ref resolved-query)
+                                :message      {:response     (get response :body)
+                                               :error-source service}}})))
+     (if (> (:status response 0) 299)
+       (throw (ex-info (str "Deps request error for " service)
+                       {:error {:to-service   service
+                                :from-service service-name
+                                :service      service
+                                :query-id     (:query-id resolved-query)
+                                :ref          (:ref resolved-query)
+                                :status       (:status response)
+                                :message      (str "Response status:" (:status response))}}))
+       (cond
+         (service-query? resolved-query) (get-in response [:body :result])
+         (service-rtf? resolved-query) (get response :body))))))
 
 (defn- validate-response-schema-setting [ctx]
   (let [setting (or (:response-schema-validation ctx)
@@ -203,13 +204,15 @@
 
 (defn resolve-local-dependency
   [ctx cmd query-fn deps]
-  (log/debug "Resolving local dependency")
-  (let [query (call-query-fn ctx cmd query-fn deps)]
-    (when query
-      (let [resp (handle-query ctx {:query query})]
-        (if (:error resp)
-          (throw (ex-info "Failed to resolve local deps" {:error resp}))
-          resp)))))
+
+  (util/d-time
+   "Resolving local dependency"
+   (let [query (call-query-fn ctx cmd query-fn deps)]
+     (when query
+       (let [resp (handle-query ctx {:query query})]
+         (if (:error resp)
+           (throw (ex-info "Failed to resolve local deps" {:error resp}))
+           resp))))))
 
 (defn fetch-dependencies-for-deps
   [ctx deps request]
@@ -218,25 +221,26 @@
                deps)
         dps-value (reduce
                    (fn [p [key req]]
-                     (log/info "Query for dependency" key (:service req "locally"))
-                     (let [dep-value
-                           (try (if (:service req)
-                                  (resolve-remote-dependency
-                                   ctx
-                                   request
-                                   req
-                                   p)
-                                  (resolve-local-dependency
-                                   ctx
-                                   request
-                                   req
-                                   p))
-                                (catch AssertionError e
-                                  (log/warn "Assertion error for deps " key)
-                                  nil))]
-                       (if dep-value
-                         (assoc p key dep-value)
-                         p)))
+                     (util/d-time
+                      (format "Query for dependency %s %s" key (:service req "locally"))
+                      (let [dep-value
+                            (try (if (:service req)
+                                   (resolve-remote-dependency
+                                    ctx
+                                    request
+                                    req
+                                    p)
+                                   (resolve-local-dependency
+                                    ctx
+                                    request
+                                    req
+                                    p))
+                                 (catch AssertionError e
+                                   (log/warn "Assertion error for deps " key)
+                                   nil))]
+                        (if dep-value
+                          (assoc p key dep-value)
+                          p))))
                    {}
                    deps)]
     dps-value))

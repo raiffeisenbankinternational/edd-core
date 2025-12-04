@@ -2,6 +2,9 @@
 
 ## Changes
 
+- [CARS-4101] Add better logging to have durations
+This way we can see what is bottleneck.
+
 - [CARS-3906] Allow endpoint override for all operations
 
 - [LSP-10890] Load lambda.logging explicitly

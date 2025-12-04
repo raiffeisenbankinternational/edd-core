@@ -141,9 +141,13 @@
     ;; source events.
     ;; make postgres as fallback for s3
     (util/d-time
-     (format "fetching aggregate by id, service: %s, realm: %s, id: %s" service realm id)
-     (or (s3.vs/get-from-s3 ctx id)
-         (api/get-by-id *DB* realm service id)))))
+     (format "PostgresViewStore fetching aggregate by id, service: %s, realm: %s, id: %s" service realm id)
+     (or (util/d-time
+          "PostgresViewStore Fetching from S3"
+          (s3.vs/get-from-s3 ctx id))
+         (util/d-time
+          "PostgresViewStore Fetching from database"
+          (api/get-by-id *DB* realm service id))))))
 
 (defmethod get-by-id-and-version
   :postgres

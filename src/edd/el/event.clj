@@ -53,15 +53,20 @@
 
   (cond
     (:error events) (throw (ex-info "Error fetching events" {:error events}))
-    (> (count events) 0) (let [aggregate (create-aggregate snapshot events (:def-apply ctx))
-                               result-agg (apply-agg-filter ctx aggregate)]
-                           result-agg)
+    (> (count events) 0) (util/d-time
+                          (format "Rebuilding aggregate state, id: %s, events: %s" id (count events))
+                          (let [aggregate (create-aggregate snapshot events (:def-apply ctx))
+                                result-agg (apply-agg-filter ctx aggregate)]
+                            result-agg))
     :else (or snapshot
               nil)))
 
 (defn fetch-snapshot
   [ctx id]
-  (if-let [snapshot (search/get-snapshot ctx id)]
+  (if-let [snapshot
+           (util/d-time
+            "Fetching snapshot"
+            (search/get-snapshot ctx id))]
     (do (log/info "Found snapshot version: " (:version snapshot))
         snapshot)
     (log/info "Snapshot not found")))

@@ -1,25 +1,25 @@
 {:deps
- {org.clojure/clojure                    {:mvn/version "1.12.0"}
+ {org.clojure/clojure                    {:mvn/version "1.12.3"}
   com.alpha-prosoft/hikaricp             {:mvn/version "5.0.14" :exclusions [org.slf4j/slf4j-api]}
   com.auth0/java-jwt                     {:mvn/version "4.4.0"}
-  ch.qos.logback/logback-classic         {:mvn/version "1.4.9"}
+  ch.qos.logback/logback-classic         {:mvn/version "1.5.21"}
   io.blockether/tools.logging            {:mvn/version "1.3.5"}
   ring-cors/ring-cors                    {:mvn/version "0.1.13"}
   app-group-id/edd-core-json {:local/root "modules/edd-core-json"}
   org.postgresql/postgresql              {:mvn/version "42.7.5"}
   com.github.seancorfield/honeysql       {:mvn/version "2.6.1147"}
-  com.github.seancorfield/next.jdbc      {:mvn/version "1.3.955"}
+  com.github.seancorfield/next.jdbc      {:mvn/version "1.3.1070"}
   org.clojure/data.xml                   {:mvn/version "0.2.0-alpha8"}
   org.clojure/data.csv                   {:mvn/version "1.0.1"}
-  metosin/malli                          {:mvn/version "0.8.9"}
+  metosin/malli                          {:mvn/version "0.20.0"}
   java-http-clj/java-http-clj            {:mvn/version "0.4.3"}
   net.mikera/vectorz-clj                 {:mvn/version "0.48.0"}
   net.mikera/core.matrix                 {:mvn/version "0.63.0"}
-  org.slf4j/slf4j-api                    {:mvn/version "2.0.16"}
+  org.slf4j/slf4j-api                    {:mvn/version "2.0.17"}
   com.alpha-prosoft/clj-aws-sign         {:mvn/version "0.1.1.18"}
   io.forward/yaml                        {:mvn/version "1.0.11"}
   com.github.clj-easy/graal-build-time   {:mvn/version "1.0.5"}
-  com.auth0/jwks-rsa                     {:mvn/version "0.22.1"}
+  com.auth0/jwks-rsa                     {:mvn/version "0.23.0"}
   org.clojure/core.async                 {:mvn/version "1.6.673"}}
  :paths
  ["src" "resources"]
@@ -45,6 +45,6 @@
    :extra-deps {alpha-prosoft/readme {:mvn/version "1.7"}}
    :main-opts ["-m" "seancorfield.readme"]}
   :outdated
-  {:extra-deps {olical/depot {:mvn/version "2.3.0"}}
+  {:extra-deps {olical/depot {:mvn/version "2.4.1"}}
    :main-opts ["-m" "depot.outdated.main"]}
   :local {:jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}}}

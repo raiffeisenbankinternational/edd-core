@@ -23,25 +23,26 @@
 
 (defn- fetch-creds-from-uri [uri token]
   (try
-    (log/info "Fetching credentials from URI:" uri)
-    (let [headers (when token {"Authorization" token})
-          {:keys [body]}
-          (util/http-get uri {:headers headers})]
-      (if (and (:AccessKeyId body)
-               (:SecretAccessKey body))
+    (util/d-time
+     (format "AWS fetching credentials from URI: %s" uri)
+     (let [headers (when token {"Authorization" token})
+           {:keys [body]}
+           (util/http-get uri {:headers headers})]
+       (if (and (:AccessKeyId body)
+                (:SecretAccessKey body))
 
-        {:aws-access-key-id
-         (:AccessKeyId body)
+         {:aws-access-key-id
+          (:AccessKeyId body)
 
-         :aws-secret-access-key
-         (:SecretAccessKey body)
+          :aws-secret-access-key
+          (:SecretAccessKey body)
 
-         :aws-session-token
-         (or (:Token body) "")}
-        (do
-          (log/warn "Fetched incomplete credentials from URI"
-                    {:uri uri :response-keys (keys body)})
-          nil)))
+          :aws-session-token
+          (or (:Token body) "")}
+         (do
+           (log/warn "Fetched incomplete credentials from URI"
+                     {:uri uri :response-keys (keys body)})
+           nil))))
     (catch Exception e
       (log/warn "Failed to fetch credentials from URI"
                 {:uri uri :exception (ex-message e)})

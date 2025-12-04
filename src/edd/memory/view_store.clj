@@ -38,17 +38,18 @@
 (defn update-aggregate-impl
   [{:keys [aggregate] :as ctx}]
   {:pre [aggregate]}
-  (log/info "Emulated 'update-aggregate' dal function")
-  (let [aggregate (fix-keys aggregate)]
-    (swap! *dal-state*
-           #(update % :aggregate-store
-                    (fn [v]
-                      (->> v
-                           (filter
-                            (fn [el]
-                              (not= (:id el) (:id aggregate))))
-                           (cons aggregate)
-                           (sort-by (fn [{:keys [id]}] (str id))))))))
+  (util/d-time
+   (format "MemoryViewStore update-aggregate, id: %s, version: %s" (:id aggregate) (:version aggregate))
+   (let [aggregate (fix-keys aggregate)]
+     (swap! *dal-state*
+            #(update % :aggregate-store
+                     (fn [v]
+                       (->> v
+                            (filter
+                             (fn [el]
+                               (not= (:id el) (:id aggregate))))
+                            (cons aggregate)
+                            (sort-by (fn [{:keys [id]}] (str id)))))))))
 
   ctx)
 
@@ -80,18 +81,20 @@
 (defmethod get-snapshot
   :memory
   [ctx id]
-  (log/info "Fetching snapshot aggregate: " id)
-  (->> (aggregates-matching-id id)
-       (sort-by :version (fnil > 0 0))
-       first))
+  (util/d-time
+   (format "MemoryViewStore get-snapshot, id: %s" id)
+   (->> (aggregates-matching-id id)
+        (sort-by :version (fnil > 0 0))
+        first)))
 
 (defmethod get-by-id-and-version
   :memory
   [ctx id version]
-  (log/info "Fetching aggregate by id:" id ", and version:" version)
-  (->> (aggregates-matching-id id)
-       (filter #(= (:version %) version))
-       first))
+  (util/d-time
+   (format "MemoryViewStore get-by-id-and-version, id: %s, version: %s" id version)
+   (->> (aggregates-matching-id id)
+        (filter #(= (:version %) version))
+        first)))
 
 (defn register
   [ctx]
