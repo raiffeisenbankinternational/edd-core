@@ -2,6 +2,8 @@
   "
   Basic IO utilities for streams, files, GZIP encoding
   and decoding, MIME detection, and similar things.
+  The goal is to not depend on the clojure.java.io
+  namespace.
   "
   (:require
    [clojure.edn :as edn]
@@ -11,7 +13,10 @@
                     PipedInputStream
                     PipedOutputStream
                     PushbackReader
-                    Reader)
+                    Reader
+                    Writer
+                    InputStream
+                    OutputStream)
            (java.net URL)
            (java.nio.file Files)
            (java.util.zip GZIPInputStream
@@ -27,6 +32,53 @@
   (or (io/resource path)
       (throw (new RuntimeException
                   (format "missing resource: %s" path)))))
+
+(defn reader
+  "
+  A proxy to the standard io/reader function.
+  "
+  (^Reader [src]
+   (io/reader src))
+  (^Reader [src & opts]
+   (apply io/reader src opts)))
+
+(defn input-stream
+  "
+  A proxy to the standard io/input-stream function.
+  "
+  (^InputStream [src]
+   (io/input-stream src))
+  (^InputStream [src & opts]
+   (apply io/input-stream src opts)))
+
+(defn writer
+  "
+  A proxy to the standard io/writer function.
+  "
+  (^Writer [src]
+   (io/writer src))
+  (^Writer [src & opts]
+   (apply io/writer src opts)))
+
+(defn file
+  "
+  A proxy to the standard io/file function.
+  "
+  (^File [arg]
+   (io/file arg))
+  (^File [parent child]
+   (io/file parent child))
+  (^File [parent child & more]
+   (apply io/file parent child more)))
+
+(defn output-stream
+  "
+  A proxy to the standard io/output-stream function.
+  "
+  (^OutputStream [src]
+   (io/output-stream src))
+  (^OutputStream [src & opts]
+   (apply io/output-stream src opts)))
 
 (defn pushback-reader ^PushbackReader [src]
   (new PushbackReader src))
@@ -206,6 +258,21 @@
   ^bytes [src]
   (with-open [in (io/input-stream src)]
     (.readAllBytes in)))
+
+(defn file? [src]
+  (instance? File src))
+
+(defn output-stream? [src]
+  (instance? OutputStream src))
+
+(defn input-stream? [src]
+  (instance? InputStream src))
+
+(defn reader? [src]
+  (instance? Reader src))
+
+(defn writer? [src]
+  (instance? Writer src))
 
 (defmacro with-pipe
   "

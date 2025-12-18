@@ -1,6 +1,8 @@
 (ns edd.io.core-test
   (:import
-   java.io.ByteArrayInputStream)
+   (java.io File
+            ByteArrayInputStream
+            ByteArrayOutputStream))
   (:require
    [clojure.test :refer [deftest is]]
    [edd.io.core :as io]))
@@ -85,3 +87,35 @@
     (is (future? fut))
     (is (= "hello world"
            (-> fut deref (String.))))))
+
+(deftest test-io-proxies
+
+  (with-open [in (io/input-stream (.getBytes "abc"))]
+    (is (io/input-stream? in))
+    (is (= "abc"
+           (slurp in))))
+
+  (with-open [r (io/reader (.getBytes "abc"))]
+    (is (io/reader? r))
+    (is (= "abc"
+           (slurp r))))
+
+  (let [baos (new ByteArrayOutputStream)]
+    (with-open [out (io/output-stream baos)]
+      (is (io/output-stream? out))
+      (.write out (.getBytes "abc")))
+    (is (= "abc"
+           (new String (.toByteArray baos)))))
+
+  (let [baos (new ByteArrayOutputStream)]
+    (with-open [w (io/writer baos)]
+      (is (io/writer? w))
+      (.write w "abc"))
+    (is (= "abc"
+           (new String (.toByteArray baos)))))
+
+  (is (io/file? (io/file "a")))
+  (is (io/file? (io/file "a" "b")))
+  (is (io/file? (io/file "a" "b" "c" "d")))
+  (is (= "a/b/c/d"
+         (str (io/file "a" "b" "c" "d")))))

@@ -2,6 +2,11 @@
 
 ## Changes
 
+- [CARS-4340] Add some functions to the edd core io module
+- add minor io functions
+- add tests
+- update changes file
+
 - [LSO-16349] Fix typo in identity query
 
 - [CARS-4101] Add better logging to have durations
