@@ -296,7 +296,8 @@ and return nil to enable query-fn to have when conditions based on previously re
                   :item
                   {:commands [{:id cmd-id-1
                                :cmd-id :cmd-1}]
-                   :breadcrumbs [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]}))
+
+                   :breadcrumbs [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]}))
                 [:result])))
         (is (= {:error :loop-detected}
                (select-keys
@@ -305,7 +306,7 @@ and return nil to enable query-fn to have when conditions based on previously re
                   ctx
                   :item
                   {:query {:query-id :query-1}
-                   :breadcrumbs [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]}))
+                   :breadcrumbs [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]}))
                 [:error])))))))
 
 (def cmd-id-1 #uuid "11111eeb-e677-4d73-a10a-1d08b45fe4dd")

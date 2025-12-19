@@ -220,9 +220,9 @@
                    item)
 
             resp (cond
-                   (> (count (:breadcrumbs item)) 20)
+                   (> (count (:breadcrumbs item)) 25)
                    (do
-                     (log/warn :loop-detected item)
+                     (log/error :loop-detected item)
                      {:error :loop-detected})
                    (contains? item :apply) (event/handle-event (-> ctx
                                                                    (assoc :apply (assoc
@@ -234,7 +234,7 @@
                                                   (cmd/handle-commands item))
                    (contains? item :error) item
                    :else (do
-                           (log/warn item)
+                           (log/error item)
                            {:error :invalid-request}))]
         (if (:error resp)
           {:error          (:error resp)
