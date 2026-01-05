@@ -2,6 +2,8 @@
 
 ## Changes
 
+- [CARS-4540] Update gitleaks for test secrets
+
 - [CARS-4404] Increase loop depth support
 
 - [CARS-4340] Add some functions to the edd core io module

@@ -1,6 +1,6 @@
 services:
   opensearch-node1:
-    image: literal:${DOCKER_URL}/opensearchproject/opensearch:1.2.0
+    image: ${DOCKER_URL}/opensearchproject/opensearch:1.2.0
     container_name: opensearch-node1
     environment:
       - cluster.name=opensearch-cluster
@@ -23,7 +23,7 @@ services:
     networks:
       - opensearch-net
   opensearch-dashboards:
-    image: literal:${DOCKER_URL}/opensearchproject/opensearch-dashboards:1.2.0
+    image: ${DOCKER_URL}/opensearchproject/opensearch-dashboards:1.2.0
     container_name: opensearch-dashboards
     ports:
       - 5601:5601
@@ -57,7 +57,7 @@ services:
   # TL;DR: for schemas=foo,bar,baz, it creates stuff only in foo.
   #
   root-migration:
-    image: literal:${DOCKER_URL}/flyway/flyway
+    image: ${DOCKER_URL}/flyway/flyway
     command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test -user=postgres -password="no-secret" -connectRetries=60 -skipCheckForUpdate migrate
     volumes:
       - ./sql/files/edd:/flyway/sql
@@ -67,7 +67,7 @@ services:
       - opensearch-net
 
   service-migration:
-    image: literal:${DOCKER_URL}/flyway/flyway
+    image: ${DOCKER_URL}/flyway/flyway
     command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test_local_test -user=postgres -password="no-secret" -connectRetries=60 -skipCheckForUpdate migrate
     volumes:
       - ./modules/edd-core-view-store-postgres/migrations:/flyway/sql
@@ -77,7 +77,7 @@ services:
       - opensearch-net
 
   migration-test-edd-core:
-    image: literal:${DOCKER_URL}/flyway/flyway
+    image: ${DOCKER_URL}/flyway/flyway
     command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test_edd_core -user=postgres -password="no-secret" -connectRetries=60 -skipCheckForUpdate migrate
     volumes:
        - ./modules/edd-core-view-store-postgres/test/resources/migrations:/flyway/sql
@@ -87,7 +87,7 @@ services:
       - opensearch-net
 
   migration-test-dimension:
-    image: literal:${DOCKER_URL}/flyway/flyway
+    image: ${DOCKER_URL}/flyway/flyway
     command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test_glms_dimension_svc -user=postgres -password="no-secret" -connectRetries=60 -skipCheckForUpdate migrate
     volumes:
        - ./modules/edd-core-view-store-postgres/test/resources/migrations:/flyway/sql

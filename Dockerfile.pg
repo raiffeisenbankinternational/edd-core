@@ -1,4 +1,4 @@
-FROM literal:${DOCKER_URL}/library/postgres:15
+FROM ${DOCKER_URL}/library/postgres:15
 
 RUN apt-get update \
     && apt-get install -y postgresql-15-cron \
