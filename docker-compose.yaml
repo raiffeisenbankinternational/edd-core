@@ -38,6 +38,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.pg
+      args:
+        DOCKER_URL: ${DOCKER_URL}
     container_name: postgres_edd
     hostname: postgres
     ports:

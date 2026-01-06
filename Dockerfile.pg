@@ -1,3 +1,4 @@
+ARG DOCKER_URL
 FROM ${DOCKER_URL}/library/postgres:15
 
 RUN apt-get update \

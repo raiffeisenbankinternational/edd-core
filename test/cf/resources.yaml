@@ -1,0 +1,227 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'EDD-Core Testing Resources - S3 Buckets and SQS Queues'
+
+Parameters:
+  InstanceRoleArn:
+    Type: String
+    Description: ARN of the EC2 instance role that needs access to the bucket
+  
+  EnvironmentNameLower:
+    Type: String
+    Description: Environment name in lowercase
+    Default: dev
+
+Resources:
+  # IT Test Bucket
+  ItTestBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::AccountId}-${EnvironmentNameLower}-it'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+        - Key: Purpose
+          Value: Testing
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  ItTestBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ItTestBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: OnlyHTTPS
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !GetAtt ItTestBucket.Arn
+              - !Sub '${ItTestBucket.Arn}/*'
+            Condition:
+              Bool:
+                'aws:SecureTransport': 'false'
+
+  # SQS Bucket
+  SqsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::AccountId}-${EnvironmentNameLower}-sqs'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+        - Key: Purpose
+          Value: Testing
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  SqsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SqsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: OnlyHTTPS
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !GetAtt SqsBucket.Arn
+              - !Sub '${SqsBucket.Arn}/*'
+            Condition:
+              Bool:
+                'aws:SecureTransport': 'false'
+
+  # Standard SQS Queue
+  StandardQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${AWS::AccountId}-${EnvironmentNameLower}-it'
+      VisibilityTimeout: 120
+      MessageRetentionPeriod: 86400
+
+  StandardQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref StandardQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Id: it-policy
+        Statement:
+          - Sid: allowSend
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action:
+              - SQS:SendMessage
+            Resource: !GetAtt StandardQueue.Arn
+
+  # FIFO SQS Queue
+  FifoQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${AWS::AccountId}-${EnvironmentNameLower}-it.fifo'
+      FifoQueue: true
+      VisibilityTimeout: 120
+      MessageRetentionPeriod: 86400
+
+  FifoQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref FifoQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Id: it-fifo-policy
+        Statement:
+          - Sid: allowSend
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action:
+              - SQS:SendMessage
+            Resource: !GetAtt FifoQueue.Arn
+
+  # Pipeline Aggregates Bucket
+  PipelineAggregatesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::AccountId}-pipeline-aggregates'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: Purpose
+          Value: Testing
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  PipelineAggregatesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PipelineAggregatesBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowInstanceRoleFullAccess
+            Effect: Allow
+            Principal:
+              AWS: !Ref InstanceRoleArn
+            Action: 's3:*'
+            Resource:
+              - !GetAtt PipelineAggregatesBucket.Arn
+              - !Sub '${PipelineAggregatesBucket.Arn}/*'
+
+Outputs:
+  ItTestBucketName:
+    Description: Name of the IT test S3 bucket
+    Value: !Ref ItTestBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-ItTestBucketName'
+
+  SqsBucketName:
+    Description: Name of the SQS S3 bucket
+    Value: !Ref SqsBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-SqsBucketName'
+
+  StandardQueueUrl:
+    Description: URL of the standard SQS queue
+    Value: !Ref StandardQueue
+    Export:
+      Name: !Sub '${AWS::StackName}-StandardQueueUrl'
+
+  StandardQueueArn:
+    Description: ARN of the standard SQS queue
+    Value: !GetAtt StandardQueue.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-StandardQueueArn'
+
+  FifoQueueUrl:
+    Description: URL of the FIFO SQS queue
+    Value: !Ref FifoQueue
+    Export:
+      Name: !Sub '${AWS::StackName}-FifoQueueUrl'
+
+  FifoQueueArn:
+    Description: ARN of the FIFO SQS queue
+    Value: !GetAtt FifoQueue.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-FifoQueueArn'
+
+  PipelineAggregatesBucketName:
+    Description: Name of the pipeline aggregates S3 bucket
+    Value: !Ref PipelineAggregatesBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-BucketName'
+  
+  PipelineAggregatesBucketArn:
+    Description: ARN of the pipeline aggregates S3 bucket
+    Value: !GetAtt PipelineAggregatesBucket.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-BucketArn'

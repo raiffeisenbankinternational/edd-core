@@ -36,11 +36,15 @@ RUN chown build:build /home/build -R &&\
 USER build
 
 ARG BUILD_ID
+ENV BUILD_ID=${BUILD_ID}
+ARG BUILD_NUMBER
+ENV BUILD_NUMBER=${BUILD_NUMBER}
 
 RUN set -e &&\
     echo "Org: ${ARTIFACT_ORG}" &&\
     PROJECT_NAME="api" clojure -M:test:unit &&\
-    export AWS_DEFAULT_REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region) &&\
+    export TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" -s) &&\
+    export AWS_DEFAULT_REGION=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region) &&\
     export AWS_REGION=$AWS_DEFAULT_REGION &&\
     export TARGET_ACCOUNT_ID="$(aws sts get-caller-identity | jq -r '.Account')" &&\
     cred=$(aws sts assume-role \
@@ -55,15 +59,12 @@ RUN set -e &&\
     export EnvironmentNameLower=pipeline &&\
     export DatabasePassword="no-secret" &&\
     export DatabaseEndpoint="127.0.0.1" &&\
-    domain_name=$(aws es list-domain-names  | jq -r '.DomainNames[0].DomainName') &&\
     echo "Purging all SQS" &&\
     for queue in $(aws sqs list-queues --query 'QueueUrls[]' --output text); do \
       aws sqs purge-queue --queue-url $queue; \
     done &&\
-    echo "Found domain ${domain_name}" &&\
-    domain_url=$(aws es describe-elasticsearch-domain --domain-name ${domain_name} | jq -r '.DomainStatus.Endpoints.vpc') &&\
-    export IndexDomainScheme=https &&\
-    export IndexDomainEndpoint=$domain_url &&\
+    export IndexDomainScheme=http &&\
+    export IndexDomainEndpoint=127.0.0.1:9200 &&\
     flyway -password="${DatabasePassword}" \
            -schemas=glms,test,prod,test_local_svc \
            -url=jdbc:postgresql://${DatabaseEndpoint}:5432/postgres?user=postgres \
@@ -80,8 +81,6 @@ RUN set -e &&\
             -locations="filesystem:${PWD}/modules/edd-core-view-store-postgres/migrations" \
            -X \
            migrate &&\
-    echo "Run ansible stuff" &&\
-    ansible-playbook ansible/deploy/deploy.yaml &&\
     echo "Building b${BUILD_ID}" &&\
     clojure -T:build jar+install \
        :app-group-id ${ARTIFACT_ORG} \

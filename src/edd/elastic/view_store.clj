@@ -240,10 +240,17 @@
 
 (defn register
   [ctx]
-  (assoc ctx
-         :view-store :elastic
-         :elastic-search {:scheme (util/get-env "IndexDomainScheme" "https")
-                          :url    (util/get-env "IndexDomainEndpoint" "127.0.0.1:9200")}))
+  (let [scheme (util/get-env "IndexDomainScheme" "https")
+        url (util/get-env "IndexDomainEndpoint" "127.0.0.1:9200")
+        elastic-config {:scheme scheme
+                        :url url}]
+    (log/info "Registering elastic view-store"
+              {:scheme scheme
+               :url url
+               :full-url (str scheme "://" url)})
+    (assoc ctx
+           :view-store :elastic
+           :elastic-search elastic-config)))
 
 (defmethod get-snapshot
   :elastic

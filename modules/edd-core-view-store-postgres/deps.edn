@@ -19,7 +19,6 @@
   :dev      {:extra-paths ["dev/src" "dev/resources"]
              :extra-deps  {app-group-id/edd-core-io  {:local/root "../edd-core-io"}
                            app-group-id/edd-core-clj {:local/root "../edd-core-clj"}}}
-
   :unit     {:main-opts ["-m" "kaocha.runner" "unit"]}
   :it       {:main-opts ["-m" "kaocha.runner" "it"]}
 
