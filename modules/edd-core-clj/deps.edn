@@ -1,5 +1,5 @@
 {:deps {}
- :paths ["src" "resources" "api/src"]
+ :paths ["src" "resources"]
  :aliases
  {:build {:deps {io.github.clojure/tools.build {:mvn/version "0.10.6"}}
           :ns-default build}

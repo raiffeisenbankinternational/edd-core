@@ -2,6 +2,9 @@
 
 ## Changes
 
+- [AP-795] Fix build to work properly
+Update secrets file because we did rewrite of history
+
 - [CARS-4540] Update gitleaks for test secrets
 
 - [CARS-4404] Increase loop depth support

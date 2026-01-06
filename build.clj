@@ -14,10 +14,10 @@
   (System/getProperty "edd-core.override"))
 
 (defn override-deps-with-static-build-id
-  [deps]
+  [deps app-group-id]
   (reduce-kv
    (fn [acc k v]
-     (assoc acc k (if (and (str/includes? (str k) "app-group-id")
+     (assoc acc k (if (and (str/includes? (str k) (str app-group-id))
                            (contains? v :local/root)
                            (some? VERSION_OVERRIDE))
                     {:mvn/version VERSION_OVERRIDE}
@@ -29,11 +29,11 @@
   (delay
    (-> "deps.edn" jio/file dir/canonicalize deps/slurp-deps)))
 
-(def basis
-  (delay
-   (b/create-basis
-    {:project (update @project-deps :deps override-deps-with-static-build-id)
-     :user :standard})))
+(defn- basis
+  [app-group-id]
+  (b/create-basis
+   {:project (update @project-deps :deps override-deps-with-static-build-id app-group-id)
+    :user :standard}))
 
 (defn params->str
   [params]
@@ -53,7 +53,7 @@
     {:lib           lib
      :version       (str app-version)
      :jar-file      jar-file
-     :basis         @basis
+     :basis         (basis app-group-id)
      :class-dir     class-dir
      :resource-dirs ["resources"]
      :target        "./"

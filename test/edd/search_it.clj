@@ -12,7 +12,8 @@
             [clojure.string :as str]))
 
 (def ctx
-  {:elastic-search {:url (util/get-env "IndexDomainEndpoint")}
+  {:elastic-search {:scheme (util/get-env "IndexDomainScheme" "https")
+                    :url (util/get-env "IndexDomainEndpoint")}
    :meta           {:realm :test}
    :aws            {:region                (util/get-env "AWS_DEFAULT_REGION")
                     :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID")

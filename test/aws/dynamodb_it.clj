@@ -11,7 +11,8 @@
 (def interaction-id (uuid/gen))
 
 (def ctx
-  (-> {:elastic-search         {:url (util/get-env "IndexDomainEndpoint")}
+  (-> {:elastic-search         {:scheme (util/get-env "IndexDomainScheme" "https")
+                                :url (util/get-env "IndexDomainEndpoint")}
        :db                     {:name "dynamodb-svc"}
        :request-id             request-id
        :interaction-id         interaction-id
