@@ -42,25 +42,25 @@ def get_first_entry_from_changes():
     if not changes_file.exists():
         print("Error: CHANGES.md not found")
         sys.exit(1)
-    
+
     content = changes_file.read_text()
     lines = content.split('\n')
-    
+
     # Find "## Changes" section
     in_changes = False
     entry_lines = []
     found_first_entry = False
-    
+
     for line in lines:
         if line.strip() == "## Changes":
             in_changes = True
             continue
-        
+
         if in_changes:
             # Skip empty lines before first entry
             if not found_first_entry and not line.strip():
                 continue
-            
+
             # Start of first entry
             if line.startswith('- '):
                 found_first_entry = True
@@ -71,11 +71,11 @@ def get_first_entry_from_changes():
             # End of first entry (empty line or next entry)
             elif found_first_entry and (not line.strip() or line.startswith('- ')):
                 break
-    
+
     # Remove trailing empty lines
     while entry_lines and not entry_lines[-1].strip():
         entry_lines.pop()
-    
+
     return '\n'.join(entry_lines)
 
 
@@ -87,12 +87,12 @@ def get_all_commits():
         "--pretty=format:- %s%n%b%n",
         f"{initial_commit}..HEAD"
     ])
-    
+
     lines = []
     for line in output.split('\n'):
         if 'Change-Id' not in line:
             lines.append(line)
-    
+
     # Clean up multiple consecutive empty lines
     result = []
     prev_empty = False
@@ -101,7 +101,7 @@ def get_all_commits():
         if not (is_empty and prev_empty):
             result.append(line)
         prev_empty = is_empty
-    
+
     return '\n'.join(result).strip()
 
 
@@ -110,7 +110,7 @@ def regenerate_changes_file():
     header = "# Changelog\n\n## Changes\n\n"
     commits = get_all_commits()
     content = header + commits + "\n"
-    
+
     Path("CHANGES.md").write_text(content)
 
 
@@ -130,15 +130,15 @@ def main():
                         help="Check only last commit (for shallow clones)")
     parser.add_argument("--check", action="store_true",
                         help="Exit with code 1 on validation failure")
-    
+
     args = parser.parse_args()
-    
+
     if args.shallow:
         # Shallow mode: compare last commit with first entry in CHANGES.md
         try:
             last_commit = get_last_commit()
             first_entry = get_first_entry_from_changes()
-            
+
             if last_commit == first_entry:
                 print("✓ Last commit is already in CHANGES.md")
                 sys.exit(0)
@@ -150,7 +150,7 @@ def main():
                 print()
                 print("First entry in CHANGES.md:")
                 print(first_entry)
-                
+
                 if args.check:
                     sys.exit(1)
         except subprocess.CalledProcessError as e:
@@ -164,10 +164,10 @@ def main():
                 print("Error: CHANGES.md has uncommitted manual changes")
                 print("Please commit or revert your changes first")
                 sys.exit(1)
-        
+
         try:
             regenerate_changes_file()
-            
+
             if args.check:
                 # Check if regeneration created changes
                 if has_uncommitted_changes():

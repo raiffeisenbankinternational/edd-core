@@ -33,6 +33,9 @@ rebase:
 	git fetch
 	git rebase origin/master
 
+drop-cache:
+	find . -d -name '.cpcache' -exec rm -rf {} \;
+
 push:
 	git push origin HEAD:refs/for/master%topic=env/${ENV}
 

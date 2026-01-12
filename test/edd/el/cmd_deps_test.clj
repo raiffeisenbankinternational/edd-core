@@ -47,12 +47,12 @@
                                :request-id request-id
                                :interaction-id interaction-id)
                         (event-store/register))
-                deps (cmd/fetch-dependencies-for-command
-                      ctx
-                      cmd)]
+                ctx (cmd/fetch-dependencies-for-command
+                     ctx
+                     cmd)]
             (is (= {:test-value
                     {:remote :response}}
-                   deps))
+                   (select-keys ctx [:test-value])))
 
             (client/verify-traffic [{:body            (util/to-json
                                                        {:query          {:param "Some Value"
@@ -86,16 +86,14 @@
                  {}
                  {:query   (fn [_ cmd] {:a :b
                                         :query-id :some-query-id})
-                  :service :some-remote-service}
-                 {})))
+                  :service :some-remote-service})))
          (is (= {:a :b}
                 (cmd/resolve-remote-dependency
                  ctx
                  {}
                  {:query   (fn [_ cmd] {:a :b
                                         :query-id :some-query-id})
-                  :service :some-remote-service}
-                 {})))
+                  :service :some-remote-service})))
          (client/verify-traffic [{:body            (util/to-json
                                                     {:query          {:a :b
                                                                       :query-id :some-query-id}
@@ -128,8 +126,7 @@ and return nil to enable query-fn to have when conditions based on previously re
                  ctx
                  {}
                  {:query   (fn [_ cmd] nil)
-                  :service :some-remote-service}
-                 {})))
+                  :service :some-remote-service})))
          (client/verify-traffic []))))))
 
 (deftest test-local-dep-when-query-id-is-not-set
@@ -141,11 +138,11 @@ and return nil to enable query-fn to have when conditions based on previously re
                :meta           meta}]
       (is (= nil
              (cmd/resolve-local-dependency
-              ctx
+              (assoc ctx :previous-dep {:hits []})
               {}
-              (fn [deps _] (when (seq (-> deps :previous-dep :hits))
-                             {:query-id :some-query-id}))
-              {:previous-dep {:hits []}}))))))
+              (fn [deps _]
+                (when (seq (-> deps :previous-dep :hits))
+                  {:query-id :some-query-id}))))))))
 
 (deftest test-when-dependency-in-context-should-override
   (testing
@@ -465,7 +462,7 @@ and return nil to enable query-fn to have when conditions based on previously re
                   :value  "Some Value"})]
         (is (= {:test-value
                 {:remote :response}}
-               (dissoc ctx :dps)))
+               (select-keys ctx [:test-value])))
 
         (client/verify-traffic [{:body            (util/to-json
                                                    {:query          {:param "Some Value"

@@ -9,9 +9,9 @@
             [lambda.http-client :as http-client]))
 
 (defn call-query-fn
-  [_ cmd query-fn deps]
+  [ctx cmd query-fn]
   (if (fn? query-fn)
-    (query-fn deps cmd)
+    (query-fn ctx cmd)
     query-fn))
 
 (defn- service-query? [{:keys [query-id ref]}]
@@ -123,7 +123,7 @@
                                                            "X-Authorization" token}}))))
 
 (defn resolve-remote-dependency
-  [ctx cmd {:keys [service query]} deps]
+  [ctx cmd {:keys [service query]}]
   (util/d-time
    (format "Resolving remote dependency: %s %s"
            service
@@ -131,7 +131,7 @@
                (:cmd-id cmd)))
    (let [query-fn query
          service-name (:service-name ctx)
-         resolved-query (call-query-fn ctx cmd query-fn deps)
+         resolved-query (call-query-fn ctx cmd query-fn)
          request
          {:service service
           :query resolved-query}
@@ -203,11 +203,10 @@
 (declare handle-query)
 
 (defn resolve-local-dependency
-  [ctx cmd query-fn deps]
-
+  [ctx cmd query-fn]
   (util/d-time
    "Resolving local dependency"
-   (let [query (call-query-fn ctx cmd query-fn deps)]
+   (let [query (call-query-fn ctx cmd query-fn)]
      (when query
        (let [resp (handle-query ctx {:query query})]
          (if (:error resp)
@@ -215,35 +214,37 @@
            resp))))))
 
 (defn fetch-dependencies-for-deps
+  "
+  Return a copy of context with the resolved deps
+  added into it.
+  "
   [ctx deps request]
   (let [deps (if (vector? deps)
                (partition 2 deps)
-               deps)
-        dps-value (reduce
-                   (fn [p [key req]]
-                     (util/d-time
-                      (format "Query for dependency %s %s" key (:service req "locally"))
-                      (let [dep-value
-                            (try (if (:service req)
-                                   (resolve-remote-dependency
-                                    ctx
-                                    request
-                                    req
-                                    p)
-                                   (resolve-local-dependency
-                                    ctx
-                                    request
-                                    req
-                                    p))
-                                 (catch AssertionError e
-                                   (log/warn "Assertion error for deps " key)
-                                   nil))]
-                        (if dep-value
-                          (assoc p key dep-value)
-                          p))))
-                   {}
-                   deps)]
-    dps-value))
+               deps)]
+    (reduce
+     (fn [acc [key req]]
+       (if (contains? acc key)
+         acc ;; skip if exists
+         (util/d-time
+          (format "Query for dependency %s %s" key (:service req "locally"))
+          (if-let [dep-value
+                   (try (if (:service req)
+                          (resolve-remote-dependency
+                           acc
+                           request
+                           req)
+                          (resolve-local-dependency
+                           acc
+                           request
+                           req))
+                        (catch AssertionError e
+                          (log/warnf "Assertion error for deps: %s" key)
+                          nil))]
+            (assoc acc key dep-value)
+            acc))))
+     ctx
+     deps)))
 
 (defn handle-query
   [ctx body]
@@ -253,7 +254,7 @@
                 handler
                 produces]} (get-in ctx [:edd-core :queries query-id])]
 
-    (log/debug "Handling query" query-id)
+    (log/debugf "Handling query: %s" query-id)
     (when-not handler
       (throw (ex-info "No handler found"
                       {:error    "No handler found"
@@ -262,8 +263,7 @@
       (throw (ex-info "Invalid request"
                       {:error (schema/explain-error consumes query)})))
     (let [{:keys [deps]} (edd-ctx/get-query ctx query-id)
-          deps-value (fetch-dependencies-for-deps ctx deps query)
-          ctx (merge ctx deps-value)
+          ctx (fetch-dependencies-for-deps ctx deps query)
           resp (util/d-time
                 (str "handling-query: " query-id)
                 (handler ctx query))]

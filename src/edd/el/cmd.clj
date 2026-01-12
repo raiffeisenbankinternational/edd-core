@@ -255,8 +255,7 @@
   (util/d-time
    (str "handling-command: " cmd-id)
    (let [{:keys [handler]} (edd-ctx/get-cmd ctx cmd-id)
-         dependencies (fetch-dependencies-for-command ctx cmd)
-         ctx (merge dependencies ctx)
+         ctx (fetch-dependencies-for-command ctx cmd)
          {:keys [id] :as cmd} (resolve-command-id-with-id-fn ctx cmd)
          {:keys [error]
           :as validation} (validate-single-command ctx cmd)]

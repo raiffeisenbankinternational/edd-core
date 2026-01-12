@@ -46,9 +46,9 @@
                                          (if (= (get-in q [:query :query-id]) :q1)
                                            {:response true}
                                            nil))]
-        (let [deps (cmd/fetch-dependencies-for-command ctx cmd)]
+        (let [ctx (cmd/fetch-dependencies-for-command ctx cmd)]
           (is (= {:test-value {:response true}}
-                 deps))))
+                 (select-keys ctx [:test-value])))))
       (testing "If error is returned"
         (with-redefs [query/handle-query (fn [ctx q]
                                            (if (= (get-in q [:query :query-id]) :q1)
@@ -63,6 +63,11 @@
                                              nil))]
           (is (thrown? ExceptionInfo
                        (cmd/fetch-dependencies-for-command ctx cmd))))))))
+
+(def any-fn
+  (reify Object
+    (equals [_ other]
+      (ifn? other))))
 
 (deftest test-prepare-context-for-command-remote-deps
   "Test if context if properly prepared for remote queries"
@@ -83,7 +88,14 @@
                                      {:status 200
                                       :body   {:result {:response true}}})]
         (let [resolved-ctx (cmd/fetch-dependencies-for-command ctx cmd)]
-          (is (= {:test-value {:response true}}
+          (is (= {:edd-core
+                  {:commands
+                   {:test-cmd
+                    {:deps
+                     {:test-value
+                      {:service :remote
+                       :query any-fn}}}}}
+                  :test-value {:response true}}
                  (dissoc resolved-ctx
                          :dps
                          :commands)))))

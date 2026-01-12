@@ -2,6 +2,10 @@
 
 ## Changes
 
+- [CARS-4437] Fix empty context in edd core
+- replace deps map with a full context
+- update tests
+
 - [AP-795] Fix build to work properly
 
 - [CARS-4540] Update gitleaks for test secrets

@@ -13,6 +13,7 @@
                     PipedInputStream
                     PipedOutputStream
                     PushbackReader
+                    ByteArrayOutputStream
                     Reader
                     Writer
                     InputStream
@@ -97,6 +98,15 @@
                       (io/reader)
                       (pushback-reader))]
      (edn/read opt in))))
+
+(defn byte-array-output-stream
+  "
+  Create a new ByteArrayOutputStream instance.
+  "
+  (^ByteArrayOutputStream []
+   (new ByteArrayOutputStream))
+  (^ByteArrayOutputStream [size]
+   (new ByteArrayOutputStream size)))
 
 (defn get-temp-file
   "

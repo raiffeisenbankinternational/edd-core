@@ -290,7 +290,8 @@
 (defmacro d-time
   "Evaluates expr and logs time it took.  Returns the value of
  expr."
-  {:added "1.0"}
+  {:added "1.0"
+   :style/indent 1}
   [message & expr]
   `(let [current-depth#
          (int
