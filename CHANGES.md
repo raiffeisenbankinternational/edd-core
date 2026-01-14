@@ -2,6 +2,9 @@
 
 ## Changes
 
+- [CARS-4670] Add edd-client submodule
+- add edd.client.core namespace to reach other services
+
 - [CARS-4437] Fix empty context in edd core
 - replace deps map with a full context
 - update tests
