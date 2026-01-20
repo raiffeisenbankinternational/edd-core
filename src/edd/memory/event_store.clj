@@ -5,8 +5,6 @@
    [edd.dal :refer [with-init
                     get-events
                     get-max-event-seq
-                    get-sequence-number-for-id
-                    get-id-for-sequence-number
                     get-aggregate-id-by-identity
                     get-command-response
                     log-dps
@@ -24,24 +22,6 @@
   (-> val
       (util/to-json)
       (util/to-edn)))
-
-(defn store-sequence
-  "Stores sequence in memory structure.
-  Raises RuntimeException if sequence is already taken"
-  [{:keys [id service-name]}]
-  {:pre [id]}
-  (util/d-time
-   (format "MemoryEventStore store-sequence, service: %s, id: %s" service-name id)
-   (let [store (:sequence-store @*dal-state*)
-         sequence-already-exists (some
-                                  #(= (:id %) id)
-                                  store)
-         max-number (count store)]
-     (if sequence-already-exists
-       (throw (RuntimeException. "Sequence already exists")))
-     (swap! *dal-state*
-            #(update % :sequence-store (fn [v] (conj v {:id    id
-                                                        :value (inc max-number)})))))))
 
 (defn store-identity
   "Stores identity in memory structure.
@@ -132,8 +112,6 @@
       (store-event i))
     (doseq [i (:identities resp)]
       (store-identity i))
-    (doseq [i (:sequences resp)]
-      (store-sequence i))
     (doseq [i (:effects resp)]
       (store-command i))
     (log/info resp)
@@ -159,15 +137,6 @@
         (into [])
         (sort-by #(:event-seq %)))))
 
-(defmethod get-sequence-number-for-id
-  :memory
-  [{:keys [id]}]
-  {:pre [id]}
-  (let [store (:sequence-store @*dal-state*)
-        entry (first (filter #(= (:id %) id)
-                             store))]
-    (:value entry)))
-
 (defmethod get-command-response
   :memory
   [{:keys [request-id breadcrumbs]}]
@@ -180,15 +149,6 @@
         (filter #(and (= (:request-id %) request-id)
                       (= (:breadcrumbs %) breadcrumbs))
                 store))))))
-
-(defmethod get-id-for-sequence-number
-  :memory
-  [{:keys [sequence]}]
-  {:pre [sequence]}
-  (let [store (:sequence-store @*dal-state*)
-        entry (first (filter #(= (:value %) sequence)
-                             store))]
-    (:id entry)))
 
 (defn get-max-event-seq-impl
   [{:keys [id]}]

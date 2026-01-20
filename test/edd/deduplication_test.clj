@@ -46,8 +46,8 @@
                 :effects    []
                 :events     1
                 :meta       [{:do-sth {:id id1}}]
-                :identities 0
-                :sequences  0} resp))
+                :identities 0}
+               resp))
         (is (= {:request-id  request-id
                 :breadcrumbs [0]}
                breadcrumbs))))))

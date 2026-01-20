@@ -2,8 +2,8 @@
   (:require [clojure.string :as str]
             [clojure.tools.logging.impl]
             [lambda.request :as request]
-            [clojure.stacktrace :as cst]
-            [lambda.util :refer [*d-time-depth*]])
+            [lambda.logging.state :as log-state]
+            [clojure.stacktrace :as cst])
   (:import (org.slf4j LoggerFactory)
            (org.slf4j Logger)))
 
@@ -28,7 +28,7 @@
 
 (defn- log-common-attrs
   [level msg]
-  (let [depth (if (bound? #'*d-time-depth*) *d-time-depth* 0)
+  (let [depth (if (bound? #'log-state/*d-time-depth*) log-state/*d-time-depth* 0)
         indent (str/join "" (repeat depth "  "))]
     (str
      indent

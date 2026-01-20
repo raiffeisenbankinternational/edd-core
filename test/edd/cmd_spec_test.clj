@@ -32,7 +32,6 @@
                                       :meta      {}
                                       :id        cmd-id}])
     (mock/verify-state :identities [])
-    (mock/verify-state :sequences [])
     (mock/verify-state :commands [])))
 
 (deftest test-missing-id-command

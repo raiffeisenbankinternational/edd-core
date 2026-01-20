@@ -12,8 +12,6 @@
             [edd.dal :refer [with-init
                              get-events
                              get-max-event-seq
-                             get-sequence-number-for-id
-                             get-id-for-sequence-number
                              get-aggregate-id-by-identity
                              get-command-response
                              log-dps
@@ -239,55 +237,6 @@
                   (:service-name ctx)
                   (:id identity)]))
 
-(defn update-sequence
-  [ctx sequence]
-  {:pre [(:id sequence)]}
-  (util/d-time
-   (str "Update sequence: " (:service-name ctx) ", " sequence)
-   (let [service-name (:service-name ctx)
-         aggregate-id (:id sequence)]
-     (jdbc/execute! *DB*
-                    [(str "BEGIN WORK;
-                       LOCK TABLE " (->table ctx :sequence_lastval) " IN ROW EXCLUSIVE MODE;
-                       INSERT INTO " (->table ctx :sequence_lastval) " AS t
-                         VALUES (?, 1)
-                       ON CONFLICT (service_name) DO UPDATE
-                         SET last_value = t.last_value + 1;
-
-                       UPDATE " (->table ctx :sequence_store) "
-                          SET value =  (SELECT last_value
-                                        FROM " (->table ctx :sequence_lastval) "
-                                        WHERE service_name = ?)
-                          WHERE aggregate_id = ? AND service_name = ?;
-                     COMMIT WORK;")
-                     service-name
-                     service-name
-                     aggregate-id
-                     service-name]))))
-
-(defn prepare-store-sequence
-  [ctx sequence]
-  {:pre [(:id sequence)]}
-  (util/d-time
-   (format "Postgres prepare-sequence, service: %s, id: %s" (:service-name ctx) (:id sequence))
-   (let [service-name (:service-name ctx)
-         aggregate-id (:id sequence)]
-     (jdbc/execute! *DB*
-                    [(str "INSERT INTO " (->table ctx :sequence_store) " (invocation_id,
-                                                       request_id,
-                                                       interaction_id,
-                                                       breadcrumbs,
-                                                       aggregate_id,
-                                                       service_name,
-                                                       value)
-                             VALUES (?, ?, ?, ?, ?, ?, 0);")
-                     (:invocation-id ctx)
-                     (:request-id ctx)
-                     (:interaction-id ctx)
-                     (breadcrumb-str (:breadcrumbs ctx))
-                     aggregate-id
-                     service-name]))))
-
 (defmethod get-command-response
   :postgres
   [{:keys [request-id breadcrumbs] :as ctx}]
@@ -307,48 +256,6 @@
                  (breadcrumb-str breadcrumbs)]
                 {:builder-fn rs/as-unqualified-lower-maps})]
     result))
-
-(defn get-sequence-number-for-id-imp
-  [{:keys [id] :as ctx}]
-  {:pre [id]}
-  (let [service-name (:service-name ctx)
-        value-fn #(-> (jdbc/execute-one!
-                       *DB*
-                       [(str "SELECT value
-                               FROM " (->table ctx :sequence_store) "
-                              WHERE aggregate_id = ?
-                                AND service_name = ?")
-                        id
-                        service-name]
-                       {:builder-fn rs/as-unqualified-lower-maps})
-                      (:value))
-        result (value-fn)]
-    (if (= result 0)
-      (do (update-sequence ctx {:id id})
-          (value-fn))
-      result)))
-
-(defmethod get-sequence-number-for-id
-  :postgres
-  [{:keys [id] :as ctx}]
-  {:pre [id]}
-  (get-sequence-number-for-id-imp ctx))
-
-(defmethod get-id-for-sequence-number
-  :postgres
-  [{:keys [sequence] :as ctx}]
-  {:pre [sequence]}
-  (let [service-name (:service-name ctx)
-        result (jdbc/execute-one!
-                *DB*
-                [(str "SELECT aggregate_id
-                     FROM " (->table ctx :sequence_store) "
-                    WHERE value = ?
-                      AND service_name = ?")
-                 sequence
-                 service-name]
-                {:builder-fn rs/as-unqualified-lower-maps})]
-    (:aggregate_id result)))
 
 (defmethod get-aggregate-id-by-identity
   :postgres
@@ -525,17 +432,10 @@
           (:resp ctx)
 
           ctx
-          (dissoc ctx :resp)
-
-          sequences
-          (:sequences resp)]
+          (dissoc ctx :resp)]
 
       (pool/with-tx []
-        (store-results-impl ctx resp)
-        (doseq [i sequences]
-          (prepare-store-sequence ctx i)))
-      (doseq [i sequences]
-        (update-sequence ctx i))
+        (store-results-impl ctx resp))
       ctx)))
 
 (defmethod with-init

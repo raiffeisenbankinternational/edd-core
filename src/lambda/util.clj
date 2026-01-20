@@ -9,6 +9,7 @@
             [java-http-clj.core :as http]
             [lambda.aes :as aes]
             [lambda.gzip :as gzip]
+            [lambda.logging.state :refer [*d-time-depth*]]
             [lambda.request :as request])
   (:import (java.io File InputStream)
            (java.net URLEncoder)
@@ -284,8 +285,6 @@
     (->> message-bytes
          (.doFinal mac)
          (.encodeToString (Base64/getEncoder)))))
-
-(def ^:dynamic *d-time-depth*)
 
 (defmacro d-time
   "Evaluates expr and logs time it took.  Returns the value of

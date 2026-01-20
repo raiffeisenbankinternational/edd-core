@@ -119,11 +119,11 @@
                                                                     :effects    [],
                                                                     :events     1,
                                                                     :meta       [{:cmd-1 {:id agg-id}}],
-                                                                    :identities 0,
-                                                                    :sequences  0}
+                                                                    :identities 0},
                                                    :invocation-id  0
                                                    :request-id     req-id1
                                                    :interaction-id int-id}
+
                                                   {:error          [{:error "failed",
                                                                      :id    agg-id}],
                                                    :invocation-id  0
@@ -133,11 +133,11 @@
                                                                     :effects    [],
                                                                     :events     1,
                                                                     :meta       [{:cmd-1 {:id agg-id}}],
-                                                                    :identities 0,
-                                                                    :sequences  0}
+                                                                    :identities 0},
                                                    :invocation-id  0
                                                    :request-id     req-id3
                                                    :interaction-id int-id}]
+
                                          :method :post
                                          :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
                                         {:method  :get
@@ -180,20 +180,20 @@
                                                                     :effects    [],
                                                                     :events     1,
                                                                     :meta       [{:cmd-1 {:id agg-id}}],
-                                                                    :identities 0,
-                                                                    :sequences  0}
+                                                                    :identities 0},
                                                    :invocation-id  0
                                                    :request-id     req-id4,
                                                    :interaction-id int-id}
+
                                                   {:result         {:success    true,
                                                                     :effects    [],
                                                                     :events     1,
                                                                     :meta       [{:cmd-1 {:id agg-id}}],
-                                                                    :identities 0,
-                                                                    :sequences  0}
+                                                                    :identities 0},
                                                    :invocation-id  0
                                                    :request-id     req-id5,
                                                    :interaction-id int-id}]
+
                                          :method :post
                                          :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
                                         {:method  :get
@@ -247,8 +247,7 @@
                                            :effects    [],
                                            :events     1,
                                            :meta       [{:cmd-1 {:id agg-id}}],
-                                           :identities 0,
-                                           :sequences  0}
+                                           :identities 0},
                           :invocation-id  0
                           :request-id     req-id1
                           :interaction-id int-id}
@@ -323,8 +322,7 @@
                                             :effects    [],
                                             :events     1,
                                             :meta       [{:cmd-1 {:id agg-id}}],
-                                            :identities 0,
-                                            :sequences  0}
+                                            :identities 0},
                            :invocation-id  0
                            :request-id     req-id1
                            :interaction-id int-id}

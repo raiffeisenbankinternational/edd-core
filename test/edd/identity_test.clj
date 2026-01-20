@@ -42,7 +42,6 @@
               :events     1
               :identities 1
               :meta       [{:create-1 {:id id}}]
-              :sequences  0
               :success    true}
              resp)))))
 
@@ -63,7 +62,6 @@
               :events     1
               :identities 0
               :meta       [{:create-2 {:id id}}]
-              :sequences  0
               :success    true}
              resp)))))
 
@@ -84,7 +82,6 @@
               :events     1
               :identities 0
               :meta       [{:create-3 {:id id}}]
-              :sequences  0
               :success    true}
              resp)))))
 

@@ -31,12 +31,14 @@
   {:extra-paths ["test"]
    :extra-deps {com.gfredericks/test.chuck {:mvn/version "0.2.14"}
                 org.clojure/test.check {:mvn/version "1.1.1"}}}
-  :unit
-  {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}}
-   :main-opts ["-m" "kaocha.runner" "unit"]}
-  :it
-  {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}}
-   :main-opts ["-m" "kaocha.runner" "it"]}
+   :unit
+   {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}}
+    :main-opts ["-m" "kaocha.runner" "unit"]
+    :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}
+   :it
+   {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}}
+    :main-opts ["-m" "kaocha.runner" "it"]
+    :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}
   :check {:extra-deps {io.github.athos/clj-check
                        {:git/tag "0.1.0" :git/sha "0ca84df"}}
           :main-opts ["-m" "clj-check.check"]}

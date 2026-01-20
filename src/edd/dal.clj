@@ -12,14 +12,6 @@
   :default
   [_] [])
 
-(defmulti get-sequence-number-for-id
-  (fn [{:keys [_id] :as ctx}]
-    (:event-store ctx)))
-
-(defmulti get-id-for-sequence-number
-  (fn [{:keys [_sequence] :as ctx}]
-    (:event-store ctx)))
-
 (defmulti get-aggregate-id-by-identity
   (fn [{:keys [_identity] :as ctx}]
     (:event-store ctx)))

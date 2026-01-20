@@ -49,7 +49,6 @@
       (dal/store-results (assoc ctx
                                 :resp {:events     [event]
                                        :commands   [command]
-                                       :sequences  []
                                        :identities [identity]})))
 
     (is (= {:Item {:Data          {:S (util/to-json event)}

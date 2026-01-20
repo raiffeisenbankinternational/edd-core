@@ -2,6 +2,20 @@
 
 ## Changes
 
+- [AP-798] Remove :sequence feature
+This commit removes the :sequence concept from all edd-core event store implementations.
+The sequence feature allowed event handlers to returna
+{:sequence :keyword :id aggregate-id} maps to generate
+gapless incrementing sequence numbers with bidirectional
+lookup between aggregate IDs and sequence numbers.
+The feature requires distributed locking and complex two-phase commits
+in Postgres (using LOCK TABLE and dual-table updates).
+
+This cannot be efficiently or reliably implemented in DynamoDB or other
+eventually-consistent data stores without significant complexity and
+potential for race conditions. It is also easy to replace with simple
+aggregate that will used as counter (testable, and more flexible)
+
 - [CARS-4852] Refactor edd-core attributes file (intenal)
 
 - [CARS-4853] Update gitleaks configuration to TOML

@@ -52,50 +52,6 @@
            (view-store/simple-search (assoc ctx
                                             :query {:id 4}))))))
 
-(deftest when-store-sequence-then-ok
-  (with-mock-dal (dal/store-sequence {:id "id1"})
-    (dal/store-sequence {:id "id2"})
-    (verify-state [{:id    "id1"
-                    :value 1}
-                   {:id    "id2"
-                    :value 2}] :sequence-store)
-    (is (= 1
-           (event-store/get-sequence-number-for-id (assoc ctx
-                                                          :id "id1"))))
-    (is (= 2
-           (event-store/get-sequence-number-for-id (assoc ctx
-                                                          :id "id2"))))
-    (is (= "id1"
-           (event-store/get-id-for-sequence-number (assoc ctx
-                                                          :sequence 1))))
-    (is (= "id2"
-           (event-store/get-id-for-sequence-number (assoc ctx
-                                                          :sequence 2))))))
-
-(deftest when-sequnce-null-then-fail
-  (with-mock-dal
-    (is (thrown? AssertionError
-                 (dal/store-sequence {:id nil})))
-
-    (dal/store-sequence {:id "id2"})
-    (is (= "id2"
-           (event-store/get-id-for-sequence-number (assoc ctx
-                                                          :sequence 1))))
-    (is (thrown? AssertionError
-                 (event-store/get-id-for-sequence-number (assoc ctx
-                                                                :sequence nil))))
-    (is (thrown? AssertionError
-                 (event-store/get-sequence-number-for-id (assoc ctx
-                                                                :id nil))))))
-
-(deftest when-sequence-exists-then-exception
-  (with-mock-dal (dal/store-sequence {:id 1})
-    (is (thrown? RuntimeException
-                 (dal/store-sequence
-                  {:id 1})))
-    (verify-state [{:id    1
-                    :value 1}] :sequence-store)))
-
 (deftest when-store-identity-then-ok
   (with-mock-dal
     (dal/store-identity {:identity 1
@@ -254,8 +210,7 @@
     (is (= {:aggregate-store []
             :command-store   [{:cmd 1}]
             :event-store     [{:event :bla}]
-            :identity-store  []
-            :sequence-store  []}
+            :identity-store  []}
            (peek-state)))
 
     (is (= [{:cmd 1}]
@@ -269,8 +224,7 @@
     (is (= {:aggregate-store []
             :command-store   [{:cmd 1}]
             :event-store     []
-            :identity-store  []
-            :sequence-store  []}
+            :identity-store  []}
            (peek-state)))))
 
 (deftest test-simple-query
@@ -431,7 +385,6 @@
               :events     1
               :identities 0
               :meta       [{:test-cmd {:id id}}]
-              :sequences  0
               :success    true}
              (mock/handle-cmd ctx {:cmd-id :test-cmd
                                    :id     id})))
@@ -440,8 +393,7 @@
                             :event-seq 3
                             :id        id}]
               :identities []
-              :meta       [{:test-cmd {:id id}}]
-              :sequences  []}
+              :meta       [{:test-cmd {:id id}}]}
              (mock/get-commands-response ctx {:cmd-id :test-cmd
                                               :id     id})))
       (let [request-id (uuid/gen)
@@ -463,8 +415,7 @@
                                 :request-id     request-id
                                 :interaction-id interaction-id}]
                   :identities []
-                  :meta       [{:test-cmd-fx {:id id}}]
-                  :sequences  []}
+                  :meta       [{:test-cmd-fx {:id id}}]}
                  (mock/get-commands-response (assoc ctx :include-meta true
                                                     :request-id request-id
                                                     :interaction-id interaction-id)
@@ -489,8 +440,7 @@
                                 :event-seq 5
                                 :id        id}]
                   :identities []
-                  :meta       [{:test-cmd-fx {:id id}}]
-                  :sequences  []}
+                  :meta       [{:test-cmd-fx {:id id}}]}
                  (mock/get-commands-response (assoc ctx :request-id request-id
                                                     :interaction-id interaction-id)
                                              {:commands       [{:cmd-id :test-cmd-fx

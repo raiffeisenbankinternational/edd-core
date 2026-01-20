@@ -284,8 +284,7 @@ and return nil to enable query-fn to have when conditions based on previously re
                  :effects [],
                  :events 1,
                  :meta [{:cmd-1 {:id cmd-id-1}}]
-                 :identities 0,
-                 :sequences 0}}
+                 :identities 0}}
                (select-keys
                 (edd/dispatch-item
                  (assoc

@@ -66,7 +66,6 @@
                                   :resp {:events (concat events
                                                          events-2)
                                          :commands []
-                                         :sequences []
                                          :identities []}))
         (is (= events
                (dal/get-events (assoc % :id agg-id))))
@@ -87,7 +86,6 @@
         (dal/store-results (assoc %
                                   :resp {:events []
                                          :commands []
-                                         :sequences []
                                          :identities [identity identity-2]}))
         (is (= agg-id
                (dal/get-aggregate-id-by-identity (assoc % :identity id-1))))
@@ -95,30 +93,3 @@
                (dal/get-aggregate-id-by-identity (assoc % :identity id-2))))
         (is (= nil
                (dal/get-aggregate-id-by-identity (assoc % :identity "agg-id-3"))))))))
-
-(deftest test-sequence-number
-  (let [id-1 (str "id-" (uuid/gen))
-        identity {:identity id-1
-                  :id agg-id}
-        id-2 (str "id-2-" (uuid/gen))
-        identity-2 {:identity id-2
-                    :id agg-id-2}
-        sequence-1 {:sequence :seq
-                    :id agg-id}
-        sequence-2 {:sequence :seq
-                    :id agg-id-2}]
-    (run-test
-     #(do
-        (dal/store-results (assoc %
-                                  :resp {:events []
-                                         :commands []
-                                         :sequences [sequence-1 sequence-2]
-                                         :identities [identity identity-2]}))
-        (is (= agg-id
-               (dal/get-aggregate-id-by-identity (assoc % :identity id-1))))
-        (is (= agg-id-2
-               (dal/get-aggregate-id-by-identity (assoc % :identity id-2))))
-        (is (= nil
-               (dal/get-aggregate-id-by-identity (assoc % :identity "agg-id-3"))))
-        (is (= 1
-               (common/get-sequence-number-for-id % agg-id)))))))

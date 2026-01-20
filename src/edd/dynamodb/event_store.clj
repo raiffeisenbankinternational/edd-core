@@ -5,8 +5,6 @@
    [edd.dal :refer [with-init
                     get-events
                     get-max-event-seq
-                    get-sequence-number-for-id
-                    get-id-for-sequence-number
                     get-command-response
                     get-aggregate-id-by-identity
                     log-dps
@@ -48,18 +46,6 @@
 (defmethod log-response
   :dynamodb
   [ctx]
-  ctx)
-
-(defmethod get-sequence-number-for-id
-  :dynamodb
-  [{:keys [id]}]
-  {:pre [id]}
-  1)
-
-(defmethod get-id-for-sequence-number
-  :dynamodb
-  [{:keys [sequence] :as ctx}]
-  {:pre [sequence]}
   ctx)
 
 (defmethod get-command-response

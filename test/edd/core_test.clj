@@ -184,7 +184,6 @@
                 :meta       [{:dummy-cmd {:id cmd-id}}
                              {:dummy-cmd-2 {:id cmd-id-2}}
                              {:dummy-cmd-3 {:id dps-id}}]
-                :sequences  0
                 :success    true}
                resp))))))
 
@@ -217,7 +216,6 @@
                                                        :events     1
                                                        :identities 0
                                                        :meta       [{:object-uploaded {:id #uuid "1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"}}]
-                                                       :sequences  0
                                                        :success    true}
                                       :invocation-id  0
                                       :interaction-id interaction-id
@@ -270,8 +268,7 @@
                                                                                         :service-name :local-test}]
                                                                           :events     1
                                                                           :meta       [{:dummy-cmd {:id cmd-id}}]
-                                                                          :identities 0
-                                                                          :sequences  0}
+                                                                          :identities 0}
                                                          :invocation-id  0
                                                          :request-id     request-id
                                                          :interaction-id interaction-id})
@@ -320,8 +317,7 @@
                                                                                         :service-name :local-test}]
                                                                           :events     1
                                                                           :meta       [{:dummy-cmd {:id cmd-id}}]
-                                                                          :identities 0
-                                                                          :sequences  0}
+                                                                          :identities 0}
                                                          :invocation-id  0
                                                          :request-id     request-id
                                                          :interaction-id interaction-id})

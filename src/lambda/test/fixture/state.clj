@@ -4,7 +4,6 @@
   {:global          true
    :event-store     []
    :identity-store  []
-   :sequence-store  []
    :command-store   []
    :aggregate-store []
    :response-log    []

@@ -12,7 +12,11 @@
             [lambda.util :as util]
             [edd.common :as common]
             [clojure.tools.logging :as log]
-            [lambda.core :as core]))
+            [lambda.core :as core]
+            [sdk.aws.common]
+            [sdk.aws.s3]
+            [edd.response.s3]
+            [aws.aws]))
 
 (def fx-id (uuid/gen))
 
@@ -38,7 +42,6 @@
   ([] (-> (clean-ctx)
           (edd/reg-cmd :cmd-1 (fn [ctx cmd]
                                 [{:identity (:id cmd)}
-                                 {:sequence (:id cmd)}
                                  {:id       (:id cmd)
                                   :event-id :event-1
                                   :name     (:name cmd)}
@@ -101,7 +104,6 @@
                                :events     2
                                :identities 1
                                :meta       [{:cmd-1 {:id agg-id}}]
-                               :sequences  1
                                :success    true}
               :invocation-id  invocation-id
               :interaction-id interaction-id
@@ -481,64 +483,8 @@
                 :request-id     request-id}
                resp))))))
 
-(deftest test-sequence-when-saving-error
-  (binding [*dal-state* (atom {})]
-    (let [invocation-id (uuid/gen)
-          ctx (-> (get-ctx invocation-id)
-                  (edd/reg-cmd :cmd-i1 (fn [ctx cmd]
-                                         [{:sequence (:id cmd)}
-                                          {:event-id :i1-created}]))
-                  (edd/reg-cmd :cmd-i2 (fn [ctx cmd]
-                                         [{:event-id :i1-created}])
-                               :deps {:seq edd.common/get-sequence-number-for-id})
-                  (edd/reg-fx (fn [ctx events]
-                                {:commands [{:cmd-id :cmd-i2
-                                             :id     (:id (first events))}]
-                                 :service  :s2})))
-          agg-id (uuid/gen)
-          interaction-id (uuid/gen)
-          request-id (uuid/gen)
-          agg-id-2 (uuid/gen)
-          req {:request-id     request-id
-               :interaction-id interaction-id
-               :meta           {:realm :test}
-               :commands       [{:cmd-id :cmd-i1
-                                 :id     agg-id}]}
-          resp (with-redefs [event-store/update-sequence (fn [ctx cmd]
-                                                           (throw (ex-info "Sequence Store failure" {})))]
-                 (edd/handler ctx
-                              (assoc req :log-level :debug)))]
-
-      (edd/handler ctx
-                   {:request-id     (uuid/gen)
-                    :interaction-id interaction-id
-                    :meta           {:realm :test}
-                    :commands       [{:cmd-id :cmd-i1
-                                      :id     agg-id-2}]})
-      (edd/with-stores
-        ctx (fn [ctx]
-              (is (not= []
-                        (event-store/get-response-log
-                         (with-realm ctx)
-                         {:invocation-id invocation-id})))
-              (let [seq (event-store/get-sequence-number-for-id-imp
-                         (with-realm (assoc ctx :id agg-id)))]
-                (is (> seq
-                       0))
-                (is (= (dec seq)
-                       (event-store/get-sequence-number-for-id-imp
-                        (with-realm (assoc ctx :id agg-id-2))))))
-              (is (= nil
-                     (event-store/get-sequence-number-for-id-imp
-                      (with-realm (assoc ctx :id (uuid/gen))))))))
-
-      (is (= {:exception      "Sequence Store failure"
-              :invocation-id  invocation-id
-              :interaction-id interaction-id
-              :request-id     request-id}
-             resp)))))
-
 (deftest test-saving-of-request-error
+
   (binding [*dal-state* (atom {})]
     (let [invocation-id (uuid/gen)
           ctx (get-ctx invocation-id)
@@ -727,19 +673,19 @@
                 (with-realm)
                 (assoc :aws {:aws-session-token "tok"})
                 (assoc :service-name "retry-test")
-                (edd/reg-cmd :error-prone (fn [ctx cmd]
-                                            [{:sequence (:id cmd)}
+                (edd/reg-cmd :error-prone (fn [_ctx cmd]
+                                            [{:identity (:id cmd)}
                                              {:event-id :error-prone-event
                                               :attr     "sa"}])))]
-    (with-redefs [sdk.aws.s3/put-object (fn [ctx object]
+    (with-redefs [sdk.aws.s3/put-object (fn [_ctx _object]
                                           {:status 200})
                   sdk.aws.common/authorize (fn [_] "")
                   sdk.aws.common/create-date (fn [] "20220304T113706Z")
-                  edd.postgres.event-store/update-sequence (fn [_ctx _sequence]
-                                                             (when (= @attempt 0)
-                                                               (swap! attempt inc)
-                                                               (throw (ex-info "Timeout"
-                                                                               {:data "Timeout"}))))]
+                  event-store/store-identity (fn [_ctx _identity]
+                                               (when (= @attempt 0)
+                                                 (swap! attempt inc)
+                                                 (throw (ex-info "Timeout"
+                                                                 {:data "Timeout"}))))]
       (core-mock/mock-core
        :invocations [(util/to-json {:request-id     request-id
                                     :interaction-id interaction-id
@@ -752,16 +698,18 @@
                                     :commands       [{:cmd-id :error-prone
                                                       :id     aggregate-id}]})]
 
-       :requests [{:post "https://sqs.eu-central-1.amazonaws.com/11111111111/test-evets-queue"}]
+       :requests [{:post (str
+                          "https://sqs.eu-central-1.amazonaws.com/"
+                          account-id
+                          "/test-evets-queue")}]
        (core/start
         ctx
         edd/handler)
        (verify-traffic-edn [{:body   {:result         {:meta       [{:error-prone {:id aggregate-id}}],
                                                        :events     1,
-                                                       :sequences  1,
                                                        :success    true,
                                                        :effects    [],
-                                                       :identities 0},
+                                                       :identities 1},
                                       :invocation-id  invocation-id-2
                                       :request-id     request-id
                                       :interaction-id interaction-id}
@@ -769,13 +717,13 @@
                              :url    (str "http://mock/2018-06-01/runtime/invocation/"
                                           invocation-id-2
                                           "/response")}
-                            {:body            (str "Action=SendMessage&MessageBody=%7B%22Records%22%3A%5B%7B%22s3%22%3A%7B%22object%22%3A%7B%22key%22%3A%22response%2F"
-                                                   request-id
-                                                   "%2F0%2Flocal-test.json%22%7D%2C%22bucket%22%3A%7B%22name%22%3A%22"
+                            {:body            (str "Action=SendMessage&MessageBody=%7B%22Records%22%3A%5B%7B%22s3%22%3A%7B%22bucket%22%3A%7B%22name%22%3A%22"
                                                    account-id
                                                    "-"
                                                    environment-name-lower
-                                                   "-sqs%22%7D%7D%7D%5D%7D")
+                                                   "-sqs%22%7D%2C%22object%22%3A%7B%22key%22%3A%22response%2F"
+                                                   request-id
+                                                   "%2F0%2Flocal-test.json%22%7D%7D%7D%5D%7D")
                              :connect-timeout 300
                              :headers         {"Accept"               "application/json"
                                                "Authorization"        ""

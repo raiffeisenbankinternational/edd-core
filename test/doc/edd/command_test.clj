@@ -53,7 +53,6 @@
               :events     1
               :identities 0
               :meta       [{:test-cmd {:id cmd-id}}]
-              :sequences  0
               :success    true}
              (el-cmd/handle-commands
               ctx
@@ -71,8 +70,7 @@
                             :meta           {}
                             :request-id     nil}]
               :identities []
-              :meta       [{:test-cmd {:id cmd-id}}]
-              :sequences  []}
+              :meta       [{:test-cmd {:id cmd-id}}]}
              (el-cmd/handle-commands
               (assoc ctx :no-summary true)
               {:commands [request]}))))
@@ -113,8 +111,7 @@
                               :request-id     nil}]
                 :identities []
                 :meta       [{:test-cmd-1 {:id cmd-id-1}}
-                             {:test-cmd-2 {:id cmd-id-2}}]
-                :sequences  []}
+                             {:test-cmd-2 {:id cmd-id-2}}]}
                (el-cmd/handle-commands
                 (assoc ctx :no-summary true)
                 {:commands [{:id     cmd-id-1
@@ -139,7 +136,6 @@
               :events     1
               :identities 0
               :meta       [{:test-cmd {:id cmd-id}}]
-              :sequences  0
               :success    true}
              (el-cmd/handle-commands
               ctx
@@ -157,8 +153,7 @@
                             :meta           {}
                             :request-id     nil}]
               :identities []
-              :meta       [{:test-cmd {:id cmd-id}}]
-              :sequences  []}
+              :meta       [{:test-cmd {:id cmd-id}}]}
              (el-cmd/handle-commands
               (assoc ctx :no-summary true)
               {:commands [request]}))))))

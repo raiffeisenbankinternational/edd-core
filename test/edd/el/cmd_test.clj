@@ -113,8 +113,7 @@
                                                            :effects    []
                                                            :events     1
                                                            :meta       [{:ping {:id id}}]
-                                                           :identities 0
-                                                           :sequences  0}
+                                                           :identities 0}
                                           :invocation-id  0
                                           :request-id     request-id
                                           :interaction-id interaction-id})

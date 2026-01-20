@@ -6,4 +6,10 @@
          {:id           :it
           :source-paths ["src"]
           :test-paths   ["test"]
-          :ns-patterns  ["-it$"]}]}
+          :ns-patterns  ["-it$"]}]
+ :color? true
+ :fail-fast? false
+ :randomize? false
+ :diff-style :deep
+ :plugins [:kaocha.plugin/profiling]
+ :kaocha.plugin.profiling/count 10}

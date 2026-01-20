@@ -1,8 +1,10 @@
 (ns lambda.test.fixture.client
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [is]]
             [lambda.util :as util]
             [clojure.tools.logging :as log]
-            [clojure.data :refer [diff]]))
+            [clojure.data :refer [diff]]
+            [clojure.string :as str]
+            [lambda.logging.state :as log-state]))
 
 (def ^:dynamic *world*)
 
@@ -23,19 +25,19 @@
            traffic))
     traffic))
 
-(defmacro verify-traffic-edn
-  [y]
-  `(is (= ~y
-          (->> (:traffic @*world*)
-               (mapv map-body-to-edn)
-               (mapv #(dissoc % :keepalive))))))
+(defn verify-traffic-edn
+  [expected]
+  (is (= expected
+         (->> (:traffic @*world*)
+              (mapv map-body-to-edn)
+              (mapv #(dissoc % :keepalive))))))
 
-(defmacro verify-traffic
-  [y]
-  `(is (= ~y
-          (mapv
-           #(dissoc % :keepalive)
-           (:traffic @*world*)))))
+(defn verify-traffic
+  [expected]
+  (is (= expected
+         (mapv
+          #(dissoc % :keepalive)
+          (:traffic @*world*)))))
 
 (defn traffic-edn
   ([]
@@ -72,7 +74,7 @@
   [coll func]
   (first
    (keep-indexed (fn [idx v]
-                   (if (func v) idx))
+                   (when (func v) idx))
                  coll)))
 
 (defn is-match
@@ -86,6 +88,36 @@
            (diff (get v :req)
                  (util/to-edn body)))
           nil))))
+
+(defn- log-mock-not-found
+  "Log mock not found error as a single message with indentation"
+  [method url req all pass-through?]
+  (let [depth (if (bound? #'log-state/*d-time-depth*) log-state/*d-time-depth* 0)
+        indent (str/join "      " (repeat depth "  "))
+        body-str (if (:body req)
+                   (try
+                     (str (util/to-edn (:body req)))
+                     (catch Exception _
+                       (str (:body req))))
+                   "none")
+        expected-urls (when (seq all)
+                        (str/join "\n"
+                                  (map-indexed
+                                   (fn [i m]
+                                     (str indent "    [" i "] " (or (:get m) (:post m) (:put m) (:delete m) (:patch m))))
+                                   all)))
+        prefix (if pass-through? "Mock pass-through" "Mock not found")
+        message (str prefix "\n"
+                     indent "Request:\n"
+                     indent "  Method: " method "\n"
+                     indent "  URL: " url "\n"
+                     indent "  Body: " body-str "\n"
+                     indent "Available mocks: " (count all)
+                     (when expected-urls
+                       (str "\n" indent "  Expected URLs:\n" expected-urls)))]
+    (if pass-through?
+      (log/warn message)
+      (log/error message))))
 
 (defn handle-request
   "Each request contained :method :url pair and response :body.
@@ -106,13 +138,13 @@
                  update-in [:responses]
                  #(remove-at % idx)))
         (dissoc resp method :req :keep))
-      (do
-        (log/error {:error {:message "Mock not Found"
-                            :url     url
-                            :method  method
-                            :req     req}})
-        {:status 200
-         :body   (util/to-json {:result nil})}))))
+      (let [{:keys [pass-through original-request-fn]
+             :or {pass-through false}} (:config @*world*)]
+        (log-mock-not-found method url req all pass-through)
+        (if (and pass-through original-request-fn)
+          (original-request-fn req)
+          {:status 200
+           :body   (util/to-json {:result nil})})))))
 
 (defmacro mock-http
   [responses & body]
@@ -120,6 +152,9 @@
          config# (if (map? responses#)
                    (:config responses#)
                    {})
+         config# (if (:pass-through config#)
+                   (assoc config# :original-request-fn util/request)
+                   config#)
          responses# (if (map? responses#)
                       (:responses responses#)
                       responses#)]

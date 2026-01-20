@@ -71,7 +71,6 @@
 (def default-db
   {:event-store     []
    :identity-store  []
-   :sequence-store  []
    :command-store   []
    :aggregate-store []})
 

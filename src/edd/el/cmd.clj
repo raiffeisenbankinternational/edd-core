@@ -207,8 +207,7 @@
                     (map #(assoc % :id (:id cmd)))
                     (remove nil?))
         response {:events     []
-                  :identities []
-                  :sequences  []}]
+                  :identities []}]
     (if (some :error events)
       (assoc response
              :error (vec
@@ -217,7 +216,6 @@
        (fn [p event]
          (cond-> p
            (contains? event :identity) (update :identities conj event)
-           (contains? event :sequence) (update :sequences conj event)
            (contains? event :event-id) (update :events conj event)))
        response
        events))))
@@ -331,7 +329,6 @@
   {:meta       []
    :events     []
    :effects    []
-   :sequences  []
    :history    []
    :identities []})
 
@@ -367,8 +364,7 @@
                                           sample)
                              :events     (count (:events resp))
                              :meta       (:meta resp)
-                             :identities (count (:identities resp))
-                             :sequences  (count (:sequences resp))})))
+                             :identities (count (:identities resp))})))
 
 (defn e-concurrent-modification?
   "

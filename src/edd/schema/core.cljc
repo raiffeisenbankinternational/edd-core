@@ -136,8 +136,6 @@
      [:events {:description "NUmber of events produced"}
       :int]
      [:identities {:description "Number of identities created"}
-      :int]
-     [:sequences {:description "Number of sequences created"}
       :int]]]
    [:invocation-id {:description "Invocation ID represents backend invocation
                                   id for this execution."} :uuid]

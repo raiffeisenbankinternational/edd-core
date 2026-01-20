@@ -117,29 +117,6 @@
     (search/get-snapshot ctx id)
     (log/warn "Fetch-by-id -> Id is nil")))
 
-(defn get-sequence-number-for-id
-  [ctx & [query]]
-  {:pre [(or (:id ctx)
-             query)]}
-  (let [id (if (:id query)
-             (:id query)
-             (parse-param query))]
-    (dal/get-sequence-number-for-id
-     (if query
-       (assoc ctx :id  id)
-       ctx))))
-
-(defn get-id-for-sequence-number
-  [ctx & [query]]
-  {:pre [(or (:sequence ctx)
-             sequence)]}
-  (dal/get-id-for-sequence-number
-   (if query
-     (assoc ctx :id (if (:sequence query)
-                      (:sequence query)
-                      (parse-param query)))
-     ctx)))
-
 (defn get-aggregate-id-by-identity
   [ctx & [query]]
   {:pre [(or (:identity ctx)
