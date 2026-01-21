@@ -1,0 +1,1490 @@
+# Gitleaks ignore file - generated from scan results
+
+title = "gitleaks config"
+
+[allowlist]
+  description = "Allowlisted findings from security scan"
+  paths = [
+    '''test/.*'''
+  ]
+  regexes = []
+  stopwords = []
+
+  [[allowlist.fingerprints]]
+    fingerprint = "008c3732c7b92773250dd92fc01c40b90dd68dfd:test/edd/core_test.clj:generic-api-key:202"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "00b37ec8dfc6cb9a5e5967f91330e08f5448c705:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "00b37ec8dfc6cb9a5e5967f91330e08f5448c705:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "00b37ec8dfc6cb9a5e5967f91330e08f5448c705:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "0293d0fc1312f7cf4fe221657c715fd4bcc55e58:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "039df7d5f0e1b74a3140eb2fa7345feb56bd1cec:test/edd/apply_batch_test.clj:generic-api-key:142"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "039df7d5f0e1b74a3140eb2fa7345feb56bd1cec:test/edd/core_test.clj:generic-api-key:229"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "039df7d5f0e1b74a3140eb2fa7345feb56bd1cec:test/lambda/s3_test.clj:generic-api-key:88"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "039df7d5f0e1b74a3140eb2fa7345feb56bd1cec:test/lambda/sqs_filter_test.clj:generic-api-key:125"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "03a369da95987463ea0f85383330006868016e21:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "03a369da95987463ea0f85383330006868016e21:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "03a369da95987463ea0f85383330006868016e21:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "03af022ae97956a619b558821c8a77cb16a78523:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "03af022ae97956a619b558821c8a77cb16a78523:test/lambda/jwt_test.clj:jwt:8"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "03af022ae97956a619b558821c8a77cb16a78523:test/lambda/jwt_test.clj:jwt:9"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "03f8b0c7bce78e97688376a0fdce498bbf6716b3:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "041ef52dd8228391a0567a474ff35e4a9eb06cfa:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "041ef52dd8228391a0567a474ff35e4a9eb06cfa:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "041ef52dd8228391a0567a474ff35e4a9eb06cfa:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "058ab0ed4a0cbd279d55005bae70c96fd8f72e21:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "058ab0ed4a0cbd279d55005bae70c96fd8f72e21:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "058ab0ed4a0cbd279d55005bae70c96fd8f72e21:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "05cea3d881dbd4bae4c9816de77320de2041c5e9:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "05cea3d881dbd4bae4c9816de77320de2041c5e9:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "05cea3d881dbd4bae4c9816de77320de2041c5e9:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "05d9f714f4ca5839544e6a4151f6c72f6ee13488:test/edd/core_test.clj:generic-api-key:202"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "06752f6cf9c667c677a9802f27726f69011189c8:test/edd/core_test.clj:generic-api-key:202"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "07346b28b49eaa1ed30aa24ff3ce61a51788aee1:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "0821173720d3a83d41bd049c348169eba14cbde4:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "08344232105754a7f2f2bc08287e489b97e43ab4:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "08d8d8d2aa09a2029064ef2a9d69b2aec9c94e9d:test/edd/core_test.clj:generic-api-key:193"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "08d8d8d2aa09a2029064ef2a9d69b2aec9c94e9d:test/lambda/s3_test.clj:generic-api-key:84"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "08d8d8d2aa09a2029064ef2a9d69b2aec9c94e9d:test/lambda/sqs_filter_test.clj:generic-api-key:120"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "0b71c9d61cc48995067edd2e426bfaa5153c26f9:test/lambda/sqs_filter_test.clj:generic-api-key:111"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "0bef50e52e01e75b7f6cb45903fc7afe94b6e2d4:test/lambda/sqs_filter_test.clj:generic-api-key:111"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "0ca55fab3a885e864fa5ee62fcce601024f6e604:resources/secret.json:generic-api-key:12"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "0ca55fab3a885e864fa5ee62fcce601024f6e604:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "0ca55fab3a885e864fa5ee62fcce601024f6e604:test/lambda/jwt_test.clj:jwt:8"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "0ca55fab3a885e864fa5ee62fcce601024f6e604:test/lambda/jwt_test.clj:jwt:9"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "0deeab0490b610a1605323690341ea2aa8d7b72b:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "0f2c0a3b523d5c316459e468ef4a5e2f5723b973:test/edd/apply_batch_test.clj:generic-api-key:142"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "129b727d666a37d3e0a6443c4d715939f5185040:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "129b727d666a37d3e0a6443c4d715939f5185040:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "129b727d666a37d3e0a6443c4d715939f5185040:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "133afcab3b955c444d878e7d41e4f50bddca32d0:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "133afcab3b955c444d878e7d41e4f50bddca32d0:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "133afcab3b955c444d878e7d41e4f50bddca32d0:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "143703332a2a3eaa95dbf0aa5290159a16226df2:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "143b81d59bbe315e79f6701ed17eae74ce08a911:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "143b81d59bbe315e79f6701ed17eae74ce08a911:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "143b81d59bbe315e79f6701ed17eae74ce08a911:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "1528b0ab8a5875946ba873b2522f37e9cf944525:test/edd/core_test.clj:generic-api-key:206"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "153e92e1816cc3c09185278a5ab4e72b3ab4b595:test/edd/core_test.clj:generic-api-key:230"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "153e92e1816cc3c09185278a5ab4e72b3ab4b595:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "15b1bbc5731820f67d7229a99d154ae65335b80c:test/lambda/api_test.clj:jwt:260"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "1826f9beea792d9c5ef75212ecaa86d8f2a8d50e:test/edd/apply_batch_test.clj:generic-api-key:142"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "1826f9beea792d9c5ef75212ecaa86d8f2a8d50e:test/edd/core_test.clj:generic-api-key:229"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "1826f9beea792d9c5ef75212ecaa86d8f2a8d50e:test/lambda/s3_test.clj:generic-api-key:88"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "1826f9beea792d9c5ef75212ecaa86d8f2a8d50e:test/lambda/sqs_filter_test.clj:generic-api-key:125"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "18fab9b9406370d4cebfeffaacb282d07e3efc78:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "18fab9b9406370d4cebfeffaacb282d07e3efc78:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "18fab9b9406370d4cebfeffaacb282d07e3efc78:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "19dac1643bfdc29dc6100a4166e715e901161695:test/edd/apply_batch_test.clj:generic-api-key:142"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "1af1848ffcbbe0eaed09091e37874e9c6b80111a:test/edd/apply_batch_test.clj:generic-api-key:142"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "204acfa9036bb1a36d8a769c648b8bed9a6a59ca:test/edd/apply_batch_test.clj:generic-api-key:142"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "206523ebd0419b6b4159f48732fa66f5dc91c36a:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "20cd879be5b40f8da69ea4551f5fd98891ad27a6:test/lambda/api_test.clj:jwt:346"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "226a28c0d678ebd1f7d003d42fd01d3988e0fddd:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "226a28c0d678ebd1f7d003d42fd01d3988e0fddd:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "226a28c0d678ebd1f7d003d42fd01d3988e0fddd:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "22deb4346769faf254e723625f70cfcacfa8f924:resources/secret.json:generic-api-key:12"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "22deb4346769faf254e723625f70cfcacfa8f924:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "22deb4346769faf254e723625f70cfcacfa8f924:test/lambda/jwt_test.clj:jwt:8"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "22deb4346769faf254e723625f70cfcacfa8f924:test/lambda/jwt_test.clj:jwt:9"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "256d21ac15d92866dfc4482a52500ac0fbc60eae:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "256d21ac15d92866dfc4482a52500ac0fbc60eae:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "256d21ac15d92866dfc4482a52500ac0fbc60eae:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "26e3ef15b39af22c11b9ed36ede0a6090b673e94:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "27766f7980f90e2993b4175aaca2fcd4c475017b:test/edd/core_test.clj:generic-api-key:230"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "27766f7980f90e2993b4175aaca2fcd4c475017b:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "278b10cb61c56912ccf6da21229534c1fafabd9c:test/edd/core_test.clj:generic-api-key:230"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "278b10cb61c56912ccf6da21229534c1fafabd9c:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "2a5df9b0319163cb763869eb26f5f63b68551ed6:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "2b034ee3170ef73a9e79b6137d5843864294059c:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "2b413ea5f96002fae355478597a18d17c43ffe03:test/edd/apply_batch_test.clj:generic-api-key:139"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "2c527fc5d5fe7f9d09564aa9ced098035a90593e:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "2cce4c86e9fab8ff3f1ce8814a5d209b15f56bed:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "2d21dc40bbf5e00ed9c38ddd785c82d804af8bf7:test/lambda/api_test.clj:jwt:260"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "2d4b1d38ebf4127a675de2a3c8d708b460c1497c:test/lambda/api_test.clj:jwt:19"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "2d6b7324ed56d28d48570ac4f7708b3384a0c402:test/edd/core_test.clj:generic-api-key:206"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "2e2149ec225a13adc3e5053c5311b4a3cc7280d6:test/lambda/api_test.clj:jwt:19"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "2faccf4c7cb69fe4c9a7f5bd1b2ba354f54c088e:test/edd/apply_batch_test.clj:generic-api-key:142"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "30206e7b0d7d5c2c21d80927d50dd416618143bb:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "32957c10ee648af3fc1bdaf902ace1eebc6c90d5:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "32957c10ee648af3fc1bdaf902ace1eebc6c90d5:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "32957c10ee648af3fc1bdaf902ace1eebc6c90d5:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "33215fc3fef64e7da5c2fd9453b8a738670d1dc7:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "340e9c9a1c4b29a779762381e1b05e5f77cb0f3c:test/edd/core_test.clj:generic-api-key:234"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "345b641835028a90912049e6fc8f7aed1fdc3218:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "345b641835028a90912049e6fc8f7aed1fdc3218:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "345b641835028a90912049e6fc8f7aed1fdc3218:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "350d4b8222b5fd8c8965ebf83fc30d554e45b0c9:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "350d4b8222b5fd8c8965ebf83fc30d554e45b0c9:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "350d4b8222b5fd8c8965ebf83fc30d554e45b0c9:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3569006eabf012f75a922b86aa1d259bc0edf000:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3569006eabf012f75a922b86aa1d259bc0edf000:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3569006eabf012f75a922b86aa1d259bc0edf000:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "35b045fb355e8942015b2336b064571733b28b31:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "35b045fb355e8942015b2336b064571733b28b31:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "35b045fb355e8942015b2336b064571733b28b31:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "37610cff00f0b245a0b8e3629c44f246be4381f1:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "37610cff00f0b245a0b8e3629c44f246be4381f1:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "37610cff00f0b245a0b8e3629c44f246be4381f1:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "389655cd05d049cdb3b3685fba38ac7151dfdcb2:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "39e74abba30350b5b0600b51cd730b0027e02844:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "39e74abba30350b5b0600b51cd730b0027e02844:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "39e74abba30350b5b0600b51cd730b0027e02844:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3a2c4838c2d658702e3a06cb30843bd3865a72ec:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3a2c4838c2d658702e3a06cb30843bd3865a72ec:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3a2c4838c2d658702e3a06cb30843bd3865a72ec:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3a36b549aeca58e9c93ea3d0d20dc225ecfa685f:test/lambda/api_test.clj:jwt:260"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3a5fbe05a776663b04a82d9a1438621c7752ad17:test/edd/core_test.clj:generic-api-key:234"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3a5fbe05a776663b04a82d9a1438621c7752ad17:test/lambda/api_test.clj:jwt:434"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3b75f1e2870248ae9d3ce5708e72936dde03394b:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3b75f1e2870248ae9d3ce5708e72936dde03394b:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3b75f1e2870248ae9d3ce5708e72936dde03394b:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3bc37aad4216f8eef4a6d07978cddc074c47f69f:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3bc37aad4216f8eef4a6d07978cddc074c47f69f:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3bc37aad4216f8eef4a6d07978cddc074c47f69f:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3d910ca20d3003f982b5abf3444e3622109b18fa:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3dc789a96a96e69a1cbd3aa41e08e8bb22d3fc60:resources/secret.json:generic-api-key:7"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3dc789a96a96e69a1cbd3aa41e08e8bb22d3fc60:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3dc789a96a96e69a1cbd3aa41e08e8bb22d3fc60:test/lambda/jwt_test.clj:jwt:12"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3dc789a96a96e69a1cbd3aa41e08e8bb22d3fc60:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3dc789a96a96e69a1cbd3aa41e08e8bb22d3fc60:test/lambda/s3_test.clj:generic-api-key:47"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3dc789a96a96e69a1cbd3aa41e08e8bb22d3fc60:test/lambda/sqs_filter_test.clj:generic-api-key:112"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "3f6ed266a6e00a536bbd19bf4327711aa8b408ee:test/lambda/s3_test.clj:generic-api-key:86"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "40040e3779ebcd73d27d858d4055b551520ea47f:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "41b469f40f63e07b64fe754571fd9adc0e027e6b:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "42988a60215d3ed06993a5bf66be3763dd64d4c6:resources/secret.json:generic-api-key:7"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "42988a60215d3ed06993a5bf66be3763dd64d4c6:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "42988a60215d3ed06993a5bf66be3763dd64d4c6:test/lambda/jwt_test.clj:jwt:12"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "42988a60215d3ed06993a5bf66be3763dd64d4c6:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "42988a60215d3ed06993a5bf66be3763dd64d4c6:test/lambda/s3_test.clj:generic-api-key:47"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "42988a60215d3ed06993a5bf66be3763dd64d4c6:test/lambda/sqs_filter_test.clj:generic-api-key:112"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "43c692af51adda4f0504c0db8e2927466eb2232d:test/edd/core_test.clj:generic-api-key:202"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "43f3693c8ad57afcc87c3ae07aeed38bbc0950c2:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "43f98637ccfa409c18b5bb99a5ca59f9dd01ba83:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "43f98637ccfa409c18b5bb99a5ca59f9dd01ba83:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "43f98637ccfa409c18b5bb99a5ca59f9dd01ba83:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "45bd309856db7fc48cc8dfbe71a8b6029a7dea4a:test/edd/apply_batch_test.clj:generic-api-key:142"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "471f2316285b1717e1cff89b03c9872825fb8e79:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "471f2316285b1717e1cff89b03c9872825fb8e79:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "471f2316285b1717e1cff89b03c9872825fb8e79:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "47ed189aefa4dcd9fd04ef4ed76e5ecbe0a29a6b:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "4a5199dc481e99f72bcaf113db9498e3f26ec509:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "4a5199dc481e99f72bcaf113db9498e3f26ec509:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "4a5199dc481e99f72bcaf113db9498e3f26ec509:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "4af19039d1be19cdc2163c266bb542579c6bfe44:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "4af19039d1be19cdc2163c266bb542579c6bfe44:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "4af19039d1be19cdc2163c266bb542579c6bfe44:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "4c4db4e9302fccc6aadd5f9d9426ce27e0d382ae:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "4c4db4e9302fccc6aadd5f9d9426ce27e0d382ae:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "4c4db4e9302fccc6aadd5f9d9426ce27e0d382ae:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "4ec2d8655f821522137f6e446053c8fc9fe03ea2:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "4ecf4853eb32293f9315e6dc9d029d47ea3b8f01:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "4fb1811ffc17bab4e7893c9c95c18a2f8aa70f28:test/edd/core_test.clj:generic-api-key:202"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5008a4b3ebd8fda9570bd4ef488247222f3705c4:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5008a4b3ebd8fda9570bd4ef488247222f3705c4:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5008a4b3ebd8fda9570bd4ef488247222f3705c4:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "50390b7e649027d452c0c690c0a63d2b1f8811ae:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5149d8b2d263cc735b137d9b9fdf760d2d05c103:test/lambda/sqs_filter_test.clj:generic-api-key:111"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "524b3b87c2284928d79e94c58b1cd1c4d63dd38c:test/lambda/api_test.clj:jwt:260"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "52bbedc4b50c6b87c672a63254fdca3b51d02cbc:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "52bbedc4b50c6b87c672a63254fdca3b51d02cbc:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "52bbedc4b50c6b87c672a63254fdca3b51d02cbc:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "54d22c2d16cb3a6e4cf7a6575a7f4e756e4e176a:test/edd/core_test.clj:generic-api-key:202"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "55f7e593bc1c8e0ffce1bcb4e0047a66726cecdf:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5612c56f92bc63949317d31fc0333492a9f73553:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5612c56f92bc63949317d31fc0333492a9f73553:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5612c56f92bc63949317d31fc0333492a9f73553:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5618ed7dae20e43f00a5caa0d61cd89fcf1725c0:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5646555a9d45b75c222a4b7efeb464450a3e1d4b:test/lambda/api_test.clj:jwt:346"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5666ab155b57ef4988979fe1ccceb0dd943c7d4c:test/edd/core_test.clj:generic-api-key:202"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "584ac1bdf7c5674e90f07f013ec06c357dbd1768:resources/secret.json:generic-api-key:7"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "584ac1bdf7c5674e90f07f013ec06c357dbd1768:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "584ac1bdf7c5674e90f07f013ec06c357dbd1768:test/lambda/jwt_test.clj:jwt:12"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "584ac1bdf7c5674e90f07f013ec06c357dbd1768:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "584ac1bdf7c5674e90f07f013ec06c357dbd1768:test/lambda/s3_test.clj:generic-api-key:47"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "584ac1bdf7c5674e90f07f013ec06c357dbd1768:test/lambda/sqs_filter_test.clj:generic-api-key:112"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "58693fdab7fff5e07657ae1ff8fbd24ba27481d2:test/edd/core_test.clj:generic-api-key:234"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "586e63b005c6b2979c683fe9d685b5432f37577c:test/edd/core_test.clj:generic-api-key:193"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "586e63b005c6b2979c683fe9d685b5432f37577c:test/lambda/s3_test.clj:generic-api-key:84"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "586e63b005c6b2979c683fe9d685b5432f37577c:test/lambda/sqs_filter_test.clj:generic-api-key:120"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "596ef36511e12f76c5840090e7161b00729184b7:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5976b1bd47ebfac93031aba6f06cb4b8c85e0029:resources/secret.json:generic-api-key:12"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5976b1bd47ebfac93031aba6f06cb4b8c85e0029:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5976b1bd47ebfac93031aba6f06cb4b8c85e0029:test/lambda/jwt_test.clj:jwt:8"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5976b1bd47ebfac93031aba6f06cb4b8c85e0029:test/lambda/jwt_test.clj:jwt:9"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "59fd24f39d173fda0f774f4d317565162d0f20d9:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5a60cced33a3ad982933d5629f59dada6e394d04:test/edd/commands_batch_test.clj:aws-access-token:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5b9a1bd891f52518ba21a5def3881411d81a8691:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5bfddc81b2dff0988c0bdcba03ef187a22b0d244:test/edd/core_test.clj:generic-api-key:193"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5bfddc81b2dff0988c0bdcba03ef187a22b0d244:test/lambda/s3_test.clj:generic-api-key:84"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5bfddc81b2dff0988c0bdcba03ef187a22b0d244:test/lambda/sqs_filter_test.clj:generic-api-key:120"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5c97db0137d463b8d980659d73736923f40e8388:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5cba5e3cb125dd3a7f60bee1ffb8227dd59f5698:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5cd4c53300857fc007336cecae4c4db3f09d2feb:test/edd/core_test.clj:generic-api-key:230"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5cd4c53300857fc007336cecae4c4db3f09d2feb:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5d6ec0a44deda5b5437438f885a26074b4c96726:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5dbd04a0304c4c497c2a9d6e539631a7fcc6da8e:resources/secret.json:generic-api-key:12"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5dbd04a0304c4c497c2a9d6e539631a7fcc6da8e:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5dbd04a0304c4c497c2a9d6e539631a7fcc6da8e:test/lambda/jwt_test.clj:jwt:8"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5dbd04a0304c4c497c2a9d6e539631a7fcc6da8e:test/lambda/jwt_test.clj:jwt:9"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5df4e309d43515a2e94b9192d52bfe9bf93dcaf3:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5f2bd243c46e12094ad0e0ce5d4b84735db4927f:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5f81a1e4586536f1020ffa61ab7a1eca2f985252:test/lambda/api_test.clj:jwt:19"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5fff4b8b60530cb1bff69e9214c9d339366e1b36:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5fff4b8b60530cb1bff69e9214c9d339366e1b36:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "5fff4b8b60530cb1bff69e9214c9d339366e1b36:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "60004fd8abf7612127da00044e600419a9d9b192:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "600fe0d6ce743fa662b876e53b0859875bae1937:test/lambda/api_test.clj:jwt:260"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "603ce6fba539d9f5318baeca3ac925502705ab13:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "60b0ab1a24627389f27b99c1349436f7d9141f9b:test/lambda/sqs_filter_test.clj:generic-api-key:111"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "63040916fe6ff6a36e44e1940d5f4e86f89c02c5:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6515292977612dc2a27c38b0b473212ab92cc0e9:test/edd/apply_batch_test.clj:generic-api-key:139"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6571d3d899237304e998f395858135d00ed85d44:test/edd/core_test.clj:generic-api-key:202"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6697fc4bc48d8b0c95d4eea480d0d43ba1cb99bf:test/edd/core_test.clj:generic-api-key:193"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6697fc4bc48d8b0c95d4eea480d0d43ba1cb99bf:test/lambda/s3_test.clj:generic-api-key:86"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6697fc4bc48d8b0c95d4eea480d0d43ba1cb99bf:test/lambda/sqs_filter_test.clj:generic-api-key:120"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6791fc8556dfd4f96b0ea4cca8aea162f3012435:test/edd/core_test.clj:generic-api-key:193"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6791fc8556dfd4f96b0ea4cca8aea162f3012435:test/lambda/s3_test.clj:generic-api-key:84"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6791fc8556dfd4f96b0ea4cca8aea162f3012435:test/lambda/sqs_filter_test.clj:generic-api-key:120"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6797de930e5f2f26dcc52ed15810262ce79409bf:test/edd/core_test.clj:generic-api-key:193"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6797de930e5f2f26dcc52ed15810262ce79409bf:test/lambda/s3_test.clj:generic-api-key:84"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6797de930e5f2f26dcc52ed15810262ce79409bf:test/lambda/sqs_filter_test.clj:generic-api-key:120"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "67cf36ceeb024cf286a76a75cbe2d264949bf9e7:test/lambda/api_test.clj:jwt:346"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6898096d028b5abc83fcecb217e0591a795db1d4:test/edd/core_test.clj:generic-api-key:202"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "698818527d07c4c3a700c6d0743f4da6c9b18cf6:test/edd/core_test.clj:generic-api-key:193"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "698818527d07c4c3a700c6d0743f4da6c9b18cf6:test/lambda/s3_test.clj:generic-api-key:86"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "69dbf1f352b10be850093b376ea8e2c009ae68c0:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "69e4c6f3b09b9d3189ae28b6194083d36e6070b6:test/edd/core_test.clj:generic-api-key:234"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6bc93f98b12b65749728055e76fdba77d12bcf51:test/edd/apply_batch_test.clj:generic-api-key:139"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6e40fa274c5d987a3c8b2dbcc3b8d6f2c44ede64:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6f1af63022154ca84f861195b3b18cb72d20e455:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6f8b8d553bc92b18a75b46fec720ae4355467daf:resources/secret.json:generic-api-key:12"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6f8b8d553bc92b18a75b46fec720ae4355467daf:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6f8b8d553bc92b18a75b46fec720ae4355467daf:test/lambda/jwt_test.clj:jwt:8"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "6f8b8d553bc92b18a75b46fec720ae4355467daf:test/lambda/jwt_test.clj:jwt:9"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "70d0d9ecaa290ac82c8e8ee311dda0d2b189e3be:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "738aa76d964c4ee99691cfe115686cf7d41b5f0a:test/edd/apply_batch_test.clj:generic-api-key:142"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "73a056f6f2d767759a683e938a8350de759b899e:test/edd/apply_batch_test.clj:generic-api-key:142"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "73a056f6f2d767759a683e938a8350de759b899e:test/edd/core_test.clj:generic-api-key:229"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "73a056f6f2d767759a683e938a8350de759b899e:test/lambda/s3_test.clj:generic-api-key:88"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "73a056f6f2d767759a683e938a8350de759b899e:test/lambda/sqs_filter_test.clj:generic-api-key:125"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "73ab6059f694b5620d31725eec5382c6e28d48ff:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "73b49620999ab43bdf74584511df643e8cff2613:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "73b49620999ab43bdf74584511df643e8cff2613:test/lambda/jwt_test.clj:jwt:8"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "73b49620999ab43bdf74584511df643e8cff2613:test/lambda/jwt_test.clj:jwt:9"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "73eccd050b15c751daf7bfc232303b397d87b5ac:test/edd/apply_batch_test.clj:generic-api-key:139"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7568ca9eb67ae7f9895b90be39aad5f83755a13f:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7764535e083458d9cc1395b0d113bd88896774b9:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "77b45e9009b631df5d4bf31028c638ecde0385b3:test/edd/core_test.clj:generic-api-key:193"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "77b45e9009b631df5d4bf31028c638ecde0385b3:test/lambda/s3_test.clj:generic-api-key:84"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "77b45e9009b631df5d4bf31028c638ecde0385b3:test/lambda/sqs_filter_test.clj:generic-api-key:120"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "796f9b13eb4d87a4933109a7e1237f1eb15234ff:test/lambda/api_test.clj:jwt:19"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "796f9b13eb4d87a4933109a7e1237f1eb15234ff:test/secret.json:generic-api-key:8"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "79a2ff678e0c55dd28bbb677309a54718ff79e46:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7aecf79ca558d221d3fb9cdf3fa998b17ae97f92:test/edd/core_test.clj:generic-api-key:230"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7aecf79ca558d221d3fb9cdf3fa998b17ae97f92:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7b3007512c9a0b553f259d53c4c9ad9e0691dff4:resources/secret.json:generic-api-key:7"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7b3007512c9a0b553f259d53c4c9ad9e0691dff4:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7b3007512c9a0b553f259d53c4c9ad9e0691dff4:test/lambda/jwt_test.clj:jwt:12"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7b3007512c9a0b553f259d53c4c9ad9e0691dff4:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7b3007512c9a0b553f259d53c4c9ad9e0691dff4:test/lambda/s3_test.clj:generic-api-key:47"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7b3007512c9a0b553f259d53c4c9ad9e0691dff4:test/lambda/sqs_filter_test.clj:generic-api-key:112"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7be79c7a4e067d063a70622dd5a286626186a3ba:test/lambda/api_test.clj:jwt:19"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7be79c7a4e067d063a70622dd5a286626186a3ba:test/secret.json:generic-api-key:8"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7bef91022ad51b24587b9797e2207cfa33ee3fa5:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7d46abe627be80aa048327f78100288032909991:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7d46abe627be80aa048327f78100288032909991:test/lambda/jwt_test.clj:jwt:12"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7d46abe627be80aa048327f78100288032909991:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7d46abe627be80aa048327f78100288032909991:test/lambda/s3_test.clj:generic-api-key:47"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7d46abe627be80aa048327f78100288032909991:test/lambda/sqs_filter_test.clj:generic-api-key:112"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7e72b96805e74788e0c4d936d06b399acfaf32d8:test/edd/apply_batch_test.clj:generic-api-key:142"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7e72b96805e74788e0c4d936d06b399acfaf32d8:test/edd/core_test.clj:generic-api-key:229"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7e72b96805e74788e0c4d936d06b399acfaf32d8:test/lambda/s3_test.clj:generic-api-key:88"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7e72b96805e74788e0c4d936d06b399acfaf32d8:test/lambda/sqs_filter_test.clj:generic-api-key:125"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7e7ca3427925359f756825d4021f0821bc46fb2d:test/edd/core_test.clj:generic-api-key:202"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "7fab080343906ca92d6e51071abf22581c6586e6:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "83803c9430fbe35d257214e905def0cb3f5abe55:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "84943f8274491f4698ca91638ca81a5875cc219a:test/edd/core_test.clj:generic-api-key:193"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "84943f8274491f4698ca91638ca81a5875cc219a:test/lambda/s3_test.clj:generic-api-key:84"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "84943f8274491f4698ca91638ca81a5875cc219a:test/lambda/sqs_filter_test.clj:generic-api-key:120"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "84eb8289717420cef3db442540655c0a62ac447f:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "84fe2aa5736019efca501ae3a349357a9466045c:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "8504339d5375d6ff9662e166607a75c0875828be:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "85dca3eb4cf67c55fa1d13d8f257a59b298a150f:test/lambda/api_test.clj:jwt:19"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "85eb2961643a954bc5160cf03b42bc01d227a7e0:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "87693fade859d527cc14950fca8a80906afb7898:test/edd/core_test.clj:generic-api-key:202"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "89781fbf7210cbf58108e5a1d02a9730ae9218d5:test/edd/apply_batch_test.clj:generic-api-key:139"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "8b7e11bc94f9ab8c7bd58ede1690708a605c592f:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "8b7e11bc94f9ab8c7bd58ede1690708a605c592f:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "8b7e11bc94f9ab8c7bd58ede1690708a605c592f:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "8d52f43fc85bfa1c582efe7bf5bc80e3df6161b0:test/edd/apply_batch_test.clj:generic-api-key:139"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9183fc53779ecd6ceb56e2b685ef2e3e29829ec1:resources/secret.json:generic-api-key:12"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9183fc53779ecd6ceb56e2b685ef2e3e29829ec1:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9183fc53779ecd6ceb56e2b685ef2e3e29829ec1:test/lambda/jwt_test.clj:jwt:8"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9183fc53779ecd6ceb56e2b685ef2e3e29829ec1:test/lambda/jwt_test.clj:jwt:9"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "921571f3c6b9b2778826ea07c59d7df9ed99883e:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9226eb4caab1bb47dff30c750872b580fc31bb2c:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "92d8a2ec11ecfd2125c43aeccf5f2f561ec9a6a2:test/edd/commands_batch_test.clj:aws-access-token:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9333b447e9e4dd72135da77c4226ba769f9cc0b4:test/edd/core_test.clj:generic-api-key:193"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9333b447e9e4dd72135da77c4226ba769f9cc0b4:test/lambda/s3_test.clj:generic-api-key:84"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9333b447e9e4dd72135da77c4226ba769f9cc0b4:test/lambda/sqs_filter_test.clj:generic-api-key:120"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "934a7a9660008b4260c0b1fff0f2a7cc65597635:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "934a7a9660008b4260c0b1fff0f2a7cc65597635:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "934a7a9660008b4260c0b1fff0f2a7cc65597635:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "974b9f6774cb2280194a1d52fd919730f29b6dfa:test/edd/apply_batch_test.clj:generic-api-key:142"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "980a10d764532c8dc053bb4fc273668c73100aaa:test/lambda/api_test.clj:jwt:260"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "98479cdfadf326eb47d8d2454d59d4c2870cfefb:test/lambda/api_test.clj:jwt:346"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "995bab6978c95ee2113a2a70648a1bee9d31629e:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9a6ecb8ef36a0b43eaaf96f2673113703b726438:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9b8158afc7dee04bf26c9449a88d2f3d7aa08fee:test/edd/apply_batch_test.clj:generic-api-key:142"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9b8158afc7dee04bf26c9449a88d2f3d7aa08fee:test/edd/core_test.clj:generic-api-key:229"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9b8158afc7dee04bf26c9449a88d2f3d7aa08fee:test/lambda/s3_test.clj:generic-api-key:88"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9b8158afc7dee04bf26c9449a88d2f3d7aa08fee:test/lambda/sqs_filter_test.clj:generic-api-key:125"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9c51a90d436106c0d8b7343e9ae813dade3a7e82:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9c51a90d436106c0d8b7343e9ae813dade3a7e82:test/lambda/jwt_test.clj:jwt:12"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9c51a90d436106c0d8b7343e9ae813dade3a7e82:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9c51a90d436106c0d8b7343e9ae813dade3a7e82:test/lambda/s3_test.clj:generic-api-key:47"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9c51a90d436106c0d8b7343e9ae813dade3a7e82:test/lambda/sqs_filter_test.clj:generic-api-key:112"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9c66854fc12888ada5c8ad77a9ed8440ac64a56e:test/lambda/api_test.clj:jwt:259"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9e43cb7752ebdee7269d9662704b5bdaa5f02860:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9e43cb7752ebdee7269d9662704b5bdaa5f02860:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9e43cb7752ebdee7269d9662704b5bdaa5f02860:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9eec5e5033d35e6cea908c00099c91f22022ab64:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9eec5e5033d35e6cea908c00099c91f22022ab64:test/lambda/jwt_test.clj:jwt:8"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9eec5e5033d35e6cea908c00099c91f22022ab64:test/lambda/jwt_test.clj:jwt:9"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9eed7b460b58c943ab3444cb403efcc6fc04ebb5:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "9f5ebcb4777e14e6dc794598168df78ee9ccd8e3:test/edd/core_test.clj:generic-api-key:202"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "a10b9f2df8aa80e67034722b7f4b1a917d3b66d3:test/edd/core_test.clj:generic-api-key:230"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "a10b9f2df8aa80e67034722b7f4b1a917d3b66d3:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "a171c3d44befc7b25af30c1dfaa5ef130171bb9b:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "a33bebc7e887f0c61dd3c0a32412b5bb838e3c72:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "a3ca28927b8f22391f6f1db4c6e430aba6a4fdb8:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "a5270fe55d56a8464e39c915d61bf52e32686995:test/edd/core_test.clj:generic-api-key:230"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "a5270fe55d56a8464e39c915d61bf52e32686995:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "a7147d617dc1d148de848a7b6909a8a23728a63d:test/lambda/api_test.clj:jwt:19"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "a7147d617dc1d148de848a7b6909a8a23728a63d:test/secret.json:generic-api-key:8"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "a873c23b4b5c09cb8d1ba9dbecd04952cdafecf5:test/edd/core_test.clj:generic-api-key:202"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "aad52bac06506b55b31776d8d8aef936b06c1a6e:test/edd/core_test.clj:generic-api-key:193"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "aad52bac06506b55b31776d8d8aef936b06c1a6e:test/lambda/s3_test.clj:generic-api-key:84"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "aad52bac06506b55b31776d8d8aef936b06c1a6e:test/lambda/sqs_filter_test.clj:generic-api-key:120"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "ac8d5039ca2b8b45328f38467bb0be086943bdfe:test/edd/core_test.clj:generic-api-key:202"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "af00392114362d2b2a6243b74a8b2aab40cd5483:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "af221b734d666721e38f297bf1cc84d821da584d:test/lambda/api_test.clj:jwt:260"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b24dd8f7e26831289ea1a0e11aa9d40e39d17123:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b26ec72b21b3c0d4c31a67cde98d80e6a6a1f9a7:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b2b66e76b0d4177304b47aa23308f42181ef3dfc:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b2b66e76b0d4177304b47aa23308f42181ef3dfc:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b2b66e76b0d4177304b47aa23308f42181ef3dfc:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b3618f147687fd39d36468af6c6f87eca96d628b:test/edd/core_test.clj:generic-api-key:230"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b3618f147687fd39d36468af6c6f87eca96d628b:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b40b073b7c6ef255b1a03c42714caafbb5ad1930:resources/secret.json:generic-api-key:12"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b40b073b7c6ef255b1a03c42714caafbb5ad1930:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b40b073b7c6ef255b1a03c42714caafbb5ad1930:test/lambda/jwt_test.clj:jwt:8"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b40b073b7c6ef255b1a03c42714caafbb5ad1930:test/lambda/jwt_test.clj:jwt:9"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b42f1a6fe99d23afc28c4c6ac3e70adb7fd0a0e8:test/edd/apply_batch_test.clj:generic-api-key:142"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b49f14f8ad06247f59d544267e45bee9ca7943c9:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b594181b78f004bffa2fe4764ea6417da32c2623:test/lambda/sqs_filter_test.clj:generic-api-key:111"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b5f306e242ac4850462f5a039aabe6df788d6b2a:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b618b70131d8d5734518659156d9aa52929af421:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b6a44535769243f1ff245329605eccfbe10f4d46:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b6a5324c6d767adbfda23797ecd3bfede540d567:test/edd/apply_batch_test.clj:generic-api-key:139"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b6cc7701c19c547bb99e6c60dd7bce6cb1df4ab3:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b6ffec5365f8327d50be9397407d62b5b25f954d:test/lambda/api_test.clj:jwt:346"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b78814dea4077eb8a1f7749a678e707474962574:resources/secret.json:generic-api-key:12"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b78814dea4077eb8a1f7749a678e707474962574:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b78814dea4077eb8a1f7749a678e707474962574:test/lambda/jwt_test.clj:jwt:8"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b78814dea4077eb8a1f7749a678e707474962574:test/lambda/jwt_test.clj:jwt:9"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b7bec00e2d47cf5429d3718825568b1dcaddb57a:test/edd/core_test.clj:generic-api-key:234"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b7bec00e2d47cf5429d3718825568b1dcaddb57a:test/lambda/api_test.clj:jwt:434"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "b8995cc5067b878877681419a7b67ca86f8ad349:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "ba0d5a8afe4019948c861e35bc8aa4c101d19683:test/lambda/api_test.clj:jwt:346"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "bc5ffd041177c94f114c439116f1dc105aa63dc2:test/edd/core_test.clj:generic-api-key:234"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "bc5ffd041177c94f114c439116f1dc105aa63dc2:test/lambda/api_test.clj:jwt:434"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "bd44f17af6327f4ab6b8786c1d01b3e7013aed14:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "bd44f17af6327f4ab6b8786c1d01b3e7013aed14:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "bd44f17af6327f4ab6b8786c1d01b3e7013aed14:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "beb7bd4b053ee586d63ba05ff7b12bd7c188f2a5:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "beb7bd4b053ee586d63ba05ff7b12bd7c188f2a5:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "beb7bd4b053ee586d63ba05ff7b12bd7c188f2a5:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "bf7d3d6901cf38d6efd2d7f6055d6c3bd0744bd6:resources/secret.json:generic-api-key:12"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "bf7d3d6901cf38d6efd2d7f6055d6c3bd0744bd6:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "bf7d3d6901cf38d6efd2d7f6055d6c3bd0744bd6:test/lambda/jwt_test.clj:jwt:8"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "bf7d3d6901cf38d6efd2d7f6055d6c3bd0744bd6:test/lambda/jwt_test.clj:jwt:9"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "c0a7f8d75eaaf1500d9da6b81edd54558779e6da:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "c27e46e74a9bfe840e1feb89fcdfebd1746b52e3:test/edd/apply_batch_test.clj:generic-api-key:139"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "c2a04a5efe384aabc9829a313a769aa49e45671c:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "c2a04a5efe384aabc9829a313a769aa49e45671c:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "c2a04a5efe384aabc9829a313a769aa49e45671c:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "c3a5eccb420e52c89ea9a1eeac42f764ca91b7ff:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "c414f4e343c7102b64e97800c4991424d9dbdf11:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "c79ec93806b1c98f86090aeb4373d36aeca3048d:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "c79ec93806b1c98f86090aeb4373d36aeca3048d:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "c79ec93806b1c98f86090aeb4373d36aeca3048d:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "cc73a5bd3a844b7c48f886df2dea5dd7f7f64d25:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "ced645db647cc7a923586d5d6e5d4559b573d1f7:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "ced645db647cc7a923586d5d6e5d4559b573d1f7:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "ced645db647cc7a923586d5d6e5d4559b573d1f7:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "cf5b33a507f107c9f27192f39385bcf3e461cab5:test/lambda/api_test.clj:jwt:19"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "cf898d3fa13c9412e4fc436bc0c2befc5b7a7516:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "d11740d6b3ca6b60dc16c66fa888988ab5d74655:test/edd/core_test.clj:generic-api-key:230"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "d11740d6b3ca6b60dc16c66fa888988ab5d74655:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "d2469056b692ed7cdcbf70d2efaabe077bce9866:test/edd/core_test.clj:generic-api-key:202"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "d3ea7dbfa253c6d8cab9e65f35efe56276aadbcd:resources/secret.json:generic-api-key:12"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "d3ea7dbfa253c6d8cab9e65f35efe56276aadbcd:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "d3ea7dbfa253c6d8cab9e65f35efe56276aadbcd:test/lambda/jwt_test.clj:jwt:8"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "d3ea7dbfa253c6d8cab9e65f35efe56276aadbcd:test/lambda/jwt_test.clj:jwt:9"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "d4f8ff075b8074d9b9dd7a4b03145ca499105830:test/lambda/api_test.clj:jwt:259"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "d77f6c60ba1cf9b6034129f09253a83d6f6e1eae:test/edd/core_test.clj:generic-api-key:193"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "d77f6c60ba1cf9b6034129f09253a83d6f6e1eae:test/lambda/s3_test.clj:generic-api-key:84"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "d77f6c60ba1cf9b6034129f09253a83d6f6e1eae:test/lambda/sqs_filter_test.clj:generic-api-key:120"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "d795a9fc328cce6a1569375e0a3140e3ee5a9554:test/lambda/sqs_filter_test.clj:generic-api-key:111"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "d95144d8936c45d6e4d8a38856cac563c01aacc2:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "d95144d8936c45d6e4d8a38856cac563c01aacc2:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "d95144d8936c45d6e4d8a38856cac563c01aacc2:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "d9e25866c478a108424c8185a217627a37169afb:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "da2f5e8ec93cc23895150ea13d8dea3ef6bdba6c:test/edd/core_test.clj:generic-api-key:193"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "da2f5e8ec93cc23895150ea13d8dea3ef6bdba6c:test/lambda/s3_test.clj:generic-api-key:84"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "da2f5e8ec93cc23895150ea13d8dea3ef6bdba6c:test/lambda/sqs_filter_test.clj:generic-api-key:120"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "daf830a2c85105ccbec64b88b9af18de3a477dc5:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "ddeeee7c8d5c865f68d404f237d658df5e26ee5d:resources/secret.json:generic-api-key:12"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "ddeeee7c8d5c865f68d404f237d658df5e26ee5d:test/lambda/jwt_test.clj:jwt:11"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "ddeeee7c8d5c865f68d404f237d658df5e26ee5d:test/lambda/jwt_test.clj:jwt:8"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "ddeeee7c8d5c865f68d404f237d658df5e26ee5d:test/lambda/jwt_test.clj:jwt:9"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "ddf5e9d772aa057c87f6807a3f372476261d4e2f:test/lambda/sqs_filter_test.clj:generic-api-key:111"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "dee17bd7710f378fdf0dd51914fafeddb244418c:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "df17360a55f2ac24b79463ad27b13efbd9939707:test/lambda/s3_test.clj:generic-api-key:92"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "e1d408a951b79258b20fe3efb9e7d375be6a3ebd:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "e24369071b960426aa499e4b54ad384f6feccc3c:test/edd/apply_batch_test.clj:generic-api-key:139"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "e24425b7791913e3156da1f2d0383444530c1ee2:test/lambda/api_test.clj:jwt:19"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "e36644d36d4c639af7f7be1ae33921610e4fb2e1:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "e609d5213d3f75a5f667aac9701351aa16ba833e:test/lambda/sqs_filter_test.clj:generic-api-key:124"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "e6cfac30d00f7d398a67b5b2010e81158b7d56ba:test/edd/apply_batch_test.clj:generic-api-key:142"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "e6cfac30d00f7d398a67b5b2010e81158b7d56ba:test/edd/core_test.clj:generic-api-key:229"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "e6cfac30d00f7d398a67b5b2010e81158b7d56ba:test/lambda/s3_test.clj:generic-api-key:88"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "e6cfac30d00f7d398a67b5b2010e81158b7d56ba:test/lambda/sqs_filter_test.clj:generic-api-key:125"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "e8f679dca8a876ac9b436353063e2471f37c66a1:README.md:aws-access-token:3"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "e983e645f46cbe7fc40da369746edf15161a0901:test/lambda/api_test.clj:jwt:346"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "ea3c204194be1b3f16648cac926a14f6460d73aa:test/lambda/api_test.clj:jwt:346"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "ea41ab563d596f6d42a192593aecba9a77a28709:test/edd/apply_batch_test.clj:generic-api-key:142"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "ea5fcbffdafaa0b650a39706c4b9cdaea777bfcf:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "ea5fcbffdafaa0b650a39706c4b9cdaea777bfcf:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "ea5fcbffdafaa0b650a39706c4b9cdaea777bfcf:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "eaf54e8a9741cb3c978ecd2b2312e66014ffb2cf:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "eaf54e8a9741cb3c978ecd2b2312e66014ffb2cf:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "eaf54e8a9741cb3c978ecd2b2312e66014ffb2cf:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "eb78b3cd79466dc601109ab438bc0d79f03806cd:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "eb78b3cd79466dc601109ab438bc0d79f03806cd:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "eb78b3cd79466dc601109ab438bc0d79f03806cd:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "ee95e2912f2ac069c5478960b597fd166f3934f7:test/edd/core_test.clj:generic-api-key:202"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "ef55c399b0509144dfaf60a82e2732b707c89790:test/lambda/api_test.clj:jwt:260"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f0464d123b116d287cc2effbb50e69ef7ee87763:test/lambda/api_test.clj:jwt:260"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f076ce71f6f3dea280b11d11439ecfdc84135235:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f076ce71f6f3dea280b11d11439ecfdc84135235:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f076ce71f6f3dea280b11d11439ecfdc84135235:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f17b4eb5dfa0e0fbda5824114722b30179d3256f:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f17b4eb5dfa0e0fbda5824114722b30179d3256f:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f17b4eb5dfa0e0fbda5824114722b30179d3256f:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f25ff97c2990f7f3b365f232eb32ade9d2e8c89d:test/lambda/api_test.clj:jwt:346"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f2ea85da014af27a7a669114953a10e9cd2f7483:test/edd/apply_batch_test.clj:generic-api-key:140"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f32c637d9ad251d49d5c152efe051c86baad915e:test/edd/commands_batch_test.clj:aws-access-token:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f3393742b4156aef9938eb2bbb0e16b85bae6137:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f3393742b4156aef9938eb2bbb0e16b85bae6137:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f3393742b4156aef9938eb2bbb0e16b85bae6137:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f40491b72db2b4eb3bf65a55ad09e1d79b765501:test/edd/core_test.clj:generic-api-key:202"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f55c934997662e609724b15b061521083b22f26d:test/edd/core_test.clj:generic-api-key:193"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f55c934997662e609724b15b061521083b22f26d:test/lambda/s3_test.clj:generic-api-key:84"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f55c934997662e609724b15b061521083b22f26d:test/lambda/sqs_filter_test.clj:generic-api-key:120"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f583a9803c172a39c3ce34010fbcfbaee244caf7:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f583a9803c172a39c3ce34010fbcfbaee244caf7:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f583a9803c172a39c3ce34010fbcfbaee244caf7:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f58aae3bd1c77b19d04fd4d617ab7f6b1096f4ae:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f62fe95047b3f49d18c6bbab253797e464933489:test/edd/core_test.clj:generic-api-key:231"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f62fe95047b3f49d18c6bbab253797e464933489:test/lambda/s3_test.clj:generic-api-key:93"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f62fe95047b3f49d18c6bbab253797e464933489:test/lambda/sqs_filter_test.clj:generic-api-key:127"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f9cabdd83e391f7cb7e4abd1d1d2f6fcb269b059:test/edd/core_test.clj:generic-api-key:193"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f9cabdd83e391f7cb7e4abd1d1d2f6fcb269b059:test/lambda/s3_test.clj:generic-api-key:84"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "f9cabdd83e391f7cb7e4abd1d1d2f6fcb269b059:test/lambda/sqs_filter_test.clj:generic-api-key:120"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "fbb7bd5debe6642eab16ea1c62c5a2ff93f3b447:test/lambda/jwt_test.clj:jwt:14"
+
+  [[allowlist.fingerprints]]
+    fingerprint = "fdb2ada1ce81078336e4f9a01cbe1c912b38af54:test/edd/core_test.clj:generic-api-key:202"
