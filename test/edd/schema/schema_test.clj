@@ -1,4 +1,4 @@
-(ns edd.schema.core-test
+(ns edd.schema.schema-test
   (:require [edd.schema.core :as sut]
             [clojure.test.check.properties :as prop]
             [edd.test.fixture.dal :as mock]

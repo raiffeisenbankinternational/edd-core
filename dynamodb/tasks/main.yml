@@ -1,0 +1,11 @@
+- name: 'Deploy dynamodb stack: {{ application_name }}-{{ realm_name }}'
+  amazon.aws.cloudformation:
+     stack_name: '{{ params["EnvironmentNameUpper"] | default(lookup("env", "EnvironmentNameUpper")) }}-DYNAMODB-{{ application_name }}-{{ realm_name }}-stack'
+     state: "present"
+     region: '{{ lookup("env", "Region")  }}'
+     disable_rollback: false
+     template: "{{ role_path }}/files/db.yaml"
+     template_parameters:
+       EnvironmentNameLower: '{{ params["EnvironmentNameLower"] | default(lookup("env", "EnvironmentNameLower")) }}'
+       ApplicationName: '{{ application_name }}'
+       Realm: '{{ realm_name }}'

@@ -6,7 +6,6 @@
    [edd.memory.event-store :as event-store]
    [edd.memory.view-store :as view-store]
    [edd.test.fixture.dal :as f]
-   [lambda.test.fixture.state :as state]
    [edd.core :as edd]
    [edd.test.fixture.dal :as mock]))
 
@@ -74,7 +73,7 @@
                        :id     id2})
 
       (is (sut/process-next! ctx))
-      (is (= 1 (count (:event-store @state/*dal-state*)))))))
+      (is (= 1 (count (f/peek-state :event-store)))))))
 
 (deftest test-place-and-process-all
   (f/with-mock-dal
@@ -89,7 +88,7 @@
 
       (sut/process-all! ctx)
 
-      (is (= 4 (count (:event-store @state/*dal-state*)))))))
+      (is (= 4 (count (f/peek-state :event-store)))))))
 
 (deftest test-run-multiple-cmds
   (f/with-mock-dal
@@ -102,7 +101,7 @@
                     {:cmd-id :cmd-1
                      :id     id2})
 
-      (is (= 4 (count (:event-store @state/*dal-state*)))))))
+      (is (= 4 (count (f/peek-state :event-store)))))))
 
 (deftest test-run-a-single-cmd
   (f/with-mock-dal
@@ -112,4 +111,4 @@
       (sut/run-cmd! ctx {:cmd-id :cmd-1
                          :id     id1})
 
-      (is (= 2 (count (:event-store @state/*dal-state*)))))))
+      (is (= 2 (count (f/peek-state :event-store)))))))

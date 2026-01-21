@@ -24,7 +24,8 @@
 (def HOST
   (if DOCKER? "postgres" "127.0.0.1"))
 
-(def PORT 5432)
+(def PORT
+  (Integer/parseInt (or (System/getenv "DatabasePort") "5432")))
 
 (def pool-opt
   {:dbtype "postgres"

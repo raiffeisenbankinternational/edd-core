@@ -5,7 +5,6 @@
    [edd.memory.event-store :as event-store]
    [edd.test.fixture.execution :as exec]
    [edd.common :as common]
-   [lambda.test.fixture.state :as state]
    [lambda.uuid :as uuid]
    [edd.test.fixture.dal :as mock]
    [clojure.string :as str]))
@@ -160,7 +159,7 @@
 
       (exec/run-cmd! ctx {:commands [{:cmd-id :inc
                                       :id     id1}]})
-      (let [cmds (set (:command-store @state/*dal-state*))]
+      (let [cmds (set (mock/peek-state :command-store))]
         (is (= command-store-with-bc
                (sort-crumbs cmds)))))))
 
@@ -176,6 +175,6 @@
       (exec/run-cmd! ctx {:commands    [{:cmd-id :inc
                                          :id     id1}]
                           :breadcrumbs [0]})
-      (let [cmds (:command-store @state/*dal-state*)]
+      (let [cmds (mock/peek-state :command-store)]
         (is (= command-store-with-bc
                (sort-crumbs cmds)))))))

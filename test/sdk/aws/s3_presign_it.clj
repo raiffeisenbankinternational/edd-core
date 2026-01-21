@@ -13,7 +13,8 @@
    :region (or (System/getenv "AWS_REGION") "eu-central-1")})
 
 (def test-bucket
-  (str (System/getenv "TARGET_ACCOUNT_ID") "-pipeline-it"))
+  (str (System/getenv "TARGET_ACCOUNT_ID") "-"
+       (or (System/getenv "EnvironmentNameLower") "dev01") "-it"))
 
 (deftest presign-url-integration-test
   (testing "presigned URL for PUT and GET operations"

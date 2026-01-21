@@ -31,19 +31,15 @@
                                                                                    "events" {"description" "NUmber of events produced",
                                                                                              "format" "int64",
                                                                                              "type" "integer"},
-                                                                                   "identities" {"description" "Number of identities created",
-                                                                                                 "format" "int64",
-                                                                                                 "type" "integer"},
-                                                                                   "sequences" {"description" "Number of sequences created",
-                                                                                                "format" "int64",
-                                                                                                "type" "integer"},
-                                                                                   "success" {"description" "Indicates if response was successfull",
-                                                                                              "type" "boolean"}},
-                                                                     "required" ["success"
-                                                                                 "effects"
-                                                                                 "events"
-                                                                                 "identities"
-                                                                                 "sequences"],
+                                                                                    "identities" {"description" "Number of identities created",
+                                                                                                  "format" "int64",
+                                                                                                  "type" "integer"},
+                                                                                    "success" {"description" "Indicates if response was successfull",
+                                                                                               "type" "boolean"}},
+                                                                      "required" ["success"
+                                                                                  "effects"
+                                                                                  "events"
+                                                                                  "identities"],
                                                                      "type" "object"}},
                                              "required" ["result"
                                                          "invocation-id"

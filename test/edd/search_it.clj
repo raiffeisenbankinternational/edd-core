@@ -1,15 +1,15 @@
 (ns edd.search-it
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is]]
             [clojure.tools.logging :as log]
             [lambda.util :as util]
             [edd.memory.view-store :as memory-view-store]
             [edd.elastic.view-store :as elastic-view-store]
             [edd.search :as search]
-            [lambda.test.fixture.state :as state]
-            [edd.search :as search]
             [lambda.elastic :as el]
             [lambda.uuid :as uuid]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [edd.test.fixture.dal :as dal]
+            [lambda.test.fixture.state :as state]))
 
 (def ctx
   {:elastic-search {:scheme (util/get-env "IndexDomainScheme" "https")
@@ -21,19 +21,22 @@
                     :aws-session-token     (util/get-env "AWS_SESSION_TOKEN")}})
 (defn load-data
   [ctx]
-  (doseq [i (:aggregate-store @state/*dal-state*)]
-    (log/info (el/query
-               (assoc ctx
-                      :method "POST"
-                      :path (str "/"
-                                 (elastic-view-store/realm ctx)
-                                 "_" (:service-name ctx) "/_doc")
-                      :body (util/to-json
-                             i))))))
+  (doseq [i (dal/peek-state :aggregate-store)]
+    (let [doc-id (str (uuid/gen))
+          response (el/query
+                    (assoc ctx
+                           :method "POST"
+                           :path (str "/"
+                                      (elastic-view-store/realm ctx)
+                                      "_" (:service-name ctx) "/_doc/" doc-id)
+                           :body (util/to-json i)))]
+      (log/info "Indexed document" doc-id "Response:" response))))
 
 (defn test-query
   [data q]
-  (binding [state/*dal-state* (atom {:aggregate-store data})]
+  (binding [state/*dal-state* (atom {:aggregate-store data
+                                     :realm :test
+                                     :realms {:test {:aggregate-store data}}})]  ;; For load-data
     (let [service-name (str/replace (str (uuid/gen)) "-" "_")
           local-ctx (assoc ctx :service-name service-name)
           body {:settings
@@ -62,7 +65,18 @@
                          service-name)
               :body (util/to-json body)))
       (load-data local-ctx)
-      (Thread/sleep 2000)
+       ;; Explicitly refresh the index to make documents searchable immediately
+      (log/info "Refreshing index" service-name)
+      (let [refresh-response (el/query
+                              (assoc local-ctx
+                                     :method "GET"
+                                     :path (str "/"
+                                                (elastic-view-store/realm ctx)
+                                                "_"
+                                                service-name
+                                                "/_refresh")))]
+        (log/info "Refresh response:" refresh-response))
+      (Thread/sleep 100)
       (let [el-result (search/advanced-search (-> local-ctx
                                                   (elastic-view-store/register)
                                                   (assoc :query q)))

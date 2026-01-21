@@ -93,7 +93,9 @@
   "Log mock not found error as a single message with indentation"
   [method url req all pass-through?]
   (let [depth (if (bound? #'log-state/*d-time-depth*) log-state/*d-time-depth* 0)
-        indent (str/join "      " (repeat depth "  "))
+        indent (str "      "
+                    (str/join "" (repeat depth "  ")))
+
         body-str (if (:body req)
                    (try
                      (str (util/to-edn (:body req)))

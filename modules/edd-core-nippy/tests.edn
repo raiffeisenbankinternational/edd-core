@@ -1,5 +1,6 @@
 #kaocha/v1
-{:tests [{:id           :unit
+{:jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]
+ :tests [{:id           :unit
           :source-paths ["src"]
           :test-paths   ["test"]
           :ns-patterns  ["-test$"]}

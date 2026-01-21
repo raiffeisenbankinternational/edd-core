@@ -2,6 +2,7 @@
         app-group-id/edd-core               {:local/root "../../"}
         org.crac/crac                                   {:mvn/version "1.5.0"}}
  :paths ["src"]
+ :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]
  :aliases {:build {:deps {io.github.clojure/tools.build {:mvn/version "0.10.6"}}
                    :ns-default build}
            :test {:extra-paths ["test"]}

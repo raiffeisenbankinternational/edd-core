@@ -14,10 +14,10 @@
                              get-max-event-seq
                              get-aggregate-id-by-identity
                              get-command-response
-                             log-dps
                              log-request
                              log-request-error
                              log-response
+                             get-records
                              store-results]]))
 
 (set! *warn-on-reflection* true)
@@ -162,12 +162,6 @@
   (util/d-time
    (format "Postgres storing request error, request-id: %s" (:request-id ctx))
    (log-request-error-impl ctx body error)))
-
-(defmethod log-dps
-  :postgres
-  [{:keys [dps-resolved] :as ctx}]
-  (log/debug "Storing deps" dps-resolved)
-  ctx)
 
 (defn log-response-impl
   [{:keys [invocation-id
@@ -445,7 +439,32 @@
 
 (defn register
   [ctx]
-  (assoc ctx :event-store :postgres))
+  (assoc ctx :edd-event-store :postgres))
+
+(defmethod get-records
+  :postgres
+  [ctx {:keys [interaction-id]}]
+  {:pre [interaction-id]}
+  (util/d-time
+   (format "Postgres get-records for interaction-id: %s" interaction-id)
+   (let [events (jdbc/execute!
+                 *DB*
+                 [(str "SELECT data
+                        FROM " (->table ctx :event_store) "
+                        WHERE interaction_id=?
+                        ORDER BY event_seq ASC")
+                  interaction-id]
+                 {:builder-fn rs/as-arrays})
+         effects (jdbc/execute!
+                  *DB*
+                  [(str "SELECT data
+                         FROM " (->table ctx :command_store) "
+                         WHERE interaction_id=?
+                         ORDER BY id")
+                   interaction-id]
+                  {:builder-fn rs/as-unqualified-kebab-maps})]
+     {:events (flatten (rest events))
+      :effects (mapv :data effects)})))
 
 (defn get-response-log
   [ctx {:keys [request-id

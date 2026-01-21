@@ -6,7 +6,6 @@
    [edd.memory.event-store :as event-store]
    [edd.test.fixture.execution :as exec]
    [edd.common :as common]
-   [lambda.test.fixture.state :as state]
    [lambda.uuid :as uuid]
    [edd.test.fixture.dal :as mock]))
 
@@ -40,7 +39,7 @@
                                         :request-id request-id)
                                  cmd)
             breadcrumbs (select-keys
-                         (first (:response-log @state/*dal-state*))
+                         (first (mock/get-store :response-log))
                          [:request-id :breadcrumbs])]
         (is (= {:success    true
                 :effects    []
@@ -51,5 +50,6 @@
         (is (= {:request-id  request-id
                 :breadcrumbs [0]}
                breadcrumbs))))))
+
 
 

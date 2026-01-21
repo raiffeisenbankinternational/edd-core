@@ -18,12 +18,12 @@
    :invocation-id (uuid/gen)
    :meta {:realm :test}
    :ref-date (util/date-time)
-   :environment-name-lower "pipeline"
+   :environment-name-lower (util/get-env "EnvironmentNameLower")
    :elastic-search {:scheme (util/get-env "IndexDomainScheme" "https")
                     :url (util/get-env "IndexDomainEndpoint")}
    :db {:endpoint (util/get-env "DatabaseEndpoint")
-        :port "5432"
-        :name "dynamodb-svc"
+        :port (util/get-env "DatabasePort" "5432")
+        :name "postgres"
         :password (util/get-env "DatabasePassword" "no-secret")}
    :aws {:account-id (util/get-env "AccountId")
          :region (util/get-env "AWS_DEFAULT_REGION")

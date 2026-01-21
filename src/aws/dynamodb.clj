@@ -1,15 +1,31 @@
 (ns aws.dynamodb
-  (:require [clojure.tools.logging :as log]
+  (:require [clojure.string :as string]
+            [clojure.tools.logging :as log]
             [lambda.util :as util]
             [sdk.aws.common :as common]))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
 
+(defn- extract-table-names
+  "Extract all table names from DynamoDB request body"
+  [body]
+  (let [direct-table (when-let [t (:TableName body)] [t])
+        transact-tables (when-let [items (:TransactItems body)]
+                          (->> items
+                               (keep (fn [item]
+                                       (or (get-in item [:Put :TableName])
+                                           (get-in item [:Update :TableName])
+                                           (get-in item [:Delete :TableName])
+                                           (get-in item [:ConditionCheck :TableName]))))
+                               (distinct)))]
+    (distinct (concat direct-table transact-tables))))
+
 (defn make-request
   [{:keys [aws action body]}]
   (log/info "Make request" body)
-  (let [req {:method     "POST"
+  (let [table-names (extract-table-names body)
+        req {:method     "POST"
              :uri        "/"
              :query      ""
              :payload    (util/to-json body)
@@ -37,7 +53,15 @@
       (when (contains? response :error)
         (throw (ex-info "Invocation error" (:error response))))
       (when (> status 399)
-        (throw (ex-info "Invocation error" (:body response))))
+        (let [error-body (:body response)
+              is-not-found? (and (map? error-body)
+                                 (= (:__type error-body) "com.amazonaws.dynamodb.v20120810#ResourceNotFoundException"))
+              error-msg (if (and is-not-found? (seq table-names))
+                          (str "Invocation error (table(s): " (string/join ", " table-names) ")")
+                          "Invocation error")]
+          (when (and is-not-found? (seq table-names))
+            (log/error "DynamoDB table(s) not found:" (string/join ", " table-names)))
+          (throw (ex-info error-msg error-body))))
       (:body response))))
 
 (defn list-tables
