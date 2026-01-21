@@ -18,7 +18,6 @@
 (deftest test-if-properly-working-when-no-deps
   "Test if properly prepared for no-dependencies"
   (with-redefs [query/handle-query (fn [ctx q] {:response true})
-                dal/log-dps (fn [ctx] ctx)
                 dal/get-max-event-seq (fn [ctx id] 0)]
     (let [cmd {:cmd-id :test-cmd
                :id     cmd-id}
@@ -30,8 +29,7 @@
   "Test if context if properly prepared for local queries. If local query return nill
   we do not expect context to change. This will be used for testing on other servies
   to prearrange context"
-  (with-redefs [dal/log-dps (fn [ctx] ctx)
-                dal/get-max-event-seq (fn [ctx id] 0)]
+  (with-redefs [dal/get-max-event-seq (fn [ctx id] 0)]
     (let [ctx (edd-ctx/put-cmd {}
                                :cmd-id :test-cmd
                                :options {:deps {:test-value   (fn [_ cmd]
@@ -72,7 +70,6 @@
 (deftest test-prepare-context-for-command-remote-deps
   "Test if context if properly prepared for remote queries"
   (with-redefs [aws/get-token (fn [ctx] "")
-                dal/log-dps (fn [ctx] ctx)
                 dal/get-max-event-seq (fn [ctx id] 0)]
     (let [ctx (edd-ctx/put-cmd {}
                                :cmd-id :test-cmd

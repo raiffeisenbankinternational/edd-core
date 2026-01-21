@@ -16,12 +16,13 @@
             [edd.elastic.view-store :as elastic]
             [lambda.util :as util]
             [edd.test.fixture.dal :as mock]
-            [lambda.uuid :as uuid])
+            [lambda.uuid :as uuid]
+            [lambda.test.fixture.state :as state])
   (:import (clojure.lang ExceptionInfo)))
 
 (deftest when-store-and-load-events-then-ok
   (with-mock-dal
-    (dal/store-event {:id 1 :info "info"})
+    (dal/store-event ctx {:id 1 :info "info"})
     (verify-state [{:id 1 :info "info"}] :event-store)
     (let [events (event-store/get-events (assoc ctx
                                                 :id 1))]
@@ -54,10 +55,10 @@
 
 (deftest when-store-identity-then-ok
   (with-mock-dal
-    (dal/store-identity {:identity 1
-                         :id       1})
-    (dal/store-identity {:identity 2
-                         :id       2})
+    (dal/store-identity ctx {:identity 1
+                             :id       1})
+    (dal/store-identity ctx {:identity 2
+                             :id       2})
     (verify-state [{:identity 1
                     :id       1}
                    {:identity 2
@@ -66,25 +67,25 @@
 (deftest when-identity-exists-then-exception
   (let [id (uuid/gen)]
     (with-mock-dal
-      (dal/store-identity {:identity 1
-                           :id id})
+      (dal/store-identity ctx {:identity 1
+                               :id id})
       (is (thrown? RuntimeException
-                   (dal/store-identity
-                    {:identity 1
-                     :id (uuid/gen)})))
+                   (dal/store-identity ctx
+                                       {:identity 1
+                                        :id (uuid/gen)})))
       (verify-state [{:identity 1
                       :id id}] :identity-store))))
 
 (deftest when-store-command-then-ok
   (with-mock-dal
-    (dal/store-command {:service "test-service" :payload "payload"})
+    (dal/store-command ctx {:service "test-service" :payload "payload"})
     (verify-state [{:service "test-service"
                     :payload "payload"}] :command-store)))
 
 (deftest when-identity-exists-then-id-for-aggregate-can-be-fetched
   (with-mock-dal
-    (dal/store-identity {:identity 1
-                         :id       2})
+    (dal/store-identity ctx {:identity 1
+                             :id       2})
     (verify-state [{:identity 1
                     :id       2}] :identity-store)
     (is (= 2
@@ -103,12 +104,12 @@
 
 (deftest test-that-events-can-be-fetched-by-aggregate-id
   (with-mock-dal
-    (dal/store-event (first events))
-    (dal/store-event (second events))
-    (dal/store-event {:event-id  :name
-                      :name      "Bla"
-                      :event-seq 3
-                      :id        4})
+    (dal/store-event ctx (first events))
+    (dal/store-event ctx (second events))
+    (dal/store-event ctx {:event-id  :name
+                          :name      "Bla"
+                          :event-seq 3
+                          :id        4})
     (verify-state (conj events {:event-id  :name
                                 :name      "Bla"
                                 :event-seq 3
@@ -127,7 +128,7 @@
 
 (deftest when-no-result-by-id-return-nil
   (with-mock-dal
-    (dal/store-event (first events))
+    (dal/store-event ctx (first events))
     (verify-state [(first events)] :event-store)
     (is (= {:aggregate nil}
            (select-keys (common/get-by-id (assoc ctx :id 5))
@@ -135,7 +136,7 @@
 
 (deftest when-no-id-passed-in-return-nil
   (with-mock-dal
-    (dal/store-event (first events))
+    (dal/store-event ctx (first events))
     (verify-state [(first events)] :event-store)
     (is (= nil
            (common/get-by-id ctx {})))))
@@ -145,7 +146,7 @@
     {:event-store [{:event-id :e1}]}
     (verify-state [{:event-id :e1}] :event-store)
     (verify-state [] :command-store)
-    (dal/store-event (first events))
+    (dal/store-event ctx (first events))
     (verify-state [{:event-id :e1} (first events)] :event-store)
     (is (= nil
            (:aggregate (common/get-by-id (assoc ctx :id 5)))))
@@ -188,8 +189,8 @@
 
 (deftest test-event-seq-and-event-order
   (with-mock-dal
-    (dal/store-event e1)
-    (dal/store-event e2)
+    (dal/store-event ctx e1)
+    (dal/store-event ctx e2)
     (is (= 2 (event-store/get-max-event-seq (assoc ctx :id 1))))
     (is (= 0 (event-store/get-max-event-seq (assoc ctx :id 3))))
     (is (= [e1 e2]
@@ -197,8 +198,8 @@
 
 (deftest test-reverse-event-order-1
   (with-mock-dal
-    (dal/store-event e1)
-    (dal/store-event e2)
+    (dal/store-event ctx e1)
+    (dal/store-event ctx e2)
     (is (= [e1 e2]
            (event-store/get-events (assoc ctx
                                           :id 1))))))
@@ -332,11 +333,11 @@
 
 (deftest when-identity-exists-then-ok
   (with-mock-dal
-    (dal/store-identity {:id       "id1"
-                         :identity 1})
-    (dal/store-identity
-     {:id       "id1"
-      :identity 2})
+    (dal/store-identity ctx {:id       "id1"
+                             :identity 1})
+    (dal/store-identity ctx
+                        {:id       "id1"
+                         :identity 2})
     (verify-state :identity-store [{:id "id1" :identity 1}
                                    {:id "id1" :identity 2}])
 
@@ -409,7 +410,7 @@
                                 :request-id     request-id
                                 :service        nil}]
                   :events     [{:event-id       :2
-                                :event-seq      4
+                                :event-seq      1  ;; realm2 has its own sequence
                                 :id             id
                                 :meta           {:realm :realm2}
                                 :request-id     request-id
@@ -425,11 +426,17 @@
                                               :request-id     request-id
                                               :interaction-id interaction-id}))))
         (testing "Without including meta"
-          (mock/verify-state :command-store [{:commands [{:cmd-id :fx-cmd
-                                                          :attrs  {:event-id :2
-                                                                   :id       id}}]
-                                              :meta     {:realm :realm2}
-                                              :service  nil}])
+          ;; Note: verify-state uses the default :test realm, but this command
+          ;; was stored in :realm2, so we need to check that realm directly
+          (is (= [{:commands [{:cmd-id :fx-cmd
+                               :attrs  {:event-id :2
+                                        :id       id}}]
+                   :meta     {:realm :realm2}
+                   :breadcrumbs [0 0]  ;; dal-state-accessor keeps breadcrumbs
+                   :service  nil}]
+                 (into [] (mock/dal-state-accessor
+                           (assoc @state/*dal-state* :realm :realm2)
+                           :command-store))))
           (is (= {:effects    [{:breadcrumbs [0
                                               0]
                                 :commands    [{:cmd-id :fx-cmd
@@ -437,7 +444,7 @@
                                                         :id       id}}]
                                 :service     nil}]
                   :events     [{:event-id  :2
-                                :event-seq 5
+                                :event-seq 2  ;; realm2 second event
                                 :id        id}]
                   :identities []
                   :meta       [{:test-cmd-fx {:id id}}]}
@@ -486,16 +493,17 @@
 
 (deftest storing-same-event-twice-should-fail
   (with-mock-dal
-    (dal/store-event {:id        2
-                      :info      "info"
-                      :event-seq 1})
-    (dal/store-event {:id        2
-                      :info      "info 1"
-                      :event-seq 2})
+    (dal/store-event ctx {:id        2
+                          :info      "info"
+                          :event-seq 1})
+    (dal/store-event ctx {:id        2
+                          :info      "info 1"
+                          :event-seq 2})
     (is (thrown? ExceptionInfo
-                 (dal/store-event {:id        1
-                                   :info      "info"
-                                   :event-seq 1})
-                 (dal/store-event {:id        1
-                                   :info      "info 1"
-                                   :event-seq 1})))))
+                 (do
+                   (dal/store-event ctx {:id        1
+                                         :info      "info"
+                                         :event-seq 1})
+                   (dal/store-event ctx {:id        1
+                                         :info      "info 1"
+                                         :event-seq 1}))))))

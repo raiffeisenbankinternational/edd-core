@@ -560,3 +560,54 @@ The context map flows through all handlers containing:
 ```
 
 This guide provides everything needed to build production-grade event-sourced services with EDD-Core.
+
+## Running Tests
+
+### Prerequisites
+
+- **Docker** - For integration tests (PostgreSQL + OpenSearch)
+- **AWS CLI** - For authentication (configured with valid credentials)
+- **Clojure CLI** - For running tests
+- **Make** - For running test commands
+
+### Test Suites
+
+1. **Unit Tests** - Fast, in-memory tests using mock DAL (no external dependencies)
+2. **Integration Tests** - Real database tests requiring PostgreSQL and OpenSearch
+
+### Running Tests
+
+**Unit Tests** (no setup required):
+```bash
+make test-unit
+```
+
+**Integration Tests** (automated setup + run):
+```bash
+make it
+```
+
+This command automatically:
+- Starts Docker services (PostgreSQL + OpenSearch)
+- Runs database migrations
+- Sets up environment variables
+- Runs integration tests
+
+**Cleanup** (after integration tests):
+```bash
+make it-clean
+```
+
+**Run All Tests**:
+```bash
+make test
+```
+
+### Writing Tests
+
+See "Testing with Mock DAL" section for examples of writing unit tests with `mock/with-mock-dal`.
+
+
+# Documentation
+
+Dont over-document 

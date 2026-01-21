@@ -11,7 +11,8 @@
             [edd.test.fixture.dal :as mock]
             [lambda.request :as request]
             [edd.ctx :as edd-ctx]
-            [aws.aws :as aws])
+            [aws.aws :as aws]
+            [lambda.test.fixture.state :as state])
   (:import (java.net URLEncoder)))
 
 (def cmd-id #uuid "11111eeb-e677-4d73-a10a-1d08b45fe4dd")
@@ -74,7 +75,6 @@
              :meta           meta}]
     (binding [request/*request* (atom {:scoped true})]
       (with-redefs [aws/get-token (fn [ctx] "#id-token")
-                    dal/log-dps (fn [ctx] ctx)
                     util/get-env (fn [v]
                                    (get {"PrivateHostedZoneName" "mock.com"} v))]
         (client/mock-http
@@ -115,7 +115,6 @@ and return nil to enable query-fn to have when conditions based on previously re
                :interaction-id interaction-id
                :meta           meta}]
       (with-redefs [aws/get-token (fn [ctx] "#id-token")
-                    dal/log-dps (fn [ctx] ctx)
                     util/get-env (fn [v]
                                    (get {"PrivateHostedZoneName" "mock.com"} v))]
         (client/mock-http
@@ -346,14 +345,14 @@ and return nil to enable query-fn to have when conditions based on previously re
                                         :id     cmd-id-2}]})
       (mock/verify-state :event-store [{:event-id  :event-1
                                         :event-seq 1
-                                        :value     :2
-                                        :meta      {}
-                                        :id        cmd-id-2}
-                                       {:event-id  :event-1
-                                        :event-seq 1
                                         :value     :1
                                         :meta      {}
-                                        :id        cmd-id-deps}]))))
+                                        :id        cmd-id-deps}
+                                       {:event-id  :event-1
+                                        :event-seq 1
+                                        :value     :2
+                                        :meta      {}
+                                        :id        cmd-id-2}]))))
 
 (deftest test-id-fn
   (let [ctx (-> mock/ctx
@@ -387,10 +386,11 @@ and return nil to enable query-fn to have when conditions based on previously re
     (let [current-events [{:event-id  :event-1
                            :event-seq 4
                            :value     :2
-                           :meta      {}
+                           :meta      {:realm :realm2}  ; Match the realm of commands
                            :id        cmd-id-2}]]
       (mock/with-mock-dal
-        {:event-store current-events}
+        {:event-store current-events
+         :realm :realm2}  ; Set default realm to :realm2
 
         (mock/handle-cmd ctx
                          {:meta     {:realm :realm2}
@@ -401,23 +401,28 @@ and return nil to enable query-fn to have when conditions based on previously re
                                       :value   :2
                                       :id      cmd-id-2
                                       :version 4}]})
-        (mock/verify-state :event-store [{:event-id  :event-1
-                                          :event-seq 1
-                                          :value     :1
-                                          :meta      {:realm :realm2}
-                                          :id        cmd-id-deps}
-                                         {:event-id  :event-1
-                                          :event-seq 4
-                                          :value     :2
-                                          :meta      {}
-                                          :id        cmd-id-2}
-                                         {:event-id  :event-1
-                                          :event-seq 5
-                                          :value     :2
-                                          :meta      {:realm :realm2}
-                                          :id        cmd-id-2}]))
+        ;; Check :realm2 since commands are processed there
+        (is (= [{:event-id  :event-1
+                 :event-seq 1
+                 :value     :1
+                 :meta      {:realm :realm2}
+                 :id        cmd-id-deps}
+                {:event-id  :event-1
+                 :event-seq 4
+                 :value     :2
+                 :meta      {:realm :realm2}
+                 :id        cmd-id-2}
+                {:event-id  :event-1
+                 :event-seq 5
+                 :value     :2
+                 :meta      {:realm :realm2}
+                 :id        cmd-id-2}]
+               (into [] (mock/dal-state-accessor
+                         (assoc @state/*dal-state* :realm :realm2)
+                         :event-store)))))
       (mock/with-mock-dal
-        {:event-store current-events}
+        {:event-store current-events
+         :realm :realm2}  ; Set default realm to :realm2
 
         (is (= {:error   :concurrent-modification
                 :message "Version mismatch"

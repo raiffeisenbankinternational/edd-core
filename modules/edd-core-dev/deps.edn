@@ -1,7 +1,8 @@
 {:deps    {info.sunng/ring-jetty9-adapter    {:mvn/version "0.14.3"}
            compojure/compojure               {:mvn/version "1.7.1"},
            app-group-id/edd-core {:local/root "../../"}}
- :paths   ["src" "resources"],
+ :paths   ["src" "resources"]
+ :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]
  :aliases {:build    {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.6"}}
                       :ns-default build}
            :test     {:extra-paths ["test"],

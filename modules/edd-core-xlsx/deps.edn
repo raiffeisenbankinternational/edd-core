@@ -2,6 +2,7 @@
  {org.dhatim/fastexcel        {:mvn/version "0.18.0"}
   org.dhatim/fastexcel-reader {:mvn/version "0.18.0"}}
  :paths ["src" "resources" "api/src"]
+ :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]
  :aliases
  {:build  {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.6"}}
            :ns-default build}

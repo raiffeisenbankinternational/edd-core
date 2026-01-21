@@ -1,0 +1,238 @@
+
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  EnvironmentNameLower:
+    Type: String
+  ApplicationName:
+    Type: String
+  Realm:
+    Type: String
+Resources:
+  RequestLogV2:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: "Id"
+          AttributeType: "S"
+        - AttributeName: "RequestId"
+          AttributeType: "S"
+        - AttributeName: "Breadcrumbs"
+          AttributeType: "S"
+        - AttributeName: "InvocationId"
+          AttributeType: "S"
+        - AttributeName: "InteractionId"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "Id"
+          KeyType: "HASH"
+      GlobalSecondaryIndexes:
+        - IndexName: "request-id"
+          KeySchema:
+            - AttributeName: "RequestId"
+              KeyType: "HASH"
+            - AttributeName: "Breadcrumbs"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+        - IndexName: "invocation-id"
+          KeySchema:
+            - AttributeName: "InvocationId"
+              KeyType: "HASH"
+            - AttributeName: "Breadcrumbs"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+        - IndexName: "interaction-id"
+          KeySchema:
+            - AttributeName: "InteractionId"
+              KeyType: "HASH"
+            - AttributeName: "Breadcrumbs"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+      TableName: !Sub "${EnvironmentNameLower}-${ApplicationName}-${Realm}-request-log-ddb"
+  ResponseLogV2:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: "RequestId"
+          AttributeType: "S"
+        - AttributeName: "Breadcrumbs"
+          AttributeType: "S"
+        - AttributeName: "InvocationId"
+          AttributeType: "S"
+        - AttributeName: "InteractionId"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "RequestId"
+          KeyType: "HASH"
+        - AttributeName: "Breadcrumbs"
+          KeyType: "RANGE"
+      GlobalSecondaryIndexes:
+        - IndexName: "request-id"
+          KeySchema:
+            - AttributeName: "RequestId"
+              KeyType: "HASH"
+            - AttributeName: "Breadcrumbs"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+        - IndexName: "invocation-id"
+          KeySchema:
+            - AttributeName: "InvocationId"
+              KeyType: "HASH"
+            - AttributeName: "Breadcrumbs"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+        - IndexName: "interaction-id"
+          KeySchema:
+            - AttributeName: "InteractionId"
+              KeyType: "HASH"
+            - AttributeName: "Breadcrumbs"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+      TableName: !Sub "${EnvironmentNameLower}-${ApplicationName}-${Realm}-response-log-ddb"
+  EventsTableV2:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: "AggregateId"
+          AttributeType: "S"
+        - AttributeName: "EventSeq"
+          AttributeType: "N"
+        - AttributeName: "RequestId"
+          AttributeType: "S"
+        - AttributeName: "Breadcrumbs"
+          AttributeType: "S"
+        - AttributeName: "InvocationId"
+          AttributeType: "S"
+        - AttributeName: "InteractionId"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "AggregateId"
+          KeyType: "HASH"
+        - AttributeName: "EventSeq"
+          KeyType: "RANGE"
+      GlobalSecondaryIndexes:
+        - IndexName: "request-id"
+          KeySchema:
+            - AttributeName: "RequestId"
+              KeyType: "HASH"
+            - AttributeName: "Breadcrumbs"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+        - IndexName: "invocation-id"
+          KeySchema:
+            - AttributeName: "InvocationId"
+              KeyType: "HASH"
+            - AttributeName: "Breadcrumbs"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+        - IndexName: "interaction-id"
+          KeySchema:
+            - AttributeName: "InteractionId"
+              KeyType: "HASH"
+            - AttributeName: "Breadcrumbs"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+      TableName: !Sub "${EnvironmentNameLower}-${ApplicationName}-${Realm}-event-store-ddb"
+
+  EffectsTableV2:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: "Id"
+          AttributeType: "S"
+        - AttributeName: "RequestId"
+          AttributeType: "S"
+        - AttributeName: "Breadcrumbs"
+          AttributeType: "S"
+        - AttributeName: "InvocationId"
+          AttributeType: "S"
+        - AttributeName: "InteractionId"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "Id"
+          KeyType: "HASH"
+      GlobalSecondaryIndexes:
+        - IndexName: "request-id"
+          KeySchema:
+            - AttributeName: "RequestId"
+              KeyType: "HASH"
+            - AttributeName: "Breadcrumbs"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+        - IndexName: "invocation-id"
+          KeySchema:
+            - AttributeName: "InvocationId"
+              KeyType: "HASH"
+            - AttributeName: "Breadcrumbs"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+        - IndexName: "interaction-id"
+          KeySchema:
+            - AttributeName: "InteractionId"
+              KeyType: "HASH"
+            - AttributeName: "Breadcrumbs"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+      TableName: !Sub "${EnvironmentNameLower}-${ApplicationName}-${Realm}-effect-store-ddb"
+  IdentityTableV2:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: "Id"
+          AttributeType: "S"
+        - AttributeName: "RequestId"
+          AttributeType: "S"
+        - AttributeName: "Breadcrumbs"
+          AttributeType: "S"
+        - AttributeName: "InvocationId"
+          AttributeType: "S"
+        - AttributeName: "InteractionId"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "Id"
+          KeyType: "HASH"
+      GlobalSecondaryIndexes:
+        - IndexName: "request-id"
+          KeySchema:
+            - AttributeName: "RequestId"
+              KeyType: "HASH"
+            - AttributeName: "Breadcrumbs"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+        - IndexName: "invocation-id"
+          KeySchema:
+            - AttributeName: "InvocationId"
+              KeyType: "HASH"
+            - AttributeName: "Breadcrumbs"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+        - IndexName: "interaction-id"
+          KeySchema:
+            - AttributeName: "InteractionId"
+              KeyType: "HASH"
+            - AttributeName: "Breadcrumbs"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+      TableName: !Sub "${EnvironmentNameLower}-${ApplicationName}-${Realm}-identity-store-ddb"
+Outputs:
+  DatabaseName:
+    Value: !Ref EventsTableV2

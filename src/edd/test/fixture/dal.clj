@@ -1,18 +1,19 @@
-;; This namespace functions emulating Data Access Layer
-;; by redefining Data Access Layer function and binding
-;; state to thread local. Should be used only in tests.
-;; Any test wanted to use emulated Data Access Layer
-;; should call "defdaltest" macro.
+;; Test fixture for in-memory Data Access Layer.
+;; Provides helpers for writing unit tests with mock data stores.
+;;
+;; All stores are partitioned by realm (from ctx [:meta :realm], defaults to :test).
+;; Helper functions provide normalized views with infrastructure metadata removed.
 ;;
 ;; Example:
 ;;
-;; (defdaltest when-store-and-load-events
-;;   (dal/store-event {} {} {:id 1 :info "info"})
-;;   (verify-state [{:id 1 :info "info"}] :event-store)
-;;   (let [events (dal/get-events {} 1)]
-;;     (is (= [{:id 1 :info "info"}]
-;;            events))))
-;;
+;; (with-mock-dal
+;;   {:event-store [{:id #uuid"..." :event-id :existing}]}
+;;   
+;;   (handle-cmd ctx {:cmd-id :create-order
+;;                    :id (uuid/gen)
+;;                    :attrs {...}})
+;;   
+;;   (verify-state :event-store [{:event-id :order-created ...}]))
 
 (ns edd.test.fixture.dal
   (:require [clojure.tools.logging :as log]
@@ -69,10 +70,30 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;   Test Fixtures   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def default-db
-  {:event-store     []
-   :identity-store  []
-   :command-store   []
-   :aggregate-store []})
+  {:realms {}})
+
+(defn get-realm-from-state
+  []
+  (get-in @*dal-state* [:realm] :test))
+
+(defn get-store
+  [store-key]
+  (get-in @*dal-state* [:realms (get-realm-from-state) store-key] []))
+
+(defn dal-state-accessor
+  "Returns realm-scoped store data with normalization for test assertions.
+   Removes request-id, interaction-id, service-name.
+   Sorts event-store by event-seq."
+  [state key]
+  (if (#{:event-store :identity-store :command-store :aggregate-store
+         :response-log :command-log :request-error-log} key)
+    (let [realm (get state :realm :test)
+          data (get-in state [:realms realm key] [])
+          normalize (fn [item] (dissoc item :request-id :interaction-id :service-name))]
+      (if (= key :event-store)
+        (mapv normalize (sort-by :event-seq data))
+        (mapv normalize data)))
+    (get state key)))
 
 (defn create-identity
   [& [id]]
@@ -113,62 +134,91 @@
   [_ _]
   nil)
 
+(defn create-realm-partitioned-state
+  "Partitions flat test state into realm structure.
+   Moves top-level store keys into [:realms <realm> <store-key>]."
+  [base-state]
+  (let [realm (get base-state :realm :test)
+        store-keys [:event-store :identity-store :command-store :aggregate-store
+                    :response-log :command-log :request-error-log]
+        top-level-stores (select-keys base-state store-keys)
+        existing-realm-stores (get-in base-state [:realms realm] {})
+        merged-realm-stores (merge existing-realm-stores top-level-stores)
+        clean-base-state (apply dissoc base-state store-keys)]
+    (assoc clean-base-state
+           :realms {realm merged-realm-stores})))
+
 (defmacro with-mock-dal [& body]
   `(edd/with-stores
      ctx
-     #(binding [*dal-state* (atom (util/fix-keys
-                                   ~(if (map? (first body))
-                                      (merge
-                                       default-db
-                                       (dissoc (first body) :seed))
-                                      default-db)))
-                *queues* {:command-queue (atom [])
-                          :seed          ~(if (and (map? (first body)) (:seed (first body)))
-                                            (:seed (first body))
-                                            '(rand-int 10000000))}
-                util/*cache* (atom {})
-                request/*request* (atom {})]
-        %
-        (client/mock-http
-         {:responses (vec (concat (prepare-dps-calls ctx)
-                                  (get @*dal-state* :responses [])))
-          :config {:reuse-responses true}}
-         (with-redefs
-          [aws/get-token aws-get-token
-           common/create-identity create-identity]
-           (do (log/info "with-mock-dal using seed" (:seed *queues*))
-               ~@body))))))
+     #(let [base-state# (merge
+                         {:realm :test}  ; Default realm for tests
+                         (util/fix-keys
+                          ~(if (map? (first body))
+                             (merge
+                              default-db
+                              (dissoc (first body) :seed))
+                             default-db)))]
+        (binding [*dal-state* (atom (create-realm-partitioned-state base-state#))
+                  *queues* {:command-queue (atom [])
+                            :seed          ~(if (and (map? (first body)) (:seed (first body)))
+                                              (:seed (first body))
+                                              '(rand-int 10000000))}
+                  util/*cache* (atom {})
+                  request/*request* (atom {})]
+          %
+          (client/mock-http
+           {:responses (vec (concat (prepare-dps-calls ctx)
+                                    (get @*dal-state* :responses [])))
+            :config {:reuse-responses true}}
+           (with-redefs
+            [aws/get-token aws-get-token
+             common/create-identity create-identity]
+             (do (log/info "with-mock-dal using seed" (:seed *queues*))
+                 ~@body)))))))
 
-(defmacro verify-state [x & [y]]
+(defmacro verify-state
+  "Verifies normalized store contents in current realm.
+   
+   Usage:
+     (verify-state :event-store [{:event-id :foo :id ...}])
+     (verify-state [{:event-id :foo}] :event-store)"
+  [x & [y]]
   `(if (keyword? ~y)
-     (is (= ~x (into [] (~y @*dal-state*))))
-     (is (= ~y (into [] (~x @*dal-state*))))))
+     (is (= ~x (into [] (dal-state-accessor @*dal-state* ~y))))
+     (is (= ~y (into [] (dal-state-accessor @*dal-state* ~x))))))
 
 (defmacro verify-state-fn [x fn y]
   `(is (= ~y (mapv
               ~fn
-              (~x @*dal-state*)))))
+              (dal-state-accessor @*dal-state* ~x)))))
 
 (defn pop-state
-  "Retrieves commands and removes them from the store"
-  [x]
-  (let [current-state (x @*dal-state*)]
+  "Retrieves and clears realm-scoped store."
+  [store-key]
+  (let [realm (get-realm-from-state)
+        current-state (get-in @*dal-state* [:realms realm store-key] [])]
     (swap! *dal-state*
-           #(update % x (fn [v] [])))
+           #(assoc-in % [:realms realm store-key] []))
     current-state))
 
 (defn peek-state
-  "Retrieves the first command without removing it from the store"
+  "Retrieves normalized realm-scoped store data without removing it.
+   
+   With store-key: (peek-state :event-store)
+   Without args: (peek-state) returns map of all stores"
   [& x]
   (if x
-    ((first x) @*dal-state*)
-    @*dal-state*))
+    (let [store-key (first x)
+          state @*dal-state*]
+      (dal-state-accessor state store-key))
+    (let [state @*dal-state*]
+      {:aggregate-store (dal-state-accessor state :aggregate-store)
+       :command-store (dal-state-accessor state :command-store)
+       :event-store (dal-state-accessor state :event-store)
+       :identity-store (dal-state-accessor state :identity-store)})))
 
 (defn- re-parse
-  "Sometimes we parse things from outside differently
-  because keywordize keys is by default. If you have map of string
-  keys they would be keywordized. But if we pass in to test map
-  that has string we would receive string. So here we re-parse requests"
   [cmd]
   (util/fix-keys cmd))
 

@@ -4,7 +4,6 @@
    [clojure.tools.logging :as log]
    [lambda.request :as request]
    [sdk.aws.common :as common]
-   [clojure.set :as clojure-set]
    [sdk.aws.cognito-idp :as cognito-idp]
    [sdk.aws.sqs :as sqs]
    [clojure.string :as string]))

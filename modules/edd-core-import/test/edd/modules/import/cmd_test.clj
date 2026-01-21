@@ -65,8 +65,9 @@
                                                                           :file2 "file2.csv"}
                                                                  :status :uploaded}
                                                         :id     id}]
-                                            :meta     {}
-                                            :service  nil}])
+                                            :meta        {}
+                                            :service     nil
+                                            :breadcrumbs [0 0]}])
         (mock/execute-fx-apply ctx)
         (mock/verify-state :aggregate-store [{:id      id
                                               :import  {:bucket "some-bucket"

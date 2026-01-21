@@ -76,6 +76,10 @@
         (or (get-in ctx [:db :password])
             (util/get-env "DatabasePassword" "no-secret"))
 
+        port
+        (or (get-in ctx [:db :port])
+            (util/get-env "DatabasePort" "5432"))
+
         spec {:dbtype                    "postgres"
               :dbname                    "postgres"
               :initializationFailTimeout 0
@@ -87,6 +91,6 @@
               :username                  "postgres"
               :host                      host
               :schema                    "postgres"
-              :port                      "5432"}]
+              :port                      port}]
     (log/info "Initializing postgres event-store: " (dissoc spec :user :username :password))
     spec))

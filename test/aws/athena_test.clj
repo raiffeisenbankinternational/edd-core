@@ -76,19 +76,19 @@
                                        "test_limit_review_db"
                                        "118123141711-dev19-sqs"
                                        "select aggregate from test_dimension"
-                                       1.704914264467E9)
+                                       (long 1.704914264467E9))
 
            (athena/find-last-execution nil
                                        "missing_db"
                                        "118123141711-dev19-sqs"
                                        "select aggregate from test_dimension"
-                                       1.704914264467E9)
+                                       (long 1.704914264467E9))
 
            (athena/find-last-execution nil
                                        "test_limit_review_db"
                                        "118123141711-dev19-sqs"
                                        "select aggregate from test_dimension"
-                                       (+ 1.704914264467E9 100000))])]
+                                       (long (+ 1.704914264467E9 100000)))])]
 
     (is (some? result1))
     (is (nil? result2))

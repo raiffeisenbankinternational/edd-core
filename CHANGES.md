@@ -2,6 +2,8 @@
 
 ## Changes
 
+- [AP-800] Implement test suite for event store compliance
+
 - [CARS-4941] Rework edd-core attributes
 - update dimension attributes
 - add tests for the new attrs

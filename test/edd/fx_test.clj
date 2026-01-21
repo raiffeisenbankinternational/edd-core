@@ -105,10 +105,12 @@
                        [{:service  "source-svc"
                          :commands [{:id     "2"
                                      :cmd-id "2"}]
+                         :breadcrumbs [0 0]
                          :meta     {}}
                         {:service  "target-svc"
                          :commands [{:id     "1"
                                      :cmd-id "1"}]
+                         :breadcrumbs [0 1]
                          :meta     {}}])))
 
 (deftest test-fx-evt
@@ -131,6 +133,7 @@
                            [{:service  "source-svc"
                              :commands [{:id     "2"
                                          :cmd-id "2"}]
+                             :breadcrumbs [0 0]
                              :meta     {}}])))
     (testing "If multiple handlers work"
       (mock/with-mock-dal
@@ -146,10 +149,12 @@
                            [{:service  "source-svc"
                              :commands [{:id     "2"
                                          :cmd-id "2"}]
+                             :breadcrumbs [0 0]
                              :meta     {}}
                             {:service  "target-svc"
                              :commands [{:id     "1"
                                          :cmd-id "1"}]
+                             :breadcrumbs [0 1]
                              :meta     {}}])))))
 
 (deftest test-execute-fx

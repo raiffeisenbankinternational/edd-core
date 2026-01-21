@@ -43,7 +43,8 @@
 
 (def ctx
   (-> {}
-      (assoc :service-name "local-test")
+      (assoc :service-name "local-test"
+             :meta {:realm :test})
       (event-store/register)
       (view-store/register)
       (edd/reg-cmd :cmd-1 (fn [ctx cmd]
