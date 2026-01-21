@@ -1,7 +1,6 @@
 {:deps
  {app-group-id/edd-core     {:local/root "../../"}
   app-group-id/edd-core-io  {:local/root "../edd-core-io"}
-  app-group-id/edd-core-clj {:local/root "../edd-core-clj"}
   metosin/malli                         {:mvn/version "0.19.1"}
   com.github.seancorfield/honeysql      {:mvn/version "2.6.1147"}}
 

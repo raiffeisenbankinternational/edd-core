@@ -79,12 +79,12 @@ docker-rm:
 
 docker-psql:
 	psql --port 5432 --host localhost -U postgres postgres
-
 docker-migrate:
 	docker compose run root-migration
 	docker compose run service-migration
 	docker compose run migration-test-edd-core
 	docker compose run migration-test-dimension
+	docker compose run migration-test-application
 
 local-install:
     # EDD Core Installation
@@ -123,3 +123,4 @@ test-native:
 
 changes:
 	./changes.py
+	./changes.py --shallow --check

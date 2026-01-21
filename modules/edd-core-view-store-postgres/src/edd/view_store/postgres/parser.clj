@@ -274,19 +274,26 @@
             [json-op [:raw field-str] [:raw (util/to-json value)]]
 
             [json-path-str]
-            (sql/format-expr json-path)
-
-            btree?
-            (attrs/path-btree? service path)]
+            (sql/format-expr json-path)]
 
         ;; Here and below: if it's a btree attribute, we generate
-        ;; a btree expression that hits its own index. Otherwise,
-        ;; generate a JSONpath with a predicate expression.
+        ;; a btree expression that hits its own index. Than handle
+        ;; a special case for an array. Otherwise, generate
+        ;; a JSONpath with a predicate expression.
 
-        (if btree?
+        (cond
+
+          (attrs/path-btree? service path)
           [(->sql-op op)
            (honey/json-get-in-text c/COL_AGGREGATE path)
            [:inline (->string value)]]
+
+          (attrs/path-array? service path)
+          [atat
+           [:jsonb_path_query_array c/COL_AGGREGATE [:inline field-str]]
+           [:inline (first (sql/format-expr [json-op [:raw "$"] [:raw (util/to-json value)]]))]]
+
+          :else
           [atat c/COL_AGGREGATE [:inline json-path-str]]))
 
       :predicate-in
@@ -336,17 +343,28 @@
                 [json-path-str]
                 (sql/format json-path)
 
-                btree?
-                (attrs/path-btree? service path)
-
                 path
                 (attrs/attr->path attr)]
 
-            (if btree?
+            ;; See a note in the :predicate-simple branch
+
+            (cond
+
+              (attrs/path-btree? service path)
               [:in
                [:json#>> c/COL_AGGREGATE path]
                (for [v value]
                  [:inline (->string v)])]
+
+              (attrs/path-array? service path)
+              [atat
+               [:jsonb_path_query_array c/COL_AGGREGATE [:inline field-str]]
+               [:inline (first (sql/format-expr
+                                (into [:||]
+                                      (for [v value]
+                                        [:== [:raw "$"] [:raw (util/to-json v)]]))))]]
+
+              :else
               [at? c/COL_AGGREGATE [:inline json-path-str]]))))
 
       ;;

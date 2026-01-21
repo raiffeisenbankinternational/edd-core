@@ -14,7 +14,8 @@
    [next.jdbc :as jdbc]))
 
 (def DOCKER?
-  (System/getenv "CHANGE_ID"))
+  (or (System/getenv "IS_DOCKER")
+      (System/getenv "CHANGE_ID")))
 
 (def USER "postgres")
 
@@ -34,7 +35,7 @@
    :password PASS})
 
 (def TABLES-TO-DROP
-  [c/SVC_TEST c/SVC_DIMENSION])
+  [c/SVC_TEST c/SVC_DIMENSION c/SVC_APPLICATION])
 
 (defn fix-truncate-db [t]
   (doseq [table TABLES-TO-DROP]

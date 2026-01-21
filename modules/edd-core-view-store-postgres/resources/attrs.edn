@@ -1,0 +1,78 @@
+
+;;
+;; General info about attributes: how to treat them
+;; in certain cases. Service -> attribute -> meta.
+;; The meta is a set of tags.
+;;
+;; :eq? -- this attribute is used in := or :eq statements,
+;; for example: [:= :attrs.foo.bar 42]
+;;
+;; :wc? -- this attribute is used in :wc (wildcard)
+;; search expressions, for example: [:= :attrs.foo.bar "62362"]
+;;
+;; :array? -- this attribute will be wrapped as follows:
+;; jsonb_path_query_array(aggregate, $.path.to.attr)
+;;
+;; Most of database indexes where generated according
+;; to this map. Now they should be reviewed, and
+;; unnecessarily indexes must be removed.
+;;
+
+{:glms-application-svc
+ {:attrs.applicant.id                         #{:eq?}
+  :attrs.application-id                       #{:eq? :wc?}
+  :attrs.approval-authority                   #{:wc?}
+  :attrs.area                                 #{:eq?}
+  :attrs.booking-company                      #{:eq?}
+  :attrs.requests.customer.cocunut            #{:array?}
+  :attrs.resolution-date                      #{:eq?}
+  :attrs.risk-on.asset-class.asset-class-code #{:eq?}
+  :attrs.risk-on.top-gcc-short-name           #{:eq?}
+  :attrs.status                               #{:eq?}
+  :attrs.top-gcc.cocunut                      #{:eq? :wc?}
+  :attrs.top-gcc.short-name                   #{:wc?}}
+
+ :glms-user-management-svc
+ {:attrs.email           #{:wc?}
+  :attrs.full_name_lower #{:wc?}}
+
+ :glms-facility-svc
+ {:attrs.crm-external-code #{:wc?}
+  :attrs.external-id       #{:wc?}
+  :lms-crm-code            #{:wc?}}
+
+ :glms-task-manager-svc
+ {:attrs.application.application-id  #{:wc?}
+  :attrs.application.area            #{:eq?}
+  :attrs.application.booking-company #{:eq?}
+  :attrs.application.id              #{:eq?}
+  :attrs.created-by.id               #{:eq? :wc?}
+  :attrs.description                 #{:wc?}
+  :attrs.due-date                    #{:eq?}
+  :attrs.gcc.cocunut                 #{:eq? :wc?}
+  :attrs.gcc.short-name              #{:wc?}
+  :attrs.status                      #{:eq? :wc?}
+  :attrs.type                        #{:eq? :wc?}}
+
+ :glms-dimension-svc
+ {:attrs.asset-class.asset-class-code #{:eq?}
+  :attrs.cocunut                      #{:eq? :wc?}
+  :attrs.country-of-risk              #{:eq?}
+  :attrs.gics-level-1-short-name      #{:eq?}
+  :attrs.short-name                   #{:wc?}
+  :attrs.top-parent-cocunut           #{:eq?}
+  :attrs.top-parent-id                #{:eq? :wc?}
+  :attrs.top-parent-short-name        #{:eq?}
+  :state                              #{:eq?}}
+
+ :glms-notification-svc
+ {:attrs.status    #{:eq?}
+  :attrs.user.id   #{:eq?}
+  :attrs.user.role #{:eq?}}
+
+ :glms-exposure-svc
+ {:attrs.risk-on #{:eq?}}
+
+ :glms-currency-svc
+ {:batch-number  #{:eq?}
+  :business-date #{:eq?}}}

@@ -984,3 +984,29 @@ uuid2 is the third because rank is 2
 
     (testing "the broken group was ignored"
       (is (= 200 (-> result :hits count))))))
+
+(deftest test-application-indexes
+
+  (let [ctx
+        {:meta {:realm c/TEST_REALM}
+         :service-name c/SVC_APPLICATION
+         :view-store :postgres}
+
+        app-id (uuid/gen)
+
+        _
+        (api/upsert *DB* c/TEST_REALM c/SVC_APPLICATION
+                    {:id app-id
+                     :attrs
+                     {:requests
+                      [{:customer {:cocunut "12345"}}]}})
+
+        query
+        {:filter [:eq :attrs.requests.customer.cocunut "12345"]}
+
+        result
+        (search/advanced-search (-> ctx
+                                    (assoc :query query)))]
+
+    (is (= 1 (-> result :total)))
+    (is (= app-id (-> result :hits first :id)))))

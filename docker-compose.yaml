@@ -98,5 +98,15 @@ services:
     networks:
       - opensearch-net
 
+  migration-test-application:
+    image: ${DOCKER_URL}/flyway/flyway
+    command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test_glms_application_svc -user=postgres -password="no-secret" -connectRetries=60 -skipCheckForUpdate migrate
+    volumes:
+       - ./modules/edd-core-view-store-postgres/test/resources/migrations:/flyway/sql
+    depends_on:
+      - postgres
+    networks:
+      - opensearch-net
+
 networks:
   opensearch-net:

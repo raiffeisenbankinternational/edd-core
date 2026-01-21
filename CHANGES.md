@@ -2,6 +2,8 @@
 
 ## Changes
 
+- [CARS-4852] Refactor edd-core attributes file (intenal)
+
 - [CARS-4853] Update gitleaks configuration to TOML
 Format with fingerprint-based allowlist. Secrets
 all are anyway public and we didi history rewrite

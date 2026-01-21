@@ -7,9 +7,7 @@
    java.io.PushbackReader)
   (:require
    [clojure.edn :as edn]
-   [clojure.java.io :as io]
    [clojure.string :as str]
-   [edd.clj.core :as clj]
    [edd.io.core :as edd.io]
    [edd.view-store.postgres.const :as c]))
 
@@ -84,38 +82,47 @@
    {}
    (mapv attr->path attrs)))
 
-(def PATHS_BTREE
-  "
-  Like the content of the `attrs-btree.edn` file
-  but each attribute is tranformed into a path.
-  "
-  (-> "attrs-btree.edn"
-      (io/resource)
-      (edd.io/read-edn)
-      (clj/update-vals clj/each attr->path)))
-
-(def PATHS_WC
+(def -ATTRS
   "
   Like the content of the `attrs-wildcard` file
-  but each attribute is tranformed into a path.
+  but each attribute is transformed into a path.
+  Don't touch it directly, subject to change.
+  Use predicates below.
   "
-  (-> "attrs-wildcard.edn"
-      (io/resource)
+  (-> "attrs.edn"
+      (edd.io/resource!)
       (edd.io/read-edn)
-      (clj/update-vals clj/each attr->path)))
+      (update-vals (fn [service->meta]
+                     (update-keys service->meta attr->path)))))
+
+(defn get-tag
+  "
+  A general function to fetch a tag from the attrs tree.
+  "
+  ^Boolean [service path tag]
+  (some? (get-in -ATTRS [(keyword service) path tag])))
 
 (defn path-btree?
   "
   True if it's a btree path for a given service.
   "
   ^Boolean [service path]
-  (get-in PATHS_BTREE [(keyword service) path]))
+  (get-tag service path :eq?))
 
-(defn path-wildcard? ^Boolean [service path]
+(defn path-wildcard?
   "
   True if it's a wildcard path for a given service.
   "
-  (get-in PATHS_WC [(keyword service) path]))
+  ^Boolean [service path]
+  (get-tag service path :wc?))
+
+(defn path-array?
+  "
+  True if this attribute should be wrapped with
+  jsonb_path_query_array(aggregate, $.path.to.attr).
+  "
+  ^Boolean [service path]
+  (get-tag service path :array?))
 
 (defn subnode
   "

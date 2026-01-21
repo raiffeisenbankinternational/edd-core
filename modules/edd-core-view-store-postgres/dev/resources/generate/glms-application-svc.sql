@@ -1,5 +1,5 @@
 ----
--- glms-application-svc, 13K on prod
+-- glms-application-svc, 46K on prod
 ----
 
 insert into test_glms_application_svc.aggregates (id, aggregate)
@@ -114,7 +114,8 @@ select
                     'customer', jsonb_build_object(
                         'short-name', format('FooBar-%s', x),
                         'id', format('#%s', gen_random_uuid()),
-                        'cocunut', format('%s', x)
+                        -- here and below: 15608 distinct cocunut on prod
+                        'cocunut', format('cocunut_%s', ceil(random() * 15608))
                     ),
                     'id', format('#%s', gen_random_uuid())
                 ),
@@ -123,7 +124,7 @@ select
                     'customer', jsonb_build_object(
                         'short-name', format('Hello World %s', x),
                         'id', format('#%s', gen_random_uuid()),
-                        'cocunut', format('123%s', x)
+                        'cocunut', format('cocunut_%s', ceil(random() * 15608))
                     ),
                     'id', format('#%s', gen_random_uuid())
                 )
@@ -735,5 +736,5 @@ select
         )
     ) as aggregate
 from
-    generate_series(1, 15000) as gen(x)
+    generate_series(1, 50000) as gen(x)
 returning id;

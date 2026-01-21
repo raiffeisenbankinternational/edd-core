@@ -33,7 +33,7 @@ def get_last_commit():
     # Remove trailing empty lines
     while lines and not lines[-1].strip():
         lines.pop()
-    return '\n'.join(lines)
+    return lines[0]
 
 
 def get_first_entry_from_changes():

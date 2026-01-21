@@ -610,6 +610,33 @@
     (is (= "((aggregate #>> ARRAY['attrs', 'application-id']) IN ('1', '2', '3', '4', '5')) OR ((aggregate #>> ARRAY['attrs', 'application-id']) IN ('1', '2', '3', '4', '5'))"
            (filter->result c/SVC_APPLICATION filter)))))
 
+(deftest test-application-requests-customer-cocunut
+
+  (testing "eq case"
+    (let [filter
+          [:eq :attrs.requests.customer.cocunut "hello"]]
+      (is (= "JSONB_PATH_QUERY_ARRAY(aggregate, '$.attrs.requests.customer.cocunut') @@ '$ == \"hello\"'"
+             (filter->result c/SVC_APPLICATION filter)))))
+
+  (testing "in case"
+    (let [filter
+          [:in :attrs.requests.customer.cocunut ["a" "b" "c"]]]
+      (is (= "JSONB_PATH_QUERY_ARRAY(aggregate, '$.attrs.requests.customer.cocunut') @@ '($ == \"a\") || ($ == \"b\") || ($ == \"c\")'"
+             (filter->result c/SVC_APPLICATION filter)))))
+
+  ;; keep the old logic; anyway, like_regex doesn't support gin @@ index
+  (testing "wildcard case"
+    (let [filter
+          [:wildcard :attrs.requests.customer.cocunut "hello"]]
+      (is (= "aggregate @@ '($.attrs.requests.customer.cocunut like_regex \"hello\" flag \"iq\")'"
+             (filter->result c/SVC_APPLICATION filter)))))
+
+  (testing "non-application service"
+    (let [filter
+          [:eq :attrs.requests.customer.cocunut "hello"]]
+      (is (= "aggregate @@ '$.attrs.requests.customer.cocunut == \"hello\"'"
+             (filter->result c/SVC_DIMENSION filter))))))
+
 (deftest test-trailing-keyword-removed
 
   (let [filter
