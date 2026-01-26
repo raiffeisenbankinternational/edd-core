@@ -2,6 +2,10 @@
 
 ## Changes
 
+- [CARS-4941] Rework edd-core attributes
+- update dimension attributes
+- add tests for the new attrs
+
 - [AP-798] Remove :sequence feature
 This commit removes the :sequence concept from all edd-core event store implementations.
 The sequence feature allowed event handlers to returna

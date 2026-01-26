@@ -55,15 +55,12 @@
   :attrs.type                        #{:eq? :wc?}}
 
  :glms-dimension-svc
- {:attrs.asset-class.asset-class-code #{:eq?}
-  :attrs.cocunut                      #{:eq? :wc?}
+ {:attrs.cocunut                      #{:eq? :wc?}
   :attrs.country-of-risk              #{:eq?}
-  :attrs.gics-level-1-short-name      #{:eq?}
   :attrs.short-name                   #{:wc?}
-  :attrs.top-parent-cocunut           #{:eq?}
+  :attrs.top-parent-cocunut           #{:eq? :wc?}
   :attrs.top-parent-id                #{:eq? :wc?}
-  :attrs.top-parent-short-name        #{:eq?}
-  :state                              #{:eq?}}
+  :attrs.top-parent-short-name        #{:wc?}}
 
  :glms-notification-svc
  {:attrs.status    #{:eq?}

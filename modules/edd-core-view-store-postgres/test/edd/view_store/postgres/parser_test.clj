@@ -32,7 +32,7 @@
            [:= "attrs.cocunut" "abc"]
            [:= :attrs.short-name "hello"]
            [:= :attrs.foo-bar "hello"]]]
-      (is (= "((aggregate #>> ARRAY['state']) = ':test') AND ((aggregate #>> ARRAY['attrs', 'cocunut']) = 'abc') AND (aggregate @@ '$.attrs.\"short-name\" == \"hello\"') AND (aggregate @@ '$.attrs.\"foo-bar\" == \"hello\"')"
+      (is (= "(aggregate @@ '$.state == \":test\"') AND ((aggregate #>> ARRAY['attrs', 'cocunut']) = 'abc') AND (aggregate @@ '$.attrs.\"short-name\" == \"hello\"') AND (aggregate @@ '$.attrs.\"foo-bar\" == \"hello\"')"
              (filter->result c/SVC_DIMENSION filter)))))
   (testing "in case"
     (let [filter
@@ -40,6 +40,14 @@
            [:in "attrs.cocunut" ["test" :foo 'bar 42]]]]
       (is (= "((aggregate #>> ARRAY['attrs', 'cocunut']) IN ('test', ':foo', 'bar', '42'))"
              (filter->result c/SVC_DIMENSION filter))))))
+
+(deftest test-dimension-attrs-top-parent
+  (let [filter
+        [:or
+         [:wildcard :attrs.top-parent-cocunut "12345"]
+         [:wildcard :attrs.top-parent-short-name "12345"]]]
+    (is (= "((aggregate #>> ARRAY['attrs', 'top-parent-cocunut']) ILIKE '%12345%') OR ((aggregate #>> ARRAY['attrs', 'top-parent-short-name']) ILIKE '%12345%')"
+           (filter->result c/SVC_DIMENSION filter)))))
 
 (deftest test-notification-attrs
   (let [filter
@@ -208,14 +216,12 @@
            (parser/search-conditions->case :test conditions)))))
 
 (deftest test-parse-dimension-attrs-cocunut
-
   (testing "filter part"
     (let [filter
           [:and
            [:eq :attrs.cocunut "abc"]
            [:not [:eq :state :deleted]]]]
-
-      (is (= "((aggregate #>> ARRAY['attrs', 'cocunut']) = 'abc') AND NOT ((aggregate #>> ARRAY['state']) = ':deleted')"
+      (is (= "((aggregate #>> ARRAY['attrs', 'cocunut']) = 'abc') AND NOT (aggregate @@ '$.state == \":deleted\"')"
              (filter->result c/SVC_DIMENSION filter))))))
 
 (deftest test-parse-os-query-nested-attrs
