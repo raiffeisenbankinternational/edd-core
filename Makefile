@@ -78,6 +78,7 @@ docker-rm:
 	docker compose rm --force
 
 docker-psql:
+
 	psql --port 5432 --host localhost -U postgres postgres
 docker-migrate:
 	docker compose run root-migration

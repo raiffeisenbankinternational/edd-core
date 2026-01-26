@@ -33,7 +33,7 @@ def get_last_commit():
     # Remove trailing empty lines
     while lines and not lines[-1].strip():
         lines.pop()
-    return '\n'.join(lines)
+    return lines[0]
 
 
 def get_first_entry_from_changes():
@@ -71,7 +71,7 @@ def get_first_entry_from_changes():
             # Continuation of entry (any line including empty lines)
             elif found_first_entry:
                 entry_lines.append(line)
-    
+
     # Remove trailing empty lines
     while entry_lines and not entry_lines[-1].strip():
         entry_lines.pop()
@@ -185,4 +185,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
