@@ -20,6 +20,7 @@
    [edd.view-store.postgres.common
     :refer [->realm
             ->service
+            enumerate
             flatten-paths]]
    [edd.view-store.postgres.const :as c]
    [edd.view-store.postgres.honey :as honey]
@@ -400,12 +401,34 @@
 
      (find-aggregates db realm service where opt))))
 
-(defn find-advanced-parsed
+(defn advanced-search-sql-map
   "
-  Find aggregates using the **parsed** advanced search query.
-  For unparsed query, see the function below.
+  When search attributes are passed, the query changes a lot.
+  It's a number of layers connected with UNION ALL. Each layer
+  is a pair of rank and id. The rank is used for further
+  ordering. Less rank means the layer goes first.
+
+  Each condition produces two layers: equality and wildcard.
+  For example, :attrs.cocunut & '12345' will produce two
+  layers:
+
+  select 1 as rank, id from prod_glms_dimension_svc.aggregates
+  where aggregate #>> '{attrs,cocunut}' = '12345'
+
+  select 2 as rank, id from prod_glms_dimension_svc.aggregates
+  where aggregate #>> '{attrs,cocunut}' ilike '%12345$'
+
+  Layers are grouped by id keeping the minimum rank. Finally,
+  the aggregates table gets inner-joined, and the extra
+  WHERE conditions are applied.
+
+  The result is always sorted by rank, and then other
+  grouping fields are applied, if passed.
+
+  This must be a pure function so it can be easily tested.
+  See a test for the rendered result.
   "
-  [db realm service query-parsed]
+  [realm service query-parsed]
 
   (let [{filter-parsed :filter
          search-parsed :search
@@ -415,83 +438,123 @@
          size-parsed :size}
         query-parsed
 
+        {:keys [attrs value]}
+        search-parsed
+
+        search-pairs
+        (parser/correct-search-expression service attrs value)
+
+        conditions
+        (parser/get-search-conditions search-pairs)
+
+        table
+        (->table realm service)
+
+        builder-fn
+        (if (seq select-parsed)
+          (->as-aggregates select-parsed)
+          as-aggregates)
+
         limit
         (parser/size-parsed->limit size-parsed)
 
         offset
         (parser/from-parsed->offset from-parsed)
 
+        order-by
+        (when sort-parsed
+          (parser/sort-parsed->order-by service sort-parsed))
+
         where-base
         (when filter-parsed
           (parser/filter-parsed->where service filter-parsed))
 
-        order-by
-        (when sort-parsed
-          (parser/sort-parsed->order-by service sort-parsed))]
+        sql-map-base
+        {:with [[:layers
+                 {:union-all
+                  (for [[i condition]
+                        (enumerate 1 conditions)]
+                    {:select [[[:inline i] :rank] :id]
+                     :from [table]
+                     :where (parser/filter->where service condition)})}]
+
+                [:layer
+                 {:select [[[:min :rank] :rank]
+                           :id]
+                  :from [:layers]
+                  :group-by [:id]
+                  :order-by [:1]}]]
+
+         :select [:aggregate]
+         :from [:layer]
+         :join [table [:using :id]]
+         :order-by (cons [:rank] order-by)
+         :limit [:inline limit]
+         :offset [:inline offset]}]
+
+    (cond-> sql-map-base
+      where-base
+      (assoc :where where-base))))
+
+(defn find-advanced-parsed
+  "
+  Find aggregates using the **parsed** advanced search query.
+  For unparsed query, see the function below.
+  "
+  [db realm service query-parsed]
+
+  (let [{select-parsed :select
+         search-parsed :search}
+        query-parsed]
 
     (if search-parsed
 
       ;;
-      ;; When search attributes are passed, two things come into play.
-      ;; First, we add extra wildcard expressions into WHERE for each
-      ;; attribute. Second, the order of search attributes does matter:
-      ;; rows found within the first wildcard must precede rows found
-      ;; within the second and so on. For this, we generate a custom
-      ;; CASE ... END expression with weights and use it as a leading
-      ;; ORDER BY clause.
+      ;; Build a custom SQL map with layers and UNION
+      ;; (see docstring for advanced-search-sql-map).
       ;;
-
-      (let [{:keys [attrs value]}
-            search-parsed
-
-            search-pairs
-            (parser/correct-search-expression service attrs value)
-
-            conditions
-            (parser/get-search-conditions search-pairs)
-
-            table
-            (->table realm service)
+      (let [sql-map
+            (advanced-search-sql-map realm service query-parsed)
 
             builder-fn
             (if (seq select-parsed)
               (->as-aggregates select-parsed)
-              as-aggregates)
-
-            where-search
-            (parser/filter->where service (cons :or conditions))
-
-            where-full
-            [:and where-base where-search]
-
-            order-case
-            (parser/search-conditions->case service conditions)
-
-            order-by-full
-            (cons [order-case :asc] order-by)
-
-            sql-map
-            {:select [:aggregate]
-             :from [table]
-             :where where-full
-             :order-by order-by-full
-             :limit [:inline limit]
-             :offset [:inline offset]}]
+              as-aggregates)]
 
         (honey/execute db sql-map {:builder-fn builder-fn}))
 
       ;;
       ;; If no search was passed, just find the aggregates
-      ;; using the where expression obtained from `filter`.
+      ;; using the :where expression obtained from `filter`.
       ;;
-      (find-aggregates db
-                       realm
-                       service
-                       where-base
-                       {:attrs select-parsed
-                        :limit limit
-                        :offset offset
-                        :order-by order-by}))))
+      (let [{filter-parsed :filter
+             sort-parsed :sort
+             from-parsed :from
+             size-parsed :size}
+            query-parsed
+
+            limit
+            (parser/size-parsed->limit size-parsed)
+
+            offset
+            (parser/from-parsed->offset from-parsed)
+
+            order-by
+            (when sort-parsed
+              (parser/sort-parsed->order-by service sort-parsed))
+
+            where-base
+            (when filter-parsed
+              (parser/filter-parsed->where service filter-parsed))]
+
+        (find-aggregates db
+                         realm
+                         service
+                         where-base
+                         {:attrs select-parsed
+                          :limit limit
+                          :offset offset
+                          :order-by order-by})))))
 
 (defn find-advanced
   "

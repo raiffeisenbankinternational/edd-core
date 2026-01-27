@@ -196,25 +196,6 @@
               :from [:string "123"]}
              query-parsed)))))
 
-(deftest test-search-case-order-form
-  (let [conditions
-        [[:= :fieldA 1]
-         [:= :fieldB 2]
-         [:wildcard :fieldA "abc"]
-         [:wildcard :fieldB "xyz"]]]
-    (is (= [:case
-            [(keyword "@@") :aggregate [:inline "$.fieldA == 1"]]
-            [:inline 0]
-            [(keyword "@@") :aggregate [:inline "$.fieldB == 2"]]
-            [:inline 1]
-            [(keyword "@@") :aggregate [:inline "($.fieldA like_regex \"abc\" flag \"iq\")"]]
-            [:inline 2]
-            [(keyword "@@") :aggregate [:inline "($.fieldB like_regex \"xyz\" flag \"iq\")"]]
-            [:inline 3]
-            :else
-            [:inline 999]]
-           (parser/search-conditions->case :test conditions)))))
-
 (deftest test-parse-dimension-attrs-cocunut
   (testing "filter part"
     (let [filter
