@@ -132,6 +132,16 @@
        [:attr (->enum :id)]
        [:value :uuid]]
 
+      ;;
+      ;; Case: [:eq :id "123456"] or [:wildcard :id "123456"]
+      ;; Without handling, slows down dimension service a lot.
+      ;;
+      ::PredicateIdString
+      [:catn
+       [:op (->enum :eq :wildcard :=)]
+       [:attr (->enum :id)]
+       [:value :string]]
+
       ::PredicateIdInUUID
       [:catn
        [:op (->enum :in)]
@@ -192,6 +202,7 @@
        [:predicate-in-uuid [:ref ::PredicateIdInUUID]]
        [:predicate-in [:ref ::PredicateIn]]
        [:predicate-exists [:ref ::PredicateExists]]
+       [:predicate-id-string [:ref ::PredicateIdString]]
        [:predicate-id-uuid [:ref ::PredicateIdUUID]]
        [:predicate-simple [:ref ::PredicateSimple]]
        [:predicate-wc [:ref ::PredicateWildcard]]

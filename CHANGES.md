@@ -2,6 +2,11 @@
 
 ## Changes
 
+- [CARS-5008] Improve advanced search
+- update expression that builds advanced search query
+- handle case when id is matched against a string
+- fix and update tests
+
 - [AP-800] Implement test suite for event store compliance
 
 - [CARS-4941] Rework edd-core attributes

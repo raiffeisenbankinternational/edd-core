@@ -419,6 +419,26 @@
             content]
         [:= :id [:inline value]])
 
+      ;;
+      ;; Case: [:eq :id "12345"]
+      ;;
+      :predicate-id-string
+      (let [{:keys [op
+                    value]}
+            content]
+
+        (case op
+          (:eq :=)
+          ;; Can be only applied if the string is a UUID.
+          ;; Makes no sense otherwise.
+          (if-let [uuid (parse-uuid value)]
+            [:= :id [:inline uuid]]
+            false)
+
+          ;; needs trigram index on id::text
+          (:wildcard)
+          (honey/ilike [:raw "id::text"] value)))
+
       :predicate-in-uuid
       (let [{:keys [attr value]}
             content
@@ -675,22 +695,3 @@
     (doseq [[attr value] search-pairs]
       (.add result [:wildcard attr value]))
     result))
-
-(defn search-conditions->case
-  "
-  Having a seq of condition predicates, generate a CASE expression
-  which is used as a leading ORDER BY form. Each branch has an integer
-  weight. The default branch has weight 999.
-
-  https://github.com/seancorfield/honeysql/blob/develop/doc/special-syntax.md#case
-  "
-  [service conditions]
-  (let [inner
-        (reduce
-         (fn [acc [i condition]]
-           (conj acc
-                 (filter->where service condition)
-                 [:inline i]))
-         [:case]
-         (enumerate conditions))]
-    (conj inner :else [:inline 999])))
