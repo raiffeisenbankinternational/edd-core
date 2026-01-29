@@ -1,0 +1,124 @@
+[
+    {
+        "name": "org.apache.hadoop.io.compress.GzipCodec",
+        "allDeclaredConstructors": true,
+        "allPublicConstructors": true,
+        "allDeclaredMethods": true,
+        "allPublicMethods": true
+    },
+    {
+        "name": "org.apache.hadoop.conf.Configuration"
+    },
+    {
+        "name": "org.apache.hadoop.mapred.JobConf"
+    },
+    {
+        "name": "org.apache.parquet.column.values.bitpacking.ByteBitPackingBE",
+        "fields": [
+            {
+                "name": "factory"
+            }
+        ]
+    },
+    {
+        "name": "org.apache.parquet.column.values.bitpacking.ByteBitPackingForLongBE",
+        "fields": [
+            {
+                "name": "factory"
+            }
+        ]
+    },
+    {
+        "name": "org.apache.parquet.column.values.bitpacking.ByteBitPackingForLongLE",
+        "fields": [
+            {
+                "name": "factory"
+            }
+        ]
+    },
+    {
+        "name": "org.apache.parquet.column.values.bitpacking.ByteBitPackingLE",
+        "fields": [
+            {
+                "name": "factory"
+            }
+        ]
+    },
+    {
+        "name": "org.apache.parquet.column.values.bitpacking.LemireBitPackingBE",
+        "fields": [
+            {
+                "name": "factory"
+            }
+        ]
+    },
+    {
+        "name": "org.apache.parquet.column.values.bitpacking.LemireBitPackingLE",
+        "fields": [
+            {
+                "name": "factory"
+            }
+        ]
+    },
+    {
+        "name": "org.apache.parquet.hadoop.ParquetWriter"
+    },
+    {
+        "name": "org.apache.parquet.hadoop.ParquetWriter$Builder"
+    },
+    {
+        "name": "org.apache.parquet.hadoop.api.WriteSupport"
+    },
+    {
+        "name": "org.apache.parquet.hadoop.api.WriteSupport$WriteContext"
+    },
+    {
+        "name": "org.apache.parquet.hadoop.metadata.CompressionCodecName",
+        "allPublicFields": true
+    },
+    {
+        "name": "org.apache.parquet.io.OutputFile"
+    },
+    {
+        "name": "org.apache.parquet.io.PositionOutputStream"
+    },
+    {
+        "name": "org.apache.parquet.io.api.Binary",
+        "allPublicFields": true
+    },
+    {
+        "name": "org.apache.parquet.io.api.RecordConsumer"
+    },
+    {
+        "name": "org.apache.parquet.schema.LogicalTypeAnnotation",
+        "allPublicFields": true
+    },
+    {
+        "name": "org.apache.parquet.schema.MessageType"
+    },
+    {
+        "name": "org.apache.parquet.schema.PrimitiveType$PrimitiveTypeName",
+        "allPublicFields": true
+    },
+    {
+        "name": "org.apache.parquet.schema.Type$Repetition",
+        "allPublicFields": true
+    },
+    {
+        "name": "org.apache.parquet.schema.Types",
+        "allPublicFields": true
+    },
+    {
+        "name": "org.apache.parquet.schema.Types$BasePrimitiveBuilder"
+    },
+    {
+        "name": "org.apache.parquet.schema.Types$Builder"
+    },
+    {
+        "name": "org.apache.parquet.schema.Types$PrimitiveBuilder"
+    },
+    {
+        "name": "org.iq80.snappy.Snappy",
+        "allPublicFields": true
+    }
+]
