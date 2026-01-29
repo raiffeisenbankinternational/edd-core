@@ -1,0 +1,85 @@
+{:deps
+ {org.clojure/tools.logging {:mvn/version "1.2.4"}
+  org.apache.parquet/parquet-hadoop {:mvn/version "1.16.0"
+                                     :exclusions [org.slf4j/slf4j-log4j12]}
+  org.apache.hadoop/hadoop-common
+  {:mvn/version "3.4.2"
+   :exclusions [com.sun.jersey/jersey-core
+                com.sun.jersey/jersey-json
+                com.sun.jersey/jersey-server
+                com.sun.jersey/jersey-servlet
+
+                dnsjava/dnsjava
+
+                org.eclipse.jetty/jetty-server
+                org.eclipse.jetty/jetty-servlet
+                org.eclipse.jetty/jetty-util
+                org.eclipse.jetty/jetty-webapp
+
+                javax.activation/javax.activation-api
+                javax.servlet.jsp/jsp-api
+                javax.servlet/javax.servlet-api
+
+                io.netty/netty-codec
+                io.netty/netty-handler
+                io.netty/netty-transport
+                io.netty/netty-transport-native-epoll
+
+                org.codehaus.jettison/jettison
+
+                org.apache.zookeeper/zookeeper
+
+                org.apache.curator/curator-recipes
+                org.apache.curator/curator-client
+                org.apache.htrace/htrace-core4
+
+                org.apache.hadoop.thirdparty/hadoop-shaded-protobuf_3_7
+                org.apache.hadoop/hadoop-auth
+
+                org.apache.kerby/kerb-core
+
+                commons-cli/commons-cli
+                commons-net/commons-net
+                org.apache.commons/commons-text
+
+                com.google.re2j/re2j
+                com.google.code.findbugs/jsr305
+
+                com.jcraft/jsch
+
+                log4j/log4j
+                org.slf4j/slf4j-log4j12]}}
+ :paths ["src" "resources"]
+ :aliases
+ {:build  {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.6"}}
+           :ns-default build}
+
+  :test   {:extra-paths ["test"]
+           :extra-deps  {org.clojure/test.check {:mvn/version "1.1.1"}
+                         ;; Test deps for reading parquet files
+                         org.apache.hadoop/hadoop-client-api     {:mvn/version "3.4.2"}
+                         org.apache.hadoop/hadoop-client-runtime {:mvn/version "3.4.2"}
+                         org.apache.hadoop/hadoop-mapreduce-client-core
+                         {:mvn/version "3.4.2"
+                          :exclusions  [org.slf4j/slf4j-log4j12
+                                        org.apache.avro/avro
+                                        org.apache.hadoop/hadoop-yarn-client
+                                        org.apache.hadoop/hadoop-yarn-common
+                                        org.apache.hadoop/hadoop-annotations
+                                        org.apache.hadoop/hadoop-hdfs-client
+                                        io.netty/netty
+                                        com.google.inject.extensions/guice-servlet]}}}
+
+  :it     {:extra-deps {lambdaisland/kaocha {:mvn/version "1.91.1392"}}
+           :main-opts  ["-m" "kaocha.runner" "it"]}
+
+  :unit   {:extra-deps {lambdaisland/kaocha {:mvn/version "1.91.1392"}}
+           :main-opts  ["-m" "kaocha.runner" "unit"]}
+
+  :dev    {:extra-paths ["dev" "dev/resources"]}
+
+  :lint   {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2025.10.23"}}
+           :main-opts  ["-m" "clj-kondo.main" "--lint" "."]}
+
+  :format {:extra-deps {zprint/zprint {:mvn/version "1.2.9"}
+                        dev.weavejester/cljfmt {:mvn/version "0.7.0"}}}}}

@@ -2,6 +2,10 @@
 
 ## Changes
 
+- [CARS-5048] Add edd-core-parquet module
+- add write support for Parquet bytes
+- update Makefile format to add Ivan-style binding formatting
+
 - [CARS-5008] Improve advanced search
 - update expression that builds advanced search query
 - handle case when id is matched against a string
