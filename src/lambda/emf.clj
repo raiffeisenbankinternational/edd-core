@@ -2,8 +2,7 @@
   (:require
    [malli.core :as m]
    [malli.util :as mu]
-   [clojure.tools.logging :as log]
-   [malli.error :as me])
+   [clojure.tools.logging :as log])
   (:import
    [java.lang.management ManagementFactory GarbageCollectorMXBean]
    [java.util Comparator Iterator Collections Timer TimerTask ArrayList]))
@@ -442,11 +441,4 @@
                                 (publish-event! event))))]
       (.scheduleAtFixedRate timer task (long 0) ^long TEN_SECONDS)
       (fn cancel-timer! [] (.cancel timer)))))
-
-(comment
-  (require '[malli.error :as me])
-  (require '[malli.dev :as dev])
-  (dev/start!)
-  (-> (m/explain AWSEvent (->event))
-      (me/humanize)))
 

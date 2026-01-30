@@ -1,8 +1,29 @@
 (ns edd.view-store.postgres.api
-  "
-  Basic CRUD operations for aggregates: create, upsert,
-  bulk upsert, dump/copy, etc.
-  "
+  "PostgreSQL view store implementation for EDD-Core aggregate persistence.
+   
+   PREREQUISITES:
+   - PostgreSQL database (version 12+)
+   - Database schema: <realm>-<service> (e.g., prod-user-svc)
+   - Table: aggregate_view with columns: id (uuid PK), aggregate (jsonb), created_at, updated_at
+   - Connection pool configured in context [:view-store :impl]
+   
+   STORAGE ARCHITECTURE:
+   - Schema per realm-service pair: Provides isolation and independent scaling
+   - JSONB column: Efficient querying via GIN indexes on nested attributes
+   - Optimistic locking: Via event_seq (handled at event-store level)
+   - Only latest version stored per aggregate ID
+   
+   IMPLEMENTATION NOTES:
+   - Implements edd.search multimethods: update-aggregate, get-snapshot
+   - ON CONFLICT (id) DO UPDATE SET for write operations
+   - Supports bulk operations: COPY IN for high-throughput batch writes
+   - Advanced Search DSL: supports both OpenSearch and PostgreSQL as query implementations
+   
+   USAGE:
+   (-> ctx (postgres-view-store/register db-config))
+   
+   This namespace provides low-level CRUD functions. For multimethod implementations,
+   see edd.view-store.postgres.core."
   (:import
    clojure.lang.Keyword
    java.io.ByteArrayOutputStream
@@ -181,12 +202,11 @@
 
 (defn upsert-many
   "
-  Create or update many aggregates. Relies on the ON CONFLICT ...
-  DO UPDATE SET ... Postgres expression. Bumps the `updated_at`
-  column on update.
+  Store many aggregates. On ID conflict, updates the existing row
+  and bumps the `updated_at` column.
 
   Note: don't use when the number of aggregates is high. There is
-  a COPY IN implementation for batch upsert.
+  a COPY IN implementation for batch writes.
   "
   [db realm service aggregates]
   (when (seq aggregates)
@@ -209,7 +229,7 @@
 
 (defn upsert
   "
-  Create or update a single aggregate.
+  Store a single aggregate.
   "
   [db realm service aggregate]
   (-> db
@@ -218,7 +238,7 @@
 
 (defn upsert-bulk
   "
-  Upsert aggregates using the `jdbc/execute-batch!` bulk method.
+  Store aggregates using the `jdbc/execute-batch!` bulk method.
   The default chunk size might be overridden.
   "
   ([db realm service aggregates]
@@ -249,20 +269,19 @@
 
 (defn copy-in-csv
   "
-  Having an input stream of CSV, insert aggregates in batch.
+  Having an input stream of CSV, store aggregates in batch.
   The CSV must have two columns: the id and the JSON aggregate
   with NO headers.
 
   First, COPY IN the aggregates into a temp table. Then transfer
-  them into the target table using the ON CONFLICT ... DO UPDATE SET
-  expression. Bump the `updated_at` field for modified rows.
+  them into the target table handling ID conflicts by updating
+  existing rows. Bumps the `updated_at` field for modified rows.
 
   The `src` argument is anything that can be transformed into
   a stream using the `io/input-stream` function: a file, another
   stream, a file path, etc.
-  "
-  ([db realm service src]
-   (copy-in-csv db realm service src nil))
+  "  ([db realm service src]
+      (copy-in-csv db realm service src nil))
 
   ([db realm service src {:keys [header?]}]
 
@@ -303,7 +322,7 @@
 
 (defn copy-in
   "
-  Having a seq of aggregates, upsert them using CSV + COPY IN.
+  Having a seq of aggregates, store them using CSV + COPY IN.
   "
   [db realm service aggregates]
 
@@ -562,7 +581,7 @@
 
 (defn find-advanced
   "
-  Find aggregates using the *unparsed* Open Search DSL query.
+  Find aggregates using the *unparsed* Advanced Search DSL query.
   "
   [db realm service query]
   (let [query-parsed

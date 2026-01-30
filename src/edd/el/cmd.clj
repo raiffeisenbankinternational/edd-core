@@ -1,6 +1,5 @@
 (ns edd.el.cmd
   (:require
-   [edd.flow :refer :all]
    [clojure.tools.logging :as log]
    [malli.core :as m]
    [lambda.util :as util]

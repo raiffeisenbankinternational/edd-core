@@ -4,11 +4,14 @@
             [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]
             [lambda.uuid :as uuid]
+            [lambda.ctx :as lambda-ctx]
             [lambda.util :as util]
             [clojure.string :as string]
             [edd.postgres.history :as history]
             [edd.core :as edd]
             [edd.postgres.pool :as pool :refer [*DB*]]
+            [malli.core :as m]
+            [malli.error :as me]
             [edd.dal :refer [with-init
                              get-events
                              get-max-event-seq
@@ -44,7 +47,7 @@
 
   (let [match (first
                (filter
-                (fn [[k v]]
+                (fn [[_k v]]
                   (error-matches? m v))
                 errors))]
     (if match
@@ -207,9 +210,10 @@
 
 (defmethod log-response
   :postgres
-  [ctx]
-  (throw (ex-info "Deprecated"
-                  {:message "Deprecated, done together with sore-result in transaction"})))
+  [_ctx]
+  (throw (ex-info "Deprecated: log-response is superseded by store-results (done together in transaction)"
+                  {:deprecated true
+                   :superseded-by "store-results"})))
 
 (defn store-identity
   [ctx identity]
@@ -260,7 +264,7 @@
                   identity
                   [identity])
          placeholders (map
-                       (fn [%] "?")
+                       (fn [_%] "?")
                        params)
          result (if (empty? params)
                   []
@@ -437,9 +441,23 @@
   [ctx body-fn]
   (pool/with-init ctx body-fn))
 
+(def PostgresEventStoreCtx
+  (m/schema
+   [:map
+    [:service-name keyword?]]))
+
 (defn register
   [ctx]
-  (assoc ctx :edd-event-store :postgres))
+  (let [ctx (-> ctx
+                (lambda-ctx/init)
+                (assoc :edd-event-store :postgres))]
+    (log/info "Registering postgres event store"
+              {:service-name (:service-name ctx)})
+    (when-not (m/validate PostgresEventStoreCtx ctx)
+      (throw (ex-info "Invalid Postgres event store configuration"
+                      {:error (-> (m/explain PostgresEventStoreCtx ctx)
+                                  (me/humanize))})))
+    ctx))
 
 (defmethod get-records
   :postgres
@@ -686,7 +704,7 @@
                        {:builder-fn rs/as-unqualified-kebab-maps})))))
 
 (defmacro verify-state
-  [ctx interaction-id x y]
+  [ctx interaction-id _x y]
   `(let [query# (str "SELECT *
                     FROM " (->table ~ctx :event-store) "
                     WHERE interaction_id=?

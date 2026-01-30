@@ -1,5 +1,6 @@
 {:deps
- {org.clojure/tools.logging {:mvn/version "1.2.4"}
+ {com.rbinternational.glms/edd-core {:local/root "../../"}
+  org.clojure/tools.logging {:mvn/version "1.2.4"}
   org.apache.parquet/parquet-hadoop {:mvn/version "1.16.0"
                                      :exclusions [org.slf4j/slf4j-log4j12]}
   org.apache.hadoop/hadoop-common
@@ -73,11 +74,13 @@
                          org.apache.hadoop/hadoop-client-api     {:mvn/version "3.4.2"}
                          org.apache.hadoop/hadoop-client-runtime {:mvn/version "3.4.2"}}}
 
-  :it     {:extra-deps {lambdaisland/kaocha {:mvn/version "1.91.1392"}}
-           :main-opts  ["-m" "kaocha.runner" "it"]}
+   :it     {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}}
+            :main-opts  ["-m" "kaocha.runner" "it"]
+            :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}
 
-  :unit   {:extra-deps {lambdaisland/kaocha {:mvn/version "1.91.1392"}}
-           :main-opts  ["-m" "kaocha.runner" "unit"]}
+   :unit   {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}}
+            :main-opts  ["-m" "kaocha.runner" "unit"]
+            :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}
 
   :dev    {:extra-paths ["dev" "dev/resources"]}
 

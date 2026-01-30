@@ -48,7 +48,6 @@
       (f/verify-state :event-store
                       [{:event-id  :e1,
                         :name      :cmd-1,
-                        :meta      {}
                         :id        id
                         :event-seq 1}]))))
 

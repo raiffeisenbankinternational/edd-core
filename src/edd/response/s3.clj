@@ -1,9 +1,8 @@
 (ns edd.response.s3
   (:require [sdk.aws.s3 :as s3]
             [lambda.util :as util]
-            [edd.response.cache :refer :all]
-            [clojure.string :as str]
-            [clojure.tools.logging :as log]))
+            [edd.response.cache :refer [cache-response]]
+            [clojure.string :as str]))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)

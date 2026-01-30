@@ -2,6 +2,8 @@
   (:require
    [clojure.tools.logging :as log]
    [aws.dynamodb :as dynamodb]
+   [aws.ctx :as aws-ctx]
+   [lambda.ctx :as lambda-ctx]
    [edd.dal :refer [with-init
                     get-events
                     get-max-event-seq
@@ -13,7 +15,9 @@
                     get-records
                     store-results]]
    [lambda.util :as util]
-   [clojure.string :as string]))
+   [clojure.string :as string]
+   [malli.core :as m]
+   [malli.error :as me]))
 
 (def breadcrumbs-separator ":")
 
@@ -218,12 +222,11 @@
            breadcrumbs
            interaction-id
            invocation-id]
-    :as   ctx
-    :or   {version 0}}]
-  (log/info (format "Fetching events for: %s, starting version: %s"
-                    id version))
-  (if id
-    (do
+    :as   ctx}]
+  (let [version (or version 0)]
+    (log/info (format "Fetching events for: %s, starting version: %s"
+                      id version))
+    (if id
       (util/d-time
        (format "Fetching events for: %s, starting version: %s" id version)
        (let [resp (dynamodb/make-request
@@ -241,15 +244,15 @@
                      (get resp :Items []))]
 
          (log/info (format "Received events: %s" (count events)))
-         events)))
-    (do "Fetching by request data"
-        (analytic-query ctx
-                        :event-store
-                        (cond-> {}
-                          request-id (assoc :request-id request-id)
-                          breadcrumbs (assoc :breadcrumbs request-id)
-                          interaction-id (assoc :interaction-id request-id)
-                          invocation-id (assoc :invocation-id request-id))))))
+         events))
+      (do (log/info "Fetching by request data")
+          (analytic-query ctx
+                          :event-store
+                          (cond-> {}
+                            request-id (assoc :request-id request-id)
+                            breadcrumbs (assoc :breadcrumbs request-id)
+                            interaction-id (assoc :interaction-id request-id)
+                            invocation-id (assoc :invocation-id request-id)))))))
 
 (defmethod get-max-event-seq
   :dynamodb
@@ -379,11 +382,33 @@
   (log/debug "Initializing")
   (body-fn ctx))
 
+(def DynamoDBEventStoreCtx
+  (m/schema
+   [:map
+    [:service-name keyword?]
+    [:environment-name-lower [:string {:min 1}]]
+    [:db [:map
+          [:name [:string {:min 1}]]]]]))
+
 (defn register
   [ctx]
-  (let [db-name
-        (or (util/get-env "ApplicationName")
-            (get-in ctx [:db :name]))]
-    (-> ctx
-        (assoc :edd-event-store :dynamodb)
-        (assoc-in [:db :name] db-name))))
+  (let [ctx (-> ctx
+                (lambda-ctx/init)
+                (aws-ctx/init))
+        env-app-name (util/get-env "DatabaseName")
+        ctx-db-name (get-in ctx [:db :name])
+        db-name (or env-app-name ctx-db-name)
+        ctx (-> ctx
+                (assoc :edd-event-store :dynamodb)
+                (assoc-in [:db :name] db-name))]
+    (log/info "Registering dynamodb event store"
+              {:application-name-env env-app-name
+               :ctx-db-name ctx-db-name
+               :resolved-db-name db-name
+               :service-name (:service-name ctx)
+               :environment-name-lower (:environment-name-lower ctx)})
+    (when-not (m/validate DynamoDBEventStoreCtx ctx)
+      (throw (ex-info "Invalid DynamoDB event store configuration"
+                      {:error (-> (m/explain DynamoDBEventStoreCtx ctx)
+                                  (me/humanize))})))
+    ctx))

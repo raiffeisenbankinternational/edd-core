@@ -46,7 +46,16 @@
       :filters [fl/from-api]
       :post-filter fl/to-api)
 
-     (is (= [{:body   {:body            {:invocation-id  0
+     (is (= [{:method  :get
+              :url     "http://mock/2018-06-01/runtime/invocation/next"}
+             {:url
+              "https://sqs.eu-west-1.amazonaws.com/local/local-glms-router-svc-response",
+              :method :post,
+              :body
+              (str "Action=SendMessage&MessageBody=%7B%22Records%22%3A%5B%7B%22key%22%3A%22response%2F"
+                   request-id
+                   "%2F0%2Flocal-test.json%22%7D%5D%7D")}
+             {:body   {:body            {:invocation-id  0
                                          :request-id     request-id
                                          :interaction-id interaction-id
                                          :error          {:id ["missing required key"]}}
@@ -58,16 +67,7 @@
                        :isBase64Encoded false
                        :statusCode      500}
               :method :post
-              :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-             {:url
-              "https://sqs.eu-west-1.amazonaws.com/local/local-glms-router-svc-response",
-              :method :post,
-              :body
-              (str "Action=SendMessage&MessageBody=%7B%22Records%22%3A%5B%7B%22key%22%3A%22response%2F"
-                   request-id
-                   "%2F0%2Flocal-test.json%22%7D%5D%7D")}
-             {:method  :get
-              :url     "http://mock/2018-06-01/runtime/invocation/next"}]
+              :url    "http://mock/2018-06-01/runtime/invocation/0/response"}]
             (mapv
              #(select-keys % [:method :body :url])
              (client/traffic-edn)))))))
@@ -83,6 +83,7 @@
              :commands       [{:cmd-id :ping
                                :id     id}]}]
     (mock/with-mock-dal
+      {:keep-meta true}
       (with-redefs [sqs/sqs-publish (fn [{:keys [message]}]
                                       (is (= {:Records [{:key (str "response/"
                                                                    request-id
@@ -108,7 +109,10 @@
                                                                          :group-3
                                                                          :group-2]}}}])
            (verify-traffic-edn
-            [{:body   {:body            (util/to-json
+            [{:method  :get
+              :timeout 90000000
+              :url     "http://mock/2018-06-01/runtime/invocation/next"}
+             {:body   {:body            (util/to-json
                                          {:result         {:success    true
                                                            :effects    []
                                                            :events     1
@@ -125,13 +129,10 @@
                        :isBase64Encoded false
                        :statusCode      200}
               :method :post
-              :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-             {:method  :get
-              :timeout 90000000
-              :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))))
+              :url    "http://mock/2018-06-01/runtime/invocation/0/response"}])))))))
 
 (deftest test-cache-partitioning
-  (let [ctx {:service-name "local-test"
+  (let [ctx {:service-name :local-test
              :breadcrumbs  "0"
              :request-id   "1"}
         resp-1 {:effects [{:a :b}]}
@@ -189,7 +190,7 @@
                         (/ 0 0))
                       3)
         (is false)
-        (catch Exception e
+        (catch Exception _e
           (is (= 1 @capture!))))))
 
   (testing "special exception"

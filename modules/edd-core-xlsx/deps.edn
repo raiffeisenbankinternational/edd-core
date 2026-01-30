@@ -1,8 +1,8 @@
 {:deps
- {org.dhatim/fastexcel        {:mvn/version "0.18.0"}
+ {com.rbinternational.glms/edd-core {:local/root "../../"}
+  org.dhatim/fastexcel        {:mvn/version "0.18.0"}
   org.dhatim/fastexcel-reader {:mvn/version "0.18.0"}}
  :paths ["src" "resources" "api/src"]
- :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]
  :aliases
  {:build  {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.6"}}
            :ns-default build}
@@ -11,10 +11,12 @@
            :extra-deps  {org.clojure/test.check {:mvn/version "1.1.1"}}},
 
   :it     {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}},
-           :main-opts  ["-m" "kaocha.runner" "it"]}
+           :main-opts  ["-m" "kaocha.runner" "it"]
+           :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}
 
   :unit   {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}},
-           :main-opts  ["-m" "kaocha.runner" "unit"]}
+           :main-opts  ["-m" "kaocha.runner" "unit"]
+           :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}
 
   :dev    {:extra-paths ["dev" "dev/resources"]}
 

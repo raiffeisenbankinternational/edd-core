@@ -11,8 +11,9 @@
 (defn clean-ctx
   []
   (-> {}
-      (assoc :service-name "local-test")
+      (assoc :service-name :local-test)
       (assoc :response-cache :default)
+      (assoc :hosted-zone-name (util/get-env "PublicHostedZoneName" "example.com"))
       (assoc :environment-name-lower (util/get-env "EnvironmentNameLower"))
       (event-store/register)
       (view-store/register)))

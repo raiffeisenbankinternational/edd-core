@@ -34,7 +34,6 @@
 ;;
 ;; JDBC functions
 ;;
-
 (defn mask-params
   "
   Replace or mask some parameters before logging them.
@@ -81,8 +80,8 @@
 
          message
          (if (seq params)
-           (cc/format "PG query: %s, args: %s" sql (mask-params params))
-           (cc/format "PG query: %s" sql))]
+           (cc/format "PG query:\n%s\n  args: %s" (util/format-sql sql) (mask-params params))
+           (cc/format "PG query:\n%s" (util/format-sql sql)))]
 
      (util/d-time message
                   (jdbc/execute-one! db

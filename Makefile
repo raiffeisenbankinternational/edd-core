@@ -14,9 +14,7 @@ test-it:
 # Full integration test setup (same as CI pipeline)
 it:
 	@echo "Running pre-build setup (CloudFormation + Docker + migrations)..."
-	./pre-build.sh
-	@echo "Running integration tests..."
-	bash -c "source ./setup-it-env.sh && clojure -M:test:it"
+	bash -c "source ./pre-build.sh && echo 'Running integration tests...' && clojure -M:test:it"
 # Cleanup integration test environment
 it-clean:
 	@echo "Cleaning up integration test environment..."
@@ -25,7 +23,7 @@ it-clean:
 #
 # Run all the known docker-related tests
 test-view-store-postgres:
-	cd ${PG_VIEW_STORE} && make test
+	bash -c "source ./pre-build.sh && cd ${PG_VIEW_STORE} && make test"
 test: test-unit test-it
 .PHONY: test test-unit test-it it it-clean
 env ?= $(error Please specify the env=... argument, e.g. env=DEV99)

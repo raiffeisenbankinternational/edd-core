@@ -1,5 +1,6 @@
 (ns aws.lambda
   (:require [lambda.util :as util]
+            [lambda.ctx :as lambda-ctx]
             [aws.aws :as aws]
             [lambda.emf :as emf]
             [lambda.request :as request]
@@ -74,7 +75,7 @@
 (defn init-filters
   [{:keys [filters] :as ctx}]
   (reduce
-   (fn [c {:keys [init] :as f}]
+   (fn [c {:keys [init] :as _f}]
      (if init
        (init c)
        c))
@@ -105,24 +106,6 @@
           (handle-error (assoc ctx
                                :req body) e))))))
 
-(defn initalize-context
-  [ctx]
-  (-> ctx
-      (merge (util/load-config "secret.json"))
-      (merge (util/to-edn
-              (util/get-env "CustomConfig" "{}")))
-      (aws-ctx/init)
-      (assoc :service-name (keyword (util/get-env
-                                     "ServiceName"
-                                     "local-test"))
-             :hosted-zone-name (util/get-env
-                                "PublicHostedZoneName"
-                                "example.com")
-             :environment-name-lower (util/get-env
-                                      "EnvironmentNameLower"
-                                      "local"))
-      (init-filters)))
-
 (defn lambda-custom-runtime
   [init-ctx handler & {:keys [filters post-filter]
                        :or   {filters     []
@@ -136,7 +119,9 @@
                    (assoc :filters filters
                           :handler handler
                           :post-filter post-filter)
-                   (initalize-context))]
+                   (lambda-ctx/init)
+                   (aws-ctx/init)
+                   (init-filters))]
        (doseq [i (get-loop)]
          (let [request (aws/get-next-request api)
                invocation-id (get-in

@@ -1,11 +1,33 @@
-- name: 'Deploy dynamodb stack: {{ application_name }}-{{ realm_name }}'
+- name: Resolve environment variables
+  set_fact:
+    env_upper: '{{ params["EnvironmentNameUpper"] | default(lookup("env", "EnvironmentNameUpper")) }}'
+    env_lower: '{{ params["EnvironmentNameLower"] | default(lookup("env", "EnvironmentNameLower")) }}'
+    resource_name: '{{ params["ResourceName"] | default(lookup("env", "ResourceName")) }}'
+    realm: '{{  realm_name | default(lookup("env", "Realm")) }}'
+
+- name: Validate required parameters
+  ansible.builtin.fail:
+    msg: "Required parameter '{{ item.name }}' is not set in params and has no environment variable fallback"
+  when: item.value | length == 0
+  loop:
+    - { name: "EnvironmentNameUpper", value: "{{ env_upper }}" }
+    - { name: "EnvironmentNameLower", value: "{{ env_lower }}" }
+    - { name: "ResourceName", value: "{{ resource_name }}" }
+    - { name: "Realm", value: "{{ realm }}" }
+
+- name: Calculate derived names
+  set_fact:
+    stack_name: '{{ env_upper }}-DYNAMODB-{{ resource_name }}-stack'
+    database_name: '{{ resource_name }}'
+
+- name: 'Deploy dynamodb stack: {{ stack_name }}'
   amazon.aws.cloudformation:
-     stack_name: '{{ params["EnvironmentNameUpper"] | default(lookup("env", "EnvironmentNameUpper")) }}-DYNAMODB-{{ application_name }}-{{ realm_name }}-stack'
-     state: "present"
-     region: '{{ lookup("env", "Region")  }}'
-     disable_rollback: false
-     template: "{{ role_path }}/files/db.yaml"
-     template_parameters:
-       EnvironmentNameLower: '{{ params["EnvironmentNameLower"] | default(lookup("env", "EnvironmentNameLower")) }}'
-       ApplicationName: '{{ application_name }}'
-       Realm: '{{ realm_name }}'
+    stack_name: '{{ stack_name }}'
+    state: "present"
+    region: '{{ lookup("env", "Region") }}'
+    disable_rollback: false
+    template: "{{ role_path }}/files/db.yaml"
+    template_parameters:
+      EnvironmentNameLower: '{{ env_lower }}'
+      DatabaseName: '{{ database_name }}'
+      Realm: '{{ realm }}'

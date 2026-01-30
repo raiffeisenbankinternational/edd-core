@@ -1,6 +1,6 @@
 (ns lambda.http-client-test
 
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is]]
             [lambda.http-client :as http-client]
             [edd.util :as edd-util]))
 

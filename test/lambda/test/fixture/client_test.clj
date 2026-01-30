@@ -69,11 +69,12 @@
    (is (= {:body {:a :1}}
           (util/http-post "http://google.com" {:request :payload1})))
 
+   ;; Traffic is recorded in chronological order: payload2 first, payload1 second
    (client/verify-traffic
-    [{:body   "{\"request\":\":payload1\"}"
+    [{:body   "{\"request\":\":payload2\"}"
       :method :post
       :url    "http://google.com"}
-     {:body   "{\"request\":\":payload2\"}"
+     {:body   "{\"request\":\":payload1\"}"
       :method :post
       :url    "http://google.com"}])))
 

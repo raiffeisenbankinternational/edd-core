@@ -35,8 +35,7 @@
                              :event-seq 1
                              :id        id
                              :import    {:bucket "some-bucket"
-                                         :files  {:file1 "prefix.some-file1.csv"}}
-                             :meta      {}}])
+                                         :files  {:file1 "prefix.some-file1.csv"}}}])
 
         (mock/verify-state :command-store [])
         (mock/apply-cmd ctx {:cmd-id :object-uploaded
@@ -65,8 +64,7 @@
                                                                           :file2 "file2.csv"}
                                                                  :status :uploaded}
                                                         :id     id}]
-                                            :meta        {}
-                                            :service     nil
+                                            :service     :local-test
                                             :breadcrumbs [0 0]}])
         (mock/execute-fx-apply ctx)
         (mock/verify-state :aggregate-store [{:id      id

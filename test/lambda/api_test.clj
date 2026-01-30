@@ -5,9 +5,7 @@
             [lambda.jwt-test :as jwt-test]
             [lambda.test.fixture.client :as client :refer [verify-traffic-edn]]
             [lambda.test.fixture.core :refer [mock-core]]
-            [lambda.util :as util])
-  (:import
-   clojure.lang.ExceptionInfo))
+            [lambda.util :as util]))
 
 (def cmd-id #uuid "c5c4d4df-0570-43c9-a0c5-2df32f3be124")
 
@@ -189,7 +187,7 @@
     :User-Agent                   ["Custom User Agent String"]}})
 
 (defn m2m_request
-  [body & {:keys [token path http-method] :or {token jwt-test/token}}]
+  [body & {:keys [token _path http-method] :or {token jwt-test/token}}]
   {:path                            "/integration/canary/event-log",
    :queryStringParameters           "None",
    :pathParameters                  {:stage "canary", :function "event-log"},
@@ -276,7 +274,7 @@
     ["Self=1-624c4641-39061598649a512f2b364894;Root=1-624c4641-31a8bde2177ec9aa0409676b"]}})
 
 (defn cognito-authorizer-request
-  [body & {:keys [token path http-method] :or {token jwt-test/token}}]
+  [body & {:keys [token _path http-method] :or {token jwt-test/token}}]
   {:path                            "/integration/canary/event-log",
    :queryStringParameters           "None",
    :pathParameters                  {:stage "canary", :function "event-log"},
@@ -394,7 +392,10 @@
     :filters [fl/from-api]
     :post-filter fl/to-api)
    (verify-traffic-edn
-    [{:body
+    [{:timeout 90000000
+      :method  :get
+      :url     "http://mock/2018-06-01/runtime/invocation/next"}
+     {:body
       {:headers
        {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
         :Access-Control-Expose-Headers "*"
@@ -416,10 +417,7 @@
                 :role  :users}})
        :statusCode      200}
       :method :post
-      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-     {:timeout 90000000
-      :method  :get
-      :url     "http://mock/2018-06-01/runtime/invocation/next"}])))
+      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}])))
 
 (deftest test-cognito-authorizer
   (mock-core
@@ -434,7 +432,10 @@
     :filters [fl/from-api]
     :post-filter fl/to-api)
    (verify-traffic-edn
-    [{:body
+    [{:timeout 90000000
+      :method  :get
+      :url     "http://mock/2018-06-01/runtime/invocation/next"}
+     {:body
       {:headers
        {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
         :Access-Control-Expose-Headers "*"
@@ -456,10 +457,7 @@
                 :role  :users}})
        :statusCode      200}
       :method :post
-      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-     {:timeout 90000000
-      :method  :get
-      :url     "http://mock/2018-06-01/runtime/invocation/next"}])))
+      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}])))
 
 (deftest api-handler-test
   (mock-core
@@ -474,7 +472,10 @@
     :filters [fl/from-api]
     :post-filter fl/to-api)
    (verify-traffic-edn
-    [{:body   {:body            (util/to-json
+    [{:method  :get
+      :timeout 90000000
+      :url     "http://mock/2018-06-01/runtime/invocation/next"}
+     {:body   {:body            (util/to-json
                                  {:source dummy-cmd
                                   :user   {:id    "john.smith@example.com"
                                            :roles [:group-1 :group-3 :group-2]
@@ -489,10 +490,7 @@
                :isBase64Encoded false
                :statusCode      200}
       :method :post
-      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-     {:method  :get
-      :timeout 90000000
-      :url     "http://mock/2018-06-01/runtime/invocation/next"}])))
+      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}])))
 
 (deftest api-handler-test-base64
   (mock-core
@@ -505,26 +503,25 @@
        :user   (get-in ctx [:meta :user])})
     :filters [fl/from-api]
     :post-filter fl/to-api)
-   (do
-     (verify-traffic-edn
-      [{:body   {:body            (util/to-json
-                                   {:source dummy-cmd
-                                    :user   {:id    "john.smith@example.com"
-                                             :roles [:group-1 :group-3 :group-2]
-                                             :email "john.smith@example.com"
-                                             :role  :group-2}})
-                 :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-                                   :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
-                                   :Access-Control-Allow-Origin   "*"
-                                   :Access-Control-Expose-Headers "*"
-                                   :Content-Type                  "application/json"}
-                 :isBase64Encoded false
-                 :statusCode      200}
-        :method :post
-        :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-       {:method  :get
-        :timeout 90000000
-        :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))
+   (verify-traffic-edn
+    [{:method  :get
+      :timeout 90000000
+      :url     "http://mock/2018-06-01/runtime/invocation/next"}
+     {:body   {:body            (util/to-json
+                                 {:source dummy-cmd
+                                  :user   {:id    "john.smith@example.com"
+                                           :roles [:group-1 :group-3 :group-2]
+                                           :email "john.smith@example.com"
+                                           :role  :group-2}})
+               :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                                 :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
+                                 :Access-Control-Allow-Origin   "*"
+                                 :Access-Control-Expose-Headers "*"
+                                 :Content-Type                  "application/json"}
+               :isBase64Encoded false
+               :statusCode      200}
+      :method :post
+      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}])))
 
 (deftest api-handler-invalid-token-test
   (mock-core
@@ -537,7 +534,10 @@
     :filters [fl/from-api]
     :post-filter fl/to-api)
    (verify-traffic-edn
-    [{:body   {:body            (util/to-json
+    [{:method  :get
+      :timeout 90000000
+      :url     "http://mock/2018-06-01/runtime/invocation/next"}
+     {:body   {:body            (util/to-json
                                  {:exception {:message {:jwt :invalid}}})
                :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
                                  :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
@@ -547,10 +547,7 @@
                :isBase64Encoded false
                :statusCode      500}
       :method :post
-      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-     {:method  :get
-      :timeout 90000000
-      :url     "http://mock/2018-06-01/runtime/invocation/next"}])))
+      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}])))
 
 (deftest test-error-result
   (mock-core
@@ -558,12 +555,15 @@
    :invocations [(api-request dummy-cmd)]
    (core/start
     {}
-    (fn [ctx body]
+    (fn [_ctx _body]
       {:error "Some error"})
     :filters [fl/from-api]
     :post-filter fl/to-api)
    (verify-traffic-edn
-    [{:body   {:body            (util/to-json
+    [{:method  :get
+      :timeout 90000000
+      :url     "http://mock/2018-06-01/runtime/invocation/next"}
+     {:body   {:body            (util/to-json
                                  {:error "Some error"})
                :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
                                  :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
@@ -573,10 +573,7 @@
                :isBase64Encoded false
                :statusCode      500}
       :method :post
-      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-     {:method  :get
-      :timeout 90000000
-      :url     "http://mock/2018-06-01/runtime/invocation/next"}])))
+      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}])))
 
 (deftest test-handler-exception
   (mock-core
@@ -584,12 +581,15 @@
    :env {"Region" "eu-west-1"}
    (core/start
     {}
-    (fn [ctx body]
+    (fn [_ctx _body]
       (throw (new RuntimeException "Some error")))
     :filters [fl/from-api]
     :post-filter fl/to-api)
    (verify-traffic-edn
-    [{:body   {:body            (util/to-json
+    [{:method  :get
+      :timeout 90000000
+      :url     "http://mock/2018-06-01/runtime/invocation/next"}
+     {:body   {:body            (util/to-json
                                  {:exception {:message "Some error"}})
                :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
                                  :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
@@ -599,22 +599,22 @@
                :isBase64Encoded false
                :statusCode      500}
       :method :post
-      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-     {:method  :get
-      :timeout 90000000
-      :url     "http://mock/2018-06-01/runtime/invocation/next"}])))
+      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}])))
 
 (deftest test-bucket-filter-ignored
   (mock-core
    :invocations [(api-request dummy-cmd)]
    (core/start
     {}
-    (fn [ctx body]
+    (fn [_ctx body]
       {:source body})
     :filters [fl/from-bucket]
     :post-filter fl/to-api)
    (verify-traffic-edn
-    [{:body   {:body            (util/to-json
+    [{:method  :get
+      :timeout 90000000
+      :url     "http://mock/2018-06-01/runtime/invocation/next"}
+     {:body   {:body            (util/to-json
                                  {:source (request dummy-cmd)})
                :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
                                  :Access-Control-Allow-Methods  "OPTIONS,POST,PUT,GET"
@@ -624,10 +624,7 @@
                :isBase64Encoded false
                :statusCode      200}
       :method :post
-      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-     {:method  :get
-      :timeout 90000000
-      :url     "http://mock/2018-06-01/runtime/invocation/next"}])))
+      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}])))
 
 (deftest test-health-check
   (mock-core
@@ -635,12 +632,15 @@
                               :path "/health")]
    (core/start
     {}
-    (fn [ctx body]
+    (fn [_ctx _body]
       {:healthy false})
     :filters [fl/from-api]
     :post-filter fl/to-api)
    (verify-traffic-edn
-    [{:body   {:body            (util/to-json
+    [{:method  :get
+      :timeout 90000000
+      :url     "http://mock/2018-06-01/runtime/invocation/next"}
+     {:body   {:body            (util/to-json
                                  {:healthy  true
                                   :build-id "b0"})
                :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
@@ -651,10 +651,7 @@
                :isBase64Encoded false
                :statusCode      200}
       :method :post
-      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-     {:method  :get
-      :timeout 90000000
-      :url     "http://mock/2018-06-01/runtime/invocation/next"}])))
+      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}])))
 
 (deftest test-options-check
   (mock-core
@@ -662,12 +659,15 @@
                               :http-method "OPTIONS")]
    (core/start
     {}
-    (fn [ctx body]
+    (fn [_ctx _body]
       {:healthy false})
     :filters [fl/from-api]
     :post-filter fl/to-api)
    (verify-traffic-edn
-    [{:body   {:body            (util/to-json
+    [{:method  :get
+      :timeout 90000000
+      :url     "http://mock/2018-06-01/runtime/invocation/next"}
+     {:body   {:body            (util/to-json
                                  {:healthy  true
                                   :build-id "b0"})
                :headers         {:Access-Control-Allow-Headers  "Id, VersionId, X-Authorization,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
@@ -678,10 +678,7 @@
                :isBase64Encoded false
                :statusCode      200}
       :method :post
-      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-     {:method  :get
-      :timeout 90000000
-      :url     "http://mock/2018-06-01/runtime/invocation/next"}])))
+      :url    "http://mock/2018-06-01/runtime/invocation/0/response"}])))
 
 (deftest test-custom-config
   (mock-core
@@ -696,8 +693,7 @@
               :c :d}
              (select-keys ctx [:a :c])))
       {:source body
-       :user   (:user ctx)}))
-   (do)))
+       :user   (:user ctx)}))))
 
 (deftest test-to-api-serialization-exception
 

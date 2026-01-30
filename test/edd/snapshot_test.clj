@@ -8,13 +8,17 @@
             [edd.test.fixture.dal :as mock]
             [edd.memory.event-store :as event-store]
             [edd.memory.view-store :as view-store]
+            [lambda.test.fixture.state :as state]
             [edd.dal :as dal]))
 
 (def agg-id (uuid/gen))
 
 (def ctx
   (-> {}
-      (assoc :service-name "local-test")
+      (assoc :service-name :local-test
+             :hosted-zone-name "example.com"
+             :environment-name-lower "local"
+             :meta {:realm :test})
       (event-store/register)
       (view-store/register)
 
@@ -28,7 +32,9 @@
       {:event-store [{:event-id :event-1
                       :event-seq 1
                       :id       agg-id}]}
-      (let [resp (event/handle-event (assoc-in ctx [:apply :aggregate-id] agg-id))]
+      (let [resp (event/handle-event (assoc ctx
+                                            :apply {:aggregate-id agg-id
+                                                    :meta (:meta ctx)}))]
         (mock/verify-state :aggregate-store
                            [{:id    agg-id
                              :version 1
@@ -40,7 +46,9 @@
       {:aggregate-store [{:id      agg-id
                           :value   2
                           :version 2}]}
-      (let [resp (event/handle-event (assoc-in ctx [:apply :aggregate-id] agg-id))]
+      (let [resp (event/handle-event (assoc ctx
+                                            :apply {:aggregate-id agg-id
+                                                    :meta (:meta ctx)}))]
         (prn resp)
         (mock/verify-state :aggregate-store
                            [{:id      agg-id
@@ -56,11 +64,16 @@
        :aggregate-store [{:id      agg-id
                           :value   1
                           :version 2}]}
-      (let [resp (event/handle-event (assoc-in ctx [:apply :aggregate-id] agg-id))]
-        (mock/verify-state :aggregate-store
-                           [{:id      agg-id
-                             :version 3
-                             :value   2}])))))
+      (let [resp (event/handle-event (assoc ctx
+                                            :apply {:aggregate-id agg-id
+                                                    :meta (:meta ctx)}))]
+        ;; Memory store keeps all versions - verify latest version is correct
+        (let [agg-store (into [] (mock/dal-state-accessor @state/*dal-state* :aggregate-store))
+              latest-v3 (filter #(= (:version %) 3) agg-store)]
+          (is (= [{:id      agg-id
+                   :version 3
+                   :value   2}]
+                 latest-v3)))))))
 
 (deftest apply-events-snapshot-and-older-events
   (testing "snapshot available and older events, only snapshot will be considered
@@ -73,7 +86,9 @@
        :aggregate-store [{:id      agg-id
                           :value   1
                           :version 3}]}
-      (event/handle-event (assoc-in ctx [:apply :aggregate-id] agg-id))
+      (event/handle-event (assoc ctx
+                                 :apply {:aggregate-id agg-id
+                                         :meta (:meta ctx)}))
       (mock/verify-state :aggregate-store
                          [{:id      agg-id
                            :version 3

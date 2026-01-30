@@ -1,5 +1,5 @@
 (ns sdk.aws.xray-test
-  (:require [clojure.test :refer [deftest testing is]]
+  (:require [clojure.test :refer [deftest is]]
             [sdk.aws.xray :as xray]))
 
 (deftest test-parse-token

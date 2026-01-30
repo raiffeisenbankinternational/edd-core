@@ -1,8 +1,6 @@
 (ns edd.schema.swagger
   (:gen-class)
-  (:require [malli.core :as m]
-            [malli.util :as mu]
-            [malli.error :as me]
+  (:require [malli.util :as mu]
             [yaml.core :as yaml]
             [clojure.tools.logging :as log]
             [malli.swagger :as swagger]

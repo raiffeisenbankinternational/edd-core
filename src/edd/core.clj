@@ -28,7 +28,9 @@
     [:consumes
      [:fn #(m/schema? (m/schema %))]]]))
 
-(defn dps->deps [dps]
+(defn ^{:deprecated "Use :deps instead of :dps"
+        :superseded-by "reg-cmd :deps"}
+  dps->deps [dps]
   (let [dps (if (vector? dps) (partition 2 dps) dps)
         wrap-query (fn [query] (fn [d cmd] (query (merge cmd d))))]
     (vec (mapcat (fn [[key query]]
@@ -69,9 +71,9 @@
                                             (apply reg-fn rest))))]
 
     (when (:dps input-options)
-      (log/warn ":dps is deprecated and will be removed in future"))
+      (log/warn ":dps is deprecated, use :deps instead. Will be removed in future"))
     (when (:spec input-options)
-      (log/warn ":spec is deprecated and will be removed in future"))
+      (log/warn ":spec is deprecated, use :consumes instead. Will be removed in future"))
 
     (when-not (m/validate EddCoreRegCmd options)
       (throw (ex-info "Invalid command registration"

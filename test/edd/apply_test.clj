@@ -43,7 +43,9 @@
 
 (def ctx
   (-> {}
-      (assoc :service-name "local-test"
+      (assoc :service-name :local-test
+             :hosted-zone-name "example.com"
+             :environment-name-lower "local"
              :meta {:realm :test})
       (event-store/register)
       (view-store/register)
@@ -82,19 +84,20 @@
 (deftest apply-when-no-events
   (mock/with-mock-dal
     (let [resp (event/handle-event
-                (merge ctx
-                       {:apply {:aggregate-id
-                                #uuid "cb245f3b-a791-4637-919f-c0682d4277ae",
-                                :service "glms-plc2-svc"},
-                        :request-id #uuid "01ce9e4b-3922-4d93-a95d-a326b4c49b5c",
-                        :interaction-id #uuid "01ce9e4b-3922-4d93-a95d-a326b4c49b5c"}))]
+                (-> ctx
+                    (assoc :apply {:aggregate-id
+                                   #uuid "cb245f3b-a791-4637-919f-c0682d4277ae",
+                                   :service "glms-plc2-svc"
+                                   :meta (:meta ctx)}
+                           :request-id #uuid "01ce9e4b-3922-4d93-a95d-a326b4c49b5c"
+                           :interaction-id #uuid "01ce9e4b-3922-4d93-a95d-a326b4c49b5c")))]
       (is (= {:apply true}
              resp)))))
 
 (deftest apply-when-events-but-no-handler
   (let [ctx
         (-> mock/ctx
-            (assoc :service-name "local-test")
+            (assoc :service-name :local-test)
             (edd/reg-cmd :cmd-1 (fn [ctx cmd]
                                   {:id (:id cmd)
                                    :event-id :event-1
@@ -130,7 +133,7 @@
 (deftest apply-when-only-unhandeled-even
   (let [ctx
         (-> mock/ctx
-            (assoc :service-name "local-test"))]
+            (assoc :service-name :local-test))]
 
     (mock/with-mock-dal
       {:event-store [{:event-id :event-1

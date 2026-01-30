@@ -15,7 +15,7 @@
 (def apply-ctx
   (-> mock/ctx
       (assoc-in [:meta :realm] :test)
-      (merge {:service-name "local-test"})
+      (merge {:service-name :local-test})
       (edd/reg-event
        :event-1 (fn [p v]
                   (assoc p :e1 v)))
@@ -58,12 +58,14 @@
 
 (deftest test-apply-cmd-storing-error
   (with-redefs [dal/get-events (fn [_]
-                                 [{:event-id :event-1
-                                   :id       cmd-id
-                                   :k1       "a"}
-                                  {:event-id :event-2
-                                   :id       cmd-id
-                                   :k2       "b"}])]
+                                 [{:event-id  :event-1
+                                   :event-seq 1
+                                   :id        cmd-id
+                                   :k1        "a"}
+                                  {:event-id  :event-2
+                                   :event-seq 2
+                                   :id        cmd-id
+                                   :k2        "b"}])]
 
     (is (thrown? Exception
                  (event/handle-event (-> apply-ctx
@@ -73,15 +75,17 @@
 
 (deftest test-apply-cmd-storing-response-error
   (with-redefs [dal/get-events (fn [_]
-                                 [{:event-id :event-1
-                                   :id       cmd-id
-                                   :k1       "a"}
-                                  {:event-id :event-2
-                                   :id       cmd-id
-                                   :k2       "b"}])
+                                 [{:event-id  :event-1
+                                   :event-seq 1
+                                   :id        cmd-id
+                                   :k1        "a"}
+                                  {:event-id  :event-2
+                                   :event-seq 2
+                                   :id        cmd-id
+                                   :k2        "b"}])
                 util/http-get (fn [_url _request & {:keys [raw]}]
                                 {:status 404})
-                s3-view-store/store-to-s3 (fn [_ctx]
+                s3-view-store/store-to-s3 (fn [_ctx _aggregate]
                                             nil)
                 s3-view-store/get-from-s3 (fn [_ctx _id]
                                             nil)

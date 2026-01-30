@@ -28,7 +28,7 @@
                            :method "POST"
                            :path (str "/"
                                       (elastic-view-store/realm ctx)
-                                      "_" (:service-name ctx) "/_doc/" doc-id)
+                                      "_" (name (:service-name ctx)) "/_doc/" doc-id)
                            :body (util/to-json i)))]
       (log/info "Indexed document" doc-id "Response:" response))))
 
@@ -37,7 +37,7 @@
   (binding [state/*dal-state* (atom {:aggregate-store data
                                      :realm :test
                                      :realms {:test {:aggregate-store data}}})]  ;; For load-data
-    (let [service-name (str/replace (str (uuid/gen)) "-" "_")
+    (let [service-name (keyword (str/replace (str (uuid/gen)) "-" "_"))
           local-ctx (assoc ctx :service-name service-name)
           body {:settings
                 {:index
@@ -62,7 +62,7 @@
               :path (str "/"
                          (elastic-view-store/realm ctx)
                          "_"
-                         service-name)
+                         (name service-name))
               :body (util/to-json body)))
       (load-data local-ctx)
        ;; Explicitly refresh the index to make documents searchable immediately
@@ -73,7 +73,7 @@
                                      :path (str "/"
                                                 (elastic-view-store/realm ctx)
                                                 "_"
-                                                service-name
+                                                (name service-name)
                                                 "/_refresh")))]
         (log/info "Refresh response:" refresh-response))
       (Thread/sleep 100)
@@ -88,7 +88,7 @@
         (el/query
          (assoc local-ctx
                 :method "DELETE"
-                :path (str "/" service-name)))
+                :path (str "/" (name service-name))))
         [el-result mock-result]))))
 
 (deftest test-elastic-mock-parity-1

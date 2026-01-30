@@ -3,7 +3,7 @@
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [aws.athena :as athena]
-   [clojure.test :refer [deftest is testing]]))
+   [clojure.test :refer [deftest is]]))
 
 (defn resource->edn [filename]
   (-> (format "resources/athena/%s" filename)
@@ -115,14 +115,14 @@
 (def S3-URL-WITH-SPACE
   "s3://055194627518-foo-athena-query/Matched Exposure/2024/11/12/xxx.csv")
 
-(deftest test-execution->bucket
+(deftest test-execution->bucket-1
   (let [data
         {:ResultConfiguration
          {:OutputLocation S3-URL-WITH-SPACE}}]
     (is (= "055194627518-foo-athena-query"
            (athena/execution->bucket data)))))
 
-(deftest test-execution->key-path
+(deftest test-execution->key-path-2
   (let [data
         {:ResultConfiguration
          {:OutputLocation S3-URL-WITH-SPACE}}]

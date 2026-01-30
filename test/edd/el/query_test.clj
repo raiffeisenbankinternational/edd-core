@@ -1,5 +1,5 @@
 (ns edd.el.query-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is]]
             [edd.core :as edd]
             [edd.el.query :as query]
             [lambda.core :as core]
@@ -33,7 +33,7 @@
               :cognito:groups ["non-interactive" "realm-test"]}]
     (mock/with-mock-dal
       (with-redefs [realm-mock fl/get-realm
-                    jwt/parse-token (fn [ctx _]
+                    jwt/parse-token (fn [_ctx _]
                                       user)
                     sqs/sqs-publish (fn [{:keys [message]}]
                                       (is (= {:Records [{:key (str "response/"
@@ -76,7 +76,7 @@
              :query          [{:query-id :get-by-id}]}]
     (mock/with-mock-dal
       (with-redefs [realm-mock fl/get-realm
-                    jwt/parse-token (fn [ctx _]
+                    jwt/parse-token (fn [_ctx _]
                                       user)
                     sqs/sqs-publish (fn [{:keys [message]}]
                                       (is (= {:Records [{:key (str "response/"

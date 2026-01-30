@@ -17,6 +17,7 @@
 (ns edd.memory.event-store
   (:require
    [clojure.tools.logging :as log]
+   [lambda.ctx :as lambda-ctx]
    [lambda.test.fixture.state :refer [*dal-state* *queues*]]
    [edd.dal :refer [with-init
                     get-events
@@ -28,15 +29,20 @@
                     log-response
                     get-records
                     store-results]]
-   [lambda.util :as util]))
+   [lambda.util :as util]
+   [malli.core :as m]
+   [malli.error :as me]))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
 
 (defn get-realm
-  "Extract realm from context, defaults to :test"
+  "Extract realm from context. Throws if realm is not present."
   [ctx]
-  (get-in ctx [:meta :realm] :test))
+  (if-let [realm (get-in ctx [:meta :realm])]
+    realm
+    (throw (ex-info "Context must contain [:meta :realm]"
+                    {:context ctx}))))
 
 (defn get-realm-store
   "Get realm-scoped store from *dal-state*"
@@ -86,7 +92,7 @@
 (defn peek-cmd!
   []
   (let [popq (fn [q] (if (seq q) (pop q) []))
-        [old new] (swap-vals! (:command-queue *queues*) popq)]
+        [old _new] (swap-vals! (:command-queue *queues*) popq)]
     (peek old)))
 
 (defn enqueue-cmd! [cmd]
@@ -124,9 +130,6 @@
                                                  :event-seq (:event-seq event)})))
      (update-realm-store! ctx :event-store
                           (fn [v] (conj (or v []) event))))))
-
-(defn store-events
-  [events])
 
 (defn store-results-impl
   [{:keys [resp] :as ctx}]
@@ -259,9 +262,23 @@
     (binding [*dal-state* (atom {})]
       (body-fn ctx))))
 
+(def MemoryEventStoreCtx
+  (m/schema
+   [:map
+    [:service-name keyword?]]))
+
 (defn register
   [ctx]
-  (assoc ctx :edd-event-store :memory))
+  (let [ctx (-> ctx
+                (lambda-ctx/init)
+                (assoc :edd-event-store :memory))]
+    (log/info "Registering memory event store"
+              {:service-name (:service-name ctx)})
+    (when-not (m/validate MemoryEventStoreCtx ctx)
+      (throw (ex-info "Invalid Memory event store configuration"
+                      {:error (-> (m/explain MemoryEventStoreCtx ctx)
+                                  (me/humanize))})))
+    ctx))
 
 (defmethod get-records
   :memory

@@ -26,14 +26,24 @@ def run_git_command(args):
     return result.stdout.strip()
 
 
+def make_ticket_bold(line):
+    """Make ticket IDs bold by wrapping [TICKET-123] with ** **."""
+    import re
+    # Match [TICKET-123] pattern and wrap with **
+    return re.sub(r'(\[[\w-]+\])', r'**\1**', line)
+
+
 def get_last_commit():
     """Extract last commit message (subject + body), excluding Change-Id."""
-    output = run_git_command(["log", "-1", "--pretty=format:- %s%n%b"])
+    output = run_git_command(["log", "-1", "--pretty=format:%s%n%b"])
     lines = [line for line in output.split('\n') if 'Change-Id' not in line]
     # Remove trailing empty lines
     while lines and not lines[-1].strip():
         lines.pop()
-    return lines[0]
+    # Make ticket IDs bold in the first line (if it exists and starts with [)
+    if lines and lines[0].startswith('['):
+        lines[0] = make_ticket_bold(lines[0])
+    return '\n'.join(lines)
 
 
 def get_first_entry_from_changes():
@@ -61,12 +71,12 @@ def get_first_entry_from_changes():
             if not found_first_entry and not line.strip():
                 continue
 
-            # Start of first entry
-            if line.startswith('- ') and not found_first_entry:
+            # Start of first entry (line starts with "**[")
+            if line.startswith('**[') and not found_first_entry:
                 found_first_entry = True
                 entry_lines.append(line)
-            # Next entry (bullet point) - end of first entry
-            elif found_first_entry and line.startswith('- '):
+            # Next entry (starts with "**[") - end of first entry
+            elif found_first_entry and line.startswith('**['):
                 break
             # Continuation of entry (any line including empty lines)
             elif found_first_entry:
@@ -84,14 +94,18 @@ def get_all_commits():
     initial_commit = Path("initial-public-commit.txt").read_text().strip()
     output = run_git_command([
         "log",
-        "--pretty=format:- %s%n%b%n",
+        "--pretty=format:%s%n%b%n",
         f"{initial_commit}..HEAD"
     ])
 
     lines = []
     for line in output.split('\n'):
         if 'Change-Id' not in line:
-            lines.append(line)
+            # Make ticket IDs bold in lines that start with "["
+            if line.startswith('['):
+                lines.append(make_ticket_bold(line))
+            else:
+                lines.append(line)
 
     # Clean up multiple consecutive empty lines
     result = []
@@ -140,10 +154,10 @@ def main():
             first_entry = get_first_entry_from_changes()
 
             if last_commit == first_entry:
-                print("✓ Last commit is already in CHANGES.md")
+                print("Last commit is already in CHANGES.md")
                 sys.exit(0)
             else:
-                print("✗ Last commit is NOT in CHANGES.md")
+                print("Last commit is NOT in CHANGES.md")
                 print()
                 print("Expected commit:")
                 print(last_commit)
@@ -174,7 +188,7 @@ def main():
                     print("CHANGES.md has been updated. Please review the changes and commit them.")
                     sys.exit(1)
                 else:
-                    print("✓ CHANGES.md is up to date")
+                    print("CHANGES.md is up to date")
         except subprocess.CalledProcessError as e:
             print(f"Error running git command: {e}")
             sys.exit(1)

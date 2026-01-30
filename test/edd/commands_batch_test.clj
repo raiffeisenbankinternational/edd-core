@@ -61,7 +61,7 @@
 
 (def ctx
   (-> mock/ctx
-      (assoc :service-name "local-test")
+      (assoc :service-name :local-test)
       (edd/reg-cmd :cmd-1 (fn [ctx cmd]
                             {:id       (:id cmd)
                              :event-id :event-1
@@ -115,7 +115,10 @@
        (core/start
         ctx
         edd/handler)
-       (mock-client/verify-traffic-edn [{:body   [{:result         {:success    true,
+       (mock-client/verify-traffic-edn [{:method  :get
+                                         :timeout 90000000
+                                         :url     "http://mock/2018-06-01/runtime/invocation/next"}
+                                        {:body   [{:result         {:success    true,
                                                                     :effects    [],
                                                                     :events     1,
                                                                     :meta       [{:cmd-1 {:id agg-id}}],
@@ -139,10 +142,7 @@
                                                    :interaction-id int-id}]
 
                                          :method :post
-                                         :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-                                        {:method  :get
-                                         :timeout 90000000
-                                         :url     "http://mock/2018-06-01/runtime/invocation/next"}]))
+                                         :url    "http://mock/2018-06-01/runtime/invocation/0/response"}]))
       (is (= [{:Records [{:key (str "response/"
                                     req-id3
                                     "/0/local-test.json")}]}
@@ -176,7 +176,10 @@
        (core/start
         ctx
         edd/handler)
-       (mock-client/verify-traffic-edn [{:body   [{:result         {:success    true,
+       (mock-client/verify-traffic-edn [{:method  :get
+                                         :timeout 90000000
+                                         :url     "http://mock/2018-06-01/runtime/invocation/next"}
+                                        {:body   [{:result         {:success    true,
                                                                     :effects    [],
                                                                     :events     1,
                                                                     :meta       [{:cmd-1 {:id agg-id}}],
@@ -195,10 +198,7 @@
                                                    :interaction-id int-id}]
 
                                          :method :post
-                                         :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-                                        {:method  :get
-                                         :timeout 90000000
-                                         :url     "http://mock/2018-06-01/runtime/invocation/next"}])))
+                                         :url    "http://mock/2018-06-01/runtime/invocation/0/response"}])))
     (is (= [{:Records [{:key (str "response/"
                                   req-id5
                                   "/0/local-test.json")}]}
@@ -243,7 +243,23 @@
        (core/start
         ctx
         edd/handler)
-       (is (= [{:body   [{:result         {:success    true,
+       (is (= [{:method  :get
+                :timeout 90000000
+                :url     "http://mock/2018-06-01/runtime/invocation/next"}
+               {:body            (str "Action=DeleteMessageBatch&QueueUrl=https://sqs.eu-central-1.amazonaws.com/local/test-evets-queue&"
+                                      "DeleteMessageBatchRequestEntry.1.Id=id-1&"
+                                      "DeleteMessageBatchRequestEntry.1.ReceiptHandle=handle-1&"
+                                      "DeleteMessageBatchRequestEntry.2.Id=id-2&"
+                                      "DeleteMessageBatchRequestEntry.2.ReceiptHandle=handle-2&"
+                                      "Expires=2020-04-18T22%3A52%3A43PST&Version=2012-11-05")
+
+                :method          :post
+                :raw             true
+                :connect-timeout 300
+                :idle-timeout    5000
+                :url             "https://sqs.eu-central-1.amazonaws.com/local/test-evets-queue"
+                :version         :http1.1}
+               {:body   [{:result         {:success    true,
                                            :effects    [],
                                            :events     1,
                                            :meta       [{:cmd-1 {:id agg-id}}],
@@ -261,23 +277,7 @@
                           :interaction-id int-id,
                           :invocation-id 0}]
                 :method :post
-                :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
-               {:body            (str "Action=DeleteMessageBatch&QueueUrl=https://sqs.eu-central-1.amazonaws.com/local/test-evets-queue&"
-                                      "DeleteMessageBatchRequestEntry.1.Id=id-1&"
-                                      "DeleteMessageBatchRequestEntry.1.ReceiptHandle=handle-1&"
-                                      "DeleteMessageBatchRequestEntry.2.Id=id-2&"
-                                      "DeleteMessageBatchRequestEntry.2.ReceiptHandle=handle-2&"
-                                      "Expires=2020-04-18T22%3A52%3A43PST&Version=2012-11-05")
-
-                :method          :post
-                :raw             true
-                :connect-timeout 300
-                :idle-timeout    5000
-                :url             "https://sqs.eu-central-1.amazonaws.com/local/test-evets-queue"
-                :version         :http1.1}
-               {:method  :get
-                :timeout 90000000
-                :url     "http://mock/2018-06-01/runtime/invocation/next"}]
+                :url    "http://mock/2018-06-01/runtime/invocation/0/error"}]
               (map
                #(dissoc % :headers :keepalive)
                (mock-client/traffic-edn)))))
@@ -318,7 +318,20 @@
        (core/start
         ctx
         edd/handler)
-       (is  (= [{:body   [{:result         {:success    true,
+       (is  (= [{:method  :get
+                 :timeout 90000000
+                 :url     "http://mock/2018-06-01/runtime/invocation/next"}
+                {:body            (str "Action=DeleteMessageBatch&QueueUrl=https://sqs.eu-central-1.amazonaws.com/local/test-evets-queue&"
+                                       "DeleteMessageBatchRequestEntry.1.Id=id-1&"
+                                       "DeleteMessageBatchRequestEntry.1.ReceiptHandle=handle-1&"
+                                       "Expires=2020-04-18T22%3A52%3A43PST&Version=2012-11-05")
+                 :method          :post
+                 :raw             true
+                 :connect-timeout 300
+                 :idle-timeout    5000
+                 :url             "https://sqs.eu-central-1.amazonaws.com/local/test-evets-queue"
+                 :version         :http1.1}
+                {:body   [{:result         {:success    true,
                                             :effects    [],
                                             :events     1,
                                             :meta       [{:cmd-1 {:id agg-id}}],
@@ -331,20 +344,7 @@
                            :request-id     req-id2
                            :interaction-id int-id}]
                  :method :post
-                 :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
-                {:body            (str "Action=DeleteMessageBatch&QueueUrl=https://sqs.eu-central-1.amazonaws.com/local/test-evets-queue&"
-                                       "DeleteMessageBatchRequestEntry.1.Id=id-1&"
-                                       "DeleteMessageBatchRequestEntry.1.ReceiptHandle=handle-1&"
-                                       "Expires=2020-04-18T22%3A52%3A43PST&Version=2012-11-05")
-                 :method          :post
-                 :raw             true
-                 :connect-timeout 300
-                 :idle-timeout    5000
-                 :url             "https://sqs.eu-central-1.amazonaws.com/local/test-evets-queue"
-                 :version         :http1.1}
-                {:method  :get
-                 :timeout 90000000
-                 :url     "http://mock/2018-06-01/runtime/invocation/next"}]
+                 :url    "http://mock/2018-06-01/runtime/invocation/0/error"}]
                (map
                 #(dissoc % :headers :keepalive)
                 (mock-client/traffic-edn)))))
@@ -387,16 +387,15 @@
        (core/start
         ctx
         edd/handler)
-       (is  (= [{:body   [{:request-id req-id1
+       (is  (= [{:method  :get
+                 :timeout 90000000
+                 :url     "http://mock/2018-06-01/runtime/invocation/next"}
+                {:body   [{:request-id req-id1
                            :exception "Unable to parse exception",
                            :interaction-id int-id
                            :invocation-id 0}]
                  :method :post
-                 :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
-
-                {:method  :get
-                 :timeout 90000000
-                 :url     "http://mock/2018-06-01/runtime/invocation/next"}]
+                 :url    "http://mock/2018-06-01/runtime/invocation/0/error"}]
                (map
                 #(dissoc % :headers :keepalive)
                 (mock-client/traffic-edn))))))))
@@ -541,16 +540,15 @@
         :post-filter lambda-filters/to-api)
 
        (do
-         (is  (= [{:body   [{:request-id req-id1
+         (is  (= [{:method  :get
+                   :timeout 90000000
+                   :url     "http://mock/2018-06-01/runtime/invocation/next"}
+                  {:body   [{:request-id req-id1
                              :exception "No connections 0"
                              :interaction-id int-id
                              :invocation-id 0}]
                    :method :post
-                   :url    "http://mock/2018-06-01/runtime/invocation/0/error"}
-
-                  {:method  :get
-                   :timeout 90000000
-                   :url     "http://mock/2018-06-01/runtime/invocation/next"}]
+                   :url    "http://mock/2018-06-01/runtime/invocation/0/error"}]
                  (map
                   #(dissoc % :headers :keepalive)
                   (mock-client/traffic-edn))))

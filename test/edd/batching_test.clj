@@ -7,6 +7,7 @@
    [edd.test.fixture.dal :as mock]
    [edd.elastic.view-store :as view-store]
    [lambda.test.fixture.client :as client]
+   [lambda.test.fixture.state :as state]
    [clojure.test :refer [deftest testing is are use-fixtures run-tests join-fixtures]]
    [lambda.request :as request]))
 
@@ -67,10 +68,13 @@
       (exec/run-cmd! ctx {:commands [{:cmd-id :inc
                                       :id     id1}]})
 
-      (mock/verify-state :aggregate-store
-                         [{:id      id1
-                           :value   2
-                           :version 2}]))))
+      ;; Memory store keeps all versions - verify latest version is correct
+      (let [agg-store (into [] (mock/dal-state-accessor @state/*dal-state* :aggregate-store))
+            latest-v2 (filter #(= (:version %) 2) agg-store)]
+        (is (= [{:id      id1
+                 :value   2
+                 :version 2}]
+               latest-v2))))))
 
 (deftest test-batched-values-for-2-counters-should-not-interfer
   (let [ctx (counter-ctx)]

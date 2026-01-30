@@ -1,8 +1,7 @@
 (ns aws.dynamodb-it
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is]]
             [lambda.util :as util]
             [aws.dynamodb :as ddb]
-            [clojure.string :as str]
             [edd.dal :as dal]
             [edd.dynamodb.event-store :as event-store]
             [lambda.uuid :as uuid]))
@@ -14,12 +13,13 @@
 (def ctx
   (-> {:elastic-search         {:scheme (util/get-env "IndexDomainScheme" "https")
                                 :url (util/get-env "IndexDomainEndpoint")}
-       :db                     {:name (util/get-env "ApplicationName" "dynamodb-svc")}
+       :db                     {:name (util/get-env "DatabaseName" "dynamodb-svc")}
        :request-id             request-id
        :interaction-id         interaction-id
        :invocation-id          invocation-id
-       :service-name           "test-source"
+       :service-name           :test-source
        :meta                   {:realm :test}
+       :hosted-zone-name       (util/get-env "PublicHostedZoneName" "example.com")
        :environment-name-lower (util/get-env "EnvironmentNameLower")
        :aws                    {:region                (util/get-env "AWS_DEFAULT_REGION")
                                 :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID")
@@ -28,16 +28,12 @@
       (event-store/register)))
 
 (deftest test-list-tables
-  (is (= (sort ["effect-store-ddb"
-                "event-store-ddb"
-                "identity-store-ddb"
-                "request-log-ddb"
-                "response-log-ddb"])
-         (->> (ddb/list-tables ctx)
-              (:TableNames)
-              (filter #(str/includes? % "dynamodb-svc"))
-              (map #(str/replace % #".*-svc-test-" ""))
-              sort))))
+  (let [tables (set (:TableNames (ddb/list-tables ctx)))
+        expected [:effect-store :event-store :identity-store
+                  :request-log :response-log]]
+    (doseq [t expected]
+      (is (contains? tables (event-store/table-name ctx t))
+          (str "Table " (name t) " should exist")))))
 
 (deftest store-results-test
   (let [agg-id (uuid/gen)

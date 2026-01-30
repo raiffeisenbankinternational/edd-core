@@ -2,6 +2,7 @@
   (:require
    [aws.lambda :as lambda]
    [aws.ctx :as aws-ctx]
+   [lambda.ctx :as lambda-ctx]
    [clojure.java.io :as io]
    [clojure.tools.logging :as log]
    [lambda.emf :as emf]
@@ -12,15 +13,16 @@
   (:import
    [com.amazonaws.services.lambda.runtime Context]))
 
-(defn initialize-system
-  []
-  ;; a way to disable metrics locally to keep REPL clear
-  (when-not (util/get-env "AWS_LAMBDA_DISABLE_METRICS")
-    (emf/start-metrics-publishing!))
+(defonce init-cache
   (atom {}))
 
-(defonce init-cache
-  (initialize-system))
+(defn- ensure-metrics-started!
+  "Starts EMF metrics publishing on first invocation. No-op on subsequent calls."
+  []
+  (when-not (:metrics-started @init-cache)
+    (when-not (util/get-env "AWS_LAMBDA_DISABLE_METRICS")
+      (emf/start-metrics-publishing!))
+    (swap! init-cache assoc :metrics-started true)))
 
 (defn java-request-handler
   [init-ctx handler & {:keys [filters post-filter]
@@ -28,6 +30,7 @@
                               post-filter (fn [ctx] ctx)}}]
 
   (fn [_this input output ^Context context]
+    (ensure-metrics-started!)
     (binding [util/*cache* init-cache
               request/*request* (atom {})]
       (let [init-ctx
@@ -46,7 +49,13 @@
             (.getAwsRequestId context)
 
             init-ctx
-            (aws-ctx/init init-ctx)]
+            (-> init-ctx
+                (assoc :filters filters
+                       :handler handler
+                       :post-filter post-filter)
+                (lambda-ctx/init)
+                (aws-ctx/init)
+                (lambda/init-filters))]
 
         (swap! init-cache
                assoc
@@ -56,10 +65,6 @@
         (lambda/send-response
          (lambda/handle-request
           (-> init-ctx
-              (assoc :filters filters
-                     :handler handler
-                     :post-filter post-filter)
-              (lambda/initalize-context)
               (assoc :from-api (lambda/is-from-api request))
               (assoc :invocation-id (if-not (int? invocation-id)
                                       (uuid/parse invocation-id)

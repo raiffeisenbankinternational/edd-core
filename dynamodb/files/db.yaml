@@ -3,7 +3,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   EnvironmentNameLower:
     Type: String
-  ApplicationName:
+  DatabaseName:
     Type: String
   Realm:
     Type: String
@@ -51,7 +51,7 @@ Resources:
               KeyType: "RANGE"
           Projection:
             ProjectionType: "ALL"
-      TableName: !Sub "${EnvironmentNameLower}-${ApplicationName}-${Realm}-request-log-ddb"
+      TableName: !Sub "${EnvironmentNameLower}-${DatabaseName}-${Realm}-request-log-ddb"
   ResponseLogV2:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -95,7 +95,7 @@ Resources:
               KeyType: "RANGE"
           Projection:
             ProjectionType: "ALL"
-      TableName: !Sub "${EnvironmentNameLower}-${ApplicationName}-${Realm}-response-log-ddb"
+      TableName: !Sub "${EnvironmentNameLower}-${DatabaseName}-${Realm}-response-log-ddb"
   EventsTableV2:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -143,7 +143,7 @@ Resources:
               KeyType: "RANGE"
           Projection:
             ProjectionType: "ALL"
-      TableName: !Sub "${EnvironmentNameLower}-${ApplicationName}-${Realm}-event-store-ddb"
+      TableName: !Sub "${EnvironmentNameLower}-${DatabaseName}-${Realm}-event-store-ddb"
 
   EffectsTableV2:
     Type: AWS::DynamoDB::Table
@@ -188,7 +188,7 @@ Resources:
               KeyType: "RANGE"
           Projection:
             ProjectionType: "ALL"
-      TableName: !Sub "${EnvironmentNameLower}-${ApplicationName}-${Realm}-effect-store-ddb"
+      TableName: !Sub "${EnvironmentNameLower}-${DatabaseName}-${Realm}-effect-store-ddb"
   IdentityTableV2:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -232,7 +232,7 @@ Resources:
               KeyType: "RANGE"
           Projection:
             ProjectionType: "ALL"
-      TableName: !Sub "${EnvironmentNameLower}-${ApplicationName}-${Realm}-identity-store-ddb"
+      TableName: !Sub "${EnvironmentNameLower}-${DatabaseName}-${Realm}-identity-store-ddb"
 Outputs:
   DatabaseName:
-    Value: !Ref EventsTableV2
+    Value: !Ref DatabaseName

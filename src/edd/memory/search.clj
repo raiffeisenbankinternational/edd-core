@@ -73,7 +73,7 @@
         true
         false))))
 (defn exists-fn
-  [_ key & [values]]
+  [_ key & [_values]]
   (fn [p]
     (let [keys (to-keywords key)]
       (not= (get-in p keys :nil) :nil))))
@@ -88,7 +88,7 @@
 
 (defn search-fn
   [q p]
-  (let [[fields-key fields value-key value] (:search q)]
+  (let [[_fields-key fields _value-key value] (:search q)]
     (if (some
          #(let [v (get-in p (to-keywords %) "")]
             (.contains ^String v value))
@@ -175,10 +175,10 @@
                    (:aggregate-store))
         apply-filter (if (:filter query)
                        (parse mock (:filter query))
-                       (fn [%] true))
+                       (fn [_%] true))
         apply-search (if (:search query)
                        (partial search-fn query)
-                       (fn [%] true))
+                       (fn [_%] true))
         apply-select (if (:select query)
                        (partial select-fn query)
                        (fn [%] %))

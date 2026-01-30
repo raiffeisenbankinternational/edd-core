@@ -1,5 +1,5 @@
 (ns edd.elastic.elastic-it
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is]]
             [edd.core :as edd]
             [edd.common :as common]
             [edd.elastic.view-store :as elastic-view-store]
@@ -11,18 +11,19 @@
             [lambda.elastic :as el]
             [lambda.util :as util]
             [edd.response.cache :as response-cache]
-            [clojure.tools.logging :as log]))
+            [clojure.tools.logging :as log]
+            [aws.ctx :as aws-ctx]
+            [lambda.ctx :as lambda-ctx]))
 (defn get-ctx
   []
-  (-> {:aws {:region                (util/get-env "AWS_DEFAULT_REGION")
-             :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID")
-             :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY")
-             :aws-session-token     (util/get-env "AWS_SESSION_TOKEN")}}
+  (-> {}
+      (lambda-ctx/init)
+      (aws-ctx/init)
       (elastic-view-store/register)))
 
 (defn create-service-name
   []
-  (str/replace (str (uuid/gen)) "-" "_"))
+  (keyword (str/replace (str (uuid/gen)) "-" "_")))
 
 (defn create-service-index
   [{:keys [service-name] :as ctx}]
@@ -49,7 +50,7 @@
             :path (str "/"
                        (elastic-view-store/realm ctx)
                        "_"
-                       service-name)
+                       (name service-name))
             :body (util/to-json body)))
     ctx))
 
@@ -58,7 +59,7 @@
   (el/query
    (assoc ctx
           :method "DELETE"
-          :path (str "/" service-name))))
+          :path (str "/" (name service-name)))))
 
 (deftest test-get-elastic-snapshot
   (let [agg-id (uuid/gen)

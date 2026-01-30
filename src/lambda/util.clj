@@ -15,6 +15,7 @@
            (java.net URLEncoder)
            (java.nio.charset Charset)
            (java.nio.charset StandardCharsets)
+           (java.security MessageDigest)
            (java.time OffsetDateTime)
            (java.time.format DateTimeFormatter)
            (java.util Date Base64)
@@ -235,9 +236,8 @@
   (log/debug "Loading config name:" name)
   (let [file (io/as-file name)
         temp-file (io/as-file (str "/tmp/" name))
-        classpath (io/as-file
-                   (io/resource
-                    name))]
+        classpath (when-let [r (io/resource name)]
+                    (io/as-file r))]
     (to-edn
      (cond
        (.exists ^File file) (do
@@ -249,11 +249,14 @@
                                    (log/info "Loading from /tmp/" name)
                                    (-> temp-file
                                        (slurp)))
+       classpath (do
+                   (log/debug "Loading config from classpath:" name)
+                   (-> classpath
+                       (slurp)
+                       (decrypt name)))
        :else (do
-               (log/debug "Loading config from classpath:" name)
-               (-> classpath
-                   (slurp)
-                   (decrypt name)))))))
+               (log/info "Config file not found, skipping:" name)
+               "{}")))))
 
 (defn base64encode
   [^String to-encode]
@@ -272,6 +275,20 @@
             (Base64/getUrlDecoder)
             to-decode) "UTF-8"))
 
+(defn string->md5base64
+  "Compute MD5 hash of a string and return it as a Base64-encoded string."
+  [^String s]
+  (let [md (MessageDigest/getInstance "MD5")
+        digest (.digest md (.getBytes s "UTF-8"))]
+    (.encodeToString (Base64/getEncoder) digest)))
+
+(defn string->md5hex
+  "Compute MD5 hash of a string and return it as a lowercase hex string."
+  [^String s]
+  (let [md (MessageDigest/getInstance "MD5")
+        digest (.digest md (.getBytes s "UTF-8"))]
+    (apply str (map #(format "%02x" %) digest))))
+
 (def ^:dynamic *cache*)
 
 (defn hmac-sha256
@@ -285,6 +302,31 @@
     (->> message-bytes
          (.doFinal mac)
          (.encodeToString (Base64/getEncoder)))))
+
+(defn format-sql
+  "Format a SQL string for readable multiline logging.
+  Inserts newlines before major SQL keywords and indents subqueries."
+  [^String sql]
+  (-> sql
+      ;; Protect DO UPDATE from being split
+      (str/replace #"(?i)\bDO\s+UPDATE\b" "DO__UPDATE")
+      (str/replace #"(?i)\b(SELECT|FROM|WHERE|SET|VALUES|RETURNING|HAVING|LIMIT|OFFSET)\b"
+                   "\n  $1")
+      (str/replace #"(?i)\b(LEFT JOIN|RIGHT JOIN|INNER JOIN|OUTER JOIN|CROSS JOIN|JOIN)\b"
+                   "\n  $1")
+      (str/replace #"(?i)\b(ORDER BY|GROUP BY)\b"
+                   "\n  $1")
+      (str/replace #"(?i)\b(AND|OR)\b"
+                   "\n    $1")
+      (str/replace #"(?i)\b(UNION ALL|UNION|INTERSECT|EXCEPT)\b"
+                   "\n  $1")
+      (str/replace #"(?i)\b(ON CONFLICT)\b"
+                   "\n  $1")
+      (str/replace #"(?i)\b(INSERT INTO|UPDATE|DELETE FROM|DROP TABLE|CREATE TABLE|WITH)\b"
+                   "\n$1")
+      ;; Restore DO UPDATE
+      (str/replace "DO__UPDATE" "DO UPDATE")
+      (str/trim)))
 
 (defmacro d-time
   "Evaluates expr and logs time it took.  Returns the value of

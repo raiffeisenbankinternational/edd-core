@@ -4,8 +4,8 @@
             [sdk.aws.s3 :as s3]
             [lambda.uuid :as uuid]
             [lambda.util :as util]
-            [aws.lambda :as lambda]
-            [aws.ctx :as aws-ctx]))
+            [aws.ctx :as aws-ctx]
+            [lambda.ctx :as lambda-ctx]))
 
 (defn for-object
   [key]
@@ -37,14 +37,8 @@
     key))
 
 (deftest test-s3-upload
-  (let [ctx (-> {:service-name (keyword (util/get-env
-                                         "ServiceName"
-                                         "local-test"))
-                 :hosted-zone-name (util/get-env
-                                    "PublicHostedZoneNetme"
-                                    "example.com")
-                 :environment-name-lower (util/get-env
-                                          "EnvironmentNameLower")}
+  (let [ctx (-> {}
+                (lambda-ctx/init)
                 (aws-ctx/init))]
     (testing "Testing happy path of put and get object"
       (let [key (gen-key)
@@ -99,14 +93,8 @@
                    (slurp resp)))))))))
 
 (deftest test-s3-tagging
-  (let [ctx (-> {:service-name (keyword (util/get-env
-                                         "ServiceName"
-                                         "local-test"))
-                 :hosted-zone-name (util/get-env
-                                    "PublicHostedZoneNetme"
-                                    "example.com")
-                 :environment-name-lower (util/get-env
-                                          "EnvironmentNameLower")}
+  (let [ctx (-> {}
+                (lambda-ctx/init)
                 (aws-ctx/init))]
     (testing "Testing happy path of put and get object tags"
       (let [key (gen-key)
@@ -178,14 +166,8 @@
                    response))))))))
 
 (deftest test-s3-delete
-  (let [ctx    (-> {:service-name (keyword (util/get-env
-                                            "ServiceName"
-                                            "local-test"))
-                    :hosted-zone-name (util/get-env
-                                       "PublicHostedZoneNetme"
-                                       "example.com")
-                    :environment-name-lower (util/get-env
-                                             "EnvironmentNameLower")}
+  (let [ctx    (-> {}
+                   (lambda-ctx/init)
                    (aws-ctx/init))]
     (testing "Testing happy path of put and delete"
       (let [key (gen-key)
@@ -229,14 +211,8 @@
                  (s3/get-object ctx object))))))))
 
 (deftest test-s3-missing-things
-  (let [ctx    (-> {:service-name (keyword (util/get-env
-                                            "ServiceName"
-                                            "local-test"))
-                    :hosted-zone-name (util/get-env
-                                       "PublicHostedZoneNetme"
-                                       "example.com")
-                    :environment-name-lower (util/get-env
-                                             "EnvironmentNameLower")}
+  (let [ctx    (-> {}
+                   (lambda-ctx/init)
                    (aws-ctx/init))
         gen-bucket (fn []
                      (str
@@ -291,14 +267,8 @@
                      (select-keys [:code :message :bucketname])))))))))
 
 (deftest test-s3-list-objects
-  (let [ctx    (-> {:service-name (keyword (util/get-env
-                                            "ServiceName"
-                                            "local-test"))
-                    :hosted-zone-name (util/get-env
-                                       "PublicHostedZoneNetme"
-                                       "example.com")
-                    :environment-name-lower (util/get-env
-                                             "EnvironmentNameLower")}
+  (let [ctx    (-> {}
+                   (lambda-ctx/init)
                    (aws-ctx/init))]
     (testing "Testing happy path of put and list-objects"
       (let [key (gen-key)

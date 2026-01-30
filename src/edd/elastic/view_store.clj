@@ -1,7 +1,6 @@
 (ns edd.elastic.view-store
   (:gen-class)
-  (:require [clojure.test :refer :all]
-            [edd.search :refer [with-init
+  (:require [edd.search :refer [with-init
                                 parse
                                 simple-search
                                 default-size
@@ -9,13 +8,15 @@
                                 update-aggregate
                                 get-snapshot
                                 get-by-id-and-version]]
-            [edd.postgres.history :as history]
-            [edd.postgres.common :refer [->realm ->service]]
+            [edd.search.validation :as validation]
+            [lambda.ctx :as lambda-ctx]
             [lambda.util :as util]
             [lambda.elastic :as elastic]
             [edd.s3.view-store :as s3.vs]
             [clojure.tools.logging :as log]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [malli.core :as m]
+            [malli.error :as me]))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
@@ -80,7 +81,7 @@
 
 (defn search-with-filter
   [filter q]
-  (let [[fields-key fields value-key value] (:search q)
+  (let [[_fields-key fields _value-key value] (:search q)
         search (mapv
                 (fn [p]
                   {:bool
@@ -119,7 +120,7 @@
     (:sort q) (assoc :sort (form-sorting (:sort q)))))
 
 (defn advanced-direct-search
-  [ctx elastic-query & {:keys [raw-data] :as opts}]
+  [ctx elastic-query & {:keys [raw-data] :as _opts}]
   (let [json-query (util/to-json elastic-query)
         index-name (make-index-name (realm ctx) (or (:index-name ctx) (:service-name ctx)))
         {:keys [error] :as body} (elastic/query
@@ -200,21 +201,39 @@
      (get-in body [:hits :hits] []))))
 
 (defn store-to-elastic
-  [{:keys [aggregate] :as ctx}]
-  (loop [count 0]
-    (let [index-name (make-index-name (realm ctx) (:service-name ctx))
-          {:keys [error]} (elastic/query
-                           {:method         "POST"
-                            :path           (str "/" index-name "/_doc/" (:id aggregate))
-                            :body           (util/to-json aggregate)
-                            :elastic-search (:elastic-search ctx)
-                            :aws            (:aws ctx)})]
-      (if error
-        (throw (ex-info "Could not store aggregate" {:error error}))))))
+  [ctx aggregate]
+  (let [index-name (make-index-name (realm ctx) (:service-name ctx))
+        {:keys [error]} (elastic/query
+                         {:method         "POST"
+                          :path           (str "/" index-name "/_doc/" (:id aggregate))
+                          :body           (util/to-json aggregate)
+                          :elastic-search (:elastic-search ctx)
+                          :aws            (:aws ctx)})]
+    (when error
+      (throw (ex-info "Could not store aggregate" {:error error})))))
+
+(defn get-from-elastic-by-id
+  "Retrieves aggregate from OpenSearch/Elasticsearch by document ID.
+   Returns aggregate map or nil if not found."
+  [ctx id]
+  (let [index-name (make-index-name (realm ctx) (:service-name ctx))
+        {:keys [error _source found] :as body} (elastic/query
+                                                {:method         "GET"
+                                                 :path           (str "/" index-name "/_doc/" id)
+                                                 :elastic-search (:elastic-search ctx)
+                                                 :aws            (:aws ctx)})]
+    (when (and error (not= (:status error) 404))
+      (throw (ex-info "Could not fetch aggregate from Elasticsearch" {:error error})))
+    (when found
+      _source)))
 
 (defmethod update-aggregate
   :elastic
-  [{:keys [aggregate] :as ctx}]
+  [ctx aggregate]
+  ;; Implementation of edd.search/update-aggregate multimethod for :elastic view store.
+  ;; See multimethod documentation for interface contract and compliance requirements.
+  ;; Stores aggregate in S3 and indexes in Elasticsearch.
+  (validation/validate-aggregate! ctx aggregate)
   (util/d-time
    (str "Updating aggregate s3: "
         (realm ctx)
@@ -222,7 +241,7 @@
         (:id aggregate)
         " "
         (:version aggregate))
-   (s3.vs/store-to-s3 ctx))
+   (s3.vs/store-to-s3 ctx aggregate))
   (util/d-time
    (str "Updating aggregate elastic: "
         (realm ctx)
@@ -230,7 +249,7 @@
         (:id aggregate)
         " "
         (:version aggregate))
-   (store-to-elastic ctx)))
+   (store-to-elastic ctx aggregate)))
 
 (defmethod with-init
   :elastic
@@ -238,9 +257,16 @@
   (log/debug "Initializing")
   (body-fn ctx))
 
+(def ElasticConfig
+  (m/schema
+   [:map
+    [:scheme [:string {:min 1}]]
+    [:url [:string {:min 1}]]]))
+
 (defn register
   [ctx]
-  (let [scheme (util/get-env "IndexDomainScheme" "https")
+  (let [ctx (lambda-ctx/init ctx)
+        scheme (util/get-env "IndexDomainScheme" "https")
         url (util/get-env "IndexDomainEndpoint" "127.0.0.1:9200")
         elastic-config {:scheme scheme
                         :url url}]
@@ -248,20 +274,38 @@
               {:scheme scheme
                :url url
                :full-url (str scheme "://" url)})
+    (when-not (m/validate ElasticConfig elastic-config)
+      (throw (ex-info "Invalid elastic view store configuration"
+                      {:error (-> (m/explain ElasticConfig elastic-config)
+                                  (me/humanize))})))
     (assoc ctx
            :view-store :elastic
            :elastic-search elastic-config)))
 
 (defmethod get-snapshot
   :elastic
-  [ctx id]
-  (util/d-time
-   (str "Fetching snapshot aggregate: " (realm ctx) " " id)
-   (s3.vs/get-from-s3 ctx id)))
+  [ctx id-or-query]
+  (let [{:keys [id version]} (validation/validate-snapshot-query! ctx id-or-query)]
+    (if version
+      ;; Specific version requested - S3 history primary, OpenSearch fallback
+      (util/d-time
+       (format "ElasticViewStore fetching aggregate by id and version: %s %s version: %s"
+               (realm ctx) id version)
+       (or
+        ;; Primary: S3 history (versioned snapshots)
+        (s3.vs/get-history-from-s3 ctx id version)
+        ;; Fallback: OpenSearch (only has latest, so only matches if requested version is current)
+        (when-let [elastic-agg (get-from-elastic-by-id ctx id)]
+          (when (= (:version elastic-agg) version)
+            elastic-agg))))
+      ;; Latest version - use S3 cache (Elasticsearch is for search, not get-by-id)
+      (util/d-time
+       (str "Fetching snapshot aggregate: " (realm ctx) " " id)
+       (s3.vs/get-from-s3 ctx id)))))
 
 (defmethod get-by-id-and-version
   :elastic
   [ctx id version]
-  (when-let [history-entry
-             (history/get-by-id-and-version ctx id version)]
-    (:aggregate history-entry)))
+  (validation/validate-id-and-version! ctx id version)
+  ;; Delegate to get-snapshot
+  (get-snapshot ctx {:id id :version version}))

@@ -67,7 +67,9 @@
   (fn [{:keys [_commands] :as ctx} _body _error]
     (:edd-event-store ctx)))
 
-(defmulti log-response
+(defmulti ^{:deprecated "Done together with store-result in transaction"
+            :superseded-by "store-results"}
+  log-response
   "Logs command response for idempotency checking.
    
    Input: ctx with :response-summary, :request-id, :breadcrumbs

@@ -1,6 +1,5 @@
 (ns edd.el.event
   (:require
-   [edd.flow :refer :all]
    [clojure.tools.logging :as log]
    [edd.dal :as dal]
    [edd.request-cache :as request-cache]
@@ -94,13 +93,12 @@
 (defn update-aggregate
   [ctx aggregate]
   (if aggregate
-    (search/update-aggregate (assoc ctx
-                                    :aggregate aggregate))
+    (search/update-aggregate ctx aggregate)
     ctx))
 
 (defn handle-event
   [{:keys [apply] :as ctx}]
-  (let [meta (:meta apply)
+  (let [meta (or (:meta apply) (:meta ctx))
         ctx (assoc ctx :meta meta)
         realm (:realm meta)
         agg-id (:aggregate-id apply)

@@ -1,6 +1,5 @@
 (ns lambda.filters
-  (:require [aws.aws :as aws]
-            [clojure.string :as string]
+  (:require [clojure.string :as string]
             [clojure.tools.logging :as log]
             [lambda.codec :as codec]
             [lambda.gzip :as gzip]
@@ -88,9 +87,10 @@
 
 (def from-bucket
   {:cond (fn [{:keys [body]}]
-           (if (and
-                (contains? body :Records)
-                (= (:eventSource (first (:Records body))) "aws:s3")) true))
+           (when
+            (and
+             (contains? body :Records)
+             (= (:eventSource (first (:Records body))) "aws:s3")) true))
    :fn   (fn [{:keys [body] :as ctx}]
            (-> ctx
                (assoc-in [:user :id] (name (:service-name ctx)))

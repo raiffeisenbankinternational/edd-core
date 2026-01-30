@@ -6,7 +6,6 @@
             [lambda.uuid :as uuid]
             [sdk.aws.common :as sdk]
             [lambda.http-client :as client]
-            [clojure.tools.logging :as log]
             [clojure.string :as str])
   (:import (java.net URLEncoder)))
 
@@ -163,23 +162,26 @@
              :region (get aws :region)
              :access-key (:aws-access-key-id aws)
              :secret-key (:aws-secret-access-key aws)}
-        auth (sdk/authorize req)
+        auth
+        (sdk/authorize req)
+
         {:keys [error]
-         :as response} (parse-response
-                        (client/retry-n
-                         #(util/http-post
-                           (str "https://"
-                                (get (:headers req) "Host")
-                                (:uri req))
-                           (client/request->with-timeouts
-                            %
-                            {:body (:payload req)
-                             :version :http1.1
-                             :headers (-> (:headers req)
-                                          (assoc "Authorization" auth)
-                                          (dissoc "Host")
-                                          (assoc "X-Amz-Security-Token"
-                                                 (:aws-session-token aws)))}))))]
+         :as _response}
+        (parse-response
+         (client/retry-n
+          #(util/http-post
+            (str "https://"
+                 (get (:headers req) "Host")
+                 (:uri req))
+            (client/request->with-timeouts
+             %
+             {:body (:payload req)
+              :version :http1.1
+              :headers (-> (:headers req)
+                           (assoc "Authorization" auth)
+                           (dissoc "Host")
+                           (assoc "X-Amz-Security-Token"
+                                  (:aws-session-token aws)))}))))]
     (when error
       (throw (ex-info "Failed to send message"
                       error)))
@@ -273,34 +275,38 @@
               :region (get aws :region)
               :access-key (:aws-access-key-id aws)
               :secret-key (:aws-secret-access-key aws)}
-         auth (sdk/authorize req)]
-     (let [response (client/retry-n
-                     #(util/http-post
-                       (str "https://"
-                            (get (:headers req) "Host")
-                            (:uri req))
-                       (client/request->with-timeouts
-                        %
-                        {:body (:payload req)
-                         :version :http1.1
-                         :headers (-> (:headers req)
-                                      (dissoc "Host")
-                                      (assoc "Authorization" auth)
-                                      (assoc "X-Amz-Security-Token" (:aws-session-token aws)))
-                         :raw true})))
-           response (->> response
-                         :body
-                         :DeleteMessageBatchResponse
-                         :DeleteMessageBatchResult
-                         :Failed
-                         (reduce
-                          (fn [p v]
-                            (assoc p (:Id v) 0))
-                          {}))]
-       (mapv
-        (fn [{:keys [message-id]}]
-          (get response message-id 1))
-        messages)))))
+         auth (sdk/authorize req)
+
+         response
+         (client/retry-n
+          #(util/http-post
+            (str "https://"
+                 (get (:headers req) "Host")
+                 (:uri req))
+            (client/request->with-timeouts
+             %
+             {:body (:payload req)
+              :version :http1.1
+              :headers (-> (:headers req)
+                           (dissoc "Host")
+                           (assoc "Authorization" auth)
+                           (assoc "X-Amz-Security-Token" (:aws-session-token aws)))
+              :raw true})))
+
+         response
+         (->> response
+              :body
+              :DeleteMessageBatchResponse
+              :DeleteMessageBatchResult
+              :Failed
+              (reduce
+               (fn [p v]
+                 (assoc p (:Id v) 0))
+               {}))]
+     (mapv
+      (fn [{:keys [message-id]}]
+        (get response message-id 1))
+      messages))))
 
 (defn sqs-receive
   [{:keys [queue aws max-number-of-messages]
@@ -360,7 +366,8 @@
                 :receipt-handle (:ReceiptHandle m)})))))))
 
 (defn sqs-purge
-  [{:keys [queue aws] :as ctx}]
+  [{:keys [queue aws]
+    :as _ctx}]
   (util/d-time
    (str "sqs-receive: " queue)
    (let [req {:method "GET"

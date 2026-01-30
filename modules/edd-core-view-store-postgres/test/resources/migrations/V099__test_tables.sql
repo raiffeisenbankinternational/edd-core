@@ -1,14 +1,5 @@
-
-create table if not exists aggregates (
-    id UUID primary key,
-    aggregate JSONB not null,
-    created_at timestamp with time zone not null default current_timestamp,
-    updated_at timestamp with time zone null
-);
-
-create index if not exists idx_aggregates_aggregate_gin_jsonb_path
-    ON aggregates USING GIN (aggregate jsonb_path_ops);
-
+-- Test-specific tables for integration tests
+-- Version 099 ensures this runs AFTER production migrations (V001-V003)
 
 create table if not exists mv_options_one_field (
     field_key text not null,

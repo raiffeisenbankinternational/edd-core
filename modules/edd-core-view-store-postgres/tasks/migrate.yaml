@@ -4,7 +4,7 @@
     payload:
       action: ":migrate"
       payload:
-        service: ":{{ parameters['ServiceName'] }}"
+        service: ":{{ parameters['ResourceName'] }}"
         discriminator: ":global"
         realm: ":{{ item }}"
   register: migrate_output
@@ -18,7 +18,7 @@
     payload:
       action: ":migrate"
       payload:
-        service: ":{{ parameters['ServiceName'] }}"
+        service: ":{{ parameters['ResourceName'] }}"
         discriminator: ":local"
         realm: ":{{ item }}"
   register: migrate_output

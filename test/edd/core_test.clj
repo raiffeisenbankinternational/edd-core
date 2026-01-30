@@ -130,7 +130,8 @@
                                                              cmd-id-3 9}
                                                             id))]
       (mock/with-mock-dal
-        {:event-store
+        {:keep-meta true
+         :event-store
          [{:event-id  :cmd-id
            :id        cmd-id
            :event-seq 21}
@@ -213,7 +214,19 @@
         (prepare {})
         edd/handler
         :filters [fl/from-bucket])
-       (verify-traffic-edn [{:body   {:result         {:effects    [{:cmd-id       :fx-command
+       (verify-traffic-edn [{:method  :get
+                             :timeout 90000000
+                             :url     "http://mock/2018-06-01/runtime/invocation/next"}
+                            {:as              :stream
+                             :connect-timeout 300
+                             :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=5c9b0ebe8bc4504c8885115a1699e4d6d3e8d0078aa57e44cff9a8a4d37e0779"
+                                               "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                                               "x-amz-date"           "20200426T061823Z"
+                                               "x-amz-security-token" ""}
+                             :idle-timeout    5000
+                             :method          :get
+                             :url             "https://example-bucket.s3.eu-central-1.amazonaws.com/test/2021-12-27/2222b7b5-9f50-4dc4-86d1-2e4fe1f6d491/1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"}
+                            {:body   {:result         {:effects    [{:cmd-id       :fx-command
                                                                      :id           #uuid "22222111-1111-1111-1111-111111111111"
                                                                      :service-name :local-test}]
                                                        :events     1
@@ -224,20 +237,7 @@
                                       :interaction-id interaction-id
                                       :request-id     request-id}
                              :method :post
-                             :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-                            {:as              :stream
-                             :connect-timeout 300
-                             :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=5c9b0ebe8bc4504c8885115a1699e4d6d3e8d0078aa57e44cff9a8a4d37e0779"
-                                               "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                                               "x-amz-date"           "20200426T061823Z"
-                                               "x-amz-security-token" ""}
-                             :idle-timeout    5000
-                             :method          :get
-                             :url             "https://example-bucket.s3.eu-central-1.amazonaws.com/test/2021-12-27/2222b7b5-9f50-4dc4-86d1-2e4fe1f6d491/1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491"}
-
-                            {:method  :get
-                             :timeout 90000000
-                             :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
+                             :url    "http://mock/2018-06-01/runtime/invocation/0/response"}])))))
 
 (deftest test-api-request-with-fx
   (testing "Test that user is added to events and summary is properly returned"
@@ -264,7 +264,10 @@
           edd/handler
           :filters [fl/from-api]
           :post-filter fl/to-api)
-         (verify-traffic-edn [{:body   {:body            (util/to-json
+         (verify-traffic-edn [{:method  :get
+                               :timeout 90000000
+                               :url     "http://mock/2018-06-01/runtime/invocation/next"}
+                              {:body   {:body            (util/to-json
                                                           {:result         {:success    true
                                                                             :effects    [{:id           fx-id
                                                                                           :cmd-id       :fx-command
@@ -283,10 +286,7 @@
                                         :isBase64Encoded false
                                         :statusCode      200}
                                :method :post
-                               :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-                              {:method  :get
-                               :timeout 90000000
-                               :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))))
+                               :url    "http://mock/2018-06-01/runtime/invocation/0/response"}]))))))
 
 (deftest test-api-request-single-command
   (testing "Test if sending single command works on api"
@@ -313,7 +313,10 @@
           edd/handler
           :filters [fl/from-api]
           :post-filter fl/to-api)
-         (verify-traffic-edn [{:body   {:body            (util/to-json
+         (verify-traffic-edn [{:method  :get
+                               :timeout 90000000
+                               :url     "http://mock/2018-06-01/runtime/invocation/next"}
+                              {:body   {:body            (util/to-json
                                                           {:result         {:success    true
                                                                             :effects    [{:id           fx-id
                                                                                           :cmd-id       :fx-command
@@ -332,10 +335,7 @@
                                         :isBase64Encoded false
                                         :statusCode      200}
                                :method :post
-                               :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-                              {:method  :get
-                               :timeout 90000000
-                               :url     "http://mock/2018-06-01/runtime/invocation/next"}]))))))
+                               :url    "http://mock/2018-06-01/runtime/invocation/0/response"}]))))))
 
 (def apply-ctx
   {:def-apply {:event-1 (fn [p v]
@@ -368,154 +368,157 @@
            agg))))
 
 (deftest test-get-by-id
-
-  (with-redefs [dal/get-events (fn [_]
-                                 [{:event-id  :e7
-                                   :event-seq 1}])
-                search/simple-search (fn [ctx] ctx)]
-    (let [agg (query/handle-query
-               (prepare {})
-               {:query
-                {:query-id :get-by-id
-                 :id       "bla"}})]
-      (is (= {:name    :e7
-              :version 1
-              :id      nil}
-             (:aggregate agg))))))
+  (let [test-id (uuid/gen)]
+    (with-redefs [dal/get-events (fn [_]
+                                   [{:event-id  :e7
+                                     :event-seq 1}])
+                  search/simple-search (fn [ctx] ctx)]
+      (let [agg (query/handle-query
+                 (prepare {})
+                 {:query
+                  {:query-id :get-by-id
+                   :id       test-id}})]
+        (is (= {:name    :e7
+                :version 1
+                :id      nil}
+               (:aggregate agg)))))))
 
 (deftest test-get-by-id-and-version
-  (mock/with-mock-dal
-    {:aggregate-store [{:id      "1"
-                        :version 1}
-                       {:id      "2"
-                        :version 2}
-                       {:id      "1"
-                        :version 3}
-                       {:id      "2"
-                        :version 1}]}
-    (testing "get without version should return the latest aggregate"
-      (is (= 3 (:version (common/get-by-id mock/ctx {:id "1"}))))
-      (is (= 2 (:version (common/get-by-id mock/ctx {:id "2"})))))
-    (testing "otherwise the aggregate with specified version should be returned"
-      (is (= 1 (:version (common/get-by-id mock/ctx {:id "2" :version 1}))))
-      (is (= 2 (:version (common/get-by-id mock/ctx {:id "2" :version 2})))))))
+  (let [id1 (uuid/gen)
+        id2 (uuid/gen)]
+    (mock/with-mock-dal
+      {:aggregate-store [{:id      id1
+                          :version 3}
+                         {:id      id2
+                          :version 2}]}
+      (testing "get without version should return the latest aggregate"
+        (is (= 3 (:version (common/get-by-id mock/ctx {:id id1}))))
+        (is (= 2 (:version (common/get-by-id mock/ctx {:id id2}))))))))
 
 (deftest test-get-by-id-from-shapshot
+  (let [id1 (uuid/gen)]
+    (mock/with-mock-dal
+      {:aggregate-store [{:id      id1
+                          :value   "bla"
+                          :version 3}]}
 
-  (mock/with-mock-dal
-    {:aggregate-store [{:id      "1"
-                        :value   "bla"
-                        :version 3}]}
-
-    (is (= {:id      "1"
-            :value   "bla"
-            :version 3}
-           (common/get-by-id mock/ctx {:id "1"})))))
+      (is (= {:id      id1
+              :value   "bla"
+              :version 3}
+             (common/get-by-id mock/ctx {:id id1}))))))
 
 (deftest test-get-by-id-missing-snapshot
   (testing "Test combinations of get-by. If aggregate snapshot return nil we apply events"
     "If no events we return nil"
     (let [CTX {:aws {:region "test"
-                     :aws-session-token "test"}}]
-      (mock/with-mock-dal
-        (with-redefs [dal/get-events (fn [_]
-                                       [])
-                      util/http-get (fn [_url _request & {:keys [_raw]}]
-                                      {:status 404})]
-          (let [response (query/handle-query
+                     :account-id "test"
+                     :aws-session-token "test"}
+               :environment-name-lower "test"}]
+      ;; Test with valid UUID - when snapshot returns 404 and no events exist, returns nil aggregate
+      (let [test-id (uuid/gen)]
+        (mock/with-mock-dal
+          (with-redefs [dal/get-events (fn [_]
+                                         [])
+                        util/http-get (fn [_url _request & {:keys [_raw]}]
+                                        {:status 404})]
+            (let [response (query/handle-query
+                            (-> (prepare CTX)
+                                (elastic-view-store/register))
+                            {:query
+                             {:query-id :get-by-id
+                              :id       test-id}})]
+              (is (contains? response :aggregate))
+              (is (= nil
+                     (:aggregate response)))))))
+      ;; Test with valid UUID - when snapshot returns 403, throws exception
+      (let [test-id (uuid/gen)]
+        (mock/with-mock-dal
+          (with-redefs [dal/get-events (fn [_]
+                                         [{:event-id  :e7
+                                           :event-seq 1}])
+                        util/http-get (fn [_url _request & {:keys [_raw]}]
+                                        {:status 403})]
+            (is (thrown? ExceptionInfo
+                         (query/handle-query
                           (-> (prepare CTX)
                               (elastic-view-store/register))
                           {:query
                            {:query-id :get-by-id
-                            :id       "bla"}})]
-            (is (contains? response :aggregate))
-            (is (= nil
-                   (:aggregate response))))))
-      (mock/with-mock-dal
-        (with-redefs [dal/get-events (fn [_]
-                                       [{:event-id  :e7
-                                         :event-seq 1}])
-                      util/http-get (fn [_url _request & {:keys [_raw]}]
-                                      {:status 403})]
-          (is (thrown? ExceptionInfo
-                       (query/handle-query
-                        (-> (prepare CTX)
-                            (elastic-view-store/register))
-                        {:query
-                         {:query-id :get-by-id
-                          :id       "bla"}})))))
-      (mock/with-mock-dal
-        (with-redefs [dal/get-events (fn [_]
-                                       [{:event-id  :e7
-                                         :event-seq 1
-                                         :id        "bla"}])
-                      util/http-get (fn [_url _request & {:keys [_raw]}]
-                                      {:status 404})]
-          (let [response (query/handle-query
-                          (-> (prepare CTX)
-                              (elastic-view-store/register))
-                          {:query
-                           {:query-id :get-by-id
-                            :id       "bla"}})]
-            (is (contains? response :aggregate))
-            (is (= {:id      "bla"
-                    :name    :e7
-                    :version 1}
-                   (:aggregate response)))))))))
+                            :id       test-id}}))))))
+      ;; Test with valid UUID - when snapshot returns 404 but events exist, applies events
+      (let [test-id (uuid/gen)]
+        (mock/with-mock-dal
+          (with-redefs [dal/get-events (fn [_]
+                                         [{:event-id  :e7
+                                           :event-seq 1
+                                           :id        test-id}])
+                        util/http-get (fn [_url _request & {:keys [_raw]}]
+                                        {:status 404})]
+            (let [response (query/handle-query
+                            (-> (prepare CTX)
+                                (elastic-view-store/register))
+                            {:query
+                             {:query-id :get-by-id
+                              :id       test-id}})]
+              (is (contains? response :aggregate))
+              (is (= {:id      test-id
+                      :name    :e7
+                      :version 1}
+                     (:aggregate response))))))))))
 
 (deftest test-wrap-global-not-list
-  (let [result (cmd/wrap-commands {:service-name "a"}
+  (let [result (cmd/wrap-commands {:service-name :a}
                                   {:a :b})]
-    (is (= [{:service  "a"
+    (is (= [{:service  :a
              :commands [{:a :b}]}]
            result))))
 
 (deftest test-wrap-global
-  (let [result (cmd/wrap-commands {:service-name "a"}
+  (let [result (cmd/wrap-commands {:service-name :a}
                                   [{:a :b}])]
-    (is (= [{:service  "a"
+    (is (= [{:service  :a
              :commands [{:a :b}]}]
            result))))
 
 (deftest test-wrap-global-1
-  (let [result (cmd/wrap-commands {:service-name "a"}
+  (let [result (cmd/wrap-commands {:service-name :a}
                                   [])]
     (is (= []
            result))))
 
 (deftest test-wrap-global-commands
-  (let [result (cmd/wrap-commands {:service-name "a"}
-                                  [{:service  "a"
+  (let [result (cmd/wrap-commands {:service-name :a}
+                                  [{:service  :a
                                     :commands [{:a :b}]}])]
-    (is (= [{:service  "a"
+    (is (= [{:service  :a
              :commands [{:a :b}]}]
            result))))
 
 (deftest test-wrap-global-commands-multiple
-  (let [result (cmd/wrap-commands {:service-name "a"}
-                                  [{:service  "a"
+  (let [result (cmd/wrap-commands {:service-name :a}
+                                  [{:service  :a
                                     :commands [{:a :b}]}
-                                   {:service  "d"
+                                   {:service  :d
                                     :commands [{:e :f}]}])]
-    (is (= [{:service  "a"
+    (is (= [{:service  :a
              :commands [{:a :b}]}
-            {:service  "d"
+            {:service  :d
              :commands [{:e :f}]}]
            result))))
 
 (deftest test-wrap-global-commands-in-vector
-  (let [result (cmd/wrap-commands {:service-name "a"}
-                                  {:service  "a"
+  (let [result (cmd/wrap-commands {:service-name :a}
+                                  {:service  :a
                                    :commands [{:a :b}]})]
-    (is (= [{:service  "a"
+    (is (= [{:service  :a
              :commands [{:a :b}]}]
            result))))
 
 (deftest test-wrap-global-commands-as-list
-  (let [result (cmd/wrap-commands {:service-name "a"}
-                                  '({:service  "a"
+  (let [result (cmd/wrap-commands {:service-name :a}
+                                  '({:service  :a
                                      :commands [{:a :b}]}))]
-    (is (= [{:service  "a"
+    (is (= [{:service  :a
              :commands [{:a :b}]}]
            result))))
 

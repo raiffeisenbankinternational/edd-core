@@ -127,7 +127,9 @@ log_success "AWS credentials configured"
 # Step 3: Setup test environment
 log_info "Setting up test environment..."
 export EnvironmentNameLower=pipeline
-export ApplicationName=dynamodb-svc
+export ResourceName=it-dynamodb
+export PublicHostedZoneName="${PublicHostedZoneName:-example.com}"
+export DatabaseName="${ResourceName}"
 export DatabasePassword="no-secret"
 export DatabaseEndpoint="127.0.0.1"
 export DatabasePort="5433"
@@ -148,46 +150,8 @@ for queue in $(aws sqs list-queues --query 'QueueUrls[]' --output text 2>/dev/nu
 done
 log_info "Processed ${queue_count} SQS queues"
 
-# Step 5: Database migrations
-log_info "Running Flyway migrations..."
-
-DB_URL="jdbc:postgresql://${DatabaseEndpoint}:5433/postgres?user=postgres"
-
-log_info "Cleaning database schemas..."
-flyway -password="${DatabasePassword}" \
-  -schemas=test \
-  -url="${DB_URL}" \
-  -cleanDisabled="false" \
-  clean || {
-  log_error "Flyway clean failed"
-  exit 1
-}
-log_success "Database cleaned"
-
-log_info "Migrating 'test' schema..."
-flyway -password="${DatabasePassword}" \
-  -schemas=test \
-  -url="${DB_URL}" \
-  -locations="filesystem:${PWD}/sql/files/edd" \
-  migrate || {
-  log_error "Migration for 'test' schema failed"
-  exit 1
-}
-log_success "Test schema migrated"
-
-log_info "Migrating 'test' schema..."
-flyway -password="${DatabasePassword}" \
-  -schemas=test_local_svc \
-  -url="${DB_URL}" \
-  -locations="filesystem:${PWD}/modules/edd-core-view-store-postgres/migrations" \
-  -X \
-  migrate || {
-  log_error "Migration for 'test' schema failed"
-  exit 1
-}
-log_success "Test schema migrated"
-
-# Step 6: Build and install main JAR
+# Step 5: Build and install main JAR
+# NOTE: Database migrations are handled by pre-build.sh
 log_info "Building main JAR (build ${BUILD_ID})..."
 VERSION="1.${BUILD_ID}"
 
@@ -283,6 +247,13 @@ for module in $(ls -1 | sort); do
       log_error "Current directory: $(pwd)"
       log_error "Test log:"
       cat "/tmp/module-${module}-it.log"
+      # Print Clojure error reports if any
+      for error_file in /tmp/clojure-*.edn; do
+        if [ -f "$error_file" ]; then
+          log_error "Clojure error report: ${error_file}"
+          cat "$error_file"
+        fi
+      done
       exit 1
     fi
     log_success "Integration tests passed for ${module}"

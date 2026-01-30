@@ -1,17 +1,12 @@
 (ns lambda.util-test
-  (:require [clojure.core.matrix :as m]
-            [clojure.java.io :as io]
-            [clojure.test :refer :all]
+  (:require [clojure.java.io :as io]
+            [clojure.test :refer [deftest is testing]]
             [java-http-clj.core :as http]
             [lambda.codec :as codec]
-            [lambda.test.fixture.client :as client]
-            [lambda.util :as util]
-            [lambda.uuid :as uuid]
-            [mikera.vectorz.core :as v])
+            [lambda.util :as util])
 
   (:import (java.time OffsetDateTime)
-           (java.io InputStream
-                    ByteArrayOutputStream)))
+           (java.io InputStream)))
 
 ;; Dear security guy! All tokens and JWKS information here
 ;; is from non existing user pools
@@ -213,3 +208,19 @@
          (util/hmac-sha256 user-pool-client-secret
                            (str "test-svc@internal"
                                 user-pool-client-id)))))
+
+(deftest string->md5base64-test
+  (testing "known MD5 base64 for empty string"
+    (is (= "1B2M2Y8AsgTpgAmY7PhCfg==" (util/string->md5base64 ""))))
+  (testing "known MD5 base64 for 'hello'"
+    (is (= "XUFAKrxLKna5cZ2REBfFkg==" (util/string->md5base64 "hello"))))
+  (testing "known MD5 base64 for 'Hello, World!'"
+    (is (= "ZajifYh5KDgxtmS9i38K1A==" (util/string->md5base64 "Hello, World!")))))
+
+(deftest string->md5hex-test
+  (testing "known MD5 hex for empty string"
+    (is (= "d41d8cd98f00b204e9800998ecf8427e" (util/string->md5hex ""))))
+  (testing "known MD5 hex for 'hello'"
+    (is (= "5d41402abc4b2a76b9719d911017c592" (util/string->md5hex "hello"))))
+  (testing "known MD5 hex for 'Hello, World!'"
+    (is (= "65a8e27d8879283831b664bd8b7f0ad4" (util/string->md5hex "Hello, World!")))))

@@ -1,5 +1,5 @@
 (ns doc.edd.query-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [are deftest is testing]]
             [clojure.tools.logging :as log]
             [edd.core :as edd]
             [edd.el.query :as edd-query]
@@ -7,18 +7,19 @@
   (:import (clojure.lang ExceptionInfo)))
 
 (deftest register-query-test
-  "# To register query you need invoke edd.core/reg-query function"
-  (-> init-ctx
-      (edd/reg-query :get-by-id (fn [ctx query]
-                                  (comment "Here we can put handler for query.
-                                            It can return map or vector with response"))))
+  (testing
+   "# To register query you need invoke edd.core/reg-query function"
+    (-> init-ctx
+        (edd/reg-query :get-by-id (fn [_ctx _query]
+                                    (comment "Here we can put handler for query.
+                                            It can return map or vector with response")))))
   (testing "Lets register query that returns fixed response and then execute it.
             To execute query we will need to create query. Same structure of
             query you would send from API to the handler"
     (let [request {:query {:query-id :get-by-id
                            :id       "user-id-1"}}
           ctx (-> init-ctx
-                  (edd/reg-query :get-by-id (fn [ctx query]
+                  (edd/reg-query :get-by-id (fn [_ctx query]
                                               ; We just check if they match
                                               (is (= query
                                                      (:query request)))
@@ -36,7 +37,7 @@
     (let [request {:query {:query-id :get-by-unknown-handler
                            :id       "user-id-1"}}
           ctx (-> init-ctx
-                  (edd/reg-query :get-by-id (fn [ctx query]
+                  (edd/reg-query :get-by-id (fn [_ctx query]
                                               ; We just check if they match
                                               (is (= query
                                                      (:query request)))
@@ -50,7 +51,7 @@
           request-unknown-query-id {:query {:id       "Non existing query-id"
                                             :query-id :some-random-query}}
           ctx (-> init-ctx
-                  (edd/reg-query :get-by-id (fn [ctx query]
+                  (edd/reg-query :get-by-id (fn [_ctx _query]
                                               {:first-name "John"})
                                  :produces [:map]))]
       (is (thrown? ExceptionInfo
@@ -79,7 +80,7 @@
           invalid-request {:query {:query-id  :get-by-first-name
                                    :last-name "Last name instead of first-name"}}
           ctx (-> init-ctx
-                  (edd/reg-query :get-by-first-name (fn [ctx query]
+                  (edd/reg-query :get-by-first-name (fn [_ctx query]
                                                       ; We just check if they match
                                                       (is (= query
                                                              (:query request)))

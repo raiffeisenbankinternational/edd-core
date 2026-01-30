@@ -1,5 +1,4 @@
 (ns lambda.aes
-  (:require [clojure.test :refer :all])
   (:import (java.security Key)
            (javax.crypto Cipher SecretKeyFactory)
            (javax.crypto.spec SecretKeySpec PBEKeySpec IvParameterSpec)
@@ -8,8 +7,8 @@
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
 
-(defn- ^Key secret-spec
-  [^bytes msg-bytes, ^String password]
+(defn-  secret-spec
+  ^Key [^bytes msg-bytes, ^String password]
   (let [key-factory (SecretKeyFactory/getInstance "PBKDF2WithHmacSHA256")
         salt (Arrays/copyOfRange msg-bytes 8 16)
         key-spec (PBEKeySpec. (.toCharArray password)
@@ -19,8 +18,8 @@
         generated-key (.generateSecret key-factory key-spec)]
     (SecretKeySpec. (.getEncoded generated-key) "AES")))
 
-(defn ^String decrypt
-  [^String msg ^String password ^String iv]
+(defn decrypt
+  ^String [^String msg ^String password ^String iv]
   (let [msg-bytes (.decode
                    (Base64/getDecoder)
                    msg)

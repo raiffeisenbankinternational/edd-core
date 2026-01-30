@@ -18,6 +18,7 @@
    :invocation-id (uuid/gen)
    :meta {:realm :test}
    :ref-date (util/date-time)
+   :hosted-zone-name (util/get-env "PublicHostedZoneName" "example.com")
    :environment-name-lower (util/get-env "EnvironmentNameLower")
    :elastic-search {:scheme (util/get-env "IndexDomainScheme" "https")
                     :url (util/get-env "IndexDomainEndpoint")}
@@ -36,7 +37,7 @@
 
 (defn run-test
   [test-fn]
-  (let [svc (str (uuid/gen))
+  (let [svc (keyword (str (uuid/gen)))
         ctx (get-ctx svc)]
     (log/info "Svc" svc)
     (edd/with-stores

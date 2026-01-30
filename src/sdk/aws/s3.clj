@@ -2,7 +2,6 @@
   (:import
    (java.time ZoneOffset
               OffsetDateTime)
-   (java.net URL)
    (java.time.format DateTimeFormatter))
   (:require
    [clj-aws-sign.core :as sign]
@@ -116,7 +115,7 @@
 
 (defn put-object
   "puts object.content (should be plain string) into object.s3.bucket.name under object.s3.bucket.key"
-  [{:keys [aws] :as ctx} object]
+  [{:keys [_aws] :as ctx} object]
   (let [req
         (merge (s3-request-helper ctx object)
                {:method     "PUT"
@@ -191,7 +190,7 @@
            (io/reader (:body response) :encoding "UTF-8")))))))
 
 (defn delete-object
-  [{:keys [aws] :as ctx} object]
+  [{:keys [_aws] :as ctx} object]
   (let [req
         (merge (s3-request-helper ctx object)
                {:method     "DELETE"
@@ -234,49 +233,51 @@
              :region     (:region aws)
              :access-key (:aws-access-key-id aws)
              :secret-key (:aws-secret-access-key aws)}
-        common (common/authorize req)]
+        common (common/authorize req)
 
-    (let [response (client/retry-n #(-> (util/http-get
-                                         (str base-url
-                                              (:uri req))
-                                         (client/request->with-timeouts
-                                          %
-                                          {:as      :stream
-                                           :query-params (convert-query-params (:query req))
-                                           :headers      (-> (:headers req)
-                                                             (dissoc "host")
-                                                             (assoc "Authorization" common))})
-                                         :raw true)
-                                        (parse-response object)))]
-      (if (or (nil? response)
-              (:error response))
         response
-        (->> (xml/parse (:body response))
-             (:content)
-             (first)
-             (:content)
-             (mapv
-              (fn [{:keys [content]}]
-                (let [key (first content)
-                      val (second content)]
-                  (assoc
-                   {}
-                   (-> key
-                       (:tag)
-                       (name)
-                       (string/lower-case)
-                       (keyword))
-                   (-> key
-                       (:content)
-                       (first))
-                   (-> val
-                       (:tag)
-                       (name)
-                       (string/lower-case)
-                       (keyword))
-                   (-> val
-                       (:content)
-                       (first)))))))))))
+        (client/retry-n #(-> (util/http-get
+                              (str base-url
+                                   (:uri req))
+                              (client/request->with-timeouts
+                               %
+                               {:as      :stream
+                                :query-params (convert-query-params (:query req))
+                                :headers      (-> (:headers req)
+                                                  (dissoc "host")
+                                                  (assoc "Authorization" common))})
+                              :raw true)
+                             (parse-response object)))]
+
+    (if (or (nil? response)
+            (:error response))
+      response
+      (->> (xml/parse (:body response))
+           (:content)
+           (first)
+           (:content)
+           (mapv
+            (fn [{:keys [content]}]
+              (let [key (first content)
+                    val (second content)]
+                (assoc
+                 {}
+                 (-> key
+                     (:tag)
+                     (name)
+                     (string/lower-case)
+                     (keyword))
+                 (-> key
+                     (:content)
+                     (first))
+                 (-> val
+                     (:tag)
+                     (name)
+                     (string/lower-case)
+                     (keyword))
+                 (-> val
+                     (:content)
+                     (first))))))))))
 
 (defn put-object-tagging
   [{:keys [aws] :as ctx} {:keys [object tags]}]
@@ -311,23 +312,25 @@
              :payload    tags
              :access-key (:aws-access-key-id aws)
              :secret-key (:aws-secret-access-key aws)}
-        common (common/authorize req)]
-    (let [response (client/retry-n #(-> (util/http-put
-                                         (str base-url
-                                              (:uri req))
-                                         (client/request->with-timeouts
-                                          %
-                                          {:as      :stream
-                                           :query-params (convert-query-params (:query req))
-                                           :body         (:payload req)
-                                           :headers      (-> (:headers req)
-                                                             (dissoc "host")
-                                                             (assoc "Authorization" common))})
-                                         :raw true)
-                                        (parse-response object)))]
-      (if (:error response)
+        common (common/authorize req)
+
         response
-        {:version (get-in response [:headers :x-amz-version-id])}))))
+        (client/retry-n #(-> (util/http-put
+                              (str base-url
+                                   (:uri req))
+                              (client/request->with-timeouts
+                               %
+                               {:as      :stream
+                                :query-params (convert-query-params (:query req))
+                                :body         (:payload req)
+                                :headers      (-> (:headers req)
+                                                  (dissoc "host")
+                                                  (assoc "Authorization" common))})
+                              :raw true)
+                             (parse-response object)))]
+    (if (:error response)
+      response
+      {:version (get-in response [:headers :x-amz-version-id])})))
 
 (defn concat-content [a b]
   (flatten
@@ -364,8 +367,7 @@
     {:keys [s3] :as object}
     {:keys [retries] :as _params}]
 
-   (let [bucket (get-in s3 [:bucket :name])
-         prefix (get-in s3 [:prefix])
+   (let [prefix (get-in s3 [:prefix])
          req
          (merge (s3-request-helper ctx object)
                 {:method     "GET"
@@ -420,11 +422,33 @@
   download a private file. Use the :post method to create a URL
   to upload a file directly to S3 from a browser through the standard
   <form> tag and a single file input.
+
+  Can be called with ctx and object map:
+  (presign-url ctx {:method \"PUT\"
+                    :expires 360
+                    :object {:s3 {:bucket {:name \"my-bucket\"}
+                                  :object {:key \"path/to/file\"}}}})
   "
+  (^String [ctx object]
+   (let [aws (:aws ctx)
+         bucket (get-in object [:object :s3 :bucket :name])
+         path (get-in object [:object :s3 :object :key])
+         expires-sec (or (:expires object) 3600)
+         method (or (:method object) "GET")
+         extra-headers (cond-> {}
+                         (:md5 object)
+                         (assoc "content-md5" (:md5 object))
+                         (:sha256 object)
+                         (assoc "x-amz-content-sha256" (:sha256 object))
+                         (:content-length object)
+                         (assoc "content-length" (str (:content-length object))))]
+     (presign-url aws bucket path expires-sec {:method  (keyword (string/lower-case method))
+                                               :headers extra-headers})))
+
   (^String [aws bucket path expires-sec]
    (presign-url aws bucket path expires-sec nil))
 
-  (^String [aws bucket path expires-sec {:keys [method]
+  (^String [aws bucket path expires-sec {:keys [method headers]
                                          :or {method :get}}]
 
    (let [{:keys [region
@@ -456,14 +480,17 @@
                  region)
 
          headers
-         {"host" host}
+         (into (sorted-map) (merge {"host" host} headers))
+
+         signed-headers
+         (string/join ";" (keys headers))
 
          query-params
          {"X-Amz-Algorithm" "AWS4-HMAC-SHA256"
           "X-Amz-Credential" credential
           "X-Amz-Date" timestamp-full
           "X-Amz-Expires" (str expires-sec)
-          "X-Amz-SignedHeaders" "host"
+          "X-Amz-SignedHeaders" signed-headers
           "X-Amz-Security-Token" aws-session-token}
 
          method-norm

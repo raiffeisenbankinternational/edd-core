@@ -1,7 +1,5 @@
 (ns lambda.core-test
-  (:require [clojure.test :refer :all]
-            [clojure.tools.logging :as log]
-            [edd.el.event :as event]
+  (:require [clojure.test :refer [deftest is]]
             [aws.lambda :as core]
             [lambda.filters :as filters]))
 
@@ -10,7 +8,7 @@
            (assoc ctx :init-value "bla"))
    :cond (fn [{:keys [body]}]
            (contains? body :test))
-   :fn   (fn [{:keys [body] :as ctx}]
+   :fn   (fn [{:keys [_body] :as ctx}]
            (assoc ctx
                   :body {:resp "Bla"}))})
 

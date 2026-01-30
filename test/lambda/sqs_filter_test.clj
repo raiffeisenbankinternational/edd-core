@@ -1,6 +1,7 @@
 (ns lambda.sqs-filter-test
   (:require
    [lambda.util :as util]
+   [clojure.tools.logging :as log]
    [edd.core :as edd]
    [edd.el.cmd :as el-cmd]
    [lambda.uuid :as uuid]
@@ -97,15 +98,27 @@
                    :body (char-array "Of something")}]
        (core/start
         {}
-        (fn [ctx body]
-          "Slurp content of S3 request into response"
+        (fn [_ctx body]
+          (log/info "Slurp content of S3 request into response")
           (let [commands (:commands body)
                 cmd (first commands)
                 response (assoc cmd :body
                                 (slurp (:body cmd)))]
             (assoc body :commands [response])))
         :filters [fl/from-queue fl/from-bucket])
-       (verify-traffic-edn [{:body   {:commands       [{:body   "Of something"
+       (verify-traffic-edn [{:method  :get
+                             :timeout 90000000
+                             :url     "http://mock/2018-06-01/runtime/invocation/next"}
+                            {:as              :stream
+                             :connect-timeout 300
+                             :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=9cbc8f4c6d50e016febea5aaacca9571fa33246c40d100e7385179fb93282e56"
+                                               "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                                               "x-amz-date"           "20200426T061823Z"
+                                               "x-amz-security-token" ""}
+                             :idle-timeout    5000
+                             :method          :get
+                             :url             "https://s3-bucket.s3.eu-central-1.amazonaws.com/test/2021-12-27/0000b7b5-9f50-4dc4-86d1-2e4fe1f6d491/1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491.limedocu.txt"}
+                            {:body   {:commands       [{:body   "Of something"
                                                         :cmd-id :object-uploaded
                                                         :date   "2021-12-27"
                                                         :id     request-id
@@ -119,20 +132,7 @@
                                       :interaction-id interaction-id
                                       :request-id     request-id}
                              :method :post
-                             :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-                            {:as              :stream
-                             :connect-timeout 300
-                             :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=9cbc8f4c6d50e016febea5aaacca9571fa33246c40d100e7385179fb93282e56"
-                                               "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                                               "x-amz-date"           "20200426T061823Z"
-                                               "x-amz-security-token" ""}
-                             :idle-timeout    5000
-                             :method          :get
-                             :url             "https://s3-bucket.s3.eu-central-1.amazonaws.com/test/2021-12-27/0000b7b5-9f50-4dc4-86d1-2e4fe1f6d491/1111b7b5-9f50-4dc4-86d1-2e4fe1f6d491.limedocu.txt"}
-
-                            {:method  :get
-                             :timeout 90000000
-                             :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
+                             :url    "http://mock/2018-06-01/runtime/invocation/0/response"}])))))
 
 (defn sqs-commands
   [body]

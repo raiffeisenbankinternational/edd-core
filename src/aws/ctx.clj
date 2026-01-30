@@ -119,32 +119,37 @@
 
 (defn init
   [ctx]
-  (log/info "Initializing AWS context")
-  (let [preloaded-aws-config
-        (get ctx :aws {})
+  (if (:aws-ctx-initialized ctx)
+    ctx
+    (do
+      (log/info "Initializing AWS context")
+      (let [preloaded-aws-config
+            (get ctx :aws {})
 
-        endpoint
-        (util/get-env "AWS_S3_ENDPOINT")
+            endpoint
+            (util/get-env "AWS_S3_ENDPOINT")
 
-        resolved-creds
-        (resolve-credentials preloaded-aws-config)
+            resolved-creds
+            (resolve-credentials preloaded-aws-config)
 
-        aws (merge (cond-> {:region                (util/get-env "Region" (util/get-env "AWS_DEFAULT_REGION" "local"))
-                            :account-id            (util/get-env "AccountId" "local")
-                            :aws-access-key-id     ""
-                            :aws-secret-access-key ""
-                            :aws-session-token     ""}
+            aws (merge (cond-> {:region                (or (:region preloaded-aws-config)
+                                                           (util/get-env "Region" (util/get-env "AWS_DEFAULT_REGION" "local")))
+                                :account-id            (or (:account-id preloaded-aws-config)
+                                                           (util/get-env "AccountId" "local"))
+                                :aws-access-key-id     ""
+                                :aws-secret-access-key ""
+                                :aws-session-token     ""}
 
-                     endpoint
-                     (assoc :endpoint endpoint))
+                         (or (:endpoint preloaded-aws-config) endpoint)
+                         (assoc :endpoint (or (:endpoint preloaded-aws-config) endpoint)))
 
-                   resolved-creds
-                   preloaded-aws-config)]
+                       resolved-creds
+                       preloaded-aws-config)]
 
-    (when-not (m/validate AWSRuntimeSchema aws)
-      (throw (ex-info "Error initializing aws config. Invalid AWS configuration."
-                      {:error (-> (m/explain AWSRuntimeSchema aws)
-                                  (me/humanize))
-                       ;; Include the problematic config in the error
-                       :config aws})))
-    (assoc ctx :aws aws)))
+        (when-not (m/validate AWSRuntimeSchema aws)
+          (throw (ex-info "Error initializing aws config. Invalid AWS configuration."
+                          {:error (-> (m/explain AWSRuntimeSchema aws)
+                                      (me/humanize))
+                           ;; Include the problematic config in the error
+                           :config aws})))
+        (assoc ctx :aws aws :aws-ctx-initialized true)))))

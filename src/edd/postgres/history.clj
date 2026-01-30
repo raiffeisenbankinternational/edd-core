@@ -8,8 +8,7 @@
     :refer [->realm
             ->service
             ->ref-date]]
-   [clojure.tools.logging :as log]
-   [edd.postgres.history :as history]))
+   [clojure.tools.logging :as log]))
 
 (set! *warn-on-reflection* true)
 

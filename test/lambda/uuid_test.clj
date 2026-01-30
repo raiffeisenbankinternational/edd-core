@@ -1,5 +1,5 @@
 (ns lambda.uuid-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer  [deftest is]]
             [lambda.uuid :as uuid]))
 
 (deftest uuid-v3-test

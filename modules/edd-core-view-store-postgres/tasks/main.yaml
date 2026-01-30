@@ -26,7 +26,7 @@
     region: "{{ parameters['Region'] }}"
     bucket: "{{ parameters['DeploymentS3BucketName'] }}"
     file_root: "{{ role_path }}/migrations"
-    key_prefix: "migrations/postgres/{{ parameters['ServiceName'] }}/global"
+    key_prefix: "migrations/postgres/{{ parameters['ResourceName'] }}/global"
     file_change_strategy: force
     delete: true
 
@@ -36,7 +36,7 @@
     region: "{{ parameters['Region'] }}"
     bucket: "{{ parameters['DeploymentS3BucketName'] }}"
     file_root: "{{ playbook_dir }}/migrations"
-    key_prefix: "migrations/postgres/{{ parameters['ServiceName'] }}/local"
+    key_prefix: "migrations/postgres/{{ parameters['ResourceName'] }}/local"
     file_change_strategy: force
     delete: true
 

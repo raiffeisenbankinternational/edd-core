@@ -10,7 +10,6 @@
   (:import
    com.zaxxer.hikari.HikariDataSource
    com.zaxxer.hikari.pool.HikariProxyConnection
-   java.io.Closeable
    java.sql.Connection))
 
 (set! *warn-on-reflection* true)
@@ -82,5 +81,5 @@
 
   HikariProxyConnection
 
-  (get-connection ^Connection [this opts]
+  (get-connection ^Connection [this _opts]
     this))

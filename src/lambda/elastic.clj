@@ -57,45 +57,52 @@
         (cond-> {:headers  headers
                  :keepalive 300000}
           body (assoc :body body)
-          query (assoc :query-params query))]
+          query (assoc :query-params query))
 
-    (let [url (str (or (:scheme elastic-search) "https")
-                   "://"
-                   (get (:headers req) "Host")
-                   (:uri req))
-          response (client/retry-n
-                    #(let [request (client/request->with-timeouts
-                                    %
-                                    request
-                                    :idle-timeout 20000)]
-                       (cond
-                         (= method "GET") (util/http-get
-                                           url
-                                           request
-                                           :raw true)
-                         (= method "POST") (util/http-post
+        url (str (or (:scheme elastic-search) "https")
+                 "://"
+                 (get (:headers req) "Host")
+                 (:uri req))
+        response (client/retry-n
+                  #(let [request (client/request->with-timeouts
+                                  %
+                                  request
+                                  :idle-timeout 20000)]
+                     (cond
+                       (= method "GET") (util/http-get
+                                         url
+                                         request
+                                         :raw true)
+                       (= method "POST") (util/http-post
+                                          url
+                                          request
+                                          :raw true)
+                       (= method "PUT") (util/http-put
+                                         url
+                                         request
+                                         :raw true)
+                       (= method "DELETE") (util/http-delete
                                             url
                                             request
-                                            :raw true)
-                         (= method "PUT") (util/http-put
-                                           url
-                                           request
-                                           :raw true)
-                         (= method "DELETE") (util/http-delete
-                                              url
-                                              request
-                                              :raw true))))
-          status (long (:status response))
-          ignored-status (long (or ignored-status 0))]
-      (cond
-        (contains? response :error) (do
-                                      (log/warn "Failed update, client should handle error" response)
-                                      {:error {:error response}})
-        (= status ignored-status) nil
-        (> status 299) (do
-                         {:error {:message (:body response)
-                                  :status  (:status response)}})
-        :else (util/to-edn (:body response))))))
+                                            :raw true))))
+        status (long (:status response))
+        ignored-status (long (or ignored-status 0))]
+
+    (cond
+      (contains? response :error)
+      (do
+        (log/warn "Failed update, client should handle error" response)
+        {:error {:error response}})
+
+      (= status ignored-status)
+      nil
+
+      (> status 299)
+      {:error {:message (:body response)
+               :status  (:status response)}}
+
+      :else
+      (util/to-edn (:body response)))))
 
 (defn index-settings
   "

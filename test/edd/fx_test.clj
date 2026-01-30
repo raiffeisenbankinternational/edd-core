@@ -84,7 +84,7 @@
 
 (def ctx3
   (-> mock/ctx
-      (merge {:service-name "source-svc"})
+      (merge {:service-name :source-svc})
       (edd.core/reg-cmd
        :cmd-1
        (fn [ctx cmd]
@@ -102,20 +102,18 @@
     (mock/handle-cmd ctx3 {:id     cmd-id
                            :cmd-id :cmd-1})
     (mock/verify-state :command-store
-                       [{:service  "source-svc"
+                       [{:service  :source-svc
                          :commands [{:id     "2"
                                      :cmd-id "2"}]
-                         :breadcrumbs [0 0]
-                         :meta     {}}
+                         :breadcrumbs [0 0]}
                         {:service  "target-svc"
                          :commands [{:id     "1"
                                      :cmd-id "1"}]
-                         :breadcrumbs [0 1]
-                         :meta     {}}])))
+                         :breadcrumbs [0 1]}])))
 
 (deftest test-fx-evt
   (let [ctxevt (-> mock/ctx
-                   (merge {:service-name "source-svc"})
+                   (merge {:service-name :source-svc})
                    (edd.core/reg-cmd
                     :cmd-1
                     (fn [ctx cmd]
@@ -130,11 +128,10 @@
         (mock/handle-cmd ctxevt {:id     cmd-id
                                  :cmd-id :cmd-1})
         (mock/verify-state :command-store
-                           [{:service  "source-svc"
+                           [{:service  :source-svc
                              :commands [{:id     "2"
                                          :cmd-id "2"}]
-                             :breadcrumbs [0 0]
-                             :meta     {}}])))
+                             :breadcrumbs [0 0]}])))
     (testing "If multiple handlers work"
       (mock/with-mock-dal
         (mock/handle-cmd (edd.core/reg-event-fx
@@ -146,16 +143,14 @@
                          {:id     cmd-id
                           :cmd-id :cmd-1})
         (mock/verify-state :command-store
-                           [{:service  "source-svc"
+                           [{:service  :source-svc
                              :commands [{:id     "2"
                                          :cmd-id "2"}]
-                             :breadcrumbs [0 0]
-                             :meta     {}}
+                             :breadcrumbs [0 0]}
                             {:service  "target-svc"
                              :commands [{:id     "1"
                                          :cmd-id "1"}]
-                             :breadcrumbs [0 1]
-                             :meta     {}}])))))
+                             :breadcrumbs [0 1]}])))))
 
 (deftest test-execute-fx
   (let [ctx (-> mock/ctx

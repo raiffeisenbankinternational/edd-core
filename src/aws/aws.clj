@@ -27,17 +27,20 @@
   [ctx _]
   (let [resp (get @request/*request* :cache-keys)]
     (when resp
-      (doall
-       (map
-        #(let [{:keys [error]} (sqs/sqs-publish
-                                (assoc ctx :queue (str
-                                                   (:environment-name-lower ctx)
-                                                   "-glms-router-svc-response")
-                                       :message (util/to-json
-                                                 {:Records [%]})))]
-           (when error
-             (throw (ex-info "Distribution failed" error))))
-        (flatten resp))))))
+      (let [router-queue (or (get-in ctx [:infra :router :queue])
+                             "glms-router-svc-response")
+            queue-name (str (:environment-name-lower ctx)
+                            "-" router-queue)]
+        (log/info "Enqueuing response to queue:" queue-name)
+        (doall
+         (map
+          #(let [{:keys [error]} (sqs/sqs-publish
+                                  (assoc ctx :queue queue-name
+                                         :message (util/to-json
+                                                   {:Records [%]})))]
+             (when error
+               (throw (ex-info "Distribution failed" error))))
+          (flatten resp)))))))
 
 (defn send-loop-runtime-success
   [{:keys [api

@@ -201,7 +201,7 @@
   - lifetime is a string like '10m' for OS scroll.
 
   1) Dump OpenSearch into a gzipped CSV file;
-  2) COPY IN the file into a temp table, then UPSERT into the
+  2) COPY IN the file into a temp table, then store into the
      primary table handling ID conflicts;
   3) Delete the file.
   "

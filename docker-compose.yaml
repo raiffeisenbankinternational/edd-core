@@ -1,6 +1,6 @@
 services:
   opensearch-node1:
-    image: ${DOCKER_URL}/opensearchproject/opensearch:1.2.0
+    image: ${DOCKER_URL:-}opensearchproject/opensearch:2.11.1
     container_name: opensearch-node1
     environment:
       - cluster.name=opensearch-cluster
@@ -23,7 +23,7 @@ services:
     networks:
       - opensearch-net
   opensearch-dashboards:
-    image: ${DOCKER_URL}/opensearchproject/opensearch-dashboards:1.2.0
+    image: ${DOCKER_URL:-}opensearchproject/opensearch-dashboards:2.11.1
     container_name: opensearch-dashboards
     ports:
       - 5601:5601
@@ -39,7 +39,7 @@ services:
       context: .
       dockerfile: Dockerfile.pg
       args:
-        DOCKER_URL: ${DOCKER_URL}
+        DOCKER_URL: ${DOCKER_URL:-}
     container_name: postgres_edd
     hostname: postgres
     ports:
@@ -50,61 +50,6 @@ services:
       POSTGRES_DB: "postgres"
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "no-secret"
-    networks:
-      - opensearch-net
-
-  #
-  # We apply schemas one by one because of a bug (a limitation?)
-  # in flyway. See https://stackoverflow.com/questions/60436650/
-  # TL;DR: for schemas=foo,bar,baz, it creates stuff only in foo.
-  #
-  root-migration:
-    image: ${DOCKER_URL}/flyway/flyway
-    command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test -user=postgres -password="no-secret" -connectRetries=60 -skipCheckForUpdate migrate
-    volumes:
-      - ./sql/files/edd:/flyway/sql
-    depends_on:
-      - postgres
-    networks:
-      - opensearch-net
-
-  service-migration:
-    image: ${DOCKER_URL}/flyway/flyway
-    command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test_local_test -user=postgres -password="no-secret" -connectRetries=60 -skipCheckForUpdate migrate
-    volumes:
-      - ./modules/edd-core-view-store-postgres/migrations:/flyway/sql
-    depends_on:
-      - postgres
-    networks:
-      - opensearch-net
-
-  migration-test-edd-core:
-    image: ${DOCKER_URL}/flyway/flyway
-    command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test_edd_core -user=postgres -password="no-secret" -connectRetries=60 -skipCheckForUpdate migrate
-    volumes:
-       - ./modules/edd-core-view-store-postgres/test/resources/migrations:/flyway/sql
-    depends_on:
-      - postgres
-    networks:
-      - opensearch-net
-
-  migration-test-dimension:
-    image: ${DOCKER_URL}/flyway/flyway
-    command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test_glms_dimension_svc -user=postgres -password="no-secret" -connectRetries=60 -skipCheckForUpdate migrate
-    volumes:
-       - ./modules/edd-core-view-store-postgres/test/resources/migrations:/flyway/sql
-    depends_on:
-      - postgres
-    networks:
-      - opensearch-net
-
-  migration-test-application:
-    image: ${DOCKER_URL}/flyway/flyway
-    command: -url=jdbc:postgresql://postgres:5432/postgres -schemas=test_glms_application_svc -user=postgres -password="no-secret" -connectRetries=60 -skipCheckForUpdate migrate
-    volumes:
-       - ./modules/edd-core-view-store-postgres/test/resources/migrations:/flyway/sql
-    depends_on:
-      - postgres
     networks:
       - opensearch-net
 

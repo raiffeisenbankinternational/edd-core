@@ -1,11 +1,11 @@
 (ns lambda.s3-test
   (:require
+   [clojure.test :refer [deftest is]]
    [lambda.util :as util]
    [lambda.filters :as fl]
    [lambda.core :as core]
    [lambda.test.fixture.core :refer [mock-core]]
    [lambda.test.fixture.client :refer [verify-traffic-edn]]
-   [clojure.test :refer :all]
    [clojure.tools.logging :as log]
    [sdk.aws.common :as common]
    [edd.core :as edd])
@@ -68,7 +68,19 @@
                    :role (get-in ctx [:user :role]))))
         :filters [fl/from-bucket])
        (verify-traffic-edn
-        [{:body   {:commands       [{:body   "Of something"
+        [{:method  :get
+          :timeout 90000000
+          :url     "http://mock/2018-06-01/runtime/invocation/next"}
+         {:as              :stream
+          :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=1983cbe2d83869f5933974856f030f5e99b510ed3f88be163cd5aa50ca468dd7"
+                            "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
+                            "x-amz-date"           "20200426T061823Z"
+                            "x-amz-security-token" ""}
+          :method          :get
+          :connect-timeout 300
+          :idle-timeout    5000
+          :url             (str "https://example-bucket.s3.eu-central-1.amazonaws.com/" key)}
+         {:body   {:commands       [{:body   "Of something"
                                      :cmd-id :object-uploaded
                                      :bucket "example-bucket"
                                      :date   "2021-12-27"
@@ -83,19 +95,7 @@
                    :interaction-id interaction-id
                    :request-id     request-id}
           :method :post
-          :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-         {:as              :stream
-          :headers         {"Authorization"        "AWS4-HMAC-SHA256 Credential=/20200426/eu-central-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=1983cbe2d83869f5933974856f030f5e99b510ed3f88be163cd5aa50ca468dd7"
-                            "x-amz-content-sha256" "UNSIGNED-PAYLOAD"
-                            "x-amz-date"           "20200426T061823Z"
-                            "x-amz-security-token" ""}
-          :method          :get
-          :connect-timeout 300
-          :idle-timeout    5000
-          :url             (str "https://example-bucket.s3.eu-central-1.amazonaws.com/" key)}
-         {:method  :get
-          :timeout 90000000
-          :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
+          :url    "http://mock/2018-06-01/runtime/invocation/0/response"}])))))
 
 (deftest test-s3-bucket-request-when-folder-craeted
   (with-redefs [common/create-date (fn [] "20200426T061823Z")]
@@ -112,12 +112,12 @@
         edd/handler
         :filters [fl/from-bucket])
        (verify-traffic-edn
-        [{:body   {}
-          :method :post
-          :url    "http://mock/2018-06-01/runtime/invocation/0/response"}
-         {:method  :get
+        [{:method  :get
           :timeout 90000000
-          :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
+          :url     "http://mock/2018-06-01/runtime/invocation/next"}
+         {:body   {}
+          :method :post
+          :url    "http://mock/2018-06-01/runtime/invocation/0/response"}])))))
 
 (deftest s3-cond
   (let [resp ((:cond fl/from-bucket) {:body (util/to-edn

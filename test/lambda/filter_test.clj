@@ -1,8 +1,7 @@
 (ns lambda.filter-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is]]
             [lambda.codec :as codec]
             [lambda.filters :as lambda-filter]
-            [lambda.jwt-test :as jwt-test]
             [lambda.util :as util]))
 
 (def claims

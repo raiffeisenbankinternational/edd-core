@@ -1,5 +1,5 @@
 (ns edd.postgres.event-store-it
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is testing]]
             [edd.postgres.event-store :as event-store]
             [lambda.request :as request]
             [lambda.test.fixture.client :refer [verify-traffic-edn]]
@@ -16,7 +16,9 @@
             [sdk.aws.common]
             [sdk.aws.s3]
             [edd.response.s3]
-            [aws.aws]))
+            [aws.aws]
+            [lambda.ctx :as lambda-ctx]
+            [aws.ctx :as aws-ctx]))
 
 (def fx-id (uuid/gen))
 
@@ -27,20 +29,14 @@
 (defn clean-ctx
   []
   (-> {}
-      (assoc :service-name "local-test")
-      (assoc :response-cache :default)
-      (assoc :environment-name-lower (util/get-env "EnvironmentNameLower"))
-      (assoc :aws {:region                (util/get-env "AWS_DEFAULT_REGION")
-                   :account-id            (util/get-env "AccountId")
-                   :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID")
-                   :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY")
-                   :aws-session-token     (util/get-env "AWS_SESSION_TOKEN")})
+      (lambda-ctx/init)
+      (aws-ctx/init)
       (event-store/register)
       (view-store/register)))
 
 (defn get-ctx
   ([] (-> (clean-ctx)
-          (edd/reg-cmd :cmd-1 (fn [ctx cmd]
+          (edd/reg-cmd :cmd-1 (fn [_ctx cmd]
                                 [{:identity (:id cmd)}
                                  {:id       (:id cmd)
                                   :event-id :event-1
@@ -55,10 +51,10 @@
                                   :event-id :fx-event-1
                                   :name     (:name cmd)}]))
           (edd/reg-event :event-1
-                         (fn [agg event]
+                         (fn [agg _event]
                            (merge agg
                                   {:value "1"})))
-          (edd/reg-fx (fn [ctx events]
+          (edd/reg-fx (fn [_ctx _events]
                         [{:commands [{:cmd-id :vmd-2
                                       :id     fx-id}]
                           :service  :s2}
@@ -66,7 +62,7 @@
                                       :id     fx-id}]
                           :service  :s2}]))
           (edd/reg-event :event-2
-                         (fn [agg event]
+                         (fn [agg _event]
                            (merge agg
                                   {:value "2"})))))
   ([invocation-id] (-> (get-ctx)
@@ -382,13 +378,15 @@
                          :error)))))))
 
       (testing "Test command returningn mix of error and events"
-        (let [agg-id (uuid/gen)
-              {:keys [invocation-id
-                      resp]} (make-request
-                              ctx
-                              [{:cmd-id :mix-error-cmd
-                                :id     agg-id
-                                :first-name :invalit-type}])]
+        (let [agg-id
+              (uuid/gen)
+
+              {:keys [invocation-id]}
+              (make-request
+               ctx
+               [{:cmd-id :mix-error-cmd
+                 :id     agg-id
+                 :first-name :invalit-type}])]
           (edd/with-stores
             ctx
             (fn [ctx]
@@ -604,7 +602,7 @@
     (let [invocation-id (uuid/gen)
           ctx (get-ctx invocation-id)
           ctx (assoc-in ctx [:meta :realm] :test)
-          ctx (edd/reg-cmd ctx :cmd-id-1 (fn [ctx cmd]
+          ctx (edd/reg-cmd ctx :cmd-id-1 (fn [_ctx cmd]
                                            [{:identity (:ccn cmd)}]))
           agg-id (uuid/gen)
           agg-id-2 (uuid/gen)
@@ -665,14 +663,20 @@
         invocation-id-2 (uuid/gen)
         environment-name-lower (util/get-env "EnvironmentNameLower" "local")
         account-id (util/get-env "AccountId" "local")
+
+        service-name
+        :retry-test
+
         ctx (-> mock/ctx
+                (assoc :environment-name-lower
+                       environment-name-lower)
                 (event-store/register)
                 (view-store/register)
                 (dissoc :response-cache)
                 (edd.response.s3/register)
                 (with-realm)
                 (assoc :aws {:aws-session-token "tok"})
-                (assoc :service-name "retry-test")
+                (assoc :service-name service-name)
                 (edd/reg-cmd :error-prone (fn [_ctx cmd]
                                             [{:identity (:id cmd)}
                                              {:event-id :error-prone-event
@@ -701,29 +705,51 @@
        :requests [{:post (str
                           "https://sqs.eu-central-1.amazonaws.com/"
                           account-id
-                          "/test-evets-queue")}]
+                          "/test-evets-queue")
+                   :status 200}
+                  {:post (str
+                          "https://sqs.eu-central-1.amazonaws.com/"
+                          account-id
+                          "/"
+                          environment-name-lower
+                          "-glms-router-svc-response")
+                   :status 200}
+                  {:post (str
+                          "http://mock/2018-06-01/runtime/invocation/"
+                          invocation-id-1
+                          "/error")
+                   :status 200}
+                  {:post (str
+                          "http://mock/2018-06-01/runtime/invocation/"
+                          invocation-id-2
+                          "/response")
+                   :status 200}]
        (core/start
         ctx
         edd/handler)
-       (verify-traffic-edn [{:body   {:result         {:meta       [{:error-prone {:id aggregate-id}}],
-                                                       :events     1,
-                                                       :success    true,
-                                                       :effects    [],
-                                                       :identities 1},
-                                      :invocation-id  invocation-id-2
+       (verify-traffic-edn [{:method  :get
+                             :timeout 90000000
+                             :url     "http://mock/2018-06-01/runtime/invocation/next"}
+                            {:body   {:exception     "Timeout"
+                                      :invocation-id  invocation-id-1
                                       :request-id     request-id
                                       :interaction-id interaction-id}
                              :method :post
                              :url    (str "http://mock/2018-06-01/runtime/invocation/"
-                                          invocation-id-2
-                                          "/response")}
+                                          invocation-id-1
+                                          "/error")}
+                            {:method  :get
+                             :timeout 90000000
+                             :url     "http://mock/2018-06-01/runtime/invocation/next"}
                             {:body            (str "Action=SendMessage&MessageBody=%7B%22Records%22%3A%5B%7B%22s3%22%3A%7B%22bucket%22%3A%7B%22name%22%3A%22"
                                                    account-id
                                                    "-"
                                                    environment-name-lower
                                                    "-sqs%22%7D%2C%22object%22%3A%7B%22key%22%3A%22response%2F"
                                                    request-id
-                                                   "%2F0%2Flocal-test.json%22%7D%7D%7D%5D%7D")
+                                                   "%2F0%2F"
+                                                   (name service-name)
+                                                   ".json%22%7D%7D%7D%5D%7D")
                              :connect-timeout 300
                              :headers         {"Accept"               "application/json"
                                                "Authorization"        ""
@@ -738,20 +764,18 @@
                                                    environment-name-lower
                                                    "-glms-router-svc-response")
                              :version         :http1.1}
-                            {:method  :get
-                             :timeout 90000000
-                             :url     "http://mock/2018-06-01/runtime/invocation/next"}
-                            {:body   {:exception     "Timeout"
-                                      :invocation-id  invocation-id-1
+                            {:body   {:result         {:meta       [{:error-prone {:id aggregate-id}}],
+                                                       :events     1,
+                                                       :success    true,
+                                                       :effects    [],
+                                                       :identities 1},
+                                      :invocation-id  invocation-id-2
                                       :request-id     request-id
                                       :interaction-id interaction-id}
                              :method :post
                              :url    (str "http://mock/2018-06-01/runtime/invocation/"
-                                          invocation-id-1
-                                          "/error")}
-                            {:method  :get
-                             :timeout 90000000
-                             :url     "http://mock/2018-06-01/runtime/invocation/next"}])))))
+                                          invocation-id-2
+                                          "/response")}])))))
 
 (defn get-fx-meta
   [ctx req]
@@ -809,34 +833,33 @@
                                                       :id (:id event)})))
           agg-id (uuid/gen)
           interaction-id (uuid/gen)
-          request-id (uuid/gen)]
+          request-id (uuid/gen)
+          resp (edd/handler (assoc ctx :no-summary true)
+                            {:request-id     request-id
+                             :interaction-id interaction-id
+                             :meta           {:realm (get-in ctx [:meta :realm])}
+                             :commands       [{:cmd-id :cmd-level-1
+                                               :id     agg-id}]})]
 
-      (let [resp (edd/handler (assoc ctx :no-summary true)
-                              {:request-id     request-id
-                               :interaction-id interaction-id
-                               :meta           {:realm (get-in ctx [:meta :realm])}
-                               :commands       [{:cmd-id :cmd-level-1
-                                                 :id     agg-id}]})]
-
-        (is (= [{:fx-error 0
-                 :fx-created 1
-                 :fx-processed 0}]
-               (get-fx-meta ctx {:request-id request-id})))
-        (doseq [cmd (get-in resp [:result :effects])]
-          (edd/handler (assoc ctx :no-summary true)
-                       cmd))
-        (is (= [{:fx-created 1
-                 :fx-error 0
-                 :fx-processed 0}
-                {:fx-created 0
-                 :fx-error 0
-                 :fx-processed 1}]
-               (get-fx-meta ctx {:request-id request-id})))
-        (is (= [{:fx-created 1
-                 :fx-processed 1
-                 :fx-error 0
-                 :fx-remaining 0}]
-               (get-response-trace-log ctx {:request-id request-id})))))))
+      (is (= [{:fx-error 0
+               :fx-created 1
+               :fx-processed 0}]
+             (get-fx-meta ctx {:request-id request-id})))
+      (doseq [cmd (get-in resp [:result :effects])]
+        (edd/handler (assoc ctx :no-summary true)
+                     cmd))
+      (is (= [{:fx-created 1
+               :fx-error 0
+               :fx-processed 0}
+              {:fx-created 0
+               :fx-error 0
+               :fx-processed 1}]
+             (get-fx-meta ctx {:request-id request-id})))
+      (is (= [{:fx-created 1
+               :fx-processed 1
+               :fx-error 0
+               :fx-remaining 0}]
+             (get-response-trace-log ctx {:request-id request-id}))))))
 
 (deftest test-commands-with-error
   (binding [*dal-state* (atom {})]
@@ -852,34 +875,33 @@
                                                       :id (:id event)})))
           agg-id (uuid/gen)
           interaction-id (uuid/gen)
-          request-id (uuid/gen)]
+          request-id (uuid/gen)
+          resp (edd/handler (assoc ctx :no-summary true)
+                            {:request-id     request-id
+                             :interaction-id interaction-id
+                             :meta           {:realm (get-in ctx [:meta :realm])}
+                             :commands       [{:cmd-id :cmd-level-1
+                                               :id     agg-id}]})]
 
-      (let [resp (edd/handler (assoc ctx :no-summary true)
-                              {:request-id     request-id
-                               :interaction-id interaction-id
-                               :meta           {:realm (get-in ctx [:meta :realm])}
-                               :commands       [{:cmd-id :cmd-level-1
-                                                 :id     agg-id}]})]
-
-        (is (= [{:fx-error 0
-                 :fx-processed 0
-                 :fx-created 1}]
-               (get-fx-meta ctx {:request-id request-id})))
-        (doseq [cmd (get-in resp [:result :effects])]
-          (edd/handler (assoc ctx :no-summary true)
-                       cmd))
-        (is (= [{:fx-processed 0
-                 :fx-error 0
-                 :fx-created 1}
-                {:fx-error 1
-                 :fx-created 0
-                 :fx-processed 0}]
-               (get-fx-meta ctx {:request-id request-id})))
-        (is (= [{:fx-created 1
-                 :fx-processed 0
-                 :fx-error 1
-                 :fx-remaining 0}]
-               (get-response-trace-log ctx {:request-id request-id})))))))
+      (is (= [{:fx-error 0
+               :fx-processed 0
+               :fx-created 1}]
+             (get-fx-meta ctx {:request-id request-id})))
+      (doseq [cmd (get-in resp [:result :effects])]
+        (edd/handler (assoc ctx :no-summary true)
+                     cmd))
+      (is (= [{:fx-processed 0
+               :fx-error 0
+               :fx-created 1}
+              {:fx-error 1
+               :fx-created 0
+               :fx-processed 0}]
+             (get-fx-meta ctx {:request-id request-id})))
+      (is (= [{:fx-created 1
+               :fx-processed 0
+               :fx-error 1
+               :fx-remaining 0}]
+             (get-response-trace-log ctx {:request-id request-id}))))))
 
 (deftest test-commands-with-exception
   (binding [*dal-state* (atom {})]
@@ -905,41 +927,41 @@
                    :interaction-id interaction-id
                    :meta           {:realm (get-in ctx [:meta :realm])}
                    :commands       [{:cmd-id :cmd-level-1
-                                     :id     agg-id}]}]
+                                     :id     agg-id}]}
 
-      (let [resp (edd/handler (assoc ctx :no-summary true)
-                              request)]
+          resp (edd/handler (assoc ctx :no-summary true)
+                            request)]
 
-        (is (= [{:fx-error 0
-                 :fx-processed 0
-                 :fx-created 1}]
-               (get-fx-meta ctx {:request-id request-id})))
-        (doseq [cmd (get-in resp [:result :effects])]
-          (edd/handler (assoc ctx :no-summary true)
-                       cmd))
-        (is (= [{:fx-error 0
-                 :fx-processed 0
-                 :fx-created 1}]
-               (get-fx-meta ctx {:request-id request-id})))
+      (is (= [{:fx-error 0
+               :fx-processed 0
+               :fx-created 1}]
+             (get-fx-meta ctx {:request-id request-id})))
+      (doseq [cmd (get-in resp [:result :effects])]
+        (edd/handler (assoc ctx :no-summary true)
+                     cmd))
+      (is (= [{:fx-error 0
+               :fx-processed 0
+               :fx-created 1}]
+             (get-fx-meta ctx {:request-id request-id})))
 
-        (is (= [{:fx-exception 0}]
-               (get-request-meta ctx {:request-id request-id})))
+      (is (= [{:fx-exception 0}]
+             (get-request-meta ctx {:request-id request-id})))
 
-        (doseq [cmd (get-in resp [:result :effects])]
-          (edd/handler (assoc ctx :no-summary true)
-                       cmd))
-        (doseq [cmd (get-in resp [:result :effects])]
-          (edd/handler (assoc ctx :no-summary true)
-                       cmd))
+      (doseq [cmd (get-in resp [:result :effects])]
+        (edd/handler (assoc ctx :no-summary true)
+                     cmd))
+      (doseq [cmd (get-in resp [:result :effects])]
+        (edd/handler (assoc ctx :no-summary true)
+                     cmd))
 
-        (is (= [{:fx-created 1
-                 :fx-processed 1
-                 :fx-error 0
-                 :fx-remaining 0}]
-               (get-response-trace-log ctx {:request-id request-id})))
-        (testing (format "We tried %s time" max-attemnt)
-          (is (= [{:fx-exception max-attemnt}]
-                 (get-request-trace-log ctx {:request-id request-id}))))))))
+      (is (= [{:fx-created 1
+               :fx-processed 1
+               :fx-error 0
+               :fx-remaining 0}]
+             (get-response-trace-log ctx {:request-id request-id})))
+      (testing (format "We tried %s time" max-attemnt)
+        (is (= [{:fx-exception max-attemnt}]
+               (get-request-trace-log ctx {:request-id request-id})))))))
 
 (deftest parent-bradcrumbs
   (is (= []

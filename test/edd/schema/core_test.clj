@@ -4,7 +4,7 @@
             [malli.core :as m]
             [malli.generator :as mg]
             [clojure.test.check.clojure-test :refer [defspec]]
-            [clojure.test :refer [deftest testing is are use-fixtures run-tests join-fixtures]]))
+            [clojure.test :refer [deftest are]]))
 
 (defspec test-non-empty-string-generator
   100

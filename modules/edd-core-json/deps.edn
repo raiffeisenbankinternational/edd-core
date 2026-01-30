@@ -1,5 +1,6 @@
 {:deps
- {com.alpha-prosoft/jsonista {:mvn/version "0.3.8.11"}
+ {com.rbinternational.glms/edd-core {:local/root "../../"}
+  com.alpha-prosoft/jsonista {:mvn/version "0.3.8.11"}
   net.mikera/vectorz {:mvn/version "0.66.0"
                       ;; We need a single class to extend a protocol
                       ;; but not the whole Mikera stuff. Excluding.
@@ -7,7 +8,6 @@
                                    net.mikera/randomz
                                    net.mikera/mathz]}}
  :paths ["src" "resources"]
- :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]
  :aliases
  {:build  {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.6"}}
            :ns-default build}
@@ -16,7 +16,8 @@
            :extra-deps  {org.clojure/test.check {:mvn/version "1.1.1"}}},
 
   :unit   {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}},
-           :main-opts  ["-m" "kaocha.runner" "unit"]}
+           :main-opts  ["-m" "kaocha.runner" "unit"]
+           :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}
 
   :dev    {:extra-paths ["dev" "dev/resources"]
            :extra-deps

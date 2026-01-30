@@ -82,14 +82,24 @@
 
 (defn dal-state-accessor
   "Returns realm-scoped store data with normalization for test assertions.
-   Removes request-id, interaction-id, service-name.
+   Removes request-id, interaction-id, service-name from all items.
+   Removes :meta entirely unless :keep-meta flag is set in state.
+   When :keep-meta is true, keeps meta as-is (including realm).
    Sorts event-store by event-seq."
   [state key]
-  (if (#{:event-store :identity-store :command-store :aggregate-store
+  (if (#{:event-store :identity-store :command-store :aggregate-store :aggregate-history
          :response-log :command-log :request-error-log} key)
     (let [realm (get state :realm :test)
           data (get-in state [:realms realm key] [])
-          normalize (fn [item] (dissoc item :request-id :interaction-id :service-name))]
+          keep-meta? (get state :keep-meta false)
+          normalize (fn [item]
+                      (let [cleaned (-> item
+                                        (dissoc :request-id :interaction-id :service-name))]
+                        (if keep-meta?
+                          ;; Keep meta as-is when keep-meta is true
+                          cleaned
+                          ;; Remove meta entirely when keep-meta is false
+                          (dissoc cleaned :meta))))]
       (if (= key :event-store)
         (mapv normalize (sort-by :event-seq data))
         (mapv normalize data)))
@@ -113,7 +123,8 @@
                    req-1)]
        (-> {:post (query/calc-service-query-url
                    (:service %)
-                   (:meta ctx))
+                   ;; Use meta from dep config, or fall back to ctx meta
+                   (or (:meta %) (:meta ctx)))
             :body (util/to-json {:result (:resp %)})
             :req  req-2})))
 
@@ -121,27 +132,36 @@
         (get @*dal-state* :deps []))))
 
 (defn aws-get-token
-  [ctx]
+  [_ctx]
   "#mock-id-token")
 
 (def ctx
-  (-> {:response-schema-validation :throw-on-error}
+  (-> {:response-schema-validation :throw-on-error
+       :service-name :local-test
+       :hosted-zone-name "example.com"
+       :environment-name-lower "local"
+       :meta {:realm :test}}
       (response-cache/register-default)
       (view-store/register)
       (event-store/register)))
 
-(defn mock-snapshot
-  [_ _]
-  nil)
-
 (defn create-realm-partitioned-state
   "Partitions flat test state into realm structure.
-   Moves top-level store keys into [:realms <realm> <store-key>]."
-  [base-state]
+   Moves top-level store keys into [:realms <realm> <store-key>].
+   Enriches identity-store records with :service-name from ctx when missing."
+  [base-state service-name]
   (let [realm (get base-state :realm :test)
-        store-keys [:event-store :identity-store :command-store :aggregate-store
+        store-keys [:event-store :identity-store :command-store :aggregate-store :aggregate-history
                     :response-log :command-log :request-error-log]
         top-level-stores (select-keys base-state store-keys)
+        top-level-stores (if (and service-name (:identity-store top-level-stores))
+                           (update top-level-stores :identity-store
+                                   (fn [ids]
+                                     (mapv #(if (:service-name %)
+                                              %
+                                              (assoc % :service-name service-name))
+                                           ids)))
+                           top-level-stores)
         existing-realm-stores (get-in base-state [:realms realm] {})
         merged-realm-stores (merge existing-realm-stores top-level-stores)
         clean-base-state (apply dissoc base-state store-keys)]
@@ -159,7 +179,7 @@
                               default-db
                               (dissoc (first body) :seed))
                              default-db)))]
-        (binding [*dal-state* (atom (create-realm-partitioned-state base-state#))
+        (binding [*dal-state* (atom (create-realm-partitioned-state base-state# (:service-name ctx)))
                   *queues* {:command-queue (atom [])
                             :seed          ~(if (and (map? (first body)) (:seed (first body)))
                                               (:seed (first body))
@@ -184,14 +204,17 @@
      (verify-state :event-store [{:event-id :foo :id ...}])
      (verify-state [{:event-id :foo}] :event-store)"
   [x & [y]]
-  `(if (keyword? ~y)
-     (is (= ~x (into [] (dal-state-accessor @*dal-state* ~y))))
-     (is (= ~y (into [] (dal-state-accessor @*dal-state* ~x))))))
+  `(let [x# ~x
+         y# ~y
+         [expected# actual#] (if (keyword? y#)
+                               [x# (into [] (dal-state-accessor @*dal-state* y#))]
+                               [y# (into [] (dal-state-accessor @*dal-state* x#))])]
+     (is (= expected# actual#))))
 
 (defmacro verify-state-fn [x fn y]
-  `(is (= ~y (mapv
-              ~fn
-              (dal-state-accessor @*dal-state* ~x)))))
+  `(let [expected# ~y
+         actual# (mapv ~fn (dal-state-accessor @*dal-state* ~x))]
+     (is (= expected# actual#))))
 
 (defn pop-state
   "Retrieves and clears realm-scoped store."
@@ -242,25 +265,23 @@
 
       (if include-meta
         resp
-        (do
-          (if no-summary
-            (do
-              (-> resp
-                  (update :events #(map
-                                    (fn [event]
-                                      (dissoc event
-                                              :request-id
-                                              :interaction-id
-                                              :meta))
-                                    %))
-                  (update :effects #(map
-                                     (fn [cmd]
-                                       (dissoc cmd
-                                               :request-id
-                                               :interaction-id
-                                               :meta))
-                                     %))))
-            resp))))
+        (if no-summary
+          (-> resp
+              (update :events #(map
+                                (fn [event]
+                                  (dissoc event
+                                          :request-id
+                                          :interaction-id
+                                          :meta))
+                                %))
+              (update :effects #(map
+                                 (fn [cmd]
+                                   (dissoc cmd
+                                           :request-id
+                                           :interaction-id
+                                           :meta))
+                                 %)))
+          resp)))
     (catch Exception ex
       (log/error "CMD execution ERROR" ex)
       (ex-data ex))))
@@ -279,7 +300,8 @@
     (doseq [id (distinct (map :id (:events resp)))]
       (event/handle-event (assoc ctx
                                  :apply {:aggregate-id id
-                                         :meta         (:meta ctx {})})))))
+                                         :meta         (:meta ctx {})})))
+    resp))
 
 (defn execute-fx [ctx]
   (doall
@@ -316,3 +338,17 @@
   (if (contains? query :query)
     (query/handle-query ctx (re-parse query))
     (query/handle-query ctx (re-parse {:query query}))))
+
+(defn get-by-id
+  "Retrieves aggregate by ID using event sourcing (replays events).
+   
+   Usage:
+     (mock/get-by-id ctx {:id #uuid \"...\"})
+     (mock/get-by-id ctx #uuid \"...\")
+   
+   Returns the aggregate map or nil if not found."
+  [ctx id-or-query]
+  (let [id (if (uuid? id-or-query)
+             id-or-query
+             (:id id-or-query))]
+    (common/get-by-id ctx {:id id})))

@@ -1,5 +1,5 @@
 (ns batch.csv-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is]]
             [clojure.java.io :as io]
             [batch.csv :as csv]
             [lambda.util :as util]))

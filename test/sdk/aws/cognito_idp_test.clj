@@ -1,5 +1,5 @@
 (ns sdk.aws.cognito-idp-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is]]
             [lambda.util-test :as util-test]
             [lambda.test.fixture.client :as client]
             [lambda.util :as util]

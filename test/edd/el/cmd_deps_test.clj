@@ -1,9 +1,8 @@
 (ns edd.el.cmd-deps-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is testing]]
             [lambda.util :as util]
             [edd.el.cmd :as cmd]
             [edd.el.query :as el-query]
-            [edd.dal :as dal]
             [edd.common :as common]
             [edd.core :as edd]
             [lambda.test.fixture.client :as client]
@@ -22,8 +21,11 @@
 
 (deftest test-prepare-context-for-command-with-remote-query
   (testing "Test if context if properly prepared for remote queries"
-    (with-redefs [util/get-env (fn [v]
-                                 (get {"PrivateHostedZoneName" "mock.com"} v))]
+    (with-redefs [util/get-env (fn
+                                 ([v]
+                                  (get {"PrivateHostedZoneName" "mock.com"} v))
+                                 ([v default]
+                                  (or (get {"PrivateHostedZoneName" "mock.com"} v) default)))]
       (let [meta {:realm :realm3}]
         (mock/with-mock-dal
           {:deps [{:service        :remote-svc
@@ -44,7 +46,10 @@
                                                                 {:param (:value cmd)
                                                                  :query-id :some-query-id})
                                                      :service :remote-svc}}})
-                        (assoc :meta meta
+                        (assoc :service-name :local-test
+                               :hosted-zone-name "example.com"
+                               :environment-name-lower "local"
+                               :meta meta
                                :request-id request-id
                                :interaction-id interaction-id)
                         (event-store/register))
@@ -74,7 +79,7 @@
              :interaction-id interaction-id
              :meta           meta}]
     (binding [request/*request* (atom {:scoped true})]
-      (with-redefs [aws/get-token (fn [ctx] "#id-token")
+      (with-redefs [aws/get-token (fn [_ctx] "#id-token")
                     util/get-env (fn [v]
                                    (get {"PrivateHostedZoneName" "mock.com"} v))]
         (client/mock-http
@@ -84,15 +89,15 @@
                 (cmd/resolve-remote-dependency
                  ctx
                  {}
-                 {:query   (fn [_ cmd] {:a :b
-                                        :query-id :some-query-id})
+                 {:query   (fn [_ctx _cmd] {:a :b
+                                            :query-id :some-query-id})
                   :service :some-remote-service})))
          (is (= {:a :b}
                 (cmd/resolve-remote-dependency
                  ctx
                  {}
-                 {:query   (fn [_ cmd] {:a :b
-                                        :query-id :some-query-id})
+                 {:query   (fn [_ctx _cmd] {:a :b
+                                            :query-id :some-query-id})
                   :service :some-remote-service})))
          (client/verify-traffic [{:body            (util/to-json
                                                     {:query          {:a :b
@@ -114,7 +119,7 @@ and return nil to enable query-fn to have when conditions based on previously re
           ctx {:request-id     request-id
                :interaction-id interaction-id
                :meta           meta}]
-      (with-redefs [aws/get-token (fn [ctx] "#id-token")
+      (with-redefs [aws/get-token (fn [_ctx] "#id-token")
                     util/get-env (fn [v]
                                    (get {"PrivateHostedZoneName" "mock.com"} v))]
         (client/mock-http
@@ -124,7 +129,7 @@ and return nil to enable query-fn to have when conditions based on previously re
                 (cmd/resolve-remote-dependency
                  ctx
                  {}
-                 {:query   (fn [_ cmd] nil)
+                 {:query   (fn [_ctx _cmd] nil)
                   :service :some-remote-service})))
          (client/verify-traffic []))))))
 
@@ -159,12 +164,12 @@ and return nil to enable query-fn to have when conditions based on previously re
                                            (:facility ctx)))
                                     {:event-id :event-1
                                      :value    (:value cmd)})
-                           :id-fn (fn [ctx cmd]
+                           :id-fn (fn [ctx _cmd]
                                     (is (= {:some :values}
                                            (:facility ctx)))
                                     cmd-id-1)
                            :deps {:facility (fn [_ _] {:query-id :query-1})})
-          ctx (edd/reg-fx ctx (fn [ctx [event]]
+          ctx (edd/reg-fx ctx (fn [ctx [_event]]
                                 (is (= {:some :values}
                                        (:facility ctx)))
                                 []))
@@ -190,13 +195,13 @@ and return nil to enable query-fn to have when conditions based on previously re
                                            (:facility ctx)))
                                     {:event-id :event-1
                                      :value    (:value cmd)})
-                           :id-fn (fn [ctx cmd]
+                           :id-fn (fn [ctx _cmd]
                                     (is (= nil
                                            (:facility ctx)))
                                     cmd-id-1)
                            :deps {:facility {:service :some-service
                                              :query   (fn [_ _] {:query-id :query-1})}})
-          ctx (edd/reg-fx ctx (fn [ctx [event]]
+          ctx (edd/reg-fx ctx (fn [ctx [_event]]
                                 (is (= nil
                                        (:facility ctx)))
                                 []))
@@ -224,7 +229,7 @@ and return nil to enable query-fn to have when conditions based on previously re
                                      :value    (:value cmd)})
                            :deps {:facility {:service :some-service
                                              :query   (fn [_ _] {:query-id :query-1})}})
-          ctx (edd/reg-fx ctx (fn [ctx [event]]
+          ctx (edd/reg-fx ctx (fn [ctx [_event]]
                                 (is (= nil
                                        (:facility ctx)))
                                 []))
@@ -233,12 +238,12 @@ and return nil to enable query-fn to have when conditions based on previously re
                                         (throw (RuntimeException. "Bla"))))]
       (mock/with-mock-dal
         (with-redefs  [el-query/-http-call
-                       (fn [ctx {:keys [service query]}]
+                       (fn [_ctx {:keys [_service _query]}]
                          {:status 200
                           :body  {:exception "Sorry"}})]
           (is (= {:exception
                   {:to-service :some-service
-                   :from-service nil
+                   :from-service :local-test
                    :query-id :query-1
                    :ref nil
                    :message
@@ -270,7 +275,7 @@ and return nil to enable query-fn to have when conditions based on previously re
                                      :value    (:value cmd)})
                            :deps {:facility {:service :some-service
                                              :query   (fn [_ _] {:query-id :query-1})}})
-          ctx (edd/reg-fx ctx (fn [ctx [event]]
+          ctx (edd/reg-fx ctx (fn [ctx [_event]]
                                 (is (= nil
                                        (:facility ctx)))
                                 []))
@@ -321,17 +326,17 @@ and return nil to enable query-fn to have when conditions based on previously re
    :id     cmd-id-2})
 
 (def ctx (-> mock/ctx
-             (edd/reg-query :query-1 (fn [ctx query]
+             (edd/reg-query :query-1 (fn [_ctx query]
                                        (get
                                         cmd-1-deps
                                         (:id query))))
-             (edd/reg-cmd :cmd-1 (fn [ctx cmd]
+             (edd/reg-cmd :cmd-1 (fn [_ctx cmd]
                                    {:event-id :event-1
                                     :value    (:value cmd)})
                           :deps {:c1 (fn [_ cmd] {:query-id :query-1
                                                   :id       (:id cmd)})
                                  :c2 (fn [_ _] nil)}
-                          :id-fn (fn [ctx cmd]
+                          :id-fn (fn [ctx _cmd]
                                    (get-in ctx [:c1 :id])))))
 
 (deftest test-id-fn-integration
@@ -346,12 +351,10 @@ and return nil to enable query-fn to have when conditions based on previously re
       (mock/verify-state :event-store [{:event-id  :event-1
                                         :event-seq 1
                                         :value     :1
-                                        :meta      {}
                                         :id        cmd-id-deps}
                                        {:event-id  :event-1
                                         :event-seq 1
                                         :value     :2
-                                        :meta      {}
                                         :id        cmd-id-2}]))))
 
 (deftest test-id-fn
@@ -374,112 +377,121 @@ and return nil to enable query-fn to have when conditions based on previously re
                                        :value    (:value cmd)})
                              :deps {:c1 (fn [_ cmd] {:query-id :query-1
                                                      :id       (:id cmd)})}
-                             :id-fn (fn [ctx cmd]
+                             :id-fn (fn [ctx _cmd]
                                       (get-in ctx [:c1 :id])))
-                (edd/reg-fx (fn [ctx [event]]
+                (edd/reg-fx (fn [_ctx [event]]
                               (if (= :1 (:value event))
                                 (is (= cmd-id-deps
                                        (:id event)))
                                 (is (= cmd-id-2
                                        (:id event))))
-                              [])))]
-    (let [current-events [{:event-id  :event-1
-                           :event-seq 4
-                           :value     :2
-                           :meta      {:realm :realm2}  ; Match the realm of commands
-                           :id        cmd-id-2}]]
-      (mock/with-mock-dal
-        {:event-store current-events
-         :realm :realm2}  ; Set default realm to :realm2
+                              [])))
 
-        (mock/handle-cmd ctx
-                         {:meta     {:realm :realm2}
-                          :commands [{:cmd-id :cmd-1
-                                      :value  :1
-                                      :id     cmd-id-1}
-                                     {:cmd-id  :cmd-1
-                                      :value   :2
-                                      :id      cmd-id-2
-                                      :version 4}]})
+        current-events
+        [{:event-id  :event-1
+          :event-seq 4
+          :value     :2
+          :meta      {:realm :realm2}  ; Match the realm of commands
+          :id        cmd-id-2}]]
+    (mock/with-mock-dal
+      {:event-store current-events
+       :realm :realm2
+       :keep-meta true}  ; Keep meta for multi-realm test
+
+      (mock/handle-cmd ctx
+                       {:meta     {:realm :realm2}
+                        :commands [{:cmd-id :cmd-1
+                                    :value  :1
+                                    :id     cmd-id-1}
+                                   {:cmd-id  :cmd-1
+                                    :value   :2
+                                    :id      cmd-id-2
+                                    :version 4}]})
         ;; Check :realm2 since commands are processed there
-        (is (= [{:event-id  :event-1
-                 :event-seq 1
-                 :value     :1
-                 :meta      {:realm :realm2}
-                 :id        cmd-id-deps}
-                {:event-id  :event-1
-                 :event-seq 4
-                 :value     :2
-                 :meta      {:realm :realm2}
-                 :id        cmd-id-2}
-                {:event-id  :event-1
-                 :event-seq 5
-                 :value     :2
-                 :meta      {:realm :realm2}
-                 :id        cmd-id-2}]
-               (into [] (mock/dal-state-accessor
-                         (assoc @state/*dal-state* :realm :realm2)
-                         :event-store)))))
-      (mock/with-mock-dal
-        {:event-store current-events
-         :realm :realm2}  ; Set default realm to :realm2
+      (is (= [{:event-id  :event-1
+               :event-seq 1
+               :value     :1
+               :meta      {:realm :realm2}
+               :id        cmd-id-deps}
+              {:event-id  :event-1
+               :event-seq 4
+               :value     :2
+               :meta      {:realm :realm2}
+               :id        cmd-id-2}
+              {:event-id  :event-1
+               :event-seq 5
+               :value     :2
+               :meta      {:realm :realm2}
+               :id        cmd-id-2}]
+             (into [] (mock/dal-state-accessor
+                       (assoc @state/*dal-state* :realm :realm2)
+                       :event-store)))))
+    (mock/with-mock-dal
+      {:event-store current-events
+       :realm :realm2
+       :keep-meta true}  ; Keep meta for multi-realm test
 
-        (is (= {:error   :concurrent-modification
-                :message "Version mismatch"
-                :state   {:current 4
-                          :version 6}}
-               (mock/handle-cmd ctx
-                                {:meta     {:realm :realm2}
-                                 :commands [{:cmd-id  :cmd-1
-                                             :value   :2
-                                             :id      cmd-id-2
-                                             :version 6}]})))))))
+      (is (= {:error   :concurrent-modification
+              :message "Version mismatch"
+              :state   {:current 4
+                        :version 6}}
+             (mock/handle-cmd ctx
+                              {:meta     {:realm :realm2}
+                               :commands [{:cmd-id  :cmd-1
+                                           :value   :2
+                                           :id      cmd-id-2
+                                           :version 6}]}))))))
 
 (deftest test-dependencies-vector
-  "Test if context is properly prepared for remote queries"
-  (with-redefs [util/get-env (fn [v]
-                               (get {"PrivateHostedZoneName" "mock.com"} v))]
-    (mock/with-mock-dal
-      {:deps [{:service        :remote-svc
-               :request-id     request-id
-               :interaction-id interaction-id
-               :query          {:param "Some Value"
-                                :query-id :some-query-id}
-               :resp           {:remote :response}}]}
-      (let [meta {:realm :realm5}
-            ctx (-> {:meta           meta
-                     :request-id     request-id
-                     :interaction-id interaction-id}
-                    (edd/reg-cmd :test-cmd (fn [ctx cmd]
-                                             {:event-id :event-1
-                                              :value    (:value cmd)})
-                                 :deps [:test-value {:query   (fn [_ cmd]
-                                                                {:param (:value cmd)
-                                                                 :query-id :some-query-id})
-                                                     :service :remote-svc}]
-                                 :id-fn (fn [ctx cmd]
-                                          (get-in ctx [:c1 :id]))))
-            ctx (cmd/fetch-dependencies-for-command
-                 ctx
-                 {:cmd-id :test-cmd
-                  :id     cmd-id
-                  :value  "Some Value"})]
-        (is (= {:test-value
-                {:remote :response}}
-               (select-keys ctx [:test-value])))
+  (testing
+   "Test if context is properly prepared for remote queries"
+    (with-redefs [util/get-env (fn
+                                 ([v]
+                                  (get {"PrivateHostedZoneName" "mock.com"} v))
+                                 ([v default]
+                                  (or (get {"PrivateHostedZoneName" "mock.com"} v) default)))]
+      (mock/with-mock-dal
+        {:deps [{:service        :remote-svc
+                 :request-id     request-id
+                 :interaction-id interaction-id
+                 :meta           {:realm :realm5}
+                 :query          {:param "Some Value"
+                                  :query-id :some-query-id}
+                 :resp           {:remote :response}}]}
+        (let [meta {:realm :realm5}
+              ctx (-> {:meta           meta
+                       :request-id     request-id
+                       :interaction-id interaction-id}
+                      (edd/reg-cmd :test-cmd (fn [_ctx cmd]
+                                               {:event-id :event-1
+                                                :value    (:value cmd)})
+                                   :deps [:test-value {:query   (fn [_ cmd]
+                                                                  {:param (:value cmd)
+                                                                   :query-id :some-query-id})
+                                                       :service :remote-svc}]
+                                   :id-fn (fn [ctx _cmd]
+                                            (get-in ctx [:c1 :id]))))
+              ctx (cmd/fetch-dependencies-for-command
+                   ctx
+                   {:cmd-id :test-cmd
+                    :id     cmd-id
+                    :value  "Some Value"})]
+          (is (= {:test-value
+                  {:remote :response}}
+                 (select-keys ctx [:test-value])))
 
-        (client/verify-traffic [{:body            (util/to-json
-                                                   {:query          {:param "Some Value"
-                                                                     :query-id :some-query-id}
-                                                    :meta           meta
-                                                    :request-id     request-id
-                                                    :interaction-id interaction-id})
-                                 :headers         {"X-Authorization" "#mock-id-token"
-                                                   "Content-Type"    "application/json"}
-                                 :method          :post
-                                 :idle-timeout    10000
-                                 :connect-timeout 300
-                                 :url             (el-query/calc-service-query-url "remote-svc"  meta)}])))))
+          (client/verify-traffic [{:body            (util/to-json
+                                                     {:query          {:param "Some Value"
+                                                                       :query-id :some-query-id}
+                                                      :meta           meta
+                                                      :request-id     request-id
+                                                      :interaction-id interaction-id})
+                                   :headers         {"X-Authorization" "#mock-id-token"
+                                                     "Content-Type"    "application/json"}
+                                   :method          :post
+                                   :idle-timeout    10000
+                                   :connect-timeout 300
+                                   :url             (el-query/calc-service-query-url "remote-svc"  meta)}]))))))
 
 (deftest dependant-deps
   (let [current-aggregate {:id      cmd-id-1
@@ -491,7 +503,7 @@ and return nil to enable query-fn to have when conditions based on previously re
                                            p
                                            :v0 (:value e))))
                 (edd/reg-query :get-by-id common/get-by-id)
-                (edd/reg-query :query-1 (fn [ctx query]
+                (edd/reg-query :query-1 (fn [_ctx query]
                                           (is (= {:id       cmd-id-1
                                                   :query-id :query-1
                                                   :c1       current-aggregate}
@@ -509,30 +521,27 @@ and return nil to enable query-fn to have when conditions based on previously re
                                           (is (nil? (:c1 cmd)))
                                           {:query-id :query-1
                                            :c1       c1
-                                           :id       (:id cmd)})]))]
-    (let [current-events [{:event-id  :event-0
-                           :event-seq 4
-                           :value     :0
-                           :meta      {}
-                           :id        cmd-id-1}]]
-      (mock/with-mock-dal
-        {:event-store current-events}
+                                           :id       (:id cmd)})]))
+        current-events [{:event-id  :event-0
+                         :event-seq 4
+                         :value     :0
+                         :id        cmd-id-1}]]
+    (mock/with-mock-dal
+      {:event-store current-events}
 
-        (mock/handle-cmd ctx {:commands [{:cmd-id :cmd-1
-                                          :value  :2
-                                          :id     cmd-id-1}]})
-        (mock/verify-state :event-store [{:event-id  :event-0
-                                          :event-seq 4
-                                          :value     :0
-                                          :meta      {}
-                                          :id        cmd-id-1}
-                                         {:event-id  :event-1
-                                          :event-seq 5
-                                          :value     :2
-                                          :meta      {}
-                                          :c1        current-aggregate
-                                          :c2        {:value :v1}
-                                          :id        cmd-id-1}])))))
+      (mock/handle-cmd ctx {:commands [{:cmd-id :cmd-1
+                                        :value  :2
+                                        :id     cmd-id-1}]})
+      (mock/verify-state :event-store [{:event-id  :event-0
+                                        :event-seq 4
+                                        :value     :0
+                                        :id        cmd-id-1}
+                                       {:event-id  :event-1
+                                        :event-seq 5
+                                        :value     :2
+                                        :c1        current-aggregate
+                                        :c2        {:value :v1}
+                                        :id        cmd-id-1}]))))
 
 (deftest dps->deps
   (let [current-aggregate {:id      cmd-id-1
@@ -544,7 +553,7 @@ and return nil to enable query-fn to have when conditions based on previously re
                                            p
                                            :v0 (:value e))))
                 (edd/reg-query :get-by-id common/get-by-id)
-                (edd/reg-query :query-1 (fn [ctx query]
+                (edd/reg-query :query-1 (fn [_ctx query]
                                           (is (= {:id       cmd-id-1
                                                   :query-id :query-1
                                                   :c1       current-aggregate}
@@ -561,30 +570,27 @@ and return nil to enable query-fn to have when conditions based on previously re
                                           (is (not= nil c1))
                                           {:query-id :query-1
                                            :c1       c1
-                                           :id       (:id cmd)})]))]
-    (let [current-events [{:event-id  :event-0
-                           :event-seq 4
-                           :value     :0
-                           :meta      {}
-                           :id        cmd-id-1}]]
-      (mock/with-mock-dal
-        {:event-store current-events}
+                                           :id       (:id cmd)})]))
+        current-events [{:event-id  :event-0
+                         :event-seq 4
+                         :value     :0
+                         :id        cmd-id-1}]]
+    (mock/with-mock-dal
+      {:event-store current-events}
 
-        (mock/handle-cmd ctx {:commands [{:cmd-id :cmd-1
-                                          :value  :2
-                                          :id     cmd-id-1}]})
-        (mock/verify-state :event-store [{:event-id  :event-0
-                                          :event-seq 4
-                                          :value     :0
-                                          :meta      {}
-                                          :id        cmd-id-1}
-                                         {:event-id  :event-1
-                                          :event-seq 5
-                                          :value     :2
-                                          :meta      {}
-                                          :c1        current-aggregate
-                                          :c2        {:value :v1}
-                                          :id        cmd-id-1}])))))
+      (mock/handle-cmd ctx {:commands [{:cmd-id :cmd-1
+                                        :value  :2
+                                        :id     cmd-id-1}]})
+      (mock/verify-state :event-store [{:event-id  :event-0
+                                        :event-seq 4
+                                        :value     :0
+                                        :id        cmd-id-1}
+                                       {:event-id  :event-1
+                                        :event-seq 5
+                                        :value     :2
+                                        :c1        current-aggregate
+                                        :c2        {:value :v1}
+                                        :id        cmd-id-1}]))))
 
 (deftest test-encoding
   (is (= "%C3%96VK"
@@ -640,7 +646,6 @@ and return nil to enable query-fn to have when conditions based on previously re
       (mock/verify-state :event-store [{:event-id  :event-1
                                         :event-seq 1
                                         :id        cmd-id-1
-                                        :meta      {}
                                         :value     {:first-name "Edd-1"}}])
       (mock/apply-cmd ctx {:commands [{:cmd-id     :cmd-2
                                        :first-name "Edd-2"

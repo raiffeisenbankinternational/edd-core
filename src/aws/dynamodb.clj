@@ -38,31 +38,30 @@
              :region     (:region aws)
              :access-key (:aws-access-key-id aws)
              :secret-key (:aws-secret-access-key aws)}
-        auth (common/authorize req)]
-
-    (let [response (common/retry
-                    #(util/http-post
-                      (str "https://" (get (:headers req) "Host") "/")
-                      {:body    (:payload req)
-                       :headers (-> (:headers req)
-                                    (dissoc "Host")
-                                    (assoc "Authorization" auth))
-                       :timeout 5000})
-                    3)
-          status (long (:status response))]
-      (when (contains? response :error)
-        (throw (ex-info "Invocation error" (:error response))))
-      (when (> status 399)
-        (let [error-body (:body response)
-              is-not-found? (and (map? error-body)
-                                 (= (:__type error-body) "com.amazonaws.dynamodb.v20120810#ResourceNotFoundException"))
-              error-msg (if (and is-not-found? (seq table-names))
-                          (str "Invocation error (table(s): " (string/join ", " table-names) ")")
-                          "Invocation error")]
-          (when (and is-not-found? (seq table-names))
-            (log/error "DynamoDB table(s) not found:" (string/join ", " table-names)))
-          (throw (ex-info error-msg error-body))))
-      (:body response))))
+        auth (common/authorize req)
+        response (common/retry
+                  #(util/http-post
+                    (str "https://" (get (:headers req) "Host") "/")
+                    {:body    (:payload req)
+                     :headers (-> (:headers req)
+                                  (dissoc "Host")
+                                  (assoc "Authorization" auth))
+                     :timeout 5000})
+                  3)
+        status (long (:status response))]
+    (when (contains? response :error)
+      (throw (ex-info "Invocation error" (:error response))))
+    (when (> status 399)
+      (let [error-body (:body response)
+            is-not-found? (and (map? error-body)
+                               (= (:__type error-body) "com.amazonaws.dynamodb.v20120810#ResourceNotFoundException"))
+            error-msg (if (and is-not-found? (seq table-names))
+                        (str "Invocation error (table(s): " (string/join ", " table-names) ")")
+                        "Invocation error")]
+        (when (and is-not-found? (seq table-names))
+          (log/error "DynamoDB table(s) not found:" (string/join ", " table-names)))
+        (throw (ex-info error-msg error-body))))
+    (:body response)))
 
 (defn list-tables
   [ctx]

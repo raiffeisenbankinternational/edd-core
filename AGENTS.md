@@ -1,5 +1,12 @@
 # EDD-Core CQRS & Event Sourcing - LLM Implementation Guide
 
+*** IMPORTANT NOTES ****
+
+- When I say to write/update PLAN.md do not start implementation ever
+- When you write plan in .opencode/plans then after summary tell me "Plan written in {}"
+- Do not event do migrations in docker-compose.ymal. We do them in pre-build.sh 
+- If there is any change in test/doc you have to ask me to confirm. This is our external API
+
 EDD-Core is a Clojure library for building event-sourced CQRS APIs. This guide provides everything needed to implement services using this architecture.
 
 ## Core Architecture

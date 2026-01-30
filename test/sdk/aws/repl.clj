@@ -1,5 +1,5 @@
 (ns sdk.aws.repl
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is]]
             [sdk.aws.cognito-idp :as cognito-idp]
             [lambda.util :as util]))
 

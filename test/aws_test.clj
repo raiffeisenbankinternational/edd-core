@@ -1,10 +1,9 @@
 (ns aws-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is]]
             [lambda.util :as utils]
             [aws.aws :as aws]
             [lambda.util-test :as util-test]
             [lambda.test.fixture.client :as client]
-            [lambda.util :as util]
             [sdk.aws.common :as common])
   (:import (clojure.lang ExceptionInfo)))
 
@@ -40,75 +39,73 @@
    :connect-timeout 300
    :url             "https://cognito-idp.eu-central-1.amazonaws.com"})
 
-(def auth-success-response)
-
 (deftest test-cognito-admin-auth
   (with-redefs [utils/get-env (fn [e] (get env e))
                 common/create-date (fn [] "20200504T080055Z")]
     (client/mock-http
      [{:post   "https://cognito-idp.eu-central-1.amazonaws.com"
        :status 200
-       :body   (util/to-json {:AuthenticationResult
-                              {:RefreshToken "refresh-token"
-                               :AccessToken  "access-token"
-                               :ExpiresIn    3600
-                               :TokenType    "Bearer"
-                               :IdToken      id-token}
-                              :ChallengeParameters {}})}]
+       :body   (utils/to-json {:AuthenticationResult
+                               {:RefreshToken "refresh-token"
+                                :AccessToken  "access-token"
+                                :ExpiresIn    3600
+                                :TokenType    "Bearer"
+                                :IdToken      id-token}
+                               :ChallengeParameters {}})}]
      (is (= id-token
             (aws/admin-auth ctx)))
      (client/verify-traffic
       [login-request]))))
 
 (deftest get-token-test
-  (binding [util/*cache* (atom {})]
+  (binding [utils/*cache* (atom {})]
     (with-redefs [utils/get-env (fn [e] (get env e))
                   common/create-date (fn [] "20200504T080055Z")]
       (client/mock-http
        [{:post   "https://cognito-idp.eu-central-1.amazonaws.com"
          :status 200
-         :body   (util/to-json {:AuthenticationResult
-                                {:RefreshToken "refres-token"
-                                 :AccessToken  "access-token"
-                                 :ExpiresIn    3600
-                                 :TokenType    "Bearer"
-                                 :IdToken      id-token}
-                                :ChallengeParameters {}})}
+         :body   (utils/to-json {:AuthenticationResult
+                                 {:RefreshToken "refres-token"
+                                  :AccessToken  "access-token"
+                                  :ExpiresIn    3600
+                                  :TokenType    "Bearer"
+                                  :IdToken      id-token}
+                                 :ChallengeParameters {}})}
         {:post   "https://cognito-idp.eu-central-1.amazonaws.com"
          :status 200
-         :body   (util/to-json {:AuthenticationResult
-                                {:RefreshToken "refresh-token"
-                                 :AccessToken  "access-token"
-                                 :ExpiresIn    3600
-                                 :TokenType    "Bearer"
-                                 :IdToken      id-token}
-                                :ChallengeParameters {}})}]
+         :body   (utils/to-json {:AuthenticationResult
+                                 {:RefreshToken "refresh-token"
+                                  :AccessToken  "access-token"
+                                  :ExpiresIn    3600
+                                  :TokenType    "Bearer"
+                                  :IdToken      id-token}
+                                 :ChallengeParameters {}})}]
        (is (= id-token
               (aws/get-token ctx)))
        ;; When this test fails on Wed Nov 13 2069 16:49:19 GMT+0100 i expect beer (as long as I still live)
-       (with-redefs [util/get-current-time-ms (fn [] 3151583359900)]
+       (with-redefs [utils/get-current-time-ms (fn [] 3151583359900)]
          (is (= id-token
                 (aws/get-token ctx))))
        (client/verify-traffic [login-request
                                login-request])))))
 
 (deftest get-token-error-test
-  (binding [util/*cache* (atom {})]
+  (binding [utils/*cache* (atom {})]
     (with-redefs [utils/get-env (fn [e] (get env e))
                   common/create-date (fn [] "20200504T080055Z")]
       (client/mock-http
        [{:post   "https://cognito-idp.eu-central-1.amazonaws.com"
          :status 400
-         :body   (util/to-json {:message "Failed miserably"})}
+         :body   (utils/to-json {:message "Failed miserably"})}
         {:post   "https://cognito-idp.eu-central-1.amazonaws.com"
          :status 200
-         :body   (util/to-json {:AuthenticationResult
-                                {:RefreshToken "refresh-token"
-                                 :AccessToken  "access-token"
-                                 :ExpiresIn    3600
-                                 :TokenType    "Bearer"
-                                 :IdToken      id-token}
-                                :ChallengeParameters {}})}]
+         :body   (utils/to-json {:AuthenticationResult
+                                 {:RefreshToken "refresh-token"
+                                  :AccessToken  "access-token"
+                                  :ExpiresIn    3600
+                                  :TokenType    "Bearer"
+                                  :IdToken      id-token}
+                                 :ChallengeParameters {}})}]
 
        (is (= id-token
               (aws/get-token ctx)))
@@ -119,31 +116,31 @@
                                login-request])))))
 
 (deftest get-token-error-multiple-requests-test
-  (binding [util/*cache* (atom {})]
+  (binding [utils/*cache* (atom {})]
     (with-redefs [utils/get-env (fn [e] (get env e))
                   common/create-date (fn [] "20200504T080055Z")]
       (client/mock-http
        [{:post   "https://cognito-idp.eu-central-1.amazonaws.com"
          :status 400
-         :body   (util/to-json {:message "Failed miserably"})}
+         :body   (utils/to-json {:message "Failed miserably"})}
         {:post   "https://cognito-idp.eu-central-1.amazonaws.com"
          :status 400
-         :body   (util/to-json {:message "Failed miserably"})}
+         :body   (utils/to-json {:message "Failed miserably"})}
         {:post   "https://cognito-idp.eu-central-1.amazonaws.com"
          :status 400
-         :body   (util/to-json {:message "Failed miserably"})}
+         :body   (utils/to-json {:message "Failed miserably"})}
         {:post   "https://cognito-idp.eu-central-1.amazonaws.com"
          :status 400
-         :body   (util/to-json {:message "Failed miserably"})}
+         :body   (utils/to-json {:message "Failed miserably"})}
         {:post   "https://cognito-idp.eu-central-1.amazonaws.com"
          :status 200
-         :body   (util/to-json {:AuthenticationResult
-                                {:RefreshToken "refresh-token"
-                                 :AccessToken  "access-token"
-                                 :ExpiresIn    3600
-                                 :TokenType    "Bearer"
-                                 :IdToken      id-token}
-                                :ChallengeParameters {}})}]
+         :body   (utils/to-json {:AuthenticationResult
+                                 {:RefreshToken "refresh-token"
+                                  :AccessToken  "access-token"
+                                  :ExpiresIn    3600
+                                  :TokenType    "Bearer"
+                                  :IdToken      id-token}
+                                 :ChallengeParameters {}})}]
 
        (is (thrown? ExceptionInfo
                     (aws/get-token ctx)))
@@ -162,20 +159,20 @@
                                login-request])))))
 
 (deftest test-adding-to-cache
-  (with-redefs [util/get-current-time-ms (fn [] 1600348559351)]
+  (with-redefs [utils/get-current-time-ms (fn [] 1600348559351)]
     (is (= {:k1   "ski"
             :meta {:k1 {:time 1600348559351}}}
            (aws/get-or-set {} :k1 (fn [] "ski"))))))
 
 (deftest test-old-value-if-not-expired
-  (with-redefs [util/get-current-time-ms (fn [] 1600348559351)]
+  (with-redefs [utils/get-current-time-ms (fn [] 1600348559351)]
     (let [cache {:k1   "ski"
                  :meta {:k1 {:time 1600348559351}}}]
       (is (= cache
              (aws/get-or-set cache :k1 (fn [] "sk2")))))))
 
 (deftest test-new-value-if-expired
-  (with-redefs [util/get-current-time-ms (fn [] 1610348559351)]
+  (with-redefs [utils/get-current-time-ms (fn [] 1610348559351)]
     (let [cache {:k1   "ski"
                  :meta {:k1 {:time 1600348559351}}}]
       (is (= {:k1   "sk2"

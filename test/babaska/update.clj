@@ -1,6 +1,7 @@
 (ns babaska.update
-  (:require [clojure.test :refer :all]
-            [clojure.java.io :as io]))
+  (:require [clojure.test :refer [deftest is]]
+            [clojure.java.io :as io]
+            [clojure.pprint :refer [pprint]]))
 
 (defn convert
   [file]
@@ -51,4 +52,4 @@
             deps
             aliases)]
   (spit "deps.edn" (with-out-str
-                     (clojure.pprint/pprint deps))))
+                     (pprint deps))))

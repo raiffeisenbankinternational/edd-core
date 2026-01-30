@@ -1,5 +1,4 @@
-(ns doc.edd.ctx
-  (:require [clojure.test :refer :all]))
+(ns doc.edd.ctx)
 
 (comment "Context is a map used to contain system configuration,
           handler, request and response values"

@@ -171,7 +171,7 @@
   {\"IndexDomainEndpoint\"   \"vpc-dev16-glms-index-svc-es-v9-4w5uux57ttvsqf6pvetl2jg4rm.eu-central-1.es.amazonaws.com\"
    \"DatabaseEndpoint\"      \"dev16-glms-health-db-v11.c0srqkcf6umv.eu-central-1.rds.amazonaws.com\"
    \"EnvironmentNameLower\"  \"dev16\"
-   \"ServiceName\"           \"glms-limit-lifecycle-svc\"
+   \"ResourceName\"          \"glms-limit-lifecycle-svc\"
    \"Region\"                \"eu-central-1\"
    \"AccountId\"             \"419951837664\"
    \"AWS_ACCESS_KEY_ID\"     \"PLACEHOLDER\"

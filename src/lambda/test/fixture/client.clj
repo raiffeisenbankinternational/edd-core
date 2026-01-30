@@ -62,8 +62,8 @@
                     req)]
     (swap! *world*
            #(update % :traffic
-                    (fn [v]
-                      (conj v clean-req))))))
+                    (fnil conj [])
+                    clean-req))))
 
 (defn remove-at
   [coll idx]

@@ -1,6 +1,5 @@
 (ns edd.test.fixture.execution
   (:require [edd.test.fixture.dal :as f]
-            [edd.el.cmd :as cmd]
             [edd.el.event :as event]
             [edd.memory.event-store :as event-store]
             [clojure.tools.logging :as log]))
@@ -22,12 +21,13 @@
     (log/info "apply-cmd returned" resp)
     (doseq [id (distinct (map :id (:events resp)))]
       (event/handle-event (assoc ctx
-                                 :apply {:aggregate-id id})))
+                                 :apply {:aggregate-id id
+                                         :meta (:meta ctx)})))
     resp))
 
 (defn process-next!
   [ctx]
-  (if-let [cmd (event-store/peek-cmd!)]
+  (when-let [cmd (event-store/peek-cmd!)]
     (process-cmd-response! ctx cmd)))
 
 (defn process-all!

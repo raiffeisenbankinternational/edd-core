@@ -19,7 +19,7 @@
 
 (defn calc-service-query-url
   [service {:keys [realm]
-            :as meta}]
+            :as _meta}]
   (let [api-url (util/get-env "ApiUrl")
         default-url (str "https://api."
                          (util/get-env "PrivateHostedZoneName"))
@@ -238,7 +238,7 @@
                            acc
                            request
                            req))
-                        (catch AssertionError e
+                        (catch AssertionError _e
                           (log/warnf "Assertion error for deps: %s" key)
                           nil))]
             (assoc acc key dep-value)
