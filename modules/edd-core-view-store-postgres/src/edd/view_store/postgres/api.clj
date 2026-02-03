@@ -473,11 +473,15 @@
         {:with [[:layers
                  {:union-all
                   (for [[i condition]
-                        (enumerate 1 conditions)]
+                        (enumerate 1 conditions)
+                        :let
+                        [where-parsed
+                         (parser/filter->where service condition)]
+                        :when where-parsed]
+                    ;; where might be nil -> skip that layer
                     {:select [[[:inline i] :rank] :id]
                      :from [table]
-                     :where (parser/filter->where service condition)})}]
-
+                     :where where-parsed})}]
                 [:layer
                  {:select [[[:min :rank] :rank]
                            :id]

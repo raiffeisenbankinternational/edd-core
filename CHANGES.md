@@ -2,6 +2,9 @@
 
 ## Changes
 
+- [CARS-5102] Fix edd-core advanced search
+- fix empty where clause in adv search
+
 - [CARS-5048] Add edd-core-parquet module
 - add write support for Parquet bytes
 - update Makefile format to add Ivan-style binding formatting
