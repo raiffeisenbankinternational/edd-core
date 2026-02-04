@@ -50,9 +50,14 @@ Writes rows to Parquet format in memory and returns `byte[]`.
 |-----------|------|----------|-------------|
 | `:table-name` | string | yes | Table name stored in Parquet metadata |
 | `:schema` | map | yes | Schema definition (see below) |
-| `:rows` | vector | yes | Sequence of row maps with string keys |
+| `:rows` | seqable | yes | Sequence of row maps with string keys. Lazy sequences preferred for memory efficiency. |
 | `:compression` | keyword | no | `:gzip` (default) or `:uncompressed` |
 | `:schema-version` | string | no | Version string stored in metadata |
+
+**Memory characteristics:**
+- Rows are consumed incrementally (lazy sequences supported)
+- Parquet writer buffers up to one row group (~128MB) internally
+- Output `byte[]` is fully materialized in memory
 
 ### `mime-type`
 
