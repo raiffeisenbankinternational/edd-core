@@ -15,6 +15,11 @@
    - :double   - 64-bit floating point (DOUBLE)
    - :long     - 64-bit signed integer (INT64)
 
+   Memory considerations:
+   - Rows are consumed lazily (one at a time), so prefer passing lazy sequences
+   - Parquet writer buffers up to one row group (~128MB) internally
+   - Output byte[] is fully materialized in memory
+
    Example:
    (write-parquet-bytes
      {:table-name \"orders\"
@@ -105,60 +110,70 @@
         (java.time.LocalDate/parse date-str)]
     (.toEpochDay date)))
 
+(defn- precompute-column-metadata
+  "Pre-computes column metadata to avoid repeated parsing in the write loop.
+   Returns a vector of maps with :idx, :name, :type, :required?, and :enum-set."
+  [column-defs]
+  (mapv (fn [idx [col-name col-type _ requirement & opts]]
+          (let [opts-map
+                (when (seq opts) (apply hash-map opts))
+
+                enum-values
+                (:enum opts-map)]
+            {:idx idx
+             :name col-name
+             :type col-type
+             :required? (= requirement :required)
+             :enum-set (when enum-values (set enum-values))}))
+        (range)
+        column-defs))
+
+(defn- write-column-value
+  "Writes a single column value to the record consumer."
+  [^org.apache.parquet.io.api.RecordConsumer rc col-meta value]
+  (let [{:keys [idx name type enum-set]}
+        col-meta
+
+        string-value
+        (str value)]
+    (.startField rc ^String name (int idx))
+    (case type
+      :string (.addBinary rc (Binary/fromString string-value))
+      :enum (do
+              (when (and enum-set (not (contains? enum-set string-value)))
+                (throw
+                 (ex-info
+                  (format "Invalid enum value '%s' for column '%s' (allowed: %s)"
+                          string-value name enum-set)
+                  {:column name :value string-value :allowed enum-set})))
+              (.addBinary rc (Binary/fromString string-value)))
+      :boolean (.addBinary rc (Binary/fromString string-value))
+      :uuid (.addBinary rc (Binary/fromString string-value))
+      :date (.addInteger rc (int (date-string->days-since-epoch string-value)))
+      :double (.addDouble rc (double value))
+      :long (.addLong rc (long value))
+      (.addBinary rc (Binary/fromString string-value)))
+    (.endField rc ^String name (int idx))))
+
 (defn- create-write-support
   [schema column-defs]
-  (let [consumer
-        (atom nil)]
+  (let [column-metadata (precompute-column-metadata column-defs)
+        consumer (atom nil)]
     (proxy [WriteSupport] []
       (init [_configuration] (WriteSupport$WriteContext. schema {}))
       (prepareForWrite [record-consumer] (reset! consumer record-consumer))
       (write [record]
-        (let [^org.apache.parquet.io.api.RecordConsumer rc
-              @consumer]
+        (let [^org.apache.parquet.io.api.RecordConsumer rc @consumer]
           (.startMessage rc)
-          (doseq [[idx [col-name col-type _ requirement & opts]]
-                  (map-indexed vector column-defs)]
+          (doseq [{:keys [name required?] :as col-meta}
+                  column-metadata]
             (let [value
-                  (get record col-name)
-
-                  string-value
-                  (when (some? value) (str value))
-
-                  allowed-enum
-                  (:enum (apply hash-map opts))]
+                  (get record name)]
               (if (some? value)
-                (do
-                  (.startField rc ^String col-name (int idx))
-                  (case col-type
-                    :string (.addBinary rc (Binary/fromString string-value))
-                    :enum
-                    (do
-                      (when (and (some? allowed-enum)
-                                 (not (some #{string-value} allowed-enum)))
-                        (throw
-                         (ex-info
-                          (format
-                           "Invalid enum value '%s' for column '%s' (allowed: %s)"
-                           string-value
-                           col-name
-                           allowed-enum)
-                          {:column col-name,
-                           :value string-value,
-                           :allowed allowed-enum})))
-                      (.addBinary rc (Binary/fromString string-value)))
-                    :boolean (.addBinary rc (Binary/fromString string-value))
-                    :uuid (.addBinary rc (Binary/fromString string-value))
-                    :date (.addInteger rc
-                                       (int (date-string->days-since-epoch
-                                             string-value)))
-                    :double (.addDouble rc (double value))
-                    :long (.addLong rc (long value))
-                    (.addBinary rc (Binary/fromString string-value)))
-                  (.endField rc ^String col-name (int idx)))
-                (when (= requirement :required)
-                  (throw (ex-info (format "Required column '%s' has nil value"
-                                          col-name)
-                                  {}))))))
+                (write-column-value rc col-meta value)
+                (when required?
+                  (throw (ex-info (format "Required column '%s' has nil value" name)
+                                  {:column name}))))))
           (.endMessage rc))))))
 
 (defn- create-in-memory-output-file
@@ -190,10 +205,8 @@
 
 (defn- filter-row-to-schema
   "Filter a row to only include columns defined in the table schema."
-  [row schema-def]
-  (let [schema-columns
-        (set (map first (:columns schema-def)))]
-    (select-keys row schema-columns)))
+  [row schema-columns]
+  (select-keys row schema-columns))
 
 (defn schema-fingerprint
   "Returns a deterministic fingerprint for the schema definition.
@@ -248,9 +261,16 @@
    Arguments (as a map):
    - :table-name (required) - Name for the table (stored in metadata)
    - :schema (required) - Schema definition map with :description and :columns
-   - :rows (required) - Sequence of row maps with string keys matching column names
+   - :rows (required) - Sequence of row maps with string keys matching column names.
+                        Lazy sequences are preferred for memory efficiency as rows
+                        are consumed one at a time without realizing the full collection.
    - :compression (optional) - Compression codec (:gzip or :uncompressed, default :gzip)
    - :schema-version (optional) - Version string stored in Parquet key/value metadata
+
+   Memory characteristics:
+   - Rows are processed incrementally (lazy seqs supported)
+   - Parquet writer buffers up to one row group (~128MB) internally
+   - Output byte[] is fully materialized in memory
 
    Returns byte[] containing the Parquet file contents."
   [{:keys [table-name schema rows compression schema-version],
@@ -270,8 +290,8 @@
         write-support
         (create-write-support parquet-schema (:columns schema))
 
-        filtered-rows
-        (mapv #(filter-row-to-schema % schema) rows)
+        schema-columns
+        (set (map first (:columns schema)))
 
         metadata
         (cond-> (reduce
@@ -304,8 +324,7 @@
 
         codec
         (get-codec compression)]
-    (log/infof "Writing %d rows to in-memory Parquet for table: %s"
-               (count filtered-rows)
+    (log/infof "Writing rows to in-memory Parquet for table: %s"
                table-name)
     (with-open [writer
                 (-> builder-class
@@ -314,6 +333,6 @@
                     (.withExtraMetaData metadata)
                     (.build))]
       (doseq [row
-              filtered-rows]
-        (.write writer row)))
+              rows]
+        (.write writer (filter-row-to-schema row schema-columns))))
     (.toByteArray baos)))

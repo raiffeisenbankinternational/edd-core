@@ -2,6 +2,8 @@
 
 ## Changes
 
+- [CARS-5133] Perf fixes to parquet writer
+
 - [CARS-5102] Fix edd-core advanced search
 - fix empty where clause in adv search
 
