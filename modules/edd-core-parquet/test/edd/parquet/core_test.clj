@@ -166,15 +166,16 @@
 
 (deftest write-parquet-bytes-required-validation-test
   (testing "Missing required column throws exception"
-    (is (thrown-with-msg? clojure.lang.ExceptionInfo
-                          #"Required column 'COL1' has nil value"
-                          (parquet/write-parquet-bytes
-                           {:table-name "validation",
-                            :schema {:description "Validation test",
-                                     :columns [["COL1" :string "Column 1"
-                                                :required]]},
-                            :rows [{"COL1" nil}],
-                            :compression :uncompressed})))))
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"Required column 'COL1' in table-schema 'ENTITIES' has nil value"
+         (parquet/write-parquet-bytes
+          {:table-name "validation",
+           :table-schema "ENTITIES",
+           :schema {:description "Validation test",
+                    :columns [["COL1" :string "Column 1" :required]]},
+           :rows [{"COL1" nil}],
+           :compression :uncompressed})))))
 
 (deftest write-parquet-bytes-enum-validation-test
   (testing "Invalid enum value throws exception"

@@ -61,6 +61,20 @@
         ]
     },
     {
+        "name": "org.apache.parquet.hadoop.ParquetFileReader",
+        "allDeclaredConstructors": true,
+        "allPublicConstructors": true,
+        "allDeclaredMethods": true,
+        "allPublicMethods": true
+    },
+    {
+        "name": "org.apache.parquet.hadoop.ParquetInputFormat",
+        "allDeclaredConstructors": true,
+        "allPublicConstructors": true,
+        "allDeclaredMethods": true,
+        "allPublicMethods": true
+    },
+    {
         "name": "org.apache.parquet.hadoop.ParquetWriter"
     },
     {
@@ -73,8 +87,14 @@
         "name": "org.apache.parquet.hadoop.api.WriteSupport$WriteContext"
     },
     {
+        "name": "org.apache.parquet.hadoop.api.ReadSupport"
+    },
+    {
         "name": "org.apache.parquet.hadoop.metadata.CompressionCodecName",
         "allPublicFields": true
+    },
+    {
+        "name": "org.apache.parquet.io.InputFile"
     },
     {
         "name": "org.apache.parquet.io.OutputFile"
@@ -83,11 +103,28 @@
         "name": "org.apache.parquet.io.PositionOutputStream"
     },
     {
+        "name": "org.apache.parquet.io.SeekableInputStream"
+    },
+    {
         "name": "org.apache.parquet.io.api.Binary",
         "allPublicFields": true
     },
     {
         "name": "org.apache.parquet.io.api.RecordConsumer"
+    },
+    {
+        "name": "org.apache.parquet.ParquetReadOptions",
+        "allDeclaredConstructors": true,
+        "allPublicConstructors": true,
+        "allDeclaredMethods": true,
+        "allPublicMethods": true
+    },
+    {
+        "name": "org.apache.parquet.ParquetReadOptions$Builder",
+        "allDeclaredConstructors": true,
+        "allPublicConstructors": true,
+        "allDeclaredMethods": true,
+        "allPublicMethods": true
     },
     {
         "name": "org.apache.parquet.schema.LogicalTypeAnnotation",
