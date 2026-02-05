@@ -6,6 +6,10 @@
    [edd.view-store.postgres.honey :as honey]
    [edd.view-store.postgres.parser :as parser]))
 
+(deftest test-mask-params
+  (is (= [1 :foo 'SKIPPED "foo" true]
+         (honey/mask-params [1 :foo {:map "yes"} "foo" true]))))
+
 (defmacro is-parsing-error [& body]
   `(try
      ~@body
@@ -21,8 +25,7 @@
   ([service filter]
    (->> filter
         (parser/filter->where service)
-        (honey/format)
-        (first))))
+        (honey/format))))
 
 (deftest test-dimension-attrs
   (testing "plain case"
@@ -32,13 +35,18 @@
            [:= "attrs.cocunut" "abc"]
            [:= :attrs.short-name "hello"]
            [:= :attrs.foo-bar "hello"]]]
-      (is (= "(aggregate @@ '$.state == \":test\"') AND ((aggregate #>> ARRAY['attrs', 'cocunut']) = 'abc') AND (aggregate @@ '$.attrs.\"short-name\" == \"hello\"') AND (aggregate @@ '$.attrs.\"foo-bar\" == \"hello\"')"
+      (is (= ["(aggregate @@ '$.state == \":test\"') AND ((aggregate #>> ARRAY['attrs', 'cocunut']) = ?) AND (aggregate @@ '$.attrs.\"short-name\" == \"hello\"') AND (aggregate @@ '$.attrs.\"foo-bar\" == \"hello\"')"
+              "abc"]
              (filter->result c/SVC_DIMENSION filter)))))
   (testing "in case"
     (let [filter
           [:and
            [:in "attrs.cocunut" ["test" :foo 'bar 42]]]]
-      (is (= "((aggregate #>> ARRAY['attrs', 'cocunut']) IN ('test', ':foo', 'bar', '42'))"
+      (is (= ["((aggregate #>> ARRAY['attrs', 'cocunut']) IN (?, ?, ?, ?))"
+              "test"
+              ":foo"
+              "bar"
+              "42"]
              (filter->result c/SVC_DIMENSION filter))))))
 
 (deftest test-dimension-attrs-top-parent
@@ -46,7 +54,9 @@
         [:or
          [:wildcard :attrs.top-parent-cocunut "12345"]
          [:wildcard :attrs.top-parent-short-name "12345"]]]
-    (is (= "((aggregate #>> ARRAY['attrs', 'top-parent-cocunut']) ILIKE '%12345%') OR ((aggregate #>> ARRAY['attrs', 'top-parent-short-name']) ILIKE '%12345%')"
+    (is (= ["((aggregate #>> ARRAY['attrs', 'top-parent-cocunut']) ILIKE ?) OR ((aggregate #>> ARRAY['attrs', 'top-parent-short-name']) ILIKE ?)"
+            "%12345%"
+            "%12345%"]
            (filter->result c/SVC_DIMENSION filter)))))
 
 (deftest test-notification-attrs
@@ -56,7 +66,10 @@
          [:= "attrs.user.id" "test@test.com"]
          [:= :attrs.short-name "hello"]
          [:= :attrs.user.role "admin"]]]
-    (is (= "((aggregate #>> ARRAY['attrs', 'status']) = ':created') AND ((aggregate #>> ARRAY['attrs', 'user', 'id']) = 'test@test.com') AND (aggregate @@ '$.attrs.\"short-name\" == \"hello\"') AND ((aggregate #>> ARRAY['attrs', 'user', 'role']) = 'admin')"
+    (is (= ["((aggregate #>> ARRAY['attrs', 'status']) = ?) AND ((aggregate #>> ARRAY['attrs', 'user', 'id']) = ?) AND (aggregate @@ '$.attrs.\"short-name\" == \"hello\"') AND ((aggregate #>> ARRAY['attrs', 'user', 'role']) = ?)"
+            ":created"
+            "test@test.com"
+            "admin"]
            (filter->result :glms-notification-svc filter)))))
 
 (deftest test-parse-os-query-basic
@@ -202,7 +215,8 @@
           [:and
            [:eq :attrs.cocunut "abc"]
            [:not [:eq :state :deleted]]]]
-      (is (= "((aggregate #>> ARRAY['attrs', 'cocunut']) = 'abc') AND NOT (aggregate @@ '$.state == \":deleted\"')"
+      (is (= ["((aggregate #>> ARRAY['attrs', 'cocunut']) = ?) AND NOT (aggregate @@ '$.state == \":deleted\"')"
+              "abc"]
              (filter->result c/SVC_DIMENSION filter))))))
 
 (deftest test-parse-os-query-nested-attrs
@@ -265,7 +279,9 @@
         [:and
          [:= :attrs.top-gcc.cocunut "foo"]
          [:= :attrs.applicant.id "bar"]]]
-    (is (= "((aggregate #>> ARRAY['attrs', 'top-gcc', 'cocunut']) = 'foo') AND ((aggregate #>> ARRAY['attrs', 'applicant', 'id']) = 'bar')"
+    (is (= ["((aggregate #>> ARRAY['attrs', 'top-gcc', 'cocunut']) = ?) AND ((aggregate #>> ARRAY['attrs', 'applicant', 'id']) = ?)"
+            "foo"
+            "bar"]
            (filter->result c/SVC_APPLICATION filter)))))
 
 (deftest test-attrs-exposure-btree
@@ -273,7 +289,8 @@
         [:and
          [:= :attrs.risk-on "foo"]
          [:= :attrs.foo-bar "bar"]]]
-    (is (= "((aggregate #>> ARRAY['attrs', 'risk-on']) = 'foo') AND (aggregate @@ '$.attrs.\"foo-bar\" == \"bar\"')"
+    (is (= ["((aggregate #>> ARRAY['attrs', 'risk-on']) = ?) AND (aggregate @@ '$.attrs.\"foo-bar\" == \"bar\"')"
+            "foo"]
            (filter->result c/SVC_EXPOSURE filter)))))
 
 (deftest test-attrs-appication-id=string
@@ -285,7 +302,9 @@
          [:in :attrs.test ["hello"]]
          [:wildcard :attrs.application-id "003"]]]
 
-    (is (= "((aggregate #>> ARRAY['attrs', 'application-id']) = '123123') AND (aggregate @?? '$.attrs.name  ?  ((@ == \"foo\") || (@ == \"bar\"))') AND (aggregate @@ '$.attrs.test == \"hello\"') AND ((aggregate #>> ARRAY['attrs', 'application-id']) ILIKE '%003%')"
+    (is (= ["((aggregate #>> ARRAY['attrs', 'application-id']) = ?) AND (aggregate @?? '$.attrs.name  ?  ((@ == \"foo\") || (@ == \"bar\"))') AND (aggregate @@ '$.attrs.test == \"hello\"') AND ((aggregate #>> ARRAY['attrs', 'application-id']) ILIKE ?)"
+            "123123"
+            "%003%"]
            (filter->result c/SVC_APPLICATION filter)))))
 
 (deftest test-honey-where
@@ -293,10 +312,10 @@
   (testing "a simple and group with eq and in"
     (let [filter
           [:and
-           [:eq :id 42]
+           [:eq :id 42] ;; TODO: must resolve to FALSE (makes no sense)
            [:in :name ["foo" "bar"]]]]
 
-      (is (= "(aggregate @@ '$.id == 42') AND (aggregate @?? '$.name  ?  ((@ == \"foo\") || (@ == \"bar\"))')"
+      (is (= ["(aggregate @@ '$.id == 42') AND (aggregate @?? '$.name  ?  ((@ == \"foo\") || (@ == \"bar\"))')"]
              (filter->result filter)))))
 
   (testing "a complex group"
@@ -309,7 +328,7 @@
             [:in :test.user-name [true false]]
             [:in "test.bbb" ["aa" "bb"]]]]]
 
-      (is (= "((aggregate @@ '$.foo.\"some-attr\" == 1') AND (aggregate @@ '$.foo.baz == null')) OR ((aggregate @?? '$.test.\"user-name\"  ?  ((@ == true) || (@ == false))') AND (aggregate @?? '$.test.bbb  ?  ((@ == \"aa\") || (@ == \"bb\"))'))"
+      (is (= ["((aggregate @@ '$.foo.\"some-attr\" == 1') AND (aggregate @@ '$.foo.baz == null')) OR ((aggregate @?? '$.test.\"user-name\"  ?  ((@ == true) || (@ == false))') AND (aggregate @?? '$.test.bbb  ?  ((@ == \"aa\") || (@ == \"bb\"))'))"]
              (filter->result filter)))))
 
   (testing "nested operator"
@@ -321,7 +340,7 @@
              [:= :attrs.users.id 1]
              [:= :attrs.users.name "smith"]]]]]
 
-      (is (= "(aggregate @@ '$.attrs.foo == 1') OR (aggregate @?? '$.attrs.users  ?  ((@.id == 1) && (@.name == \"smith\"))')"
+      (is (= ["(aggregate @@ '$.attrs.foo == 1') OR (aggregate @?? '$.attrs.users  ?  ((@.id == 1) && (@.name == \"smith\"))')"]
              (filter->result filter)))))
 
   (testing "check SQL injections (quoting)"
@@ -336,7 +355,7 @@
              [:= :attrs.users.id 1]
              [:= :attrs.users.name weird-line]]]]]
 
-      (is (= "(aggregate @@ '$.attrs.foo == \"!@#$%^&*()''test\\\"\\r\\f\\thello''~$_?drop table --''''''students??;\"') OR (aggregate @?? '$.attrs.users  ?  ((@.id == 1) && (@.name == \"!@#$%^&*()''test\\\"\\r\\f\\thello''~$_?drop table --''''''students??;\"))')"
+      (is (= ["(aggregate @@ '$.attrs.foo == \"!@#$%^&*()''test\\\"\\r\\f\\thello''~$_?drop table --''''''students??;\"') OR (aggregate @?? '$.attrs.users  ?  ((@.id == 1) && (@.name == \"!@#$%^&*()''test\\\"\\r\\f\\thello''~$_?drop table --''''''students??;\"))')"]
              (filter->result filter))))))
 
 (deftest test-honey-where-gte-lte
@@ -351,7 +370,7 @@
          [:>= :id 1]
          [:> :id 1]]]
 
-    (is (= "(aggregate @@ '$.id < 1') AND (aggregate @@ '$.id <= 1') AND (aggregate @@ '$.id == 1') AND (aggregate @@ '$.id == 1') AND (aggregate @@ '$.id == 1') AND (aggregate @@ '$.id >= 1') AND (aggregate @@ '$.id > 1')"
+    (is (= ["(aggregate @@ '$.id < 1') AND (aggregate @@ '$.id <= 1') AND (aggregate @@ '$.id == 1') AND (aggregate @@ '$.id == 1') AND (aggregate @@ '$.id == 1') AND (aggregate @@ '$.id >= 1') AND (aggregate @@ '$.id > 1')"]
            (filter->result filter)))))
 
 (deftest test-honey-where-exists
@@ -360,7 +379,7 @@
         [:and
          [:exists "foo.bar.baz"]]]
 
-    (is (= "(aggregate @?? '$.foo.bar.baz')"
+    (is (= ["(aggregate @?? '$.foo.bar.baz')"]
            (filter->result filter)))))
 
 (deftest test-parser-eq-uuid
@@ -371,7 +390,7 @@
         filter
         [:eq :id uuid]]
 
-    (is (= "id = 'e5e4048f-1f82-4a84-be2f-a85300c853ab'"
+    (is (= ["id = ?" #uuid "e5e4048f-1f82-4a84-be2f-a85300c853ab"]
            (filter->result filter)))))
 
 (deftest test-parser-in-uuid
@@ -383,7 +402,7 @@
           filter
           [:in :id [uuid]]]
 
-      (is (= "id = 'e5e4048f-1f82-4a84-be2f-a85300c853ab'"
+      (is (= ["id = ?" #uuid "e5e4048f-1f82-4a84-be2f-a85300c853ab"]
              (filter->result filter)))))
 
   (testing "singular"
@@ -396,7 +415,9 @@
           filter
           [:in :id [uuid1 uuid2]]]
 
-      (is (= "id IN ('e5e4048f-1f82-4a84-be2f-a85300c853ab', 'e0fe0037-3d22-4dc4-a169-d89859f48378')"
+      (is (= ["id IN (?, ?)"
+              #uuid "e5e4048f-1f82-4a84-be2f-a85300c853ab"
+              #uuid "e0fe0037-3d22-4dc4-a169-d89859f48378"]
              (filter->result filter))))))
 
 (deftest test-honey-where-not
@@ -407,7 +428,7 @@
           [:exists "foo.bar.baz"]
           [:= "foo.bar.baz" 1]]]]
 
-    (is (= "NOT ((aggregate @?? '$.foo.bar.baz') AND (aggregate @@ '$.foo.bar.baz == 1'))"
+    (is (= ["NOT ((aggregate @?? '$.foo.bar.baz') AND (aggregate @@ '$.foo.bar.baz == 1'))"]
            (filter->result filter)))))
 
 (deftest test-honey-where-wildcard
@@ -417,7 +438,7 @@
          [:wildcard :aa.bb "foo"]
          [:wildcard :aa.cc "bar"]]]
 
-    (is (= "(aggregate @@ '($.aa.bb like_regex \"foo\" flag \"iq\")') AND (aggregate @@ '($.aa.cc like_regex \"bar\" flag \"iq\")')"
+    (is (= ["(aggregate @@ '($.aa.bb like_regex \"foo\" flag \"iq\")') AND (aggregate @@ '($.aa.cc like_regex \"bar\" flag \"iq\")')"]
            (filter->result filter)))))
 
 (deftest test-filter-integration-tests
@@ -431,16 +452,16 @@
          [:in :attrs.status #{:approved :activated}]
          [:in :attrs.facility-type #{:tcmg-facility}]]]
 
-    (is (= "(aggregate @@ '$.attrs.\"risk-on-id\" == \"#390ec691-cd69-49fa-b80a-408b861b55a4\"') AND (aggregate @@ '$.attrs.\"risk-taker-id\" == \"#b0000000-0000-0000-0000-000000826673\"') AND (aggregate @@ '$.attrs.fat1 == \"TCMG\"') AND (aggregate @@ '$.attrs.fat2 == \"TCM12\"') AND (aggregate @?? '$.attrs.status  ?  ((@ == \":approved\") || (@ == \":activated\"))') AND (aggregate @@ '$.attrs.\"facility-type\" == \":tcmg-facility\"')"
+    (is (= ["(aggregate @@ '$.attrs.\"risk-on-id\" == \"#390ec691-cd69-49fa-b80a-408b861b55a4\"') AND (aggregate @@ '$.attrs.\"risk-taker-id\" == \"#b0000000-0000-0000-0000-000000826673\"') AND (aggregate @@ '$.attrs.fat1 == \"TCMG\"') AND (aggregate @@ '$.attrs.fat2 == \"TCM12\"') AND (aggregate @?? '$.attrs.status  ?  ((@ == \":approved\") || (@ == \":activated\"))') AND (aggregate @@ '$.attrs.\"facility-type\" == \":tcmg-facility\"')"]
            (filter->result filter)))))
 
 (deftest test-filter-broken-group
   (let [filter
         [:or [:= :foo 1] [:and]]]
-    (is (= "(aggregate @@ '$.foo == 1')"
+    (is (= ["(aggregate @@ '$.foo == 1')"]
            (filter->result filter))))
   (let [filter [:and]]
-    (is (= "NULL" ;; happens when nil is passed explicitly to :where
+    (is (= ["NULL"] ;; happens when nil is passed explicitly to :where
            (filter->result filter)))))
 
 (deftest test-parse-os-group-array
@@ -455,7 +476,7 @@
               [:< :attrs.bbb 3]
               [:wildcard :attrs.name "hello"]]]]]]
 
-      (is (= "(aggregate @@ '$.attrs.foo == 1') AND (aggregate @@ '$.attrs.bar == 2') AND ((aggregate @@ '$.attrs.aaa > 3') OR (aggregate @@ '$.attrs.bbb < 3') OR (aggregate @@ '($.attrs.name like_regex \"hello\" flag \"iq\")'))"
+      (is (= ["(aggregate @@ '$.attrs.foo == 1') AND (aggregate @@ '$.attrs.bar == 2') AND ((aggregate @@ '$.attrs.aaa > 3') OR (aggregate @@ '$.attrs.bbb < 3') OR (aggregate @@ '($.attrs.name like_regex \"hello\" flag \"iq\")'))"]
              (filter->result filter))))))
 
 (deftest test-parse-os-wildcard-id-uuid
@@ -470,7 +491,9 @@
             [:wildcard "id" uuid]
             [:eq "id" uuid]]]]
 
-      (is (= "(aggregate @@ '$.attrs.foo == 1') AND (id = 'ead78109-af06-4c66-805e-5a9914b1123f') AND (id = 'ead78109-af06-4c66-805e-5a9914b1123f')"
+      (is (= ["(aggregate @@ '$.attrs.foo == 1') AND (id = ?) AND (id = ?)"
+              #uuid "ead78109-af06-4c66-805e-5a9914b1123f"
+              #uuid "ead78109-af06-4c66-805e-5a9914b1123f"]
              (filter->result filter))))))
 
 (deftest test-parse-os-attrs-status-weird
@@ -481,14 +504,14 @@
            [[:= :attrs.foo 1]
             [:eq :attrs.status :active :pending]]]]
 
-      (is (= "(aggregate @@ '$.attrs.foo == 1') AND (aggregate @?? '$.attrs.status  ?  ((@ == \":active\") || (@ == \":pending\"))')"
+      (is (= ["(aggregate @@ '$.attrs.foo == 1') AND (aggregate @?? '$.attrs.status  ?  ((@ == \":active\") || (@ == \":pending\"))')"]
              (filter->result filter))))))
 
 (deftest test-currency-fields
   (let [filter
         [:and
          [:<= :business-date "2023-01-02"]]]
-    (is (= "((aggregate #>> ARRAY['business-date']) <= '2023-01-02')"
+    (is (= ["((aggregate #>> ARRAY['business-date']) <= ?)" "2023-01-02"]
            (filter->result c/SVC_CURRENCY filter)))))
 
 (deftest test-parse-os-nested-wildcard
@@ -499,7 +522,7 @@
           [:eq :attrs.assignees.users.role :lime-risk-managers]
           [:wildcard :attrs.assignees.users.status "name"]]]]
 
-    (is (= "aggregate @?? '$.attrs.assignees.users  ?  ((@.role == \":lime-risk-managers\") && (@.status like_regex \"name\" flag \"iq\"))'"
+    (is (= ["aggregate @?? '$.attrs.assignees.users  ?  ((@.role == \":lime-risk-managers\") && (@.status like_regex \"name\" flag \"iq\"))'"]
            (filter->result filter)))))
 
 (deftest test-wildcard-application-id
@@ -510,7 +533,10 @@
          [:= :attrs.application-id 456]
          [:wildcard :attrs.application-id "123"]]]
 
-    (is (= "((aggregate #>> ARRAY['attrs', 'application-id']) = '123') OR ((aggregate #>> ARRAY['attrs', 'application-id']) = '456') OR ((aggregate #>> ARRAY['attrs', 'application-id']) ILIKE '%123%')"
+    (is (= ["((aggregate #>> ARRAY['attrs', 'application-id']) = ?) OR ((aggregate #>> ARRAY['attrs', 'application-id']) = ?) OR ((aggregate #>> ARRAY['attrs', 'application-id']) ILIKE ?)"
+            "123"
+            "456"
+            "%123%"]
            (filter->result c/SVC_APPLICATION filter)))))
 
 (deftest test-wildcard-application-id-short-term
@@ -519,12 +545,12 @@
         [:or
          [:= :attrs.application-id "ab"]
          [:wildcard :attrs.application-id "ab"]]]
-    (is (= "((aggregate #>> ARRAY['attrs', 'application-id']) = 'ab')"
+    (is (= ["((aggregate #>> ARRAY['attrs', 'application-id']) = ?)" "ab"]
            (filter->result c/SVC_APPLICATION filter))))
 
   (let [filter
         [:wildcard :attrs.application-id "ab"]]
-    (is (= "NULL"
+    (is (= ["NULL"]
            (filter->result c/SVC_APPLICATION filter)))))
 
 (deftest test-application-new-indexes
@@ -535,7 +561,11 @@
          [:= :attrs.booking-company 42]
          [:> "attrs.status" "created"]]]
 
-    (is (= "((aggregate #>> ARRAY['attrs', 'area']) IN ('foo', 'bar')) OR ((aggregate #>> ARRAY['attrs', 'booking-company']) = '42') OR ((aggregate #>> ARRAY['attrs', 'status']) > 'created')"
+    (is (= ["((aggregate #>> ARRAY['attrs', 'area']) IN (?, ?)) OR ((aggregate #>> ARRAY['attrs', 'booking-company']) = ?) OR ((aggregate #>> ARRAY['attrs', 'status']) > ?)"
+            "foo"
+            "bar"
+            "42"
+            "created"]
            (filter->result c/SVC_APPLICATION filter)))))
 
 (deftest test-wildcard-application-id-ui-case
@@ -544,7 +574,7 @@
         [:and
          [:wildcard "attrs.application-id" "21150"]]]
 
-    (is (= "((aggregate #>> ARRAY['attrs', 'application-id']) ILIKE '%21150%')"
+    (is (= ["((aggregate #>> ARRAY['attrs', 'application-id']) ILIKE ?)" "%21150%"]
            (filter->result c/SVC_APPLICATION filter)))))
 
 (deftest test-wildcard-application-id-keyword-task-service
@@ -552,7 +582,8 @@
         [:and
          [:wildcard "attrs.application-id.keyword" "21150"]
          [:wildcard "attrs.application.application-id.keyword" "21150"]]]
-    (is (= "(aggregate @@ '($.attrs.\"application-id\" like_regex \"21150\" flag \"iq\")') AND ((aggregate #>> ARRAY['attrs', 'application', 'application-id']) ILIKE '%21150%')"
+    (is (= ["(aggregate @@ '($.attrs.\"application-id\" like_regex \"21150\" flag \"iq\")') AND ((aggregate #>> ARRAY['attrs', 'application', 'application-id']) ILIKE ?)"
+            "%21150%"]
            (filter->result :glms-task-manager-svc filter)))))
 
 (deftest test-wildcard-application-id-keyword-in
@@ -561,7 +592,11 @@
         [:and
          [:in :attrs.application-id.keyword ["1" 2 "3" :dunno]]]]
 
-    (is (= "((aggregate #>> ARRAY['attrs', 'application-id']) IN ('1', '2', '3', ':dunno'))"
+    (is (= ["((aggregate #>> ARRAY['attrs', 'application-id']) IN (?, ?, ?, ?))"
+            "1"
+            "2"
+            "3"
+            ":dunno"]
            (filter->result c/SVC_APPLICATION filter)))))
 
 (deftest test-in-empty-vector
@@ -571,7 +606,7 @@
          [:= :foo 42]
          [:in :some.attr []]]]
 
-    (is (= "(aggregate @@ '$.foo == 42') AND FALSE"
+    (is (= ["(aggregate @@ '$.foo == 42') AND FALSE"]
            (filter->result :test filter)))))
 
 (deftest test-wildcard-application-id-uuid-case
@@ -584,7 +619,9 @@
          [:= :attrs.application-id uuid]
          [:= :attrs.application-id 123]]]
 
-    (is (= "((aggregate #>> ARRAY['attrs', 'application-id']) = '#e279980e-38ea-4104-8328-ead214472551') OR ((aggregate #>> ARRAY['attrs', 'application-id']) = '123')"
+    (is (= ["((aggregate #>> ARRAY['attrs', 'application-id']) = ?) OR ((aggregate #>> ARRAY['attrs', 'application-id']) = ?)"
+            "#e279980e-38ea-4104-8328-ead214472551"
+            "123"]
            (filter->result c/SVC_APPLICATION filter)))))
 
 (deftest test-application-id-in
@@ -594,7 +631,17 @@
          [:in :attrs.application-id [1 "2" 3 "4" 5]]
          [:in :attrs.application-id.keyword [1 "2" 3 "4" 5]]]]
 
-    (is (= "((aggregate #>> ARRAY['attrs', 'application-id']) IN ('1', '2', '3', '4', '5')) OR ((aggregate #>> ARRAY['attrs', 'application-id']) IN ('1', '2', '3', '4', '5'))"
+    (is (= ["((aggregate #>> ARRAY['attrs', 'application-id']) IN (?, ?, ?, ?, ?)) OR ((aggregate #>> ARRAY['attrs', 'application-id']) IN (?, ?, ?, ?, ?))"
+            "1"
+            "2"
+            "3"
+            "4"
+            "5"
+            "1"
+            "2"
+            "3"
+            "4"
+            "5"]
            (filter->result c/SVC_APPLICATION filter)))))
 
 (deftest test-application-requests-customer-cocunut
@@ -602,26 +649,26 @@
   (testing "eq case"
     (let [filter
           [:eq :attrs.requests.customer.cocunut "hello"]]
-      (is (= "JSONB_PATH_QUERY_ARRAY(aggregate, '$.attrs.requests.customer.cocunut') @@ '$ == \"hello\"'"
+      (is (= ["JSONB_PATH_QUERY_ARRAY(aggregate, '$.attrs.requests.customer.cocunut') @@ '$ == \"hello\"'"]
              (filter->result c/SVC_APPLICATION filter)))))
 
   (testing "in case"
     (let [filter
           [:in :attrs.requests.customer.cocunut ["a" "b" "c"]]]
-      (is (= "JSONB_PATH_QUERY_ARRAY(aggregate, '$.attrs.requests.customer.cocunut') @@ '($ == \"a\") || ($ == \"b\") || ($ == \"c\")'"
+      (is (= ["JSONB_PATH_QUERY_ARRAY(aggregate, '$.attrs.requests.customer.cocunut') @@ '($ == \"a\") || ($ == \"b\") || ($ == \"c\")'"]
              (filter->result c/SVC_APPLICATION filter)))))
 
   ;; keep the old logic; anyway, like_regex doesn't support gin @@ index
   (testing "wildcard case"
     (let [filter
           [:wildcard :attrs.requests.customer.cocunut "hello"]]
-      (is (= "aggregate @@ '($.attrs.requests.customer.cocunut like_regex \"hello\" flag \"iq\")'"
+      (is (= ["aggregate @@ '($.attrs.requests.customer.cocunut like_regex \"hello\" flag \"iq\")'"]
              (filter->result c/SVC_APPLICATION filter)))))
 
   (testing "non-application service"
     (let [filter
           [:eq :attrs.requests.customer.cocunut "hello"]]
-      (is (= "aggregate @@ '$.attrs.requests.customer.cocunut == \"hello\"'"
+      (is (= ["aggregate @@ '$.attrs.requests.customer.cocunut == \"hello\"'"]
              (filter->result c/SVC_DIMENSION filter))))))
 
 (deftest test-trailing-keyword-removed
@@ -632,7 +679,7 @@
          [:= "foo.keyword.foo" "123"]
          [:wildcard :attrs.application-id.keyword "123"]]]
 
-    (is (= "(aggregate @@ '$.foo.bar == \"123\"') OR (aggregate @@ '$.foo.keyword.foo == \"123\"') OR (aggregate @@ '($.attrs.\"application-id\" like_regex \"123\" flag \"iq\")')"
+    (is (= ["(aggregate @@ '$.foo.bar == \"123\"') OR (aggregate @@ '$.foo.keyword.foo == \"123\"') OR (aggregate @@ '($.attrs.\"application-id\" like_regex \"123\" flag \"iq\")')"]
            (filter->result filter)))))
 
 (deftest test-attrs-creation-time-1
@@ -642,7 +689,7 @@
          [:lte :attrs.creation-time "2024-05-09"]
          [:gte :attrs.creation-time "2024-05-09"]]]
 
-    (is (= "(aggregate @@ '$.attrs.\"creation-time\" <= \"2024-05-09T23:59:59.999Z\"') AND (aggregate @@ '$.attrs.\"creation-time\" >= \"2024-05-09T00:00:00.000Z\"')"
+    (is (= ["(aggregate @@ '$.attrs.\"creation-time\" <= \"2024-05-09T23:59:59.999Z\"') AND (aggregate @@ '$.attrs.\"creation-time\" >= \"2024-05-09T00:00:00.000Z\"')"]
            (filter->result filter)))))
 
 (deftest test-attrs-creation-time-2
@@ -652,7 +699,7 @@
          [:lte :creation-time "2024-05-10"]
          [:gte :creation-time "2024-05-09"]]]
 
-    (is (= "(aggregate @@ '$.\"creation-time\" <= \"2024-05-10T23:59:59.999Z\"') AND (aggregate @@ '$.\"creation-time\" >= \"2024-05-09T00:00:00.000Z\"')"
+    (is (= ["(aggregate @@ '$.\"creation-time\" <= \"2024-05-10T23:59:59.999Z\"') AND (aggregate @@ '$.\"creation-time\" >= \"2024-05-09T00:00:00.000Z\"')"]
            (filter->result filter)))))
 
 (deftest test-attrs-creation-time-3
@@ -662,7 +709,7 @@
          [:<= :attrs.resolution-date "2024-05-10"]
          [">" :attrs.resolution-date "2024-05-09"]]]
 
-    (is (= "(aggregate @@ '$.attrs.\"resolution-date\" <= \"2024-05-10T23:59:59.999Z\"') AND (aggregate @@ '$.attrs.\"resolution-date\" > \"2024-05-09T00:00:00.000Z\"')"
+    (is (= ["(aggregate @@ '$.attrs.\"resolution-date\" <= \"2024-05-10T23:59:59.999Z\"') AND (aggregate @@ '$.attrs.\"resolution-date\" > \"2024-05-09T00:00:00.000Z\"')"]
            (filter->result filter)))))
 
 (deftest test-in-asset-class-code
@@ -672,14 +719,14 @@
          [:in "attrs.risk-on.asset-class.asset-class-code" [42]]
          [:in :attrs.risk-on.asset-class.asset-class-code [1 2 3]]]]
 
-    (is (= "(aggregate @@ '$.attrs.\"risk-on\".\"asset-class\".\"asset-class-code\" == \"42\"') AND (aggregate @?? '$.attrs.\"risk-on\".\"asset-class\".\"asset-class-code\"  ?  ((@ == \"1\") || (@ == \"2\") || (@ == \"3\"))')"
+    (is (= ["(aggregate @@ '$.attrs.\"risk-on\".\"asset-class\".\"asset-class-code\" == \"42\"') AND (aggregate @?? '$.attrs.\"risk-on\".\"asset-class\".\"asset-class-code\"  ?  ((@ == \"1\") || (@ == \"2\") || (@ == \"3\"))')"]
            (filter->result filter)))))
 
 (deftest test-task-manager-btree-indexes
   (let [filter
         [:and
          [:= :attrs.application.id "test"]]]
-    (is (= "((aggregate #>> ARRAY['attrs', 'application', 'id']) = 'test')"
+    (is (= ["((aggregate #>> ARRAY['attrs', 'application', 'id']) = ?)" "test"]
            (filter->result c/SVC_TASK_MANAGER filter)))))
 
 (deftest test-sort-by
@@ -833,13 +880,16 @@
          [:wildcard :attrs.short-name "123"]
          [:wildcard :attrs.top-parent-id "123"]]]
 
-    (is (= "((aggregate #>> ARRAY['attrs', 'cocunut']) ILIKE '%123%') OR ((aggregate #>> ARRAY['attrs', 'short-name']) ILIKE '%123%') OR ((aggregate #>> ARRAY['attrs', 'top-parent-id']) ILIKE '%123%')"
+    (is (= ["((aggregate #>> ARRAY['attrs', 'cocunut']) ILIKE ?) OR ((aggregate #>> ARRAY['attrs', 'short-name']) ILIKE ?) OR ((aggregate #>> ARRAY['attrs', 'top-parent-id']) ILIKE ?)"
+            "%123%"
+            "%123%"
+            "%123%"]
            (filter->result c/SVC_DIMENSION filter)))))
 
 (deftest test-dimension-attrs-top-parent-cocunut-btree
   (let [filter
         [:= :attrs.top-parent-cocunut "hello"]]
-    (is (= "(aggregate #>> ARRAY['attrs', 'top-parent-cocunut']) = 'hello'"
+    (is (= ["(aggregate #>> ARRAY['attrs', 'top-parent-cocunut']) = ?" "hello"]
            (filter->result c/SVC_DIMENSION filter)))))
 
 (deftest test-dimension-wildcard-with-slash
@@ -853,5 +903,10 @@
          [:wildcard :attrs.short-name "123/abc/test"]
          [:wildcard :attrs.top-parent-id "123/abc/test"]]]
 
-    (is (= "((aggregate #>> ARRAY['attrs', 'cocunut']) = '123/abc/test') OR (aggregate @@ '$.attrs.\"short-name\" == \"123/abc/test\"') OR ((aggregate #>> ARRAY['attrs', 'top-parent-id']) = '123/abc/test') OR ((aggregate #>> ARRAY['attrs', 'cocunut']) ILIKE '%123/abc/test%') OR ((aggregate #>> ARRAY['attrs', 'short-name']) ILIKE '%123/abc/test%') OR ((aggregate #>> ARRAY['attrs', 'top-parent-id']) ILIKE '%123/abc/test%')"
+    (is (= ["((aggregate #>> ARRAY['attrs', 'cocunut']) = ?) OR (aggregate @@ '$.attrs.\"short-name\" == \"123/abc/test\"') OR ((aggregate #>> ARRAY['attrs', 'top-parent-id']) = ?) OR ((aggregate #>> ARRAY['attrs', 'cocunut']) ILIKE ?) OR ((aggregate #>> ARRAY['attrs', 'short-name']) ILIKE ?) OR ((aggregate #>> ARRAY['attrs', 'top-parent-id']) ILIKE ?)"
+            "123/abc/test"
+            "123/abc/test"
+            "%123/abc/test%"
+            "%123/abc/test%"
+            "%123/abc/test%"]
            (filter->result c/SVC_DIMENSION filter)))))

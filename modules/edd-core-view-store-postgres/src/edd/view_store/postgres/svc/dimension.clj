@@ -26,7 +26,7 @@
         sql-map
         {:select [:field_val]
          :from [table]
-         :where [:= :field_key [:inline (name field)]]}
+         :where [:= :field_key (name field)]}
 
         rows
         (honey/execute db sql-map)]
@@ -58,8 +58,8 @@
                   :field2_val]
          :from [table]
          :where [:and
-                 [:= :field1_key [:inline (name field1)]]
-                 [:= :field2_key [:inline (name field2)]]]}
+                 [:= :field1_key (name field1)]
+                 [:= :field2_key (name field2)]]}
 
         rows
         (honey/execute db sql-map)]

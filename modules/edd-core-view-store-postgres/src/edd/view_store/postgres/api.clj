@@ -118,7 +118,7 @@
         sql-map
         {:select c/AGGREGATE_FIELDS
          :from [table]
-         :where [:= :id [:inline aggregate-id]]}]
+         :where [:= :id aggregate-id]}]
 
     (honey/execute-one db sql-map {:builder-fn as-aggregates})))
 
@@ -363,8 +363,8 @@
          sql-map
          (cond-> {:select c/AGGREGATE_FIELDS
                   :from [table]
-                  :limit [:inline limit]
-                  :offset [:inline offset]}
+                  :limit limit
+                  :offset offset}
 
            where
            (assoc :where where)
@@ -493,8 +493,8 @@
          :from [:layer]
          :join [table [:using :id]]
          :order-by (cons [:rank] order-by)
-         :limit [:inline limit]
-         :offset [:inline offset]}]
+         :limit limit
+         :offset offset}]
 
     (cond-> sql-map-base
       where-base
@@ -611,8 +611,8 @@
                     :from [table]
                     :where where}
 
-                   [sql-query]
-                   (honey/format sql-map)]
+                   [sql-query] ;; COPY doesn't accept params
+                   (honey/format sql-map {:inline true})]
 
                (-> "copy (%s) TO STDOUT WITH (format csv)"
                    (format sql-query)

@@ -50,21 +50,21 @@
                                      :glms-dimension-svc
                                      query-parsed)
 
-        [sql]
+        [sql & params]
         (sql/format sql-map)]
 
     (is (= (-> "
 
 WITH layers AS (
-    SELECT 1 AS rank, id FROM test_glms_dimension_svc.aggregates WHERE (aggregate #>> ARRAY['attrs', 'cocunut']) = 'BE'
+    SELECT 1 AS rank, id FROM test_glms_dimension_svc.aggregates WHERE (aggregate #>> ARRAY['attrs', 'cocunut']) = ?
     UNION ALL
-    SELECT 2 AS rank, id FROM test_glms_dimension_svc.aggregates WHERE (aggregate #>> ARRAY['attrs', 'top-parent-id']) = 'BE/Belgium'
+    SELECT 2 AS rank, id FROM test_glms_dimension_svc.aggregates WHERE (aggregate #>> ARRAY['attrs', 'top-parent-id']) = ?
     UNION ALL
     SELECT 3 AS rank, id FROM test_glms_dimension_svc.aggregates WHERE aggregate @@ '$.attrs.\"short-name\" == \"Belgium\"'
     UNION ALL
-    SELECT 5 AS rank, id FROM test_glms_dimension_svc.aggregates WHERE (aggregate #>> ARRAY['attrs', 'top-parent-id']) ILIKE '%BE/Belgium%'
+    SELECT 5 AS rank, id FROM test_glms_dimension_svc.aggregates WHERE (aggregate #>> ARRAY['attrs', 'top-parent-id']) ILIKE ?
     UNION ALL
-    SELECT 6 AS rank, id FROM test_glms_dimension_svc.aggregates WHERE (aggregate #>> ARRAY['attrs', 'short-name']) ILIKE '%Belgium%'
+    SELECT 6 AS rank, id FROM test_glms_dimension_svc.aggregates WHERE (aggregate #>> ARRAY['attrs', 'short-name']) ILIKE ?
 ), layer AS (
     SELECT MIN(rank) AS rank, id FROM layers GROUP BY id ORDER BY 1 ASC
 )
@@ -76,7 +76,7 @@ ORDER BY
     rank ASC,
     (aggregate #>> ARRAY['attrs', 'foo']) ASC,
     (aggregate #>> ARRAY['attrs', 'bar']) DESC
-LIMIT 100 OFFSET 42
+LIMIT ? OFFSET ?
 
 "
                (str/replace #"(?m)^\s+" "")
@@ -84,4 +84,7 @@ LIMIT 100 OFFSET 42
                (str/replace "( " "(")
                (str/replace " )" ")")
                (str/trim))
-           sql))))
+           sql))
+
+    (is (= ["BE" "BE/Belgium" "%BE/Belgium%" "%Belgium%" 100 42]
+           params))))

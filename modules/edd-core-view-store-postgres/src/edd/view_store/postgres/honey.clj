@@ -49,6 +49,18 @@
                                  sql-vec
                                  (merge jdbc-defaults opt))))))
 
+(defn mask-params
+  "
+  Replace or mask some parameters before logging them.
+  At the moment, omit aggregate maps (huge and insecure).
+  "
+  [params]
+  (mapv (fn [param]
+          (if (map? param)
+            'SKIPPED
+            param))
+        params))
+
 (defn execute-one
   "
   Like `execute` but return a single row.
@@ -57,10 +69,17 @@
    (execute-one db sql-map nil))
 
   ([db sql-map opt]
-   (let [[sql :as sql-vec] (format sql-map (:honey opt))]
-     (util/d-time (cc/format "PG query: %s" sql)
+   (let [[sql & params :as sqlvec]
+         (format sql-map (:honey opt))
+
+         message
+         (if (seq params)
+           (cc/format "PG query: %s, args: %s" sql (mask-params params))
+           (cc/format "PG query: %s" sql))]
+
+     (util/d-time message
                   (jdbc/execute-one! db
-                                     sql-vec
+                                     sqlvec
                                      (merge jdbc-defaults opt))))))
 
 (defn plan
@@ -72,10 +91,12 @@
    (plan db sql-map nil))
 
   ([db sql-map opt]
-   (let [[sql :as sql-vec] (format sql-map (:honey opt))]
+   (let [[sql :as sqlvec]
+         (format sql-map (:honey opt))]
+
      (log/infof "PG plan: %s" sql)
      (jdbc/plan db
-                sql-vec
+                sqlvec
                 (merge jdbc-defaults opt)))))
 
 ;;
@@ -154,7 +175,7 @@
   and inlines the string.
   "
   [field string]
-  [:ilike field [:inline (escape-like string)]])
+  [:ilike field (escape-like string)])
 
 (defn json-get-in
   "

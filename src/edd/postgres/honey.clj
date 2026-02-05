@@ -154,7 +154,7 @@
   and inlines the string.
   "
   [field string]
-  [:ilike field [:inline (escape-like string)]])
+  [:ilike field (escape-like string)])
 
 (defn json-get-in
   "
