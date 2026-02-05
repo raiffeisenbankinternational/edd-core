@@ -53,6 +53,7 @@ Writes rows to Parquet format in memory and returns `byte[]`.
 | `:rows` | seqable | yes | Sequence of row maps with string keys. Lazy sequences preferred for memory efficiency. |
 | `:compression` | keyword | no | `:gzip` (default) or `:uncompressed` |
 | `:schema-version` | string | no | Version string stored in metadata |
+| `:table-schema` | string | no | Database schema name stored in metadata |
 
 **Memory characteristics:**
 - Rows are consumed incrementally (lazy sequences supported)
@@ -109,6 +110,7 @@ Generated files include key-value metadata:
 |-----|-------|
 | `table.name` | Table name |
 | `table.description` | Schema description |
+| `table.schema` | Database schema name (if provided) |
 | `schema.fingerprint` | Deterministic schema hash |
 | `schema.version` | Version string (if provided) |
 | `column.{NAME}.description` | Column description |

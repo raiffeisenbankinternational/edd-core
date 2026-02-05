@@ -266,6 +266,7 @@
                         are consumed one at a time without realizing the full collection.
    - :compression (optional) - Compression codec (:gzip or :uncompressed, default :gzip)
    - :schema-version (optional) - Version string stored in Parquet key/value metadata
+   - :table-schema (optional) - Database schema name stored in Parquet key/value metadata
 
    Memory characteristics:
    - Rows are processed incrementally (lazy seqs supported)
@@ -273,7 +274,7 @@
    - Output byte[] is fully materialized in memory
 
    Returns byte[] containing the Parquet file contents."
-  [{:keys [table-name schema rows compression schema-version],
+  [{:keys [table-name schema rows compression schema-version table-schema],
     :or {compression :gzip}}]
   (let [parquet-schema
         (build-parquet-schema table-name schema)
@@ -314,7 +315,8 @@
                   "table.description" (:description schema),
                   "schema.fingerprint" (schema-fingerprint schema)}
                  (:columns schema))
-          schema-version (assoc "schema.version" (str schema-version)))
+          schema-version (assoc "schema.version" (str schema-version))
+          table-schema (assoc "table.schema" (str table-schema)))
 
         builder-class
         (proxy [org.apache.parquet.hadoop.ParquetWriter$Builder] [^OutputFile
