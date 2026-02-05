@@ -121,6 +121,7 @@
                                ["COL2" :long "Column 2" :optional]]},
             :rows [{"COL1" "value1", "COL2" 42}],
             :schema-version "1.2.3",
+            :table-schema "my_database_schema",
             :compression :uncompressed})
 
           f
@@ -132,6 +133,7 @@
           (is (= "test_table" (get md "table.name")))
           (is (= "Test description" (get md "table.description")))
           (is (= "1.2.3" (get md "schema.version")))
+          (is (= "my_database_schema" (get md "table.schema")))
           (is (string? (get md "schema.fingerprint")))
           (is (= "Column 1" (get md "column.COL1.description")))
           (is (= "required" (get md "column.COL1.requirement")))
