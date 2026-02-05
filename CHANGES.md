@@ -2,6 +2,10 @@
 
 ## Changes
 
+- [CARS-5169] Replace some inline values with params
+- replace inline HoneySQL expressions for better planning
+- update tests
+
 - [CARS-5133] Perf fixes to parquet writer
 
 - [CARS-5102] Fix edd-core advanced search

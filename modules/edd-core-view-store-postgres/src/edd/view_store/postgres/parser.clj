@@ -286,7 +286,7 @@
           (attrs/path-btree? service path)
           [(->sql-op op)
            (honey/json-get-in-text c/COL_AGGREGATE path)
-           [:inline (->string value)]]
+           (->string value)]
 
           (attrs/path-array? service path)
           [atat
@@ -353,8 +353,7 @@
               (attrs/path-btree? service path)
               [:in
                [:json#>> c/COL_AGGREGATE path]
-               (for [v value]
-                 [:inline (->string v)])]
+               (mapv ->string value)]
 
               (attrs/path-array? service path)
               [atat
@@ -417,7 +416,7 @@
       :predicate-id-uuid
       (let [{:keys [value]}
             content]
-        [:= :id [:inline value]])
+        [:= :id value])
 
       ;;
       ;; Case: [:eq :id "12345"]
@@ -432,7 +431,7 @@
           ;; Can be only applied if the string is a UUID.
           ;; Makes no sense otherwise.
           (if-let [uuid (parse-uuid value)]
-            [:= :id [:inline uuid]]
+            [:= :id uuid]
             false)
 
           ;; needs trigram index on id::text
@@ -449,11 +448,10 @@
         (cond
 
           (= len 1)
-          [:= :id [:inline (first value)]]
+          [:= :id (first value)]
 
           (> len 1)
-          [:in :id (for [uuid value]
-                     [:inline uuid])]
+          [:in :id (vec value)]
 
           :else
           (error! "Empty IN predicate, attribute: %s" attr)))
