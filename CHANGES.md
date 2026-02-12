@@ -2,6 +2,9 @@
 
 ## Changes
 
+- [CARS-5295] Better SQL logging with args
+- add logging sql args for the execute function
+
 - [CARS-5148] Parallel Parquet writer and perf fixes
 - make write-parquet-bytes optionally parallel if a realized collection
   is passed and row count is sufficiently large

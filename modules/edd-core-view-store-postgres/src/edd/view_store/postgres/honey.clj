@@ -35,20 +35,6 @@
 ;; JDBC functions
 ;;
 
-(defn execute
-  "
-  Format and execute a query by its HoneySQL representation.
-  "
-  ([db sql-map]
-   (execute db sql-map nil))
-
-  ([db sql-map opt]
-   (let [[sql :as sql-vec] (format sql-map (:honey opt))]
-     (util/d-time (cc/format "PG query: %s" sql)
-                  (jdbc/execute! db
-                                 sql-vec
-                                 (merge jdbc-defaults opt))))))
-
 (defn mask-params
   "
   Replace or mask some parameters before logging them.
@@ -60,6 +46,27 @@
             'SKIPPED
             param))
         params))
+
+(defn execute
+  "
+  Format and execute a query by its HoneySQL representation.
+  "
+  ([db sql-map]
+   (execute db sql-map nil))
+
+  ([db sql-map opt]
+   (let [[sql & params :as sql-vec]
+         (format sql-map (:honey opt))
+
+         message
+         (if (seq params)
+           (cc/format "PG query: %s, args: %s" sql (mask-params params))
+           (cc/format "PG query: %s" sql))]
+
+     (util/d-time message
+                  (jdbc/execute! db
+                                 sql-vec
+                                 (merge jdbc-defaults opt))))))
 
 (defn execute-one
   "
