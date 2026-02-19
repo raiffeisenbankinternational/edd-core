@@ -151,35 +151,43 @@
           (mock/verify-state :event-store [{:event-id  :cmd-id
                                             :id        cmd-id-2
                                             :event-seq 5}
-                                           {:event-id  :dummy-event-1
-                                            :handled   true
-                                            :event-seq 6
-                                            :meta      {:realm :test}
-                                            :id        cmd-id-2}
-                                           {:event-id  :dummy-event-2
-                                            :handled   true
-                                            :event-seq 7
-                                            :meta      {:realm :test}
-                                            :id        cmd-id-2}
+                                           {:event-id       :dummy-event-1
+                                            :handled        true
+                                            :event-seq      6
+                                            :meta           {:realm :test}
+                                            :request-id     nil
+                                            :interaction-id nil
+                                            :id             cmd-id-2}
+                                           {:event-id       :dummy-event-2
+                                            :handled        true
+                                            :event-seq      7
+                                            :meta           {:realm :test}
+                                            :request-id     nil
+                                            :interaction-id nil
+                                            :id             cmd-id-2}
                                            {:event-id  :cmd-id
                                             :id        cmd-id-3
                                             :event-seq 9}
                                            {:event-id  :cmd-id
                                             :id        cmd-id
                                             :event-seq 21}
-                                           {:event-id  :dummy-event
-                                            :handled   true
-                                            :event-seq 22
-                                            :meta      {:realm :test}
-                                            :id        cmd-id}
+                                           {:event-id       :dummy-event
+                                            :handled        true
+                                            :event-seq      22
+                                            :meta           {:realm :test}
+                                            :request-id     nil
+                                            :interaction-id nil
+                                            :id             cmd-id}
                                            {:event-id  :cmd-id
                                             :id        dps-id
                                             :event-seq 31}
-                                           {:event-id  :dummy-event-3
-                                            :handled   true
-                                            :event-seq 32
-                                            :meta      {:realm :test}
-                                            :id        dps-id}])
+                                           {:event-id       :dummy-event-3
+                                            :handled        true
+                                            :event-seq      32
+                                            :meta           {:realm :test}
+                                            :request-id     nil
+                                            :interaction-id nil
+                                            :id             dps-id}])
           (is (= {:effects    [{:cmd-id       :fx-command
                                 :id           #uuid "22222111-1111-1111-1111-111111111111"
                                 :service-name :local-test}]

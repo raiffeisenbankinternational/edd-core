@@ -64,8 +64,7 @@
                                                                           :file2 "file2.csv"}
                                                                  :status :uploaded}
                                                         :id     id}]
-                                            :service     :local-test
-                                            :breadcrumbs [0 0]}])
+                                            :service (:service-name ctx)}])
         (mock/execute-fx-apply ctx)
         (mock/verify-state :aggregate-store [{:id      id
                                               :import  {:bucket "some-bucket"

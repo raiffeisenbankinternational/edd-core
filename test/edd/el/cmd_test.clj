@@ -98,16 +98,18 @@
           :filters [fl/from-api]
           :post-filter fl/to-api)
          (do
-           (mock/verify-state :event-store [{:event-id  :ping
-                                             :event-seq 1
-                                             :id        id
-                                             :meta      {:realm :test
-                                                         :user  {:email "john.smith@example.com"
-                                                                 :id    "john.smith@example.com"
-                                                                 :role  :group-1
-                                                                 :roles [:group-1
-                                                                         :group-3
-                                                                         :group-2]}}}])
+           (mock/verify-state :event-store [{:event-id       :ping
+                                             :event-seq      1
+                                             :id             id
+                                             :request-id     request-id
+                                             :interaction-id interaction-id
+                                             :meta           {:realm :test
+                                                              :user  {:email "john.smith@example.com"
+                                                                      :id    "john.smith@example.com"
+                                                                      :role  :group-1
+                                                                      :roles [:group-1
+                                                                              :group-3
+                                                                              :group-2]}}}])
            (verify-traffic-edn
             [{:method  :get
               :timeout 90000000

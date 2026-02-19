@@ -408,21 +408,25 @@ and return nil to enable query-fn to have when conditions based on previously re
                                     :id      cmd-id-2
                                     :version 4}]})
         ;; Check :realm2 since commands are processed there
-      (is (= [{:event-id  :event-1
-               :event-seq 1
-               :value     :1
-               :meta      {:realm :realm2}
-               :id        cmd-id-deps}
+      (is (= [{:event-id       :event-1
+               :event-seq      1
+               :value          :1
+               :meta           {:realm :realm2}
+               :request-id     nil
+               :interaction-id nil
+               :id             cmd-id-deps}
               {:event-id  :event-1
                :event-seq 4
                :value     :2
                :meta      {:realm :realm2}
                :id        cmd-id-2}
-              {:event-id  :event-1
-               :event-seq 5
-               :value     :2
-               :meta      {:realm :realm2}
-               :id        cmd-id-2}]
+              {:event-id       :event-1
+               :event-seq      5
+               :value          :2
+               :meta           {:realm :realm2}
+               :request-id     nil
+               :interaction-id nil
+               :id             cmd-id-2}]
              (into [] (mock/dal-state-accessor
                        (assoc @state/*dal-state* :realm :realm2)
                        :event-store)))))

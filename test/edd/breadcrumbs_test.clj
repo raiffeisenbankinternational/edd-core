@@ -2,7 +2,6 @@
   (:require
    [clojure.test :refer [deftest testing is are use-fixtures run-tests join-fixtures]]
    [edd.core :as edd]
-   [edd.memory.event-store :as event-store]
    [edd.test.fixture.execution :as exec]
    [edd.common :as common]
    [lambda.uuid :as uuid]
@@ -151,30 +150,19 @@
 
 (deftest test-breadcrumbs-for-emtpy-command
   (mock/with-mock-dal
-    (with-redefs
-     [event-store/clean-commands (fn [cmd] (dissoc cmd
-                                                   :request-id
-                                                   :interaction-id
-                                                   :meta))]
-
-      (exec/run-cmd! ctx {:commands [{:cmd-id :inc
-                                      :id     id1}]})
-      (let [cmds (set (mock/peek-state :command-store))]
-        (is (= command-store-with-bc
-               (sort-crumbs cmds)))))))
+    {:keep-meta [:breadcrumbs]}
+    (exec/run-cmd! ctx {:commands [{:cmd-id :inc
+                                    :id     id1}]})
+    (let [cmds (set (mock/peek-state :command-store))]
+      (is (= command-store-with-bc
+             (sort-crumbs cmds))))))
 
 (deftest test-breadcrumbs-for-command-with-breadcrumb
   (mock/with-mock-dal
-    (with-redefs
-     [event-store/clean-commands (fn [cmd]
-                                   (dissoc cmd
-                                           :request-id
-                                           :interaction-id
-                                           :meta))]
-
-      (exec/run-cmd! ctx {:commands    [{:cmd-id :inc
-                                         :id     id1}]
-                          :breadcrumbs [0]})
-      (let [cmds (mock/peek-state :command-store)]
-        (is (= command-store-with-bc
-               (sort-crumbs cmds)))))))
+    {:keep-meta [:breadcrumbs]}
+    (exec/run-cmd! ctx {:commands    [{:cmd-id :inc
+                                       :id     id1}]
+                        :breadcrumbs [0]})
+    (let [cmds (mock/peek-state :command-store)]
+      (is (= command-store-with-bc
+             (sort-crumbs cmds))))))

@@ -104,12 +104,10 @@
     (mock/verify-state :command-store
                        [{:service  :source-svc
                          :commands [{:id     "2"
-                                     :cmd-id "2"}]
-                         :breadcrumbs [0 0]}
+                                     :cmd-id "2"}]}
                         {:service  "target-svc"
                          :commands [{:id     "1"
-                                     :cmd-id "1"}]
-                         :breadcrumbs [0 1]}])))
+                                     :cmd-id "1"}]}])))
 
 (deftest test-fx-evt
   (let [ctxevt (-> mock/ctx
@@ -130,8 +128,7 @@
         (mock/verify-state :command-store
                            [{:service  :source-svc
                              :commands [{:id     "2"
-                                         :cmd-id "2"}]
-                             :breadcrumbs [0 0]}])))
+                                         :cmd-id "2"}]}])))
     (testing "If multiple handlers work"
       (mock/with-mock-dal
         (mock/handle-cmd (edd.core/reg-event-fx
@@ -145,12 +142,10 @@
         (mock/verify-state :command-store
                            [{:service  :source-svc
                              :commands [{:id     "2"
-                                         :cmd-id "2"}]
-                             :breadcrumbs [0 0]}
+                                         :cmd-id "2"}]}
                             {:service  "target-svc"
                              :commands [{:id     "1"
-                                         :cmd-id "1"}]
-                             :breadcrumbs [0 1]}])))))
+                                         :cmd-id "1"}]}])))))
 
 (deftest test-execute-fx
   (let [ctx (-> mock/ctx

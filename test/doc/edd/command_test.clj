@@ -252,7 +252,7 @@
                            :event-store)))))
 
 (deftest pop-state-fixture
-  (testing "pop-state retrieves raw store contents and clears the store"
+  (testing "pop-state retrieves normalized store contents and clears the store"
     (mock/with-mock-dal
       (let [ctx (-> mock/ctx
                     (edd/reg-cmd :log-action
@@ -261,11 +261,12 @@
             cmd-id (uuid/gen)]
         (mock/handle-cmd ctx {:cmd-id :log-action :id cmd-id})
 
-        (comment "First pop returns raw event data (including :meta)")
+        (comment "First pop returns normalized event data (same as peek-state)")
         (let [events (mock/pop-state :event-store)]
           (is (= 1 (count events)))
           (is (= :action-logged (:event-id (first events))))
-          (is (= cmd-id (:id (first events)))))
+          (is (= cmd-id (:id (first events))))
+          (is (nil? (:meta (first events)))))
 
         (comment "Second pop returns empty - data was removed")
         (is (= []
@@ -487,6 +488,71 @@
 
         (is (= "Preloaded User" (:name result)))))))
 
+(deftest keep-meta-stripping
+  (let [register-ctx (fn [ctx]
+                       (-> ctx
+                           (edd/reg-cmd :create-item
+                                        (fn [_ctx _cmd]
+                                          {:event-id :item-created}))
+                           (edd/reg-event-fx :item-created
+                                             (fn [_ctx _event]
+                                               {:cmd-id :follow-up
+                                                :id     (uuid/gen)}))))
+        run-cmd (fn [ctx]
+                  (mock/handle-cmd ctx {:cmd-id :create-item
+                                        :id     (uuid/gen)}))]
+
+    (testing "nil/false strips all root-meta-fields from events and commands"
+      (mock/with-mock-dal
+        (let [ctx (register-ctx mock/ctx)]
+          (run-cmd ctx)
+          (let [event  (first (mock/peek-state :event-store))
+                effect (first (mock/peek-state :command-store))]
+            (doseq [k mock/root-meta-fields]
+              (is (not (contains? event k))
+                  (str k " should be stripped from event"))
+              (is (not (contains? effect k))
+                  (str k " should be stripped from effect")))))))
+
+    (testing "true keeps everything, nothing is stripped"
+      (mock/with-mock-dal
+        {:keep-meta true}
+        (let [ctx (register-ctx mock/ctx)]
+          (run-cmd ctx)
+          (let [event  (first (mock/peek-state :event-store))
+                effect (first (mock/peek-state :command-store))]
+            (is (contains? event :meta))
+            (is (contains? event :request-id))
+            (is (contains? event :interaction-id))
+            (is (contains? effect :meta))
+            (is (contains? effect :breadcrumbs))))))
+
+    (testing "vector keeps only listed keys from root and :meta sub-map"
+      (mock/with-mock-dal
+        {:keep-meta [:breadcrumbs]}
+        (let [ctx (register-ctx mock/ctx)]
+          (run-cmd ctx)
+          (let [effect (first (mock/peek-state :command-store))]
+            (is (contains? effect :breadcrumbs)
+                ":breadcrumbs in vector → kept on root")
+            (is (not (contains? effect :meta))
+                "no :meta keys in vector → :meta omitted")
+            (is (not (contains? effect :request-id))
+                ":request-id not in vector → stripped")))))
+
+    (testing "vector with :meta key keeps only matching entries inside :meta"
+      (mock/with-mock-dal
+        {:keep-meta [:realm]}
+        (let [ctx (register-ctx mock/ctx)]
+          (run-cmd ctx)
+          (let [event (first (mock/peek-state :event-store))]
+            (is (= {:realm :test} (:meta event))
+                ":realm in vector → kept inside :meta")
+            (is (not (contains? event :breadcrumbs))
+                ":breadcrumbs not in vector → stripped")
+            (is (not (contains? event :request-id))
+                ":request-id not in vector → stripped")))))))
+
 (deftest keep-meta-fixture
   (testing "By default peek-state will remove :meta from events. This makes
             assertions cleaner since you don't need to specify realm in every test.
@@ -520,13 +586,31 @@
                              [{:event-id :user-created
                                :id user-id
                                :event-seq 1
-                               :meta {:realm :test}}]))))))
+                               :request-id nil
+                               :interaction-id nil
+                               :meta {:realm :test}}]))))
+
+    (testing ":keep-meta can be a vector of keys to selectively preserve"
+      (mock/with-mock-dal
+        {:keep-meta [:realm]}
+        (let [ctx (-> mock/ctx
+                      (edd/reg-cmd :create-user
+                                   (fn [_ctx _cmd]
+                                     {:event-id :user-created})))
+              user-id (uuid/gen)]
+          (mock/handle-cmd ctx {:cmd-id :create-user :id user-id})
+
+          (comment "Only the specified :realm key from :meta is kept")
+          (is (= {:realm :test}
+                 (:meta (first (mock/peek-state :event-store))))))))))
 
 (deftest breadcrumbs-fixture
   (testing "When command produces side effects (via reg-event-fx), each effect
             gets assigned breadcrumbs. Breadcrumbs are used for tracing command
-            chains and preventing infinite loops. Format is [parent-index child-index]."
+            chains and preventing infinite loops. Format is [parent-index child-index].
+            Use :keep-meta [:breadcrumbs] to include them in assertions."
     (mock/with-mock-dal
+      {:keep-meta [:breadcrumbs]}
       (let [ctx (-> mock/ctx
                     (edd/reg-cmd :start-process
                                  (fn [_ctx _cmd]

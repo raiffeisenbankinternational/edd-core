@@ -441,14 +441,11 @@
           (is (= [{:commands [{:cmd-id :fx-cmd
                                :attrs  {:event-id :2
                                         :id       id}}]
-                   :breadcrumbs [0 0]  ;; dal-state-accessor keeps breadcrumbs
                    :service  :local-test}]
                  (into [] (mock/dal-state-accessor
                            (assoc @state/*dal-state* :realm :realm2)
                            :command-store))))
-          (is (= {:effects    [{:breadcrumbs [0
-                                              0]
-                                :commands    [{:cmd-id :fx-cmd
+          (is (= {:effects    [{:commands    [{:cmd-id :fx-cmd
                                                :attrs  {:event-id :2
                                                         :id       id}}]
                                 :service     :local-test}]

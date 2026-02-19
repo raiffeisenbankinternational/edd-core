@@ -16,6 +16,7 @@
 
 (ns edd.memory.event-store
   (:require
+   [clojure.pprint :as pprint]
    [clojure.tools.logging :as log]
    [lambda.ctx :as lambda-ctx]
    [lambda.test.fixture.state :refer [*dal-state* *queues*]]
@@ -42,7 +43,8 @@
   (if-let [realm (get-in ctx [:meta :realm])]
     realm
     (throw (ex-info "Context must contain [:meta :realm]"
-                    {:context ctx}))))
+                    {:meta         (:meta ctx)
+                     :service-name (:service-name ctx)}))))
 
 (defn get-realm-store
   "Get realm-scoped store from *dal-state*"
@@ -141,7 +143,8 @@
       (store-identity ctx i))
     (doseq [i (:effects resp)]
       (store-command ctx i))
-    (log/info resp)
+    (log/debug (with-out-str (pprint/pprint resp)))
+    (tap> resp)
     (log/info "Emulated 'with-transaction' dal function")
     ctx))
 

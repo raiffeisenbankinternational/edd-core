@@ -2,6 +2,11 @@
 
 ## Changes
 
+**[CARS-5422]** Improve :keep-meta stripping in test fixture
+Simplify normalize-item implementation with a single strippable-keys set.
+Expose root-meta-fields and meta-meta-fields for test assertions.
+Add comprehensive stripping test covering nil/false, true, and vector modes.
+
 **[AP-819]** Add view store compliance tests
 Implement compliance test suite for get-snapshot and update-aggregate
 
