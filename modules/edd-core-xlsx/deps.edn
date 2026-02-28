@@ -1,5 +1,5 @@
 {:deps
- {com.rbinternational.glms/edd-core {:local/root "../../"}
+ {app-group-id/edd-core {:local/root "../../"}
   org.dhatim/fastexcel        {:mvn/version "0.18.0"}
   org.dhatim/fastexcel-reader {:mvn/version "0.18.0"}}
  :paths ["src" "resources" "api/src"]

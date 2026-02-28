@@ -1,5 +1,5 @@
 {:deps
- {com.rbinternational.glms/edd-core {:local/root "../../"}}
+ {app-group-id/edd-core {:local/root "../../"}}
 
   :paths
   ["src" "resources"]

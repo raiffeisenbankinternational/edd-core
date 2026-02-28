@@ -9,7 +9,7 @@
             [java-http-clj.core :as http]
             [lambda.aes :as aes]
             [lambda.gzip :as gzip]
-            [lambda.logging.state :refer [*d-time-depth*]]
+            [lambda.logging.state :refer [*d-time-depth* *invocation-start-ns*]]
             [lambda.request :as request])
   (:import (java.io File InputStream)
            (java.net URLEncoder)
@@ -344,7 +344,14 @@
                                (.freeMemory (Runtime/getRuntime))))
                       1048576.0))
 
-             ignore# (log/info (str "START " ~message "; memory(mb): " mem#))
+             offset-ms#
+             (when (and (bound? #'*invocation-start-ns*)
+                        *invocation-start-ns*)
+               (/ (double (- start# (long *invocation-start-ns*))) 1000000.0))
+
+             ignore# (log/info (str "START " ~message "; memory(mb): " mem#
+                                    (when offset-ms#
+                                      (str "; offset(msec): " offset-ms#))))
              ret# (do
                     ~@expr)]
          (log/info (str
@@ -355,8 +362,96 @@
                                         (long
                                          (/ (long (- (.totalMemory (Runtime/getRuntime))
                                                      (.freeMemory (Runtime/getRuntime))))
-                                            1048576.0)))))
+                                            1048576.0)))
+                    (when offset-ms#
+                      (str "; offset(msec): " offset-ms#))))
          ret#))))
+
+(defn metric-label->string
+  "Converts a keyword-vector metric label to a human-readable string.
+   Prepends service-name when provided."
+  [service-name metric-path]
+  (let [svc
+        (name (or service-name "unknown"))]
+    (str svc "/" (->> metric-path
+                      (map name)
+                      (str/join "/")))))
+
+(defn report-metric!
+  "Reports a metric measurement. Calls the metrics-fn at [:logging :metrics]
+   in ctx if present, otherwise logs via log/info.
+
+   The metrics-fn receives a simple map:
+     {:label      [:query :get-order]   ;; keyword vector
+      :elapsed-ms 42.5
+      :offset-ms  123.4                ;; nil when invocation start not available
+      :status     200}                 ;; 200=success, 520=exception, 521=:error, 522=:exception"
+  [ctx metric-path elapsed-ms offset-ms status]
+  (let [metric
+        {:label metric-path
+         :elapsed-ms elapsed-ms
+         :offset-ms offset-ms
+         :status status}
+
+        metrics-fn
+        (get-in ctx [:logging :metrics])]
+
+    (if metrics-fn
+      (metrics-fn metric)
+      (let [label
+            (metric-label->string (:service-name ctx) metric-path)]
+        (log/info (str "METRIC " label
+                       "; elapsed(msec): " elapsed-ms
+                       "; status: " status
+                       (when offset-ms
+                         (str "; offset(msec): " offset-ms))))))))
+
+(defn response->status
+  "Derives a numeric status code from a response map.
+   200 = success, 521 = response contains :error, 522 = response contains :exception."
+  [resp]
+  (cond
+    (and (map? resp) (:exception resp)) 522
+    (and (map? resp) (:error resp))     521
+    :else                               200))
+
+(defmacro d-metrics
+  "Measures elapsed time of body and reports the metric.
+   ctx         - application context map
+   metric-path - vector of keywords, e.g. [:query :get-order]
+
+   Status codes reported:
+     200 - success
+     520 - uncaught exception (re-thrown after metric is reported)
+     521 - response map contains :error
+     522 - response map contains :exception"
+  {:style/indent 2}
+  [ctx metric-path & body]
+  `(let [start#
+         (System/nanoTime)
+
+         offset-start#
+         (when (and (bound? #'*invocation-start-ns*)
+                    *invocation-start-ns*)
+           (/ (double (- start# (long *invocation-start-ns*))) 1000000.0))]
+
+     (try
+       (let [ret#
+             (do ~@body)
+
+             elapsed-ms#
+             (/ (double (- (System/nanoTime) start#)) 1000000.0)
+
+             status#
+             (response->status ret#)]
+
+         (report-metric! ~ctx ~metric-path elapsed-ms# offset-start# status#)
+         ret#)
+       (catch Throwable t#
+         (let [elapsed-ms#
+               (/ (double (- (System/nanoTime) start#)) 1000000.0)]
+           (report-metric! ~ctx ~metric-path elapsed-ms# offset-start# 520)
+           (throw t#))))))
 
 (defn fix-keys
   "This is used to represent as close as possible when we store

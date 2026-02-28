@@ -2,8 +2,8 @@
   (:require [aws.lambda :as core]
             [lambda.filters :as fl]
             [lambda.util :as util]
-            [lambda.test.fixture.client :as client]
-            [lambda.emf :as emf]))
+            [lambda.metrics :as metrics]
+            [lambda.test.fixture.client :as client]))
 
 (def region "eu-central-1")
 
@@ -46,7 +46,7 @@
             ~invocations)
            responses# (vec (concat req-calls# ~requests))]
        (with-redefs [fl/get-realm realm-mock
-                     emf/start-metrics-publishing! (fn [] (constantly nil))
+                     metrics/start-metrics-publishing! (fn [ctx#] nil)
                      core/get-loop (fn [] (range 0 (count ~invocations)))
                      util/get-env (partial get-env-mock ~env)
                      util/get-current-time-ms (fn [] 1587403965)]

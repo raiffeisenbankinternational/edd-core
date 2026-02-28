@@ -7,8 +7,10 @@
 
 (def ^:dynamic *d-time-depth*
   "Current depth level for nested d-time measurements.
-  Used for indentation in logging output."
+   Used for indentation in logging output."
   0)
 
-;; Future: Add MDC (Mapped Diagnostic Context) vars here
-;; (def ^:dynamic *mdc* {})
+(def ^:dynamic *invocation-start-ns*
+  "Nano-time recorded at the beginning of invocation processing.
+   Used to compute offset-from-start in d-time logging."
+  nil)

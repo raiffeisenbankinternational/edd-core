@@ -249,80 +249,81 @@
 (defn handle-command
   [ctx {:keys [cmd-id] :as cmd}]
   (log/info "Requst meta: " (:meta ctx))
-  (util/d-time
-   (str "handling-command: " cmd-id)
-   (let [{:keys [handler]} (edd-ctx/get-cmd ctx cmd-id)
-         ctx (fetch-dependencies-for-command ctx cmd)
-         {:keys [id] :as cmd} (resolve-command-id-with-id-fn ctx cmd)
-         {:keys [error]
-          :as validation} (validate-single-command ctx cmd)]
-     (when-not handler
-       (throw (ex-info "Missing command handler"
-                       {:cmd-id (:cmd-id cmd)})))
-     (if error
-       validation
-       (let [snapshot
-             (common/get-by-id ctx id)
+  (util/d-metrics ctx [:command cmd-id]
+                  (util/d-time
+                   (str "handling-command: " cmd-id)
+                   (let [{:keys [handler]} (edd-ctx/get-cmd ctx cmd-id)
+                         ctx (fetch-dependencies-for-command ctx cmd)
+                         {:keys [id] :as cmd} (resolve-command-id-with-id-fn ctx cmd)
+                         {:keys [error]
+                          :as validation} (validate-single-command ctx cmd)]
+                     (when-not handler
+                       (throw (ex-info "Missing command handler"
+                                       {:cmd-id (:cmd-id cmd)})))
+                     (if error
+                       validation
+                       (let [snapshot
+                             (common/get-by-id ctx id)
 
-             _
-             (with-aggregate snapshot)
+                             _
+                             (with-aggregate snapshot)
 
-             ctx
-             (el-ctx/put-aggregate ctx snapshot)
+                             ctx
+                             (el-ctx/put-aggregate ctx snapshot)
 
-             resp
-             (->> (get-response-from-command-handler
-                   ctx
-                   :cmd cmd
-                   :command-handler handler)
-                  (resp->add-user-to-events ctx)
-                  (resp->assign-event-seq ctx))
+                             resp
+                             (->> (get-response-from-command-handler
+                                   ctx
+                                   :cmd cmd
+                                   :command-handler handler)
+                                  (resp->add-user-to-events ctx)
+                                  (resp->assign-event-seq ctx))
 
-             resp
-             (assoc resp :meta [{cmd-id {:id id}}])
+                             resp
+                             (assoc resp :meta [{cmd-id {:id id}}])
 
-             aggregate-schema
-             (edd-ctx/get-service-schema ctx)
+                             aggregate-schema
+                             (edd-ctx/get-service-schema ctx)
 
-             aggregate
-             (event/get-current-state
-              ctx
-              {:id id
-               :events (:events resp [])
-               :snapshot snapshot})
+                             aggregate
+                             (event/get-current-state
+                              ctx
+                              {:id id
+                               :events (:events resp [])
+                               :snapshot snapshot})
 
-             _
-             (with-aggregate aggregate)]
+                             _
+                             (with-aggregate aggregate)]
 
-         (when (and
-                aggregate
-                (not
-                 (m/validate aggregate-schema aggregate)))
-           (throw (ex-info "Invalid aggregate state"
-                           {:error (me/humanize
-                                    (m/explain aggregate-schema aggregate))})))
+                         (when (and
+                                aggregate
+                                (not
+                                 (m/validate aggregate-schema aggregate)))
+                           (throw (ex-info "Invalid aggregate state"
+                                           {:error (me/humanize
+                                                    (m/explain aggregate-schema aggregate))})))
 
-         (let [history-entry
-               {:snapshot snapshot
-                :aggregate aggregate}
+                         (let [history-entry
+                               {:snapshot snapshot
+                                :aggregate aggregate}
 
-               resp
-               (handle-effects ctx
-                               :resp resp
-                               :aggregate aggregate)
+                               resp
+                               (handle-effects ctx
+                                               :resp resp
+                                               :aggregate aggregate)
 
-               resp
-               (resp->add-meta-to-events ctx resp)
+                               resp
+                               (resp->add-meta-to-events ctx resp)
 
-               conjv
-               (fnil conj [])
+                               conjv
+                               (fnil conj [])
 
-               resp
-               (update resp :history conjv history-entry)]
+                               resp
+                               (update resp :history conjv history-entry)]
 
-           (request-cache/update-aggregate ctx aggregate)
-           (request-cache/store-identities ctx (:identities resp))
-           resp))))))
+                           (request-cache/update-aggregate ctx aggregate)
+                           (request-cache/store-identities ctx (:identities resp))
+                           resp)))))))
 
 (def initial-response
   {:meta       []

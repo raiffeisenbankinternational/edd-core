@@ -1,11 +1,19 @@
 {:deps
- {org.clojure/clojure                    {:mvn/version "1.12.3"}
-  com.alpha-prosoft/hikaricp             {:mvn/version "5.0.14" :exclusions [org.slf4j/slf4j-api]}
+ {org.clojure/clojure
+  {:mvn/version "1.12.3"}
+
+  com.alpha-prosoft/hikaricp
+  {:mvn/version "5.0.14"
+   :exclusions [org.slf4j/slf4j-api]}
+
   com.auth0/java-jwt                     {:mvn/version "4.4.0"}
   ch.qos.logback/logback-classic         {:mvn/version "1.5.21"}
   io.blockether/tools.logging            {:mvn/version "1.3.5"}
   ring-cors/ring-cors                    {:mvn/version "0.1.13"}
-  app-group-id/edd-core-json {:local/root "modules/edd-core-json"}
+
+  app-group-id/edd-core-json
+  {:local/root "modules/edd-core-json"}
+
   org.postgresql/postgresql              {:mvn/version "42.7.5"}
   com.github.seancorfield/honeysql       {:mvn/version "2.6.1147"}
   com.github.seancorfield/next.jdbc      {:mvn/version "1.3.1070"}
@@ -31,14 +39,14 @@
   {:extra-paths ["test"]
    :extra-deps {com.gfredericks/test.chuck {:mvn/version "0.2.14"}
                 org.clojure/test.check {:mvn/version "1.1.1"}}}
-   :unit
-   {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}}
-    :main-opts ["-m" "kaocha.runner" "unit"]
-    :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}
-   :it
-   {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}}
-    :main-opts ["-m" "kaocha.runner" "it"]
-    :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}
+  :unit
+  {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}}
+   :main-opts ["-m" "kaocha.runner" "unit"]
+   :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}
+  :it
+  {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}}
+   :main-opts ["-m" "kaocha.runner" "it"]
+   :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}
   :check {:extra-deps {io.github.athos/clj-check
                        {:git/tag "0.1.0" :git/sha "0ca84df"}}
           :main-opts ["-m" "clj-check.check"]}

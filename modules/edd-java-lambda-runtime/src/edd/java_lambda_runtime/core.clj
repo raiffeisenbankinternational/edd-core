@@ -3,10 +3,11 @@
    [aws.lambda :as lambda]
    [aws.ctx :as aws-ctx]
    [lambda.ctx :as lambda-ctx]
+   [lambda.metrics :as metrics]
    [clojure.java.io :as io]
    [clojure.tools.logging :as log]
-   [lambda.emf :as emf]
    [lambda.logging]
+   [lambda.logging.state :as log-state]
    [lambda.util :as util]
    [lambda.uuid :as uuid]
    [lambda.request :as request])
@@ -17,11 +18,10 @@
   (atom {}))
 
 (defn- ensure-metrics-started!
-  "Starts EMF metrics publishing on first invocation. No-op on subsequent calls."
-  []
+  "Starts metrics publishing on first invocation. No-op on subsequent calls."
+  [ctx]
   (when-not (:metrics-started @init-cache)
-    (when-not (util/get-env "AWS_LAMBDA_DISABLE_METRICS")
-      (emf/start-metrics-publishing!))
+    (metrics/start-metrics-publishing! ctx)
     (swap! init-cache assoc :metrics-started true)))
 
 (defn java-request-handler
@@ -30,9 +30,9 @@
                               post-filter (fn [ctx] ctx)}}]
 
   (fn [_this input output ^Context context]
-    (ensure-metrics-started!)
     (binding [util/*cache* init-cache
-              request/*request* (atom {})]
+              request/*request* (atom {})
+              log-state/*invocation-start-ns* (System/nanoTime)]
       (let [init-ctx
             (if (:aws @init-cache)
               (assoc  init-ctx
@@ -56,6 +56,8 @@
                 (lambda-ctx/init)
                 (aws-ctx/init)
                 (lambda/init-filters))]
+
+        (ensure-metrics-started! init-ctx)
 
         (swap! init-cache
                assoc

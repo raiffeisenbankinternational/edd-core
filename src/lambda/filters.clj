@@ -266,20 +266,77 @@
            (cond-> {}
              trace-header (assoc "X-Amzn-Trace-Id" trace-header)))))
 
+(defn- edd-header?
+  [header-name]
+  (string/starts-with?
+   (string/lower-case (name header-name))
+   "edd-"))
+
+(defn- collect-edd-headers
+  [headers multi-value-headers]
+  (let [from-headers
+        (reduce-kv
+         (fn [acc k v]
+           (if (edd-header? k)
+             (assoc acc (string/lower-case (name k)) v)
+             acc))
+         {}
+         (or headers {}))
+
+        from-multi
+        (reduce-kv
+         (fn [acc k v]
+           (if (edd-header? k)
+             (assoc acc (string/lower-case (name k)) (string/join "," v))
+             acc))
+         {}
+         (or multi-value-headers {}))]
+    (merge from-headers from-multi)))
+
+(defn- log-debug-params
+  [req]
+  (let [query-params
+        (get req :queryStringParameters)
+
+        request-id
+        (get query-params :request-id)
+
+        test-name
+        (get query-params :test-name)
+
+        _
+        (when (and request-id test-name)
+          (log/info "request-id=" request-id "&test-name=" test-name))
+
+        edd-headers
+        (collect-edd-headers
+         (get req :headers)
+         (get req :multiValueHeaders))]
+    (when (seq edd-headers)
+      (log/info "edd-headers:" edd-headers))))
+
 (defn parse-api-request
   [{:keys [body
            req
            lambda-api-requiest]
     :as ctx}]
   (store-trace-headers! lambda-api-requiest)
-  (let [method (:httpMethod req)
-        filtered (case method
-                   "GET" (parse-query-string
-                          (get-in req [:queryStringParameters :request]))
-                   (util/to-edn (:body body)))
-        ctx (assoc ctx :body filtered)]
-    (-> ctx
-        (assign-metadata))))
+  (log-debug-params req)
+  (let [query-params
+        (get req :queryStringParameters)
+
+        method
+        (:httpMethod req)
+
+        filtered
+        (case method
+          "GET" (parse-query-string
+                 (get query-params :request))
+          (util/to-edn (:body body)))
+
+        ctx
+        (assoc ctx :body filtered)]
+    (assign-metadata ctx)))
 
 (def from-api
   {:init jwt/fetch-jwks-keys
@@ -328,8 +385,11 @@
                     (format "could not serialize response, reason: %s" (ex-message e))]
                 [true (resp-serializer-fn {:error message})])))
 
+          error?
+          (or exception error serializer-error?)
+
           status
-          (if (or exception error serializer-error?)
+          (if error?
             500
             200)
 
@@ -343,11 +403,19 @@
                       origin (assoc "Access-Control-Allow-Credentials" "true"))}
 
           gzip?
-          (gzip/accepts-gzip? req)
+          (and (not error?)
+               (gzip/accepts-gzip? req))
 
           http-data
-          (if gzip?
+          (cond
+            error?
+            {:isBase64Encoded false
+             :body content}
+
+            gzip?
             (gzip/sub-response-gzip content)
+
+            :else
             (gzip/sub-response content))
 
           http-response

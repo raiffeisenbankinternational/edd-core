@@ -1,13 +1,14 @@
 (ns aws.lambda
   (:require [lambda.util :as util]
             [lambda.ctx :as lambda-ctx]
+            [lambda.metrics :as metrics]
             [aws.aws :as aws]
-            [lambda.emf :as emf]
             [lambda.request :as request]
             [lambda.uuid :as uuid]
             [aws.ctx :as aws-ctx]
             [clojure.tools.logging :as log]
-            [lambda.logging]))
+            [lambda.logging]
+            [lambda.logging.state :as log-state]))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
@@ -110,9 +111,6 @@
   [init-ctx handler & {:keys [filters post-filter]
                        :or   {filters     []
                               post-filter (fn [ctx] ctx)}}]
-  ;; a way to disable metrics locally to keep REPL clear
-  (when-not (util/get-env "AWS_LAMBDA_DISABLE_METRICS")
-    (emf/start-metrics-publishing!))
   (with-cache
     #(let [api (util/get-env "AWS_LAMBDA_RUNTIME_API")
            ctx (-> init-ctx
@@ -122,6 +120,7 @@
                    (lambda-ctx/init)
                    (aws-ctx/init)
                    (init-filters))]
+       (metrics/start-metrics-publishing! ctx)
        (doseq [i (get-loop)]
          (let [request (aws/get-next-request api)
                invocation-id (get-in
@@ -130,7 +129,8 @@
 
            (util/d-time
             (str "Handling next request: " i ", invocation-id: " invocation-id)
-            (binding [request/*request* (atom {:scoped true})]
+            (binding [request/*request* (atom {:scoped true})
+                      log-state/*invocation-start-ns* (System/nanoTime)]
               (send-response
                (handle-request
                 (-> ctx
@@ -140,3 +140,4 @@
                                             (uuid/parse invocation-id)
                                             invocation-id)))
                 request)))))))))
+

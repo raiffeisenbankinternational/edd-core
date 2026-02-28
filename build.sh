@@ -192,13 +192,54 @@ module_count=0
 skipped_count=0
 log_info "Scanning for modules to build..."
 
-for module in $(ls -1 | sort); do
+# Module build order: modules with no inter-module deps first,
+# then modules that depend on other modules.
+# Dependency graph:
+#   edd-core-view-store-postgres → edd-core-clj, edd-core-io
+#   edd-java-lambda-runtime      → edd-core-aws-emf
+MODULE_BUILD_ORDER=(
+  # Tier 1: no inter-module dependencies
+  edd-core-aws-emf
+  edd-core-client
+  edd-core-clj
+  edd-core-io
+  edd-core-json
+  edd-core-parquet
+  edd-core-xlsx
+  # Tier 2: depend on edd-core only (root, already built)
+  edd-core-dev
+  edd-core-import
+  edd-core-nippy
+  # Tier 3: depend on other modules
+  edd-core-view-store-postgres
+  edd-java-lambda-runtime
+)
+
+# Fail if any module with deps.edn exists but is not in MODULE_BUILD_ORDER
+log_info "Checking for modules not listed in MODULE_BUILD_ORDER..."
+for dir in */; do
+  dir="${dir%/}"
+  [ -f "$dir/deps.edn" ] || continue
+  found=false
+  for ordered in "${MODULE_BUILD_ORDER[@]}"; do
+    if [ "$dir" = "$ordered" ]; then
+      found=true
+      break
+    fi
+  done
+  if [ "$found" = false ]; then
+    log_error "Module '${dir}' has deps.edn but is not listed in MODULE_BUILD_ORDER. Add it to the list."
+    exit 1
+  fi
+done
+log_success "All modules accounted for in MODULE_BUILD_ORDER"
+
+for module in "${MODULE_BUILD_ORDER[@]}"; do
   if [ ! -d "$module" ]; then
-    log_warning "Skipping non-directory: ${module}"
+    log_warning "Skipping ${module} (directory not found)"
     continue
   fi
 
-  # Skip modules without deps.edn (not Clojure modules)
   if [ ! -f "$module/deps.edn" ]; then
     skipped_count=$((skipped_count + 1))
     log_warning "Skipping ${module} (no deps.edn found) [${skipped_count} skipped so far]"

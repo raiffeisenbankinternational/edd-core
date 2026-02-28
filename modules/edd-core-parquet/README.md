@@ -2,14 +2,6 @@
 
 Parquet file generation module for EDD-Core. Provides in-memory Parquet writing for columnar data export, optimized for analytics and data interchange.
 
-## Installation
-
-Add to your `deps.edn`:
-
-```clojure
-com.rbinternational.glms/edd-core-parquet {:mvn/version "VERSION"}
-```
-
 ## Usage
 
 ```clojure
@@ -116,14 +108,6 @@ Generated files include key-value metadata:
 | `column.{NAME}.description` | Column description |
 | `column.{NAME}.requirement` | `"required"` or `"optional"` |
 | `column.{NAME}.enum` | Allowed values (for enum columns) |
-
-## GraalVM Native Image
-
-This module includes reflection configuration for GraalVM native image compilation at:
-
-```
-resources/META-INF/native-image/com/rbinternational/glms/edd-core-parquet/reflect-config.json
-```
 
 ## Dependencies
 

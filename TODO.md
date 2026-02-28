@@ -15,3 +15,6 @@ NOW:
 - Version 0 handling  sould also never happen
 - rename parameter to query (defmethod get-snapshot [ctx query]) must be a map
 - check we are not fetching env variables but using ctx 
+
+
+Remove :meta from events in :peek-state

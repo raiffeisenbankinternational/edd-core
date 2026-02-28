@@ -17,12 +17,15 @@
   [deps app-group-id]
   (reduce-kv
    (fn [acc k v]
-     (assoc acc k (if (and (str/includes? (str k) (str app-group-id))
-                           (contains? v :local/root)
-                           (some? VERSION_OVERRIDE))
-                    {:mvn/version VERSION_OVERRIDE}
-                    v)))
-   deps
+     (if (and (str/includes? (str k) "app-group-id")
+              (contains? v :local/root)
+              (some? VERSION_OVERRIDE))
+       (let [new-key (symbol (str app-group-id) (name k))]
+         (-> acc
+             (dissoc k)
+             (assoc new-key {:mvn/version VERSION_OVERRIDE})))
+       (assoc acc k v)))
+   {}
    deps))
 
 (def project-deps

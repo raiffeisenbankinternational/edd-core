@@ -1,4 +1,4 @@
-{:deps {com.rbinternational.glms/edd-core {:local/root "../../"}}
+{:deps {app-group-id/edd-core {:local/root "../../"}}
  :paths ["src" "resources"]
  :aliases
  {:build {:deps {io.github.clojure/tools.build {:mvn/version "0.10.6"}}

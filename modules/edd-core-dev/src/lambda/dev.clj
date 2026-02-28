@@ -13,8 +13,7 @@
             [lambda.jwt :as jwt]
             [lambda.util :as util]
             [lambda.uuid :as uuid]
-            [ring.adapter.jetty9 :as jetty]
-            [lambda.emf :as emf]))
+            [ring.adapter.jetty9 :as jetty]))
 
 (declare default-response-handler)
 
@@ -121,7 +120,6 @@
                                          aws/get-token (fn [_] (get (config-load) "id-token"))
                                          util/load-config (fn [_] {})
                                          lambda/get-loop (fn [] [0])
-                                         emf/start-metrics-publishing! (fn [] (constantly nil))
                                          lambda/send-response (send-response-redef response-handler message)
                                          util/get-env (get-env-redef config-load)
                                          aws/get-next-invocation (get-next-invocation-redef config-load cmd-id query-id message)

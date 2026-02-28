@@ -250,23 +250,26 @@
   [ctx body]
   (let [query (:query body)
         query-id (keyword (:query-id query))
+
         {:keys [consumes
                 handler
                 produces]} (get-in ctx [:edd-core :queries query-id])]
 
-    (log/debugf "Handling query: %s" query-id)
-    (when-not handler
-      (throw (ex-info "No handler found"
-                      {:error    "No handler found"
-                       :query-id query-id})))
-    (when-not (m/validate consumes query)
-      (throw (ex-info "Invalid request"
-                      {:error (schema/explain-error consumes query)})))
-    (let [{:keys [deps]} (edd-ctx/get-query ctx query-id)
-          ctx (fetch-dependencies-for-deps ctx deps query)
-          resp (util/d-time
-                (str "handling-query: " query-id)
-                (handler ctx query))]
-      (log/debug "Query response" resp)
-      (maybe-validate-response ctx produces resp)
-      resp)))
+    (util/d-metrics ctx [:query (or query-id :unknown)]
+                    (do
+                      (log/debugf "Handling query: %s" query-id)
+                      (when-not handler
+                        (throw (ex-info "No handler found"
+                                        {:error    "No handler found"
+                                         :query-id query-id})))
+                      (when-not (m/validate consumes query)
+                        (throw (ex-info "Invalid request"
+                                        {:error (schema/explain-error consumes query)})))
+                      (let [{:keys [deps]} (edd-ctx/get-query ctx query-id)
+                            ctx (fetch-dependencies-for-deps ctx deps query)
+                            resp (util/d-time
+                                  (str "handling-query: " query-id)
+                                  (handler ctx query))]
+                        (log/debug "Query response" resp)
+                        (maybe-validate-response ctx produces resp)
+                        resp)))))
