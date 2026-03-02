@@ -386,7 +386,7 @@
           resp)))
     (catch Exception ex
       (log/error "CMD execution ERROR" ex)
-      (ex-data ex))))
+      (throw ex))))
 
 (defn get-commands-response
   [ctx cmd]

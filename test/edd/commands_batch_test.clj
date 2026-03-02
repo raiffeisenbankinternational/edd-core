@@ -560,7 +560,8 @@
         ctx (-> mock/ctx
                 (edd/reg-cmd :cmd-1 (fn [ctx _cmd]
                                       (is (= (:version (el-ctx/get-aggregate ctx))
-                                             (:version (:agg ctx)))))
+                                             (:version (:agg ctx))))
+                                      {:event-id :cmd-1-completed})
                              :deps {:agg (fn [_ctx cmd]
                                            {:query-id :get-agg-by-id
                                             :id (:id cmd)})})

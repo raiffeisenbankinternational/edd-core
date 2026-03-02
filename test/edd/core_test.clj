@@ -115,10 +115,13 @@
    "Test if id-fn works correctly together with event seq. This test does multiple things. Sorry!!"
     (mock/with-mock-dal
       (is (= {:error "Some error"}
-             (mock/handle-cmd
-              (prepare {})
-              {:commands [{:cmd-id :error-cmd
-                           :id     cmd-id}]}))))))
+             (try
+               (mock/handle-cmd
+                (prepare {})
+                {:commands [{:cmd-id :error-cmd
+                             :id     cmd-id}]})
+               (catch Exception e
+                 (ex-data e))))))))
 
 (deftest test-error-response
   (testing

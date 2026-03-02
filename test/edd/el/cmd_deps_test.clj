@@ -439,12 +439,15 @@ and return nil to enable query-fn to have when conditions based on previously re
               :message "Version mismatch"
               :state   {:current 4
                         :version 6}}
-             (mock/handle-cmd ctx
-                              {:meta     {:realm :realm2}
-                               :commands [{:cmd-id  :cmd-1
-                                           :value   :2
-                                           :id      cmd-id-2
-                                           :version 6}]}))))))
+             (try
+               (mock/handle-cmd ctx
+                                {:meta     {:realm :realm2}
+                                 :commands [{:cmd-id  :cmd-1
+                                             :value   :2
+                                             :id      cmd-id-2
+                                             :version 6}]})
+               (catch Exception e
+                 (ex-data e))))))))
 
 (deftest test-dependencies-vector
   (testing
