@@ -2,6 +2,8 @@
 
 ## Changes
 
+**[AP-823]** Throw exception on test failure
+
 **[CARS-5758]** Log command validation failures
 
 **[CARS-5783]** Add missing Snappy reflection-config entry

@@ -4,7 +4,8 @@
             [clojure.test :refer :all]
             [edd.test.fixture.dal :as mock]
             [lambda.uuid :as uuid]
-            [edd.el.cmd :as cmd]))
+            [edd.el.cmd :as cmd])
+  (:import (clojure.lang ExceptionInfo)))
 
 (defn dummy-command-handler
   [ctx cmd]
@@ -84,3 +85,146 @@
       (is
        (re-matches #".*Command validation failed.*:dummy-cmd.*missing required key.*"
                    @error-log)))))
+
+(deftest test-reserved-key-user-in-event
+  (mock/with-mock-dal
+    (try
+      (mock/handle-cmd
+       (edd/reg-cmd mock/ctx
+                    :bad-cmd
+                    (fn [_ cmd]
+                      {:event-id :bad-event
+                       :user "should-not-be-here"}))
+       {:cmd-id :bad-cmd
+        :id cmd-id})
+      (is false
+          "Expected exception for reserved key :user")
+      (catch ExceptionInfo e
+        (is
+         (some?
+          (:error (ex-data e))))))))
+
+(deftest test-reserved-key-role-in-event
+  (mock/with-mock-dal
+    (try
+      (mock/handle-cmd
+       (edd/reg-cmd mock/ctx
+                    :bad-cmd
+                    (fn [_ cmd]
+                      {:event-id :bad-event
+                       :role :admin}))
+       {:cmd-id :bad-cmd
+        :id cmd-id})
+      (is false
+          "Expected exception for reserved key :role")
+      (catch ExceptionInfo e
+        (is
+         (some?
+          (:error (ex-data e))))))))
+
+(deftest test-reserved-key-meta-in-event
+  (mock/with-mock-dal
+    (try
+      (mock/handle-cmd
+       (edd/reg-cmd mock/ctx
+                    :bad-cmd
+                    (fn [_ cmd]
+                      {:event-id :bad-event
+                       :meta {:something "sneaky"}}))
+       {:cmd-id :bad-cmd
+        :id cmd-id})
+      (is false
+          "Expected exception for reserved key :meta")
+      (catch ExceptionInfo e
+        (is
+         (some?
+          (:error (ex-data e))))))))
+
+(deftest test-reserved-key-request-id-in-event
+  (mock/with-mock-dal
+    (try
+      (mock/handle-cmd
+       (edd/reg-cmd mock/ctx
+                    :bad-cmd
+                    (fn [_ cmd]
+                      {:event-id :bad-event
+                       :request-id (uuid/gen)}))
+       {:cmd-id :bad-cmd
+        :id cmd-id})
+      (is false
+          "Expected exception for reserved key :request-id")
+      (catch ExceptionInfo e
+        (is
+         (some?
+          (:error (ex-data e))))))))
+
+(deftest test-reserved-key-event-seq-in-event
+  (mock/with-mock-dal
+    (try
+      (mock/handle-cmd
+       (edd/reg-cmd mock/ctx
+                    :bad-cmd
+                    (fn [_ cmd]
+                      {:event-id :bad-event
+                       :event-seq 42}))
+       {:cmd-id :bad-cmd
+        :id cmd-id})
+      (is false
+          "Expected exception for reserved key :event-seq")
+      (catch ExceptionInfo e
+        (is
+         (some?
+          (:error (ex-data e))))))))
+
+(deftest test-multiple-reserved-keys-in-event
+  (mock/with-mock-dal
+    (try
+      (mock/handle-cmd
+       (edd/reg-cmd mock/ctx
+                    :bad-cmd
+                    (fn [_ cmd]
+                      {:event-id :bad-event
+                       :user "bad"
+                       :role :bad
+                       :meta {:bad true}}))
+       {:cmd-id :bad-cmd
+        :id cmd-id})
+      (is false
+          "Expected exception for multiple reserved keys")
+      (catch ExceptionInfo e
+        (is
+         (some?
+          (:error (ex-data e))))))))
+
+(deftest test-event-id-must-be-keyword
+  (mock/with-mock-dal
+    (try
+      (mock/handle-cmd
+       (edd/reg-cmd mock/ctx
+                    :bad-cmd
+                    (fn [_ cmd]
+                      {:event-id "not-a-keyword"}))
+       {:cmd-id :bad-cmd
+        :id cmd-id})
+      (is false
+          "Expected exception for non-keyword :event-id")
+      (catch ExceptionInfo e
+        (is
+         (some?
+          (:error (ex-data e))))))))
+
+(deftest test-valid-event-without-reserved-keys
+  (mock/with-mock-dal
+    (let [result
+          (mock/handle-cmd
+           (edd/reg-cmd mock/ctx
+                        :good-cmd
+                        (fn [_ cmd]
+                          {:event-id :good-event
+                           :attrs {:data "valid"}}))
+           {:cmd-id :good-cmd
+            :id cmd-id})]
+
+      (is
+       (true?
+        (:success result))))))

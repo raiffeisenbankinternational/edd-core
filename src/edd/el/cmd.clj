@@ -122,17 +122,18 @@
               %))
           events)))
 
-(defn resp->add-user-to-events
+(defn resp->validate-and-add-user
   [{:keys [user]} resp]
-  (if-not user
-    resp
-    (update resp :events
-            (fn
-              [events]
-              (map #(assoc %
-                           :user (:id user)
-                           :role (:role user))
-                   events)))))
+  (update resp :events
+          (fn [events]
+            (map (fn [event]
+                   (edd-schema/validate-event event)
+                   (if user
+                     (assoc event
+                            :user (:id user)
+                            :role (:role user))
+                     event))
+                 events))))
 
 (defn resolve-command-id-with-id-fn
   "Resolving command id. Taking into account override function of id.
@@ -281,7 +282,7 @@
                                    ctx
                                    :cmd cmd
                                    :command-handler handler)
-                                  (resp->add-user-to-events ctx)
+                                  (resp->validate-and-add-user ctx)
                                   (resp->assign-event-seq ctx))
 
                              resp

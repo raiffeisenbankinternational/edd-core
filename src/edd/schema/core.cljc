@@ -1,6 +1,7 @@
 (ns edd.schema.core
   (:require
    [malli.core :as m]
+   [malli.error :as me]
    [malli.util :as mu]
    [malli.transform :as mt]))
 
@@ -165,3 +166,32 @@
 (def EddCoreQueryProduces
   [:map
    [:result [:map]]])
+
+(def reserved-event-keys
+  "Keys that are reserved for system use and must not be set by command handlers.
+  These keys are automatically injected by the framework."
+  #{:user :role :meta :request-id :interaction-id :event-seq})
+
+(def EventSchema
+  "Malli schema for events returned by command handlers.
+  Validates structure and rejects reserved system keys."
+  [:and
+   [:map
+    [:event-id keyword?]]
+   [:fn {:error/fn (fn [{:keys [value]} _]
+                     (let [found
+                           (filterv #(contains? value %) reserved-event-keys)]
+                       (str "Event must not contain reserved keys: " found)))}
+    (fn [event]
+      (not-any? #(contains? event %) reserved-event-keys))]])
+
+(defn validate-event
+  "Validates that an event returned by a command handler conforms to EventSchema.
+  Throws ex-info with humanized error if invalid."
+  [event]
+  (when-not (m/validate EventSchema event)
+    (throw (ex-info
+            (str "Invalid event: "
+                 (me/humanize (m/explain EventSchema event)))
+            {:error (me/humanize (m/explain EventSchema event))
+             :event-id (:event-id event)}))))
