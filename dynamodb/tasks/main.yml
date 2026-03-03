@@ -17,7 +17,7 @@
 
 - name: Calculate derived names
   set_fact:
-    stack_name: '{{ env_upper }}-DYNAMODB-{{ realm }}-{{ resource_name }}-stack'
+    stack_name: '{{ env_upper }}-DYNAMODB-{{ resource_name }}-{{ realm }}-stack'
     database_name: '{{ resource_name }}'
 
 - name: 'Deploy dynamodb stack: {{ stack_name }}'

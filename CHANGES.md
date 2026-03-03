@@ -2,6 +2,8 @@
 
 ## Changes
 
+**[AP-825]** Fix stack name to support realms
+
 **[AP-824]** Validate events before storing
 
 **[AP-823]** Throw exception on test failure
