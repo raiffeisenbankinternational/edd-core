@@ -31,14 +31,20 @@
        (if (and (:AccessKeyId body)
                 (:SecretAccessKey body))
 
-         {:aws-access-key-id
-          (:AccessKeyId body)
+         (do
+           (log/info "AWS credentials fetched successfully"
+                     {:uri uri :expiration (:Expiration body)})
+           {:aws-access-key-id
+            (:AccessKeyId body)
 
-          :aws-secret-access-key
-          (:SecretAccessKey body)
+            :aws-secret-access-key
+            (:SecretAccessKey body)
 
-          :aws-session-token
-          (or (:Token body) "")}
+            :aws-session-token
+            (or (:Token body) "")
+
+            :aws-expiration
+            (:Expiration body)})
          (do
            (log/warn "Fetched incomplete credentials from URI"
                      {:uri uri :response-keys (keys body)})

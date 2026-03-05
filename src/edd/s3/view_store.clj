@@ -136,6 +136,10 @@
              realm
              service-name
              id)
+
+        _
+        (log/info "S3 get-snapshot" {:bucket bucket :key key})
+
         {:keys [error]
          :as resp} (s3/get-object ctx
                                   {:s3 {:bucket {:name bucket}

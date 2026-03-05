@@ -2,6 +2,10 @@
 
 ## Changes
 
+**[AP-856]** Improve starup performance
+
+**[AP-826]** Fix order of names (typo)
+
 **[AP-825]** Fix stack name to support realms
 
 **[AP-824]** Validate events before storing

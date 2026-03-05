@@ -1,7 +1,7 @@
 {:deps
  {app-group-id/edd-core {:local/root "../../"}
   com.alpha-prosoft/jsonista {:mvn/version "0.3.8.11"}
-  net.mikera/vectorz {:mvn/version "0.66.0"
+  net.mikera/vectorz {:mvn/version "0.67.0"
                       ;; We need a single class to extend a protocol
                       ;; but not the whole Mikera stuff. Excluding.
                       :exclusions [us.bpsm/edn-java
@@ -9,22 +9,22 @@
                                    net.mikera/mathz]}}
  :paths ["src" "resources"]
  :aliases
- {:build  {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.6"}}
+ {:build  {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.13"}}
            :ns-default build}
 
   :test   {:extra-paths ["test", "test/resources"],
-           :extra-deps  {org.clojure/test.check {:mvn/version "1.1.1"}}},
+           :extra-deps  {org.clojure/test.check {:mvn/version "1.1.3"}}},
 
-  :unit   {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}},
+  :unit   {:extra-deps {lambdaisland/kaocha {:mvn/version "1.91.1392"}},
            :main-opts  ["-m" "kaocha.runner" "unit"]
            :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}
 
   :dev    {:extra-paths ["dev" "dev/resources"]
            :extra-deps
-           {org.clojure/clojure {:mvn/version "1.12.3"}}}
+           {org.clojure/clojure {:mvn/version "1.12.4"}}}
 
-  :lint   {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2023.01.20"}}
+  :lint   {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2026.01.19"}}
            :main-opts  ["-m" "clj-kondo.main" "--lint" "src" "test"]}
 
-  :format {:extra-deps {dev.weavejester/cljfmt {:mvn/version "0.11.2"}}
+  :format {:extra-deps {dev.weavejester/cljfmt {:mvn/version "0.16.4"}}
            :main-opts  ["-m" "cljfmt.main" "fix" "src" "test" "--config" "cljfmt.edn"]}}}

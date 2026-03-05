@@ -1,25 +1,25 @@
 {:deps
  {org.clojure/clojure
-  {:mvn/version "1.12.3"}
+  {:mvn/version "1.12.4"}
 
   com.alpha-prosoft/hikaricp
   {:mvn/version "5.0.14"
    :exclusions [org.slf4j/slf4j-api]}
 
-  com.auth0/java-jwt                     {:mvn/version "4.4.0"}
-  ch.qos.logback/logback-classic         {:mvn/version "1.5.21"}
-  io.blockether/tools.logging            {:mvn/version "1.3.5"}
+  com.auth0/java-jwt                     {:mvn/version "4.5.1"}
+  ch.qos.logback/logback-classic         {:mvn/version "1.5.32"}
+  io.blockether/tools.logging            {:mvn/version "1.3.7"}
   ring-cors/ring-cors                    {:mvn/version "0.1.13"}
 
   app-group-id/edd-core-json
   {:local/root "modules/edd-core-json"}
 
-  org.postgresql/postgresql              {:mvn/version "42.7.5"}
-  com.github.seancorfield/honeysql       {:mvn/version "2.6.1147"}
-  com.github.seancorfield/next.jdbc      {:mvn/version "1.3.1070"}
-  org.clojure/data.xml                   {:mvn/version "0.2.0-alpha8"}
-  org.clojure/data.csv                   {:mvn/version "1.0.1"}
-  metosin/malli                          {:mvn/version "0.20.0"}
+  org.postgresql/postgresql              {:mvn/version "42.7.10"}
+  com.github.seancorfield/honeysql       {:mvn/version "2.7.1368"}
+  com.github.seancorfield/next.jdbc      {:mvn/version "1.3.1093"}
+  org.clojure/data.xml                   {:mvn/version "0.2.0-alpha11"}
+  org.clojure/data.csv                   {:mvn/version "1.1.1"}
+  metosin/malli                          {:mvn/version "0.20.1"}
   java-http-clj/java-http-clj            {:mvn/version "0.4.3"}
   net.mikera/vectorz-clj                 {:mvn/version "0.48.0"}
   net.mikera/core.matrix                 {:mvn/version "0.63.0"}
@@ -28,23 +28,23 @@
   io.forward/yaml                        {:mvn/version "1.0.11"}
   com.github.clj-easy/graal-build-time   {:mvn/version "1.0.5"}
   com.auth0/jwks-rsa                     {:mvn/version "0.23.0"}
-  org.clojure/core.async                 {:mvn/version "1.6.673"}}
+  org.clojure/core.async                 {:mvn/version "1.9.865"}}
  :paths
  ["src" "resources"]
  :aliases
- {:build {:deps {io.github.clojure/tools.build {:mvn/version "0.10.10"}}
+ {:build {:deps {io.github.clojure/tools.build {:mvn/version "0.10.13"}}
           :ns-default build}
   :dev {:extra-paths ["dev"]}
   :test
   {:extra-paths ["test"]
-   :extra-deps {com.gfredericks/test.chuck {:mvn/version "0.2.14"}
-                org.clojure/test.check {:mvn/version "1.1.1"}}}
+   :extra-deps {com.gfredericks/test.chuck {:mvn/version "0.2.15"}
+                org.clojure/test.check {:mvn/version "1.1.3"}}}
   :unit
-  {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}}
+  {:extra-deps {lambdaisland/kaocha {:mvn/version "1.91.1392"}}
    :main-opts ["-m" "kaocha.runner" "unit"]
    :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}
   :it
-  {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}}
+  {:extra-deps {lambdaisland/kaocha {:mvn/version "1.91.1392"}}
    :main-opts ["-m" "kaocha.runner" "it"]
    :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}
   :check {:extra-deps {io.github.athos/clj-check
