@@ -75,27 +75,35 @@
   "Dispatches a synthetic command through the full in-memory pipeline.
    Forces loading of edd.core, edd.el.cmd/event/query, edd.search multimethods,
    edd.dal multimethods, Malli schema compilation, response-cache code paths, etc.
+   Also pre-loads immutable config files (secret.json, jwks.json) into the
+   load-config cache so they are snapshotted and ready on restore.
    Must never throw — failures are logged and swallowed."
   [base-ctx]
   (try
-    (log/info "SnapStart warm-up: starting pipeline dry-run.")
-    (let [ctx
-          (warm-up-ctx base-ctx)]
-      (binding [*dal-state* (atom {:realm :warmup
-                                   :realms {:warmup {}}})
-                *queues* {:command-queue (atom [])
-                          :seed 0}
-                util/*cache* init-cache
-                request/*request* (atom {:scoped true})
-                log-state/*invocation-start-ns* (System/nanoTime)]
-        (edd/with-stores
-          ctx
-          #(el-cmd/handle-commands
-            %
-            {:request-id     (uuid/gen)
-             :interaction-id (uuid/gen)
-             :commands       [{:cmd-id :warmup-cmd
-                               :id     (uuid/gen)}]}))))
+    (log/info "SnapStart warm-up: pre-loading config files.")
+    (let [preloaded-ctx
+          (-> base-ctx
+              (lambda-ctx/init)
+              (lambda/init-filters))]
+      (log/info "SnapStart warm-up: config files loaded.")
+      (log/info "SnapStart warm-up: starting pipeline dry-run.")
+      (let [ctx
+            (warm-up-ctx preloaded-ctx)]
+        (binding [*dal-state* (atom {:realm :warmup
+                                     :realms {:warmup {}}})
+                  *queues* {:command-queue (atom [])
+                            :seed 0}
+                  util/*cache* init-cache
+                  request/*request* (atom {:scoped true})
+                  log-state/*invocation-start-ns* (System/nanoTime)]
+          (edd/with-stores
+            ctx
+            #(el-cmd/handle-commands
+              %
+              {:request-id     (uuid/gen)
+               :interaction-id (uuid/gen)
+               :commands       [{:cmd-id :warmup-cmd
+                                 :id     (uuid/gen)}]})))))
     (log/info "SnapStart warm-up: pipeline dry-run complete.")
     (catch Exception e
       (log/warn "SnapStart warm-up failed (non-fatal):" (ex-message e)))))
@@ -113,14 +121,17 @@
     (binding [util/*cache* init-cache
               request/*request* (atom {:scoped true})
               log-state/*invocation-start-ns* (System/nanoTime)]
-      (let [cached-aws
-            (:aws @init-cache)
+      (let [cached
+            @init-cache
+
+            cached-aws
+            (:aws cached)
 
             init-ctx
             (if (and cached-aws (not (creds-stale? cached-aws)))
               (assoc init-ctx
                      :aws cached-aws
-                     :aws-ctx-initialized true)
+                     :aws-ctx-initialized (:aws-ctx-initialized cached true))
               init-ctx)
 
             request
@@ -144,8 +155,8 @@
 
         (swap! init-cache
                assoc
-               :aws
-               (:aws init-ctx))
+               :aws (:aws init-ctx)
+               :aws-ctx-initialized true)
 
         (lambda/send-response
          (lambda/handle-request
@@ -225,7 +236,9 @@
                    (-> @edd.java-lambda-runtime.core/restore-ctx
                        (dissoc :aws-ctx-initialized)
                        (aws.ctx/init))]
-               (swap! edd.java-lambda-runtime.core/init-cache assoc :aws (:aws fresh-ctx#))
+               (swap! edd.java-lambda-runtime.core/init-cache assoc
+                      :aws (:aws fresh-ctx#)
+                      :aws-ctx-initialized true)
                (clojure.tools.logging/info "lambda.Handler -afterRestore: credentials refreshed."))
              (catch Exception e#
                (clojure.tools.logging/warn "lambda.Handler -afterRestore: credential refresh failed (will retry on first invocation):"

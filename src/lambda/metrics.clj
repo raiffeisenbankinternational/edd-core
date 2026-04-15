@@ -25,7 +25,11 @@
    ;; Java G1 GC
    "G1 Young Generation"          "GCYoung"
    "G1 Old Generation"            "GCOldGen"
-   "G1 Concurrent GC"             "GCConcurrent"})
+   "G1 Concurrent GC"             "GCConcurrent"
+
+   ;; Java Serial GC (used by Lambda SnapStart / Java 25)
+   "Copy"                         "GCYoung"
+   "MarkSweepCompact"             "GCOldGen"})
 
 (def ^:private gcs-p
   (promise))
@@ -44,7 +48,6 @@
         (let [mx-gc-beans (ArrayList. (ManagementFactory/getGarbageCollectorMXBeans))
               _ (Collections/sort mx-gc-beans mx-gc-beans-comparator)
               ^Iterator iter (.iterator mx-gc-beans)
-              required-gcc-by-names (set (vals selected-gcs))
               gcs (loop [gcs {}]
                     (if-not (.hasNext iter)
                       gcs
@@ -55,9 +58,10 @@
                           (recur (assoc gcs gc-as-name gc-bean))
                           (recur gcs)))))
               found-gccs-by-names (set (keys gcs))]
-          (when-not (= required-gcc-by-names found-gccs-by-names)
-            (log/warnf "Unable to find all required GC collectors. Required %s, found %s"
-                       required-gcc-by-names found-gccs-by-names))
+          (when-not (or (contains? found-gccs-by-names "GCYoung")
+                        (contains? found-gccs-by-names "GCOldGen"))
+            (log/warnf "Unable to find GC collectors for metrics. Found raw collectors: %s"
+                       (mapv #(.getName ^GarbageCollectorMXBean %) (ArrayList. (ManagementFactory/getGarbageCollectorMXBeans)))))
           gcs)))
     @gcs-p))
 

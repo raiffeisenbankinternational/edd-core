@@ -231,7 +231,13 @@
                      iv))
       body)))
 
-(defn load-config
+(def ^:private config-cache
+  "Module-level cache for immutable deployment config files.
+   Keyed by filename. Populated on first read, reused across all
+   invocations and CRaC restores (files never change within a container)."
+  (atom {}))
+
+(defn- load-config-from-disk
   [name]
   (log/debug "Loading config name:" name)
   (let [file (io/as-file name)
@@ -257,6 +263,19 @@
        :else (do
                (log/info "Config file not found, skipping:" name)
                "{}")))))
+
+(defn load-config
+  "Loads and parses a config file by name.
+   Checks the current directory, /tmp/, and classpath in order.
+   Result is cached in memory — files are immutable in deployment,
+   so the first read is reused for all subsequent calls."
+  [name]
+  (let [cache @config-cache]
+    (if (contains? cache name)
+      (get cache name)
+      (let [result (load-config-from-disk name)]
+        (swap! config-cache assoc name result)
+        result))))
 
 (defn base64encode
   [^String to-encode]

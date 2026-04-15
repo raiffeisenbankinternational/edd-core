@@ -2,6 +2,8 @@
 
 ## Changes
 
+**[AP-860]** Cache context on startup
+
 **[CARS-9854]** Exclude :history from S3 cache, scope Java runtime requests
 The response cache (S3) stored the full command response including
 :history, which holds a complete aggregate snapshot per command. For
