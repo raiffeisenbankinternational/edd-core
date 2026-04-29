@@ -174,12 +174,14 @@
             (with-open [o (io/writer output)]
               (.write o (util/to-json response))))
           :on-error-fn
-          (fn [_ctx
+          (fn [ctx
                response]
             (log/info "OnErrorFn writing error")
-            (with-open [o (io/writer output)]
-              (.write o (util/to-json response)))
-            (throw (RuntimeException. (util/to-json response))))})))))
+            (let [json (util/to-json response)]
+              (with-open [o (io/writer output)]
+                (.write o json))
+              (when-not (:from-api ctx)
+                (throw (RuntimeException. json)))))})))))
 
 (defmacro start
   [ctx handler & other]

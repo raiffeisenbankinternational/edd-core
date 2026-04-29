@@ -2,6 +2,10 @@
 
 ## Changes
 
+**[AP-882]** Add createdOn for dynamodb
+Fix response on api should not throw because API
+gw does not propagate response
+
 **[AP-860]** Cache context on startup
 
 **[CARS-9854]** Exclude :history from S3 cache, scope Java runtime requests

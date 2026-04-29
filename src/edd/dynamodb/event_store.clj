@@ -48,7 +48,8 @@
            Data
            Id
            Error
-           AggregateId]}]
+           AggregateId
+           CreatedOn]}]
   (cond-> {}
     RequestId (assoc :request-id (:S RequestId))
     Breadcrumbs (assoc :breadcrumbs (mapv
@@ -61,7 +62,8 @@
     Data (assoc :data (util/to-edn (:S Data)))
     Id (assoc :id (:S Id))
     Error (assoc :error (util/to-edn (:S Error)))
-    AggregateId (assoc :aggregate-id (:S AggregateId))))
+    AggregateId (assoc :aggregate-id (:S AggregateId))
+    CreatedOn (assoc :created-on (:S CreatedOn))))
 
 (defn analytic-query
   [ctx
@@ -126,6 +128,7 @@
                              :Breadcrumbs   {:S breadcrumbs-string}
                              :InteractionId {:S (:interaction-id ctx)}
                              :InvocationId  {:S (:invocation-id ctx)}
+                             :CreatedOn     {:S (util/date->string)}
                              :Data          {:S  (util/to-json body)}}}}]}}))))
 
 (defn update-request-log
@@ -144,6 +147,7 @@
                     :Breadcrumbs   {:S (breadcrumb-str breadcumbs)}
                     :InteractionId {:S (:interaction-id ctx)}
                     :InvocationId  {:S (:invocation-id ctx)}
+                    :CreatedOn     {:S (util/date->string)}
                     :Error          {:S  (util/to-json error)}}}))))
 
 (defmethod log-request-error
@@ -278,85 +282,93 @@
 (defmethod store-results
   :dynamodb
   [{:keys [resp] :as ctx}]
-  (let [items (concat (map
-                       (fn [event]
-                         {:Put
-                          {:Item      {"AggregateId"   {:S (:id event)}
-                                       "ItemType"      {:S :event}
-                                       "Service"       {:S (keyword
-                                                            (:service-name ctx))}
-                                       "RequestId"     {:S (:request-id ctx)}
-                                       "Breadcrumbs"   {:S (breadcrumb-str
-                                                            (:breadcrumbs ctx))}
-                                       "InteractionId" {:S (:interaction-id ctx)}
-                                       "InvocationId"  {:S (:invocation-id ctx)}
-                                       "EventSeq"      {:N (str (:event-seq event))}
-                                       "Data"          {:S (util/to-json event)}},
-                           :ConditionExpression "attribute_not_exists(Id)"
-                           :TableName (table-name ctx :event-store)}})
-                       (:events resp))
-                      (map
-                       (fn [effect]
-                         {:Put
-                          {:Item      {"Id"            {:S
-                                                        (create-effect-id
-                                                         (:request-id ctx)
-                                                         (:breadcrumbs effect))}
-                                       "ItemType"      {:S :effect}
-                                       "Service"       {:S (keyword
-                                                            (:service-name ctx))}
-                                       "TargetService" {:S (:service effect)}
-                                       "RequestId"     {:S (:request-id ctx)}
-                                       "Breadcrumbs"   {:S (breadcrumb-str
-                                                            (:breadcrumbs ctx))}
-                                       "InteractionId" {:S (:interaction-id ctx)}
-                                       "InvocationId"  {:S (:invocation-id ctx)}
-                                       "Data"          {:S (util/to-json (assoc effect
-                                                                                :request-id (:request-id ctx)
-                                                                                :interaction-id (:interaction-id ctx)))}},
-                           :ConditionExpression "attribute_not_exists(Id)"
-                           :TableName (table-name ctx :effect-store)}})
-                       (:effects resp))
-                      (map
-                       (fn [item]
-                         {:Put
-                          {:Item      {"Id" {:S (str
-                                                 (name
-                                                  (:service-name ctx))
-                                                 "/"
-                                                 (:identity item))}
-                                       "ItemType"      {:S :identity}
-                                       "Service"       {:S (keyword
-                                                            (:service-name ctx))}
-                                       "RequestId"     {:S (:request-id ctx)}
-                                       "Breadcrumbs"   {:S (breadcrumb-str
-                                                            (:breadcrumbs ctx))}
-                                       "InteractionId" {:S (:interaction-id ctx)}
-                                       "InvocationId"  {:S (:invocation-id ctx)}
-                                       "AggregateId"   {:S (:id item)}
-                                       "Data"          {:S (util/to-json item)}},
-                           :ConditionExpression "attribute_not_exists(Id)"
-                           :TableName (table-name ctx :identity-store)}})
-                       (:identities resp))
+  (let [created-on
+        (util/date->string)
+
+        items
+        (concat (map
+                 (fn [event]
+                   {:Put
+                    {:Item      {"AggregateId"   {:S (:id event)}
+                                 "ItemType"      {:S :event}
+                                 "Service"       {:S (keyword
+                                                      (:service-name ctx))}
+                                 "RequestId"     {:S (:request-id ctx)}
+                                 "Breadcrumbs"   {:S (breadcrumb-str
+                                                      (:breadcrumbs ctx))}
+                                 "InteractionId" {:S (:interaction-id ctx)}
+                                 "InvocationId"  {:S (:invocation-id ctx)}
+                                 "EventSeq"      {:N (str (:event-seq event))}
+                                 "CreatedOn"     {:S created-on}
+                                 "Data"          {:S (util/to-json event)}},
+                     :ConditionExpression "attribute_not_exists(Id)"
+                     :TableName (table-name ctx :event-store)}})
+                 (:events resp))
+                (map
+                 (fn [effect]
+                   {:Put
+                    {:Item      {"Id"            {:S
+                                                  (create-effect-id
+                                                   (:request-id ctx)
+                                                   (:breadcrumbs effect))}
+                                 "ItemType"      {:S :effect}
+                                 "Service"       {:S (keyword
+                                                      (:service-name ctx))}
+                                 "TargetService" {:S (:service effect)}
+                                 "RequestId"     {:S (:request-id ctx)}
+                                 "Breadcrumbs"   {:S (breadcrumb-str
+                                                      (:breadcrumbs ctx))}
+                                 "InteractionId" {:S (:interaction-id ctx)}
+                                 "InvocationId"  {:S (:invocation-id ctx)}
+                                 "CreatedOn"     {:S created-on}
+                                 "Data"          {:S (util/to-json (assoc effect
+                                                                          :request-id (:request-id ctx)
+                                                                          :interaction-id (:interaction-id ctx)))}},
+                     :ConditionExpression "attribute_not_exists(Id)"
+                     :TableName (table-name ctx :effect-store)}})
+                 (:effects resp))
+                (map
+                 (fn [item]
+                   {:Put
+                    {:Item      {"Id" {:S (str
+                                           (name
+                                            (:service-name ctx))
+                                           "/"
+                                           (:identity item))}
+                                 "ItemType"      {:S :identity}
+                                 "Service"       {:S (keyword
+                                                      (:service-name ctx))}
+                                 "RequestId"     {:S (:request-id ctx)}
+                                 "Breadcrumbs"   {:S (breadcrumb-str
+                                                      (:breadcrumbs ctx))}
+                                 "InteractionId" {:S (:interaction-id ctx)}
+                                 "InvocationId"  {:S (:invocation-id ctx)}
+                                 "AggregateId"   {:S (:id item)}
+                                 "CreatedOn"     {:S created-on}
+                                 "Data"          {:S (util/to-json item)}},
+                     :ConditionExpression "attribute_not_exists(Id)"
+                     :TableName (table-name ctx :identity-store)}})
+                 (:identities resp))
                        ;; Only log response when summary exists (matches postgres implementation)
-                      (when (:summary resp)
-                        [{:Put
-                          {:Item      {"Id"            {:S (str
-                                                            (:request-id ctx)
-                                                            ":"
-                                                            (breadcrumb-str
-                                                             (:breadcrumbs ctx)))}
-                                       "Service"       {:S (keyword
-                                                            (:service-name ctx))}
-                                       "RequestId"     {:S (:request-id ctx)}
-                                       "Breadcrumbs"   {:S (breadcrumb-str
-                                                            (:breadcrumbs ctx))}
-                                       "InteractionId" {:S (:interaction-id ctx)}
-                                       "InvocationId" {:S (:invocation-id ctx)}
-                                       "Data"          {:S (util/to-json
-                                                            (:summary resp))}},
-                           :ConditionExpression "attribute_not_exists(Id)"
-                           :TableName (table-name ctx :response-log)}}]))]
+                (when (:summary resp)
+                  [{:Put
+                    {:Item      {"Id"            {:S (str
+                                                      (:request-id ctx)
+                                                      ":"
+                                                      (breadcrumb-str
+                                                       (:breadcrumbs ctx)))}
+                                 "Service"       {:S (keyword
+                                                      (:service-name ctx))}
+                                 "RequestId"     {:S (:request-id ctx)}
+                                 "Breadcrumbs"   {:S (breadcrumb-str
+                                                      (:breadcrumbs ctx))}
+                                 "InteractionId" {:S (:interaction-id ctx)}
+                                 "InvocationId" {:S (:invocation-id ctx)}
+                                 "CreatedOn"    {:S created-on}
+                                 "Data"          {:S (util/to-json
+                                                      (:summary resp))}},
+                     :ConditionExpression "attribute_not_exists(Id)"
+                     :TableName (table-name ctx :response-log)}}]))]
     (when-not (empty? items)
       (dynamodb/make-request
        (assoc ctx :action "TransactWriteItems"

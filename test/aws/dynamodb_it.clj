@@ -35,6 +35,8 @@
       (is (contains? tables (event-store/table-name ctx t))
           (str "Table " (name t) " should exist")))))
 
+(def ^:private fixed-created-on "2026-04-29T00:00:00.000Z")
+
 (deftest store-results-test
   (let [agg-id (uuid/gen)
         identity-id (str "id-" (uuid/gen))
@@ -48,10 +50,12 @@
                             :id     agg-id}]}
         ;; Effect ID is created from request-id and breadcrumbs, not uuid/gen
         effect-id (str request-id "-0")]
-    (dal/store-results (assoc ctx
-                              :resp {:events     [event]
-                                     :effects    [effect]
-                                     :identities [identity]}))
+    (with-redefs [util/date->string (fn ([] fixed-created-on)
+                                      ([d] fixed-created-on))]
+      (dal/store-results (assoc ctx
+                                :resp {:events     [event]
+                                       :effects    [effect]
+                                       :identities [identity]})))
 
     (is (= {:Item {:Data          {:S (util/to-json event)}
                    :EventSeq      {:N "1"}
@@ -61,6 +65,7 @@
                    :RequestId     {:S request-id}
                    :InvocationId  {:S invocation-id}
                    :Breadcrumbs   {:S "0"}
+                   :CreatedOn     {:S fixed-created-on}
                    :Service       {:S :test-source}}}
            (ddb/make-request
             (assoc ctx :action "GetItem"
@@ -83,7 +88,8 @@
       (is (= invocation-id (get-in effect-result [:Item :InvocationId :S])) "InvocationId matches")
       (is (= "0" (get-in effect-result [:Item :Breadcrumbs :S])) "Breadcrumbs matches")
       (is (= :test-svc (get-in effect-result [:Item :TargetService :S])) "TargetService matches")
-      (is (= :test-source (get-in effect-result [:Item :Service :S])) "Service matches"))
+      (is (= :test-source (get-in effect-result [:Item :Service :S])) "Service matches")
+      (is (= fixed-created-on (get-in effect-result [:Item :CreatedOn :S])) "CreatedOn matches"))
     (is (= {:Item {:Data          {:S (util/to-json identity)}
                    :AggregateId   {:S agg-id}
                    :Id            {:S (str "test-source/" identity-id)}
@@ -92,6 +98,7 @@
                    :RequestId     {:S request-id}
                    :InvocationId  {:S invocation-id}
                    :Breadcrumbs   {:S "0"}
+                   :CreatedOn     {:S fixed-created-on}
                    :Service       {:S :test-source}}}
            (ddb/make-request
             (assoc ctx :action "GetItem"
