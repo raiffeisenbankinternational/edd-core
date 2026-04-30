@@ -176,11 +176,16 @@
           :on-error-fn
           (fn [ctx
                response]
-            (log/info "OnErrorFn writing error")
-            (let [json (util/to-json response)]
+            (let [from-api?
+                  (or (:from-api ctx)
+                      (:statusCode response))
+
+                  json
+                  (util/to-json response)]
+              (log/infof "OnErrorFn writing error (from-api? %s)" (boolean from-api?))
               (with-open [o (io/writer output)]
                 (.write o json))
-              (when-not (:from-api ctx)
+              (when-not from-api?
                 (throw (RuntimeException. json)))))})))))
 
 (defmacro start

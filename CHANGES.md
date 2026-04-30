@@ -2,6 +2,8 @@
 
 ## Changes
 
+**[AP-887]** Add logging on error
+
 **[AP-882]** Add createdOn for dynamodb
 Fix response on api should not throw because API
 gw does not propagate response
