@@ -1,5 +1,5 @@
 (ns edd.el.cmd-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [edd.el.cmd :as el-cmd]
             [edd.core :as edd]
             [lambda.core :as core]
@@ -16,6 +16,14 @@
             [edd.response.cache :as response-cache]
             [aws.aws :as aws])
   (:import (clojure.lang ExceptionInfo)))
+
+(def fixed-created-on "2026-05-01T00:00:00.000+00:00")
+
+(use-fixtures :each
+  (fn [t]
+    (with-redefs [util/date->string (fn ([] fixed-created-on)
+                                      ([_] fixed-created-on))]
+      (t))))
 
 (def ctx (-> {}
              (edd/reg-cmd :ssa (fn [_ _]))))
@@ -105,6 +113,8 @@
                                              :request-id     request-id
                                              :interaction-id interaction-id
                                              :meta           {:realm :test
+                                                              :created-on fixed-created-on
+                                                              :invocation-id 0
                                                               :user  {:email "john.smith@example.com"
                                                                       :id    "john.smith@example.com"
                                                                       :role  :group-1

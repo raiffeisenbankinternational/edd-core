@@ -8,6 +8,7 @@
             [edd.core :as edd]
             [lambda.uuid :as uuid]
             [edd.test.fixture.dal :as mock]
+            [edd.test.fixture.dates :as dates]
             [lambda.test.fixture.core :as core-mock]
             [lambda.util :as util]
             [edd.common :as common]
@@ -513,24 +514,41 @@
 
 (deftest test-event-store-multiple-commands
   (binding [*dal-state* (atom {})]
-    (let [invocation-id (uuid/gen)
-          ctx (-> (get-ctx invocation-id)
-                  (with-realm))
-          agg-id (uuid/gen)
-          interaction-id (uuid/gen)
-          request-id (uuid/gen)]
+    (let [invocation-id
+          (uuid/gen)
 
-      (edd/handler ctx
-                   {:request-id     request-id
-                    :interaction-id interaction-id
-                    :meta           {:realm :test}
-                    :commands       [{:cmd-id :cmd-1
-                                      :id     agg-id}]})
-      (edd/handler ctx
-                   {:request-id     interaction-id
-                    :interaction-id request-id
-                    :meta           {:realm :test}
-                    :apply          {:aggregate-id agg-id}})
+          ctx
+          (-> (get-ctx invocation-id)
+              (with-realm))
+
+          agg-id
+          (uuid/gen)
+
+          interaction-id
+          (uuid/gen)
+
+          request-id
+          (uuid/gen)
+
+          [d1]
+          (dates/with-captured-dates
+            (edd/handler ctx
+                         {:request-id     request-id
+                          :interaction-id interaction-id
+                          :meta           {:realm :test}
+                          :commands       [{:cmd-id :cmd-1
+                                            :id     agg-id}]})
+            (edd/handler ctx
+                         {:request-id     interaction-id
+                          :interaction-id request-id
+                          :meta           {:realm :test}
+                          :apply          {:aggregate-id agg-id}}))
+
+          event-meta
+          {:realm         :test
+           :created-on    d1
+           :invocation-id invocation-id}]
+
       (mock/verify-state :aggregate-store
                          [{:id      agg-id
                            :version 2
@@ -543,14 +561,14 @@
                                   :event-seq      1
                                   :id             agg-id
                                   :interaction-id interaction-id
-                                  :meta           {:realm :test}
+                                  :meta           event-meta
                                   :name           nil
                                   :request-id     request-id}
                                  {:event-id       :event-2
                                   :event-seq      2
                                   :id             agg-id
                                   :interaction-id interaction-id
-                                  :meta           {:realm :test}
+                                  :meta           event-meta
                                   :name           nil
                                   :request-id     request-id}]))))
 

@@ -1,0 +1,90 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "EDD-Core E2E shared infra: aggregates + deployment + import S3 buckets and the S3 import SQS queue."
+
+Parameters:
+  EnvironmentNameLower:
+    Type: String
+  ImportResourceName:
+    Type: String
+    Default: "ping-svc"
+    Description: "Service that consumes the import bucket notifications."
+
+Resources:
+
+  AggregatesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::AccountId}-${EnvironmentNameLower}-aggregates"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  DeploymentBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::AccountId}-${EnvironmentNameLower}-e2e-deployment"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  # edd-core offloads each handler response to this bucket (edd.response.s3);
+  # the router reads it back to distribute effects/events.
+  SqsCacheBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::AccountId}-${EnvironmentNameLower}-sqs"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  ImportQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${EnvironmentNameLower}-${ImportResourceName}-import"
+      DelaySeconds: 0
+      VisibilityTimeout: 120
+
+  ImportQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref ImportQueue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: sqs:SendMessage
+            Principal: "*"
+            Resource: !GetAtt ImportQueue.Arn
+            Condition:
+              ArnLike:
+                aws:SourceArn: !Sub "arn:aws:s3:::${AWS::AccountId}-${EnvironmentNameLower}-${ImportResourceName}-import"
+
+  ImportBucket:
+    Type: AWS::S3::Bucket
+    DependsOn:
+      - ImportQueuePolicy
+    Properties:
+      BucketName: !Sub "${AWS::AccountId}-${EnvironmentNameLower}-${ImportResourceName}-import"
+      NotificationConfiguration:
+        QueueConfigurations:
+          - Event: s3:ObjectCreated:*
+            Queue: !GetAtt ImportQueue.Arn
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+Outputs:
+  AggregatesBucketName:
+    Value: !Ref AggregatesBucket
+  DeploymentBucketName:
+    Value: !Ref DeploymentBucket
+  ImportBucketName:
+    Value: !Ref ImportBucket
+  ImportQueueArn:
+    Value: !GetAtt ImportQueue.Arn
+  ImportQueueUrl:
+    Value: !Ref ImportQueue

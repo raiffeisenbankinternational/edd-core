@@ -2,6 +2,9 @@
 
 ## Changes
 
+**[AP-897]** Add audit metadata to events and aggregates
+- improve startup of java lambda
+
 **[AP-887]** Add logging on error
 
 **[AP-882]** Add createdOn for dynamodb

@@ -1,5 +1,5 @@
 (ns edd.core-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [clojure.tools.logging :as log]
             [edd.common :as common]
             [edd.core :as edd]
@@ -22,6 +22,14 @@
             [sdk.aws.common :as sdk-common]
             [sdk.aws.sqs :as sqs])
   (:import (clojure.lang ExceptionInfo)))
+
+(def fixed-created-on "2026-05-01T00:00:00.000+00:00")
+
+(use-fixtures :each
+  (fn [t]
+    (with-redefs [util/date->string (fn ([] fixed-created-on)
+                                      ([_] fixed-created-on))]
+      (t))))
 
 (defn dummy-command-handler
   [_ctx cmd]
@@ -157,14 +165,16 @@
                                            {:event-id       :dummy-event-1
                                             :handled        true
                                             :event-seq      6
-                                            :meta           {:realm :test}
+                                            :meta           {:realm :test
+                                                             :created-on fixed-created-on}
                                             :request-id     nil
                                             :interaction-id nil
                                             :id             cmd-id-2}
                                            {:event-id       :dummy-event-2
                                             :handled        true
                                             :event-seq      7
-                                            :meta           {:realm :test}
+                                            :meta           {:realm :test
+                                                             :created-on fixed-created-on}
                                             :request-id     nil
                                             :interaction-id nil
                                             :id             cmd-id-2}
@@ -177,7 +187,8 @@
                                            {:event-id       :dummy-event
                                             :handled        true
                                             :event-seq      22
-                                            :meta           {:realm :test}
+                                            :meta           {:realm :test
+                                                             :created-on fixed-created-on}
                                             :request-id     nil
                                             :interaction-id nil
                                             :id             cmd-id}
@@ -187,7 +198,8 @@
                                            {:event-id       :dummy-event-3
                                             :handled        true
                                             :event-seq      32
-                                            :meta           {:realm :test}
+                                            :meta           {:realm :test
+                                                             :created-on fixed-created-on}
                                             :request-id     nil
                                             :interaction-id nil
                                             :id             dps-id}])

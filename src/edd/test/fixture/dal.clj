@@ -90,7 +90,7 @@
 (def meta-meta-fields
   "Keys within the :meta sub-map that are infrastructure.
    Stripped by normalize-event; not domain data."
-  #{:realm})
+  #{:realm :created-on :invocation-id})
 
 (def ^:private strippable-keys root-meta-fields)
 
@@ -151,6 +151,33 @@
     ;; false/nil/default — strip all
     :else
     (apply dissoc item strippable-keys)))
+
+(defn- strip-annotations
+  "Removes the framework-managed [:meta :annotations] from a read result so
+   ordinary unit tests are not affected by audit metadata. Drops :meta entirely
+   when it becomes empty. Domain-level :meta and non-map results are untouched.
+   keep-meta opts back in: true keeps everything, a vector keeps :annotations
+   only when it lists :annotations."
+  [result keep-meta]
+  (if (or (true? keep-meta)
+          (and (vector? keep-meta) (contains? (set keep-meta) :annotations))
+          (not (map? result))
+          (not (get-in result [:meta :annotations])))
+    result
+    (let [m (dissoc (:meta result) :annotations)]
+      (if (seq m)
+        (assoc result :meta m)
+        (dissoc result :meta)))))
+
+(def ^:private real-handle-query query/handle-query)
+
+(defn handle-query-stripped
+  "query/handle-query replacement used inside with-mock-dal. Strips audit
+   annotations from the response unless :keep-meta opts in. Covers both
+   mock/query and dependency-injected aggregates resolved via handle-query."
+  [ctx body]
+  (strip-annotations (real-handle-query ctx body)
+                     (get @*dal-state* :keep-meta false)))
 
 (defn dal-state-accessor
   "Returns realm-scoped store data with normalization for test assertions.
@@ -272,7 +299,8 @@
             :config {:reuse-responses true}}
            (with-redefs
             [aws/get-token aws-get-token
-             common/create-identity create-identity]
+             common/create-identity create-identity
+             query/handle-query handle-query-stripped]
              (do (log/info "with-mock-dal using seed" (:seed *queues*))
                  ~@body)))))))
 
@@ -483,4 +511,5 @@
   (let [id (if (uuid? id-or-query)
              id-or-query
              (:id id-or-query))]
-    (common/get-by-id ctx {:id id})))
+    (strip-annotations (common/get-by-id ctx {:id id})
+                       (get @*dal-state* :keep-meta false))))

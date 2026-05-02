@@ -26,8 +26,10 @@
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
 
-(def errors
-  {:concurrent-modification ["pkey" "duplicate key value violates unique constraint"]})
+;; First match wins, so identity_store must precede the generic unique-violation.
+(def error-matchers
+  [[:identity-conflict       ["identity_store" "duplicate key value violates unique constraint"]]
+   [:concurrent-modification ["duplicate key value violates unique constraint"]]])
 
 (defn ->table
   [ctx table]
@@ -44,16 +46,13 @@
 
 (defn parse-error
   [m]
-
-  (let [match (first
-               (filter
-                (fn [[_k v]]
-                  (error-matches? m v))
-                errors))]
-    (if match
-      {:key              (first match)
-       :original-message m}
-      m)))
+  (if-let [key (some (fn [[k words]]
+                       (when (error-matches? m words)
+                         k))
+                     error-matchers)]
+    {:key              key
+     :original-message m}
+    m))
 
 (defn try-to-data
   [func]
@@ -297,21 +296,24 @@
   [{:keys [id service-name version]
     :as   ctx}]
   {:pre [id service-name]}
-  (let [version (or version
-                    0)]
+  (let [[seq-clause seq-params]
+        (if (vector? version)
+          (let [[from to] version]
+            ["AND event_seq>=? AND event_seq<=?" [from to]])
+          ["AND event_seq>?" [(or version 0)]])]
     (util/d-time
-     (str "Fetching events for aggregate: "  {:id id
-                                              :version version})
+     (str "Fetching events for aggregate: " {:id id
+                                             :version version})
      (let [data (jdbc/execute! *DB*
-                               [(str "SELECT data
+                               (into [(str "SELECT data
                                 FROM " (->table ctx :event_store) "
                                 WHERE aggregate_id=?
                                   AND service_name=?
-                                  AND event_seq>?
+                                  " seq-clause "
                                 ORDER BY event_seq ASC")
-                                id
-                                service-name
-                                version]
+                                      id
+                                      service-name]
+                                     seq-params)
                                {:builder-fn rs/as-arrays})]
        (if (:error data)
          data

@@ -20,6 +20,14 @@
             [lambda.test.fixture.state :as state])
   (:import (clojure.lang ExceptionInfo)))
 
+(def fixed-created-on "2026-05-01T00:00:00.000+00:00")
+
+(use-fixtures :each
+  (fn [t]
+    (with-redefs [util/date->string (fn ([] fixed-created-on)
+                                      ([_] fixed-created-on))]
+      (t))))
+
 ;; Test UUIDs for consistent test data
 (def id-1 (uuid/parse "00000001-0001-0001-0001-000000000001"))
 (def id-2 (uuid/parse "00000002-0002-0002-0002-000000000002"))
@@ -422,7 +430,8 @@
                   :events     [{:event-id       :2
                                 :event-seq      1  ;; realm2 has its own sequence
                                 :id             id
-                                :meta           {:realm :realm2}
+                                :meta           {:realm :realm2
+                                                 :created-on fixed-created-on}
                                 :request-id     request-id
                                 :interaction-id interaction-id}]
                   :identities []

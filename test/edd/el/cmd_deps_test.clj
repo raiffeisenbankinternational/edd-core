@@ -1,5 +1,5 @@
 (ns edd.el.cmd-deps-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [lambda.util :as util]
             [edd.el.cmd :as cmd]
             [edd.el.query :as el-query]
@@ -13,6 +13,14 @@
             [aws.aws :as aws]
             [lambda.test.fixture.state :as state])
   (:import (java.net URLEncoder)))
+
+(def fixed-created-on "2026-05-01T00:00:00.000+00:00")
+
+(use-fixtures :each
+  (fn [t]
+    (with-redefs [util/date->string (fn ([] fixed-created-on)
+                                      ([_] fixed-created-on))]
+      (t))))
 
 (def cmd-id #uuid "11111eeb-e677-4d73-a10a-1d08b45fe4dd")
 
@@ -411,7 +419,8 @@ and return nil to enable query-fn to have when conditions based on previously re
       (is (= [{:event-id       :event-1
                :event-seq      1
                :value          :1
-               :meta           {:realm :realm2}
+               :meta           {:realm :realm2
+                                :created-on fixed-created-on}
                :request-id     nil
                :interaction-id nil
                :id             cmd-id-deps}
@@ -423,7 +432,8 @@ and return nil to enable query-fn to have when conditions based on previously re
               {:event-id       :event-1
                :event-seq      5
                :value          :2
-               :meta           {:realm :realm2}
+               :meta           {:realm :realm2
+                                :created-on fixed-created-on}
                :request-id     nil
                :interaction-id nil
                :id             cmd-id-2}]

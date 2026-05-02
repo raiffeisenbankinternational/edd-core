@@ -1,0 +1,5 @@
+{:deps {app-group-id/edd-core {:local/root "../../"}}
+ :aliases
+ {:it {:extra-paths ["test"]
+       :extra-deps {lambdaisland/kaocha {:mvn/version "1.91.1392"}}
+       :main-opts ["-m" "kaocha.runner"]}}}

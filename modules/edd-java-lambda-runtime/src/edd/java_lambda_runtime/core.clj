@@ -21,41 +21,47 @@
    [com.amazonaws.services.lambda.runtime Context]
    [org.crac Core]))
 
-(defonce init-cache
-  (atom {}))
+(defonce init-cache (atom {}))
+(defonce restore-ctx (atom nil))
 
-(defonce restore-ctx
-  (atom nil))
+(defn ms-since [start-ns]
+  (/ (- (System/nanoTime) (long start-ns)) 1e6))
 
-(defn- ensure-metrics-started!
-  "Starts metrics publishing on first invocation. No-op on subsequent calls."
-  [ctx]
-  (when-not (:metrics-started @init-cache)
-    (metrics/start-metrics-publishing! ctx)
-    (swap! init-cache assoc :metrics-started true)))
+(def ^:private creds-buffer-ms (* 5 60 1000))
 
 (defn- creds-stale?
-  "Returns true when cached AWS credentials expire within the next 5 minutes,
-   or when no expiration is stored (conservative: treat as stale)."
-  [cached-aws]
-  (if-let [exp (:aws-expiration cached-aws)]
+  [aws]
+  (if-let [exp (:aws-expiration aws)]
     (try
-      (let [expiry-ms
-            (-> exp java.time.Instant/parse .toEpochMilli)
-
-            buffer-ms
-            (* 5 60 1000)]
-        (< expiry-ms (+ (System/currentTimeMillis) buffer-ms)))
+      (< (-> exp java.time.Instant/parse .toEpochMilli)
+         (+ (System/currentTimeMillis) creds-buffer-ms))
       (catch Exception _
         (log/warn "Could not parse :aws-expiration, treating credentials as stale:" exp)
         true))
     false))
 
-(defn- warm-up-ctx
-  "Builds a minimal in-memory context with a dummy command registered.
-   Uses only memory stores — no AWS calls are made."
-  [base-ctx]
-  (-> base-ctx
+(defn- apply-cached-aws [ctx]
+  (let [cached
+        @init-cache
+
+        aws
+        (:aws cached)]
+    (if (and aws (not (creds-stale? aws)))
+      (assoc ctx :aws aws :aws-ctx-initialized true)
+      ctx)))
+
+(defn- cache-aws! [ctx]
+  (swap! init-cache assoc
+         :aws (:aws ctx)
+         :aws-ctx-initialized true))
+
+(defn- ensure-metrics! [ctx]
+  (when-not (:metrics-started @init-cache)
+    (metrics/start-metrics-publishing! ctx)
+    (swap! init-cache assoc :metrics-started true)))
+
+(defn- warm-up-ctx [ctx]
+  (-> ctx
       (assoc :meta {:realm :warmup})
       (memory-view-store/register)
       (memory-event-store/register)
@@ -71,49 +77,57 @@
                      (fn [agg _event]
                        (assoc agg :warmed true)))))
 
-(defn run-warm-up!
-  "Dispatches a synthetic command through the full in-memory pipeline.
-   Forces loading of edd.core, edd.el.cmd/event/query, edd.search multimethods,
-   edd.dal multimethods, Malli schema compilation, response-cache code paths, etc.
-   Also pre-loads immutable config files (secret.json, jwks.json) into the
-   load-config cache so they are snapshotted and ready on restore.
-   Must never throw — failures are logged and swallowed."
-  [base-ctx]
+(defn run-warm-up! [base-ctx]
   (try
-    (log/info "SnapStart warm-up: pre-loading config files.")
-    (let [preloaded-ctx
+    (let [preloaded
           (-> base-ctx
               (lambda-ctx/init)
-              (lambda/init-filters))]
-      (log/info "SnapStart warm-up: config files loaded.")
-      (log/info "SnapStart warm-up: starting pipeline dry-run.")
-      (let [ctx
-            (warm-up-ctx preloaded-ctx)]
-        (binding [*dal-state* (atom {:realm :warmup
-                                     :realms {:warmup {}}})
-                  *queues* {:command-queue (atom [])
-                            :seed 0}
-                  util/*cache* init-cache
-                  request/*request* (atom {:scoped true})
-                  log-state/*invocation-start-ns* (System/nanoTime)]
-          (edd/with-stores
-            ctx
-            #(el-cmd/handle-commands
-              %
-              {:request-id     (uuid/gen)
-               :interaction-id (uuid/gen)
-               :commands       [{:cmd-id :warmup-cmd
-                                 :id     (uuid/gen)}]})))))
-    (log/info "SnapStart warm-up: pipeline dry-run complete.")
+              (lambda/init-filters))
+
+          ctx
+          (warm-up-ctx preloaded)]
+      (binding [*dal-state* (atom {:realm :warmup
+                                   :realms {:warmup {}}})
+                *queues* {:command-queue (atom [])
+                          :seed 0}
+                util/*cache* init-cache
+                request/*request* (atom {:scoped true})
+                log-state/*invocation-start-ns* (System/nanoTime)]
+        (edd/with-stores ctx
+          #(el-cmd/handle-commands
+            %
+            {:request-id     (uuid/gen)
+             :interaction-id (uuid/gen)
+             :commands       [{:cmd-id :warmup-cmd
+                               :id     (uuid/gen)}]})))
+      (log/info "SnapStart warm-up complete."))
     (catch Exception e
       (log/warn "SnapStart warm-up failed (non-fatal):" (ex-message e)))))
+
+(defn- write-response! [output ^String payload]
+  (with-open [o (io/writer output)]
+    (.write o payload)))
+
+(defn- on-success [_ctx response output]
+  (log/info "OnSuccessFn writing success")
+  (write-response! output (util/to-json response)))
+
+(defn- on-error [ctx response output]
+  (let [from-api?
+        (boolean (or (:from-api ctx) (:statusCode response)))
+
+        json
+        (util/to-json response)]
+    (log/infof "OnErrorFn writing error (from-api? %s)" from-api?)
+    (write-response! output json)
+    (when-not from-api?
+      (throw (RuntimeException. json)))))
 
 (defn java-request-handler
   [init-ctx handler & {:keys [filters post-filter]
                        :or   {filters     []
                               post-filter (fn [ctx] ctx)}}]
-
-  (fn [_this input output ^Context context]
+  (fn [_this input output ^Context lambda-context]
     ;; :scoped enables the per-invocation caches (see lambda.request/is-scoped).
     ;; Without it edd.el.query/with-cache short circuits and every remote
     ;; dependency is fetched over HTTP again, even when the resolved query is
@@ -121,72 +135,28 @@
     (binding [util/*cache* init-cache
               request/*request* (atom {:scoped true})
               log-state/*invocation-start-ns* (System/nanoTime)]
-      (let [cached
-            @init-cache
+      (let [request
+            {:body (util/to-edn (slurp input))}
 
-            cached-aws
-            (:aws cached)
-
-            init-ctx
-            (if (and cached-aws (not (creds-stale? cached-aws)))
-              (assoc init-ctx
-                     :aws cached-aws
-                     :aws-ctx-initialized (:aws-ctx-initialized cached true))
-              init-ctx)
-
-            request
-            {:body
-             (util/to-edn
-              (slurp input))}
-
-            invocation-id
-            (.getAwsRequestId context)
-
-            init-ctx
+            ctx
             (-> init-ctx
                 (assoc :filters filters
                        :handler handler
                        :post-filter post-filter)
+                (apply-cached-aws)
                 (lambda-ctx/init)
                 (aws-ctx/init)
-                (lambda/init-filters))]
+                (lambda/init-filters)
+                (assoc :from-api (lambda/is-from-api request)
+                       :invocation-id (uuid/parse (.getAwsRequestId lambda-context))))]
 
-        (ensure-metrics-started! init-ctx)
-
-        (swap! init-cache
-               assoc
-               :aws (:aws init-ctx)
-               :aws-ctx-initialized true)
+        (ensure-metrics! ctx)
+        (cache-aws! ctx)
 
         (lambda/send-response
-         (lambda/handle-request
-          (-> init-ctx
-              (assoc :from-api (lambda/is-from-api request))
-              (assoc :invocation-id (if-not (int? invocation-id)
-                                      (uuid/parse invocation-id)
-                                      invocation-id)))
-          request)
-
-         {:on-success-fn
-          (fn [_ctx
-               response]
-            (log/info "OnSuccessFn writing success")
-            (with-open [o (io/writer output)]
-              (.write o (util/to-json response))))
-          :on-error-fn
-          (fn [ctx
-               response]
-            (let [from-api?
-                  (or (:from-api ctx)
-                      (:statusCode response))
-
-                  json
-                  (util/to-json response)]
-              (log/infof "OnErrorFn writing error (from-api? %s)" (boolean from-api?))
-              (with-open [o (io/writer output)]
-                (.write o json))
-              (when-not from-api?
-                (throw (RuntimeException. json)))))})))))
+         (lambda/handle-request ctx request)
+         {:on-success-fn (fn [c r] (on-success c r output))
+          :on-error-fn   (fn [c r] (on-error c r output))})))))
 
 (defmacro start
   [ctx handler & other]
@@ -209,44 +179,50 @@
            (.register (org.crac.Core/getGlobalContext) ~this-sym#)
            (clojure.tools.logging/info "lambda.Handler registered with CRaC global context.")))
 
+       (def ~'-handler-fn
+         (edd.java-lambda-runtime.core/java-request-handler ~ctx ~handler ~@other))
+
        (def ~'-handleRequest
-         (fn
-           [~this-sym#
-            ^java.io.InputStream ~input-stream-sym#
-            ^java.io.OutputStream ~output-stream-sym#
-            ^com.amazonaws.services.lambda.runtime.Context ~lambda-context-sym#]
-           (clojure.tools.logging/info "lambda.Handler -handleRequest invoked.")
-           (let [handler-fn#
-                 (or (:handler-fn @edd.java-lambda-runtime.core/init-cache)
-                     (let [f# (edd.java-lambda-runtime.core/java-request-handler ~ctx ~handler ~@other)]
-                       (swap! edd.java-lambda-runtime.core/init-cache assoc :handler-fn f#)
-                       f#))]
-             (handler-fn# ~this-sym# ~input-stream-sym# ~output-stream-sym# ~lambda-context-sym#))))
+         (fn [~this-sym#
+              ^java.io.InputStream ~input-stream-sym#
+              ^java.io.OutputStream ~output-stream-sym#
+              ^com.amazonaws.services.lambda.runtime.Context ~lambda-context-sym#]
+           (~'-handler-fn ~this-sym# ~input-stream-sym# ~output-stream-sym# ~lambda-context-sym#)))
 
+       ;; Runs at build time; its cost is captured in the snapshot, not on the
+       ;; restore path. Warm up to load/JIT the request path into the snapshot,
+       ;; drop credentials so the snapshot never carries stale ones, then GC to
+       ;; shrink the snapshot (smaller snapshot => faster restore).
        (def ~'-beforeCheckpoint
-         (fn
-           [~this-sym# ^org.crac.Context ~crac-context-sym#]
-           (clojure.tools.logging/info "lambda.Handler -beforeCheckpoint invoked.")
-           (reset! edd.java-lambda-runtime.core/restore-ctx ~ctx)
-           (edd.java-lambda-runtime.core/run-warm-up! @edd.java-lambda-runtime.core/restore-ctx)
-           (swap! edd.java-lambda-runtime.core/init-cache dissoc :aws)
-           (clojure.tools.logging/info "lambda.Handler -beforeCheckpoint: stale credentials cleared, forcing GC.")
-           (System/gc)))
+         (fn [~this-sym# ^org.crac.Context ~crac-context-sym#]
+           (let [start# (System/nanoTime)]
+             (reset! edd.java-lambda-runtime.core/restore-ctx ~ctx)
+             (edd.java-lambda-runtime.core/run-warm-up! ~ctx)
+             (swap! edd.java-lambda-runtime.core/init-cache dissoc
+                    :aws :aws-ctx-initialized)
+             (System/gc)
+             (clojure.tools.logging/info
+              (format "lambda.Handler -beforeCheckpoint done in %.1f ms"
+                      (edd.java-lambda-runtime.core/ms-since start#))))))
 
+       ;; On the restore-critical path: keep it minimal. The metrics thread did
+       ;; not survive the snapshot, and the snapshot credentials are stale.
        (def ~'-afterRestore
-         (fn
-           [~this-sym# ^org.crac.Context ~crac-context-sym#]
-           (clojure.tools.logging/info "lambda.Handler -afterRestore invoked. Refreshing credentials.")
-           (swap! edd.java-lambda-runtime.core/init-cache dissoc :aws :aws-ctx-initialized :metrics-started)
-           (try
-             (let [fresh-ctx#
-                   (-> @edd.java-lambda-runtime.core/restore-ctx
-                       (dissoc :aws-ctx-initialized)
-                       (aws.ctx/init))]
-               (swap! edd.java-lambda-runtime.core/init-cache assoc
-                      :aws (:aws fresh-ctx#)
-                      :aws-ctx-initialized true)
-               (clojure.tools.logging/info "lambda.Handler -afterRestore: credentials refreshed."))
-             (catch Exception e#
-               (clojure.tools.logging/warn "lambda.Handler -afterRestore: credential refresh failed (will retry on first invocation):"
-                                           (ex-message e#)))))))))
+         (fn [~this-sym# ^org.crac.Context ~crac-context-sym#]
+           (let [start# (System/nanoTime)]
+             (swap! edd.java-lambda-runtime.core/init-cache dissoc :metrics-started)
+             (try
+               (let [fresh#
+                     (aws.ctx/init @edd.java-lambda-runtime.core/restore-ctx)]
+                 (swap! edd.java-lambda-runtime.core/init-cache assoc
+                        :aws (:aws fresh#)
+                        :aws-ctx-initialized true))
+               (catch Exception e#
+                 (swap! edd.java-lambda-runtime.core/init-cache dissoc
+                        :aws :aws-ctx-initialized)
+                 (clojure.tools.logging/warn
+                  "lambda.Handler -afterRestore: credential refresh failed, refreshing on first invocation:"
+                  (ex-message e#))))
+             (clojure.tools.logging/info
+              (format "lambda.Handler -afterRestore done in %.1f ms"
+                      (edd.java-lambda-runtime.core/ms-since start#)))))))))

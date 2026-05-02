@@ -1,11 +1,20 @@
 (ns doc.edd.command-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [doc.edd.ctx :refer [init-ctx]]
             [edd.core :as edd]
             [edd.test.fixture.dal :as mock]
             [edd.el.cmd :as el-cmd]
+            [lambda.util :as util]
             [lambda.uuid :as uuid])
   (:import (clojure.lang ExceptionInfo)))
+
+(def fixed-created-on "2026-05-01T00:00:00.000+00:00")
+
+(use-fixtures :each
+  (fn [t]
+    (with-redefs [util/date->string (fn ([] fixed-created-on)
+                                      ([_] fixed-created-on))]
+      (t))))
 
 (deftest command-registration
   (testing "# To register query you need invoke edd.core/reg-cmd function"
@@ -67,7 +76,8 @@
                             :id             cmd-id
                             :event-seq      2
                             :interaction-id nil
-                            :meta           {:realm :test}
+                            :meta           {:realm :test
+                                             :created-on fixed-created-on}
                             :request-id     nil}]
               :identities []
               :meta       [{:test-cmd {:id cmd-id}}]}
@@ -95,19 +105,22 @@
                               :id             cmd-id-1
                               :event-seq      1
                               :interaction-id nil
-                              :meta           {:realm :test}
+                              :meta           {:realm :test
+                                               :created-on fixed-created-on}
                               :request-id     nil}
                              {:event-id       :event-2-1
                               :id             cmd-id-2
                               :event-seq      1
                               :interaction-id nil
-                              :meta           {:realm :test}
+                              :meta           {:realm :test
+                                               :created-on fixed-created-on}
                               :request-id     nil}
                              {:event-id       :event-2-2
                               :id             cmd-id-2
                               :event-seq      2
                               :interaction-id nil
-                              :meta           {:realm :test}
+                              :meta           {:realm :test
+                                               :created-on fixed-created-on}
                               :request-id     nil}]
                 :identities []
                 :meta       [{:test-cmd-1 {:id cmd-id-1}}
@@ -150,7 +163,8 @@
                             :id             cmd-id
                             :event-seq      2
                             :interaction-id nil
-                            :meta           {:realm :test}
+                            :meta           {:realm :test
+                                             :created-on fixed-created-on}
                             :request-id     nil}]
               :identities []
               :meta       [{:test-cmd {:id cmd-id}}]}
@@ -579,7 +593,8 @@
           (mock/handle-cmd ctx {:cmd-id :create-user :id user-id})
 
           (comment "With :keep-meta true, meta is preserved in results")
-          (is (= {:realm :test}
+          (is (= {:realm :test
+                  :created-on fixed-created-on}
                  (:meta (first (mock/peek-state :event-store)))))
 
           (mock/verify-state :event-store
@@ -588,7 +603,8 @@
                                :event-seq 1
                                :request-id nil
                                :interaction-id nil
-                               :meta {:realm :test}}]))))
+                               :meta {:realm :test
+                                      :created-on fixed-created-on}}]))))
 
     (testing ":keep-meta can be a vector of keys to selectively preserve"
       (mock/with-mock-dal

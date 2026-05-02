@@ -24,6 +24,8 @@ COPY --chown=build:build ansible ansible
 RUN ./format.sh check
 
 COPY --chown=build:build sql sql
+COPY --chown=build:build dynamodb dynamodb
+COPY --chown=build:build e2e e2e
 
 USER root
 

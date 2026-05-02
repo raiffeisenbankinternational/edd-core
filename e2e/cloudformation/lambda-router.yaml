@@ -1,0 +1,141 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "EDD-Core E2E router lambda: consumes {env}-router-svc-response and fans commands/events to per-service FIFO queues."
+
+Parameters:
+  EnvironmentNameLower:
+    Type: String
+  Region:
+    Type: String
+  DeploymentBucketName:
+    Type: String
+  S3Key:
+    Type: String
+  LambdaMemorySize:
+    Type: Number
+    Default: 1024
+  LambdaTimeout:
+    Type: Number
+    Default: 60
+
+Resources:
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${EnvironmentNameLower}-e2e-router-svc-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: "/"
+
+  LambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub "${EnvironmentNameLower}-e2e-router-svc-policy"
+      Roles:
+        - !Ref LambdaRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - sqs:SendMessage
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+              - sqs:GetQueueUrl
+              - sqs:ChangeMessageVisibility
+            Resource: !Sub "arn:aws:sqs:${Region}:${AWS::AccountId}:${EnvironmentNameLower}*"
+
+  ResponseQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${EnvironmentNameLower}-router-svc-response"
+      DelaySeconds: 0
+      VisibilityTimeout: 120
+
+  ResponseQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref ResponseQueue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: sqs:SendMessage
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Resource: "*"
+
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - LambdaPolicy
+    Properties:
+      FunctionName: !Sub "${EnvironmentNameLower}-e2e-router-svc"
+      Handler: "lambda.Handler"
+      Runtime: "java21"
+      Role: !GetAtt LambdaRole.Arn
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      SnapStart:
+        ApplyOn: PublishedVersions
+      Code:
+        S3Bucket: !Ref DeploymentBucketName
+        S3Key: !Ref S3Key
+      Environment:
+        Variables:
+          EnvironmentNameLower: !Ref EnvironmentNameLower
+          ResourceName: "router-svc"
+          ServiceName: "router-svc"
+          PublicHostedZoneName: "example.com"
+          Region: !Ref Region
+          AccountId: !Sub "${AWS::AccountId}"
+
+  LambdaVersion:
+    Type: AWS::Lambda::Version
+    DependsOn: LambdaFunction
+    DeletionPolicy: Retain
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      # Description must change whenever published config changes, otherwise CF
+      # does not create a new Version and the BUILD alias keeps the old snapshot.
+      Description: !Sub "code ${S3Key} mem ${LambdaMemorySize}"
+
+  LambdaAlias:
+    Type: AWS::Lambda::Alias
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      Name: "BUILD"
+      FunctionVersion: !GetAtt LambdaVersion.Version
+
+  ResponseSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    DependsOn:
+      - LambdaAlias
+    Properties:
+      Enabled: true
+      BatchSize: 1
+      EventSourceArn: !GetAtt ResponseQueue.Arn
+      FunctionName: !Ref LambdaAlias
+
+Outputs:
+  LambdaFunctionName:
+    Value: !Ref LambdaFunction
+  ResponseQueueUrl:
+    Value: !Ref ResponseQueue

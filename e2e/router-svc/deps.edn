@@ -1,0 +1,6 @@
+{:deps {app-group-id/edd-core {:local/root "../../"}
+        app-group-id/edd-router {:local/root "../../modules/edd-router"}
+        app-group-id/edd-java-lambda-runtime {:local/root "../../modules/edd-java-lambda-runtime"}}
+ :paths ["src" "resources"]
+ :aliases {:build {:deps {io.github.clojure/tools.build {:mvn/version "0.10.13"}}
+                   :ns-default build}}}

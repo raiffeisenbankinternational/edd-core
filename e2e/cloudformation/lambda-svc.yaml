@@ -1,0 +1,226 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "EDD-Core E2E service lambda (ping/pong): function + BUILD alias + command/event FIFO queues + source mappings."
+
+Parameters:
+  EnvironmentNameLower:
+    Type: String
+  ResourceName:
+    Type: String
+    Description: "Service name, e.g. ping-svc. Drives function name and queue names."
+  Region:
+    Type: String
+  DeploymentBucketName:
+    Type: String
+  S3Key:
+    Type: String
+    Description: "Key of the uploaded lambda uberjar zip in the deployment bucket."
+  LambdaMemorySize:
+    Type: Number
+    Default: 1024
+  LambdaTimeout:
+    Type: Number
+    Default: 60
+  LambdaRuntime:
+    Type: String
+    Default: "java21"
+  JavaToolOptions:
+    Type: String
+    Default: ""
+    Description: "Extra JVM flags via JAVA_TOOL_OPTIONS (e.g. -XX:+UseCompactObjectHeaders)."
+  EnableImport:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+  ImportQueueArn:
+    Type: String
+    Default: ""
+  ApiUrl:
+    Type: String
+    Default: ""
+    Description: "Base URL of the E2E API; used by cross-service remote dependencies (ApiUrl env var)."
+  CQRSApiId:
+    Type: String
+    Default: ""
+    Description: "REST API id, to scope the apigateway invoke permission."
+
+Conditions:
+  IsImportEnabled: !Equals [!Ref EnableImport, "true"]
+  HasApi: !Not [!Equals [!Ref CQRSApiId, ""]]
+
+Resources:
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${EnvironmentNameLower}-e2e-${ResourceName}-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: "/"
+
+  LambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub "${EnvironmentNameLower}-e2e-${ResourceName}-policy"
+      Roles:
+        - !Ref LambdaRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - dynamodb:Query
+              - dynamodb:PutItem
+              - dynamodb:GetItem
+              - dynamodb:BatchWriteItem
+              - dynamodb:BatchGetItem
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+              - s3:ListBucket
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - sqs:SendMessage
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+              - sqs:GetQueueUrl
+              - sqs:ChangeMessageVisibility
+            Resource: !Sub "arn:aws:sqs:${Region}:${AWS::AccountId}:${EnvironmentNameLower}*"
+
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - LambdaPolicy
+    Properties:
+      FunctionName: !Sub "${EnvironmentNameLower}-e2e-${ResourceName}"
+      Handler: "lambda.Handler"
+      Runtime: !Ref LambdaRuntime
+      Role: !GetAtt LambdaRole.Arn
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      SnapStart:
+        ApplyOn: PublishedVersions
+      Code:
+        S3Bucket: !Ref DeploymentBucketName
+        S3Key: !Ref S3Key
+      Environment:
+        Variables:
+          EnvironmentNameLower: !Ref EnvironmentNameLower
+          ResourceName: !Ref ResourceName
+          ServiceName: !Ref ResourceName
+          PublicHostedZoneName: "example.com"
+          ApiUrl: !Ref ApiUrl
+          JAVA_TOOL_OPTIONS: !Ref JavaToolOptions
+          Region: !Ref Region
+          AccountId: !Sub "${AWS::AccountId}"
+
+  LambdaVersion:
+    Type: AWS::Lambda::Version
+    DependsOn: LambdaFunction
+    DeletionPolicy: Retain
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      # Description must change whenever published config changes, otherwise CF
+      # does not create a new Version and the BUILD alias keeps the old snapshot.
+      Description: !Sub "code ${S3Key} mem ${LambdaMemorySize}"
+
+  LambdaAlias:
+    Type: AWS::Lambda::Alias
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      Name: "BUILD"
+      FunctionVersion: !GetAtt LambdaVersion.Version
+
+  ApiInvokePermission:
+    Type: AWS::Lambda::Permission
+    Condition: HasApi
+    DependsOn:
+      - LambdaAlias
+    Properties:
+      FunctionName: !GetAtt LambdaAlias.AliasArn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${Region}:${AWS::AccountId}:${CQRSApiId}/*"
+
+  CommandsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${EnvironmentNameLower}-test-${ResourceName}-commands-1.fifo"
+      FifoQueue: true
+      DelaySeconds: 0
+      VisibilityTimeout: 120
+
+  EventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${EnvironmentNameLower}-test-${ResourceName}-events-1.fifo"
+      FifoQueue: true
+      DelaySeconds: 0
+      VisibilityTimeout: 120
+
+  QueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref CommandsQueue
+        - !Ref EventsQueue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: sqs:SendMessage
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Resource: "*"
+
+  CommandsSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    DependsOn:
+      - LambdaAlias
+    Properties:
+      Enabled: true
+      BatchSize: 1
+      EventSourceArn: !GetAtt CommandsQueue.Arn
+      FunctionName: !Ref LambdaAlias
+
+  EventsSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    DependsOn:
+      - LambdaAlias
+    Properties:
+      Enabled: true
+      BatchSize: 1
+      EventSourceArn: !GetAtt EventsQueue.Arn
+      FunctionName: !Ref LambdaAlias
+
+  ImportSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Condition: IsImportEnabled
+    DependsOn:
+      - LambdaAlias
+    Properties:
+      Enabled: true
+      BatchSize: 1
+      EventSourceArn: !Ref ImportQueueArn
+      FunctionName: !Ref LambdaAlias
+
+Outputs:
+  LambdaFunctionName:
+    Value: !Ref LambdaFunction
+  LambdaAliasArn:
+    Value: !Ref LambdaAlias
+  CommandsQueueUrl:
+    Value: !Ref CommandsQueue

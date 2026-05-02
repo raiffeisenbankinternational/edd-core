@@ -5,6 +5,7 @@
             [edd.elastic.view-store :as elastic-view-store]
             [edd.memory.event-store :as memory-event-store]
             [edd.test.fixture.dal :as mock]
+            [edd.test.fixture.dates :as dates]
             [lambda.uuid :as uuid]
             [edd.search :as search]
             [clojure.string :as str]
@@ -61,71 +62,108 @@
           :method "DELETE"
           :path (str "/" (name service-name)))))
 
+(def ^:private nil-id-annotations
+  {:created-request-id nil
+   :updated-request-id nil
+   :created-user-id    nil
+   :updated-user-id    nil
+   :interaction-id     nil
+   :invocation-id      nil})
+
+(defn- annotations-with-date
+  [created-on updated-on]
+  (assoc nil-id-annotations
+         :created-on created-on
+         :updated-on updated-on))
+
 (deftest test-get-elastic-snapshot
-  (let [agg-id (uuid/gen)
-        ctx (-> (get-ctx)
-                (assoc :service-name (create-service-name)
-                       :meta {:realm :test})
-                (create-service-index)
-                (response-cache/register-default)
-                (memory-event-store/register)
-                (elastic-view-store/register)
-                (edd/reg-cmd :cmd-1 (fn [_ctx cmd]
-                                      [{:event-id :event-1
-                                        :attrs    (:attrs cmd)}]))
-                (edd/reg-event :event-1 (fn [agg event]
-                                          (assoc agg :attrs
-                                                 (:attrs event)))))]
+  (let [agg-id
+        (uuid/gen)
 
-    (mock/apply-cmd ctx
-                    {:commands [{:cmd-id :cmd-1
-                                 :id     agg-id
-                                 :attrs  {:my :special}}]})
+        ctx
+        (-> (get-ctx)
+            (assoc :service-name (create-service-name)
+                   :meta {:realm :test})
+            (create-service-index)
+            (response-cache/register-default)
+            (memory-event-store/register)
+            (elastic-view-store/register)
+            (edd/reg-cmd :cmd-1 (fn [_ctx cmd]
+                                  [{:event-id :event-1
+                                    :attrs    (:attrs cmd)}]))
+            (edd/reg-event :event-1 (fn [agg event]
+                                      (assoc agg :attrs
+                                             (:attrs event)))))
 
-    (is (= {:id      agg-id
-            :version 1
-            :attrs   {:my :special}}
-           (search/get-snapshot ctx agg-id)))
+        [d1]
+        (dates/with-captured-dates
+          (mock/apply-cmd ctx
+                          {:commands [{:cmd-id :cmd-1
+                                       :id     agg-id
+                                       :attrs  {:my :special}}]}))]
+
+    (is
+     (=
+      {:id      agg-id
+       :version 1
+       :attrs   {:my :special}
+       :meta    {:annotations (annotations-with-date d1 d1)}}
+      (search/get-snapshot ctx agg-id)))
+
     (cleanup-index ctx)))
 
 (deftest test-snapshot-diff-from-get-by-id-when-event-not-applied
-  (let [agg-id (uuid/gen)
-        ctx (-> (get-ctx)
-                (assoc :service-name (create-service-name)
-                       :meta {:realm :test})
-                (create-service-index)
-                (response-cache/register-default)
-                (memory-event-store/register)
-                (elastic-view-store/register)
-                (edd/reg-cmd :cmd-1 (fn [_ cmd]
-                                      [{:event-id :event-1
-                                        :attrs    (:attrs cmd)}]))
-                (edd/reg-event :event-1 (fn [agg event]
-                                          (assoc agg :attrs
-                                                 (:attrs event)))))]
+  (let [agg-id
+        (uuid/gen)
 
-    (mock/apply-cmd ctx
-                    {:commands [{:cmd-id :cmd-1
-                                 :id     agg-id
-                                 :attrs  {:my :special}}]})
+        ctx
+        (-> (get-ctx)
+            (assoc :service-name (create-service-name)
+                   :meta {:realm :test})
+            (create-service-index)
+            (response-cache/register-default)
+            (memory-event-store/register)
+            (elastic-view-store/register)
+            (edd/reg-cmd :cmd-1 (fn [_ cmd]
+                                  [{:event-id :event-1
+                                    :attrs    (:attrs cmd)}]))
+            (edd/reg-event :event-1 (fn [agg event]
+                                      (assoc agg :attrs
+                                             (:attrs event)))))
 
-    (is (= {:id      agg-id
-            :version 1
-            :attrs   {:my :special}}
-           (search/get-snapshot ctx agg-id)))
+        [d1]
+        (dates/with-captured-dates
+          (mock/apply-cmd ctx
+                          {:commands [{:cmd-id :cmd-1
+                                       :id     agg-id
+                                       :attrs  {:my :special}}]}))]
+
+    (is
+     (=
+      {:id      agg-id
+       :version 1
+       :attrs   {:my :special}
+       :meta    {:annotations (annotations-with-date d1 d1)}}
+      (search/get-snapshot ctx agg-id)))
 
     (mock/handle-cmd ctx
                      {:commands [{:cmd-id :cmd-1
                                   :id     agg-id
                                   :attrs  {:my :prop}}]})
 
-    (is (= {:id      agg-id
-            :version 1
-            :attrs   {:my :special}}
-           (search/get-snapshot ctx agg-id)))
+    (is
+     (=
+      {:id      agg-id
+       :version 1
+       :attrs   {:my :special}
+       :meta    {:annotations (annotations-with-date d1 d1)}}
+      (search/get-snapshot ctx agg-id)))
 
-    (is (= {:id      agg-id
-            :version 2
-            :attrs   {:my :prop}}
-           (common/get-by-id ctx agg-id)))
+    (is
+     (=
+      {:id      agg-id
+       :version 2
+       :attrs   {:my :prop}}
+      (dissoc (common/get-by-id ctx agg-id) :meta)))
+
     (cleanup-index ctx)))

@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "EDD-Core E2E public REST API Gateway routing to ping-svc and pong-svc (no auth). Includes /private/{stage}/{svc}/query routes used by cross-service remote dependencies."
+
+Parameters:
+  EnvironmentNameLower:
+    Type: String
+  Region:
+    Type: String
+  StageName:
+    Type: String
+    Default: "e2e"
+
+Resources:
+
+  RestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub "${EnvironmentNameLower}-e2e-api"
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Body:
+        swagger: "2.0"
+        info:
+          title: !Sub "${EnvironmentNameLower}-e2e-api"
+          version: "1.0"
+        paths:
+          /ping-svc/{proxy+}:
+            post:
+              produces:
+                - application/json
+              responses: {}
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                type: "aws_proxy"
+                passthroughBehavior: "when_no_match"
+                uri: !Sub "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${Region}:${AWS::AccountId}:function:${EnvironmentNameLower}-e2e-ping-svc:BUILD/invocations"
+          /pong-svc/{proxy+}:
+            post:
+              produces:
+                - application/json
+              responses: {}
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                type: "aws_proxy"
+                passthroughBehavior: "when_no_match"
+                uri: !Sub "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${Region}:${AWS::AccountId}:function:${EnvironmentNameLower}-e2e-pong-svc:BUILD/invocations"
+          /private/{stage}/ping-svc/{proxy+}:
+            post:
+              produces:
+                - application/json
+              responses: {}
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                type: "aws_proxy"
+                passthroughBehavior: "when_no_match"
+                uri: !Sub "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${Region}:${AWS::AccountId}:function:${EnvironmentNameLower}-e2e-ping-svc:BUILD/invocations"
+          /private/{stage}/pong-svc/{proxy+}:
+            post:
+              produces:
+                - application/json
+              responses: {}
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                type: "aws_proxy"
+                passthroughBehavior: "when_no_match"
+                uri: !Sub "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${Region}:${AWS::AccountId}:function:${EnvironmentNameLower}-e2e-pong-svc:BUILD/invocations"
+
+  Deployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: RestApi
+    Properties:
+      RestApiId: !Ref RestApi
+
+  Stage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      RestApiId: !Ref RestApi
+      DeploymentId: !Ref Deployment
+      StageName: !Ref StageName
+
+Outputs:
+  ApiId:
+    Value: !Ref RestApi
+  ApiUrl:
+    Value: !Sub "https://${RestApi}.execute-api.${Region}.amazonaws.com/${StageName}"

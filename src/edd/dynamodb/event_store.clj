@@ -227,20 +227,24 @@
            interaction-id
            invocation-id]
     :as   ctx}]
-  (let [version (or version 0)]
-    (log/info (format "Fetching events for: %s, starting version: %s"
+  (let [event-seq-condition
+        (if (vector? version)
+          (let [[from to] version]
+            {:AttributeValueList [{:N (str from)} {:N (str to)}]
+             :ComparisonOperator "BETWEEN"})
+          {:AttributeValueList [{:N (str (or version 0))}]
+           :ComparisonOperator "GT"})]
+    (log/info (format "Fetching events for: %s, version: %s"
                       id version))
     (if id
       (util/d-time
-       (format "Fetching events for: %s, starting version: %s" id version)
+       (format "Fetching events for: %s, version: %s" id version)
        (let [resp (dynamodb/make-request
                    (assoc ctx :action "Query"
                           :body {:KeyConditions {:AggregateId
                                                  {:AttributeValueList [{:S id}]
                                                   :ComparisonOperator "EQ"}
-                                                 :EventSeq
-                                                 {:AttributeValueList [{:N (str version)}]
-                                                  :ComparisonOperator "GT"}}
+                                                 :EventSeq event-seq-condition}
                                  :TableName     (table-name ctx :event-store)}))
              events (map
                      (fn [event]
@@ -278,6 +282,47 @@
        "-"
        (breadcrumb-str
         breadcrumbs)))
+
+(defn- conditional-failure?
+  [data]
+  (let [type-str (str (:__type data))]
+    (or (string/includes? type-str "TransactionCanceled")
+        (string/includes? type-str "ConditionalCheckFailed")
+        (boolean
+         (some #(= "ConditionalCheckFailed" (:Code %))
+               (:CancellationReasons data))))))
+
+;; `item-types` is parallel to the transaction items, so the failed entry in
+;; :CancellationReasons identifies which write lost the conditional check.
+(defn conflict-key
+  [data item-types]
+  (let [failed-idx (->> (:CancellationReasons data)
+                        (keep-indexed (fn [i r]
+                                        (when (= "ConditionalCheckFailed" (:Code r)) i)))
+                        first)]
+    (if (and failed-idx
+             (= :identity (get item-types failed-idx)))
+      :identity-conflict
+      :concurrent-modification)))
+
+;; Translate a failed conditional write into the same {:error {:key ...}} the
+;; postgres store returns, rather than leaking the raw DynamoDB exception.
+(defn store-transaction
+  [ctx items item-types]
+  (try
+    (dynamodb/make-request
+     (assoc ctx
+            :action "TransactWriteItems"
+            :body {:TransactItems items}))
+    (catch clojure.lang.ExceptionInfo e
+      (let [data (ex-data e)]
+        (if (conditional-failure? data)
+          (let [key (conflict-key data item-types)]
+            (throw (ex-info (name key)
+                            {:error {:key              key
+                                     :original-message (or (:Message data)
+                                                           (ex-message e))}})))
+          (throw e))))))
 
 (defmethod store-results
   :dynamodb
@@ -368,12 +413,16 @@
                                  "Data"          {:S (util/to-json
                                                       (:summary resp))}},
                      :ConditionExpression "attribute_not_exists(Id)"
-                     :TableName (table-name ctx :response-log)}}]))]
+                     :TableName (table-name ctx :response-log)}}]))
+
+        ;; Same order as `items` above; consumed by conflict-key on failure.
+        item-types
+        (vec (concat (repeat (count (:events resp)) :event)
+                     (repeat (count (:effects resp)) :effect)
+                     (repeat (count (:identities resp)) :identity)
+                     (when (:summary resp) [:response-log])))]
     (when-not (empty? items)
-      (dynamodb/make-request
-       (assoc ctx :action "TransactWriteItems"
-              :body
-              {:TransactItems items}))))
+      (store-transaction ctx items item-types)))
   ctx)
 
 (defmethod get-records

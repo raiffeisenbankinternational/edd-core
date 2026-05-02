@@ -210,6 +210,7 @@ MODULE_BUILD_ORDER=(
   edd-core-dev
   edd-core-import
   edd-core-nippy
+  edd-router
   # Tier 3: depend on other modules
   edd-core-view-store-postgres
   edd-java-lambda-runtime
@@ -376,6 +377,21 @@ if ! clojure -M:test:it --reporter documentation --no-capture-output 2>&1 | tee 
   exit 1
 fi
 log_success "Integration tests passed"
+
+# Step 8b: End-to-end deploy + smoke test
+# Builds the ping/pong/router demo lambdas against the freshly-built edd-core,
+# deploys self-contained AWS infra (API Gateway + S3 + DynamoDB + SQS) and
+# exercises the real CQRS flow (API call, cross-service effects, S3 bucket filter).
+log_info "========================================="
+log_info "Running end-to-end deploy test from: $(pwd)"
+log_info "========================================="
+chmod +x e2e/run-e2e.sh
+if ! ./e2e/run-e2e.sh 2>&1 | tee /tmp/e2e-test.log; then
+  log_error "E2E test failed. Log output:"
+  cat /tmp/e2e-test.log
+  exit 1
+fi
+log_success "E2E test passed"
 
 # Step 9: Cleanup
 log_info "Cleaning up build artifacts..."

@@ -160,11 +160,26 @@
   "Reads event from vector under :event-store key"
   (util/d-time
    (format "MemoryEventStore get-events, id: %s, version: %s" id version)
-   (->> (get-realm-store ctx :event-store)
-        (filter #(and (= (:id %) id)
-                      (if version (> (long (:event-seq %)) (long version)) true)))
-        (into [])
-        (sort-by #(:event-seq %)))))
+   (let [seq-pred
+         (cond
+           (vector? version)
+           (let [[from to] version
+                 from-l (long from)
+                 to-l (long to)]
+             (fn [s] (and (>= (long s) from-l)
+                          (<= (long s) to-l))))
+
+           version
+           (let [v (long version)]
+             (fn [s] (> (long s) v)))
+
+           :else
+           (constantly true))]
+     (->> (get-realm-store ctx :event-store)
+          (filter #(and (= (:id %) id)
+                        (seq-pred (:event-seq %))))
+          (into [])
+          (sort-by #(:event-seq %))))))
 
 (defmethod get-command-response
   :memory

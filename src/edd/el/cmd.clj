@@ -111,16 +111,24 @@
 
 (defn resp->add-meta-to-events
   [ctx {:keys [events] :as resp}]
-  (assoc resp
-         :events
-         (map
-          (fn [{:keys [error] :as %}]
-            (if-not error
-              (assoc % :meta (:meta ctx {})
-                     :request-id (:request-id ctx)
-                     :interaction-id (:interaction-id ctx))
-              %))
-          events)))
+  (let [created-on
+        (util/date->string)
+
+        meta
+        (-> (:meta ctx {})
+            (assoc :created-on created-on)
+            (cond->
+             (:invocation-id ctx) (assoc :invocation-id (:invocation-id ctx))))]
+    (assoc resp
+           :events
+           (map
+            (fn [{:keys [error] :as %}]
+              (if-not error
+                (assoc % :meta meta
+                       :request-id (:request-id ctx)
+                       :interaction-id (:interaction-id ctx))
+                %))
+            events))))
 
 (defn resp->validate-and-add-user
   [{:keys [user]} resp]
@@ -309,11 +317,7 @@
                                            {:error (me/humanize
                                                     (m/explain aggregate-schema aggregate))})))
 
-                         (let [history-entry
-                               {:snapshot snapshot
-                                :aggregate aggregate}
-
-                               resp
+                         (let [resp
                                (handle-effects ctx
                                                :resp resp
                                                :aggregate aggregate)
@@ -321,13 +325,20 @@
                                resp
                                (resp->add-meta-to-events ctx resp)
 
+                               annotated-aggregate
+                               (event/annotate-aggregate aggregate snapshot (:events resp []))
+
+                               history-entry
+                               {:snapshot snapshot
+                                :aggregate annotated-aggregate}
+
                                conjv
                                (fnil conj [])
 
                                resp
                                (update resp :history conjv history-entry)]
 
-                           (request-cache/update-aggregate ctx aggregate)
+                           (request-cache/update-aggregate ctx annotated-aggregate)
                            (request-cache/store-identities ctx (:identities resp))
                            resp)))))))
 

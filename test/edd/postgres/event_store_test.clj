@@ -15,6 +15,6 @@
   (is (= {:key              :concurrent-modification
           :original-message msg2}
          (dal/parse-error msg2)))
-  (is (= {:key              :concurrent-modification
+  (is (= {:key              :identity-conflict
           :original-message msg3}
          (dal/parse-error msg3))))

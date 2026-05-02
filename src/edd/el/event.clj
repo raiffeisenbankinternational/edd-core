@@ -43,6 +43,39 @@
    aggregate
    (get ctx :agg-filter [])))
 
+(defn annotate-aggregate
+  "Sets :meta :annotations on aggregate using snapshot (for created-* preservation)
+   and the events that produced this version (for updated-* values).
+   Annotates new aggregates (nil snapshot) and already-annotated ones;
+   pre-existing aggregates without prior annotations are left untouched."
+  [aggregate snapshot events]
+  (let [first-event
+        (first events)
+
+        last-event
+        (last events)
+
+        existing
+        (get-in snapshot [:meta :annotations])]
+    (if (and aggregate
+             (get-in first-event [:meta :created-on])
+             (or (nil? snapshot)
+                 (:created-on existing)))
+      (let [annotations
+            {:updated-on         (get-in last-event [:meta :created-on])
+             :updated-request-id (:request-id last-event)
+             :updated-user-id    (:user last-event)
+             :invocation-id      (get-in last-event [:meta :invocation-id])
+             :interaction-id     (:interaction-id last-event)
+             :created-on         (or (:created-on existing)
+                                     (get-in first-event [:meta :created-on]))
+             :created-request-id (or (:created-request-id existing)
+                                     (:request-id first-event))
+             :created-user-id    (or (:created-user-id existing)
+                                     (:user first-event))}]
+        (assoc-in aggregate [:meta :annotations] annotations))
+      aggregate)))
+
 (defn get-current-state
   [ctx {:keys [id events snapshot]}]
   {:pre [id events]}
