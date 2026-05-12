@@ -2,6 +2,16 @@
 
 ## Changes
 
+**[CARS-7372]** lazy-parallel parquet writer
+- [edd-core-parquet] lazy writer with comparable throughput with eager parallel mode while
+  keeping peak memory low
+- [edd-core-parquet] use snappy compression as the default
+- [edd-core-json] fix vectorz dependency versions, remove transitive dep
+  exclusion from edd-core-json
+- [build] fix docker network name in pre_build script
+
+**[CARS-6849]** Add codeowners
+
 **[AP-856]** Improve starup performance
 
 **[AP-826]** Fix order of names (typo)

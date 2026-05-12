@@ -39,6 +39,8 @@
   (:import [java.io ByteArrayOutputStream]
            [java.security MessageDigest]
            [java.util Base64]
+           [java.util.concurrent ExecutionException ExecutorCompletionService
+            Executors]
            [org.apache.hadoop.conf Configuration]
            [org.apache.parquet.hadoop ParquetFileReader ParquetFileWriter]
            [org.apache.parquet.hadoop.api WriteSupport
@@ -699,28 +701,16 @@
 (defn- write-chunk-to-bytes
   "Writes a chunk of rows to Parquet format and returns the byte array.
    Used for in-memory parallel processing."
-  ^bytes [{:keys [rows schema table-name compression schema-version]}]
+  ^bytes [{:keys [rows schema table-name compression schema-version table-schema]}]
   (write-parquet-bytes-single {:table-name table-name,
                                :schema schema,
                                :rows rows,
                                :compression compression,
-                               :schema-version schema-version}))
+                               :schema-version schema-version,
+                               :table-schema table-schema}))
 
-(defn- merge-parquet-bytes-in-memory
-  "Merges multiple Parquet byte arrays into a single output byte array.
-   Uses ParquetFileWriter for efficient merging without re-serialization.
-
-   Arguments (as a map):
-   - :chunks (required) - Collection of byte arrays containing Parquet data
-   - :schema (required) - Schema definition map
-   - :table-name (required) - Name for the table (in metadata)
-   - :schema-version (optional) - Version string stored in Parquet key/value metadata
-   - :table-schema (optional) - Database schema name stored in Parquet key/value metadata
-
-   Returns byte[] containing the merged Parquet file."
-  ^bytes [{:keys [chunks schema table-name schema-version table-schema]}]
-  (when (empty? chunks)
-    (throw (IllegalArgumentException. "At least one chunk required for merge")))
+(defn- start-parquet-merge
+  [{:keys [schema table-name schema-version table-schema]}]
   (let [parquet-schema
         (build-parquet-schema table-name schema)
 
@@ -741,17 +731,51 @@
          (long (* 128 1024 1024))
          (int 0))]
     (.start writer)
+    {:baos baos,
+     :metadata metadata,
+     :writer writer}))
+
+(defn- append-parquet-bytes!
+  [^ParquetFileWriter writer ^bytes chunk]
+  (with-open [reader
+              (ParquetFileReader/open (create-in-memory-input-file chunk))]
+    (.appendTo reader writer)))
+
+(defn- finish-parquet-merge!
+  ^bytes [{:keys [baos metadata writer]}]
+  (.end ^ParquetFileWriter writer
+        (java.util.HashMap. ^java.util.Map metadata))
+  (.toByteArray ^ByteArrayOutputStream baos))
+
+(defn- merge-parquet-bytes-in-memory
+  "Merges multiple Parquet byte arrays into a single output byte array.
+   Uses ParquetFileWriter for efficient merging without re-serialization.
+
+   Arguments (as a map):
+   - :chunks (required) - Collection of byte arrays containing Parquet data
+   - :schema (required) - Schema definition map
+   - :table-name (required) - Name for the table (in metadata)
+   - :schema-version (optional) - Version string stored in Parquet key/value metadata
+   - :table-schema (optional) - Database schema name stored in Parquet key/value metadata
+
+   Returns byte[] containing the merged Parquet file."
+  ^bytes [{:keys [chunks schema table-name schema-version table-schema]}]
+  (when (empty? chunks)
+    (throw (IllegalArgumentException. "At least one chunk required for merge")))
+  (let [{:keys [writer] :as merge-state}
+        (start-parquet-merge {:schema schema,
+                              :table-name table-name,
+                              :schema-version schema-version,
+                              :table-schema table-schema})]
     (doseq [^bytes chunk
             chunks]
-      (with-open [reader
-                  (ParquetFileReader/open (create-in-memory-input-file chunk))]
-        (.appendTo reader writer)))
-    (.end writer (java.util.HashMap. ^java.util.Map metadata))
-    (.toByteArray baos)))
+      (append-parquet-bytes! writer chunk))
+    (finish-parquet-merge! merge-state)))
 
 (defn- write-chunks-parallel-mem
   "Common logic for parallel chunk writing in memory. Returns vector of byte arrays."
-  [{:keys [rows-vec schema table-name compression schema-version threads]}]
+  [{:keys [rows-vec schema table-name compression schema-version table-schema
+           threads]}]
   (let [partitions
         (partition-rows rows-vec threads)]
     (doall (pmap (fn [row-chunk]
@@ -759,8 +783,40 @@
                                           :schema schema,
                                           :table-name table-name,
                                           :compression compression,
-                                          :schema-version schema-version}))
+                                          :schema-version schema-version,
+                                          :table-schema table-schema}))
                  partitions))))
+
+(defn- take-row-chunk
+  [^java.util.Iterator row-iterator chunk-size]
+  (loop [chunk
+         (transient [])
+
+         row-count
+         0]
+    (if (and (< row-count chunk-size)
+             (.hasNext row-iterator))
+      (recur (conj! chunk (.next row-iterator))
+             (unchecked-inc row-count))
+      (let [chunk
+            (persistent! chunk)]
+        (when (seq chunk)
+          chunk)))))
+
+(defn- append-ready-parquet-chunks!
+  [^ParquetFileWriter writer pending-chunks next-chunk-idx]
+  (loop [pending-chunks
+         pending-chunks
+
+         next-chunk-idx
+         next-chunk-idx]
+    (if-let [chunk-bytes
+             (get pending-chunks next-chunk-idx)]
+      (do
+        (append-parquet-bytes! writer chunk-bytes)
+        (recur (dissoc pending-chunks next-chunk-idx)
+               (unchecked-inc next-chunk-idx)))
+      [pending-chunks next-chunk-idx])))
 
 (def ^:private parallel-row-threshold
   "Minimum row count for parallel processing to be beneficial.
@@ -768,12 +824,167 @@
    and merging exceeds the parallelization benefit."
   10000)
 
-(defn write-parquet-bytes
-  "Writes rows to Parquet format using parallel multi-threaded processing entirely in memory.
-   Partitions are processed as byte arrays in memory and merged in memory.
+(def ^:private lazy-parallel-default-chunk-size
+  50000)
 
-   For row counts below 10,000 or when receiving a lazy seq, automatically falls back to single-threaded
-   write-parquet-bytes-single since parallel overhead exceeds benefit or we don't want to fully realize the data.
+(defn write-parquet-bytes-lazy-parallel
+  "Writes rows to Parquet format with bounded chunking and parallel chunk encoding.
+
+   Intended for lazy or non-counted row sources. Rows are consumed incrementally,
+   chunked without calling count, encoded on a fixed thread pool, and merged in
+   original order without retaining all chunk bytes at once.
+
+   Extra options:
+   - :chunk-size - rows per chunk (default 50000)
+   - :max-in-flight-chunks - max submitted chunks kept in memory/queue (default: :threads)"
+  [{:keys [table-name schema rows compression schema-version table-schema
+           threads chunk-size max-in-flight-chunks],
+    :or {compression :snappy,
+         threads (.. Runtime getRuntime availableProcessors),
+         chunk-size lazy-parallel-default-chunk-size}}]
+  (log/infof "write-parquet-bytes-lazy-parallel start {:table-name %s, :compression %s, :threads %s, :chunk-size %s, :max-in-flight-chunks %s, :rows-counted? %s}"
+             table-name
+             compression
+             threads
+             chunk-size
+             (or max-in-flight-chunks threads)
+             (counted? rows))
+  (when-not (and (integer? threads) (pos? threads))
+    (throw (IllegalArgumentException.
+            ":threads must be positive integer")))
+  (when-not (and (integer? chunk-size) (pos? chunk-size))
+    (throw (IllegalArgumentException.
+            ":chunk-size must be positive integer")))
+  (let [max-in-flight-chunks
+        (or max-in-flight-chunks threads)]
+    (when-not (and (integer? max-in-flight-chunks)
+                   (pos? max-in-flight-chunks))
+      (throw (IllegalArgumentException.
+              ":max-in-flight-chunks must be positive integer")))
+    (let [^java.util.Iterator row-iterator
+          (clojure.lang.RT/iter rows)
+
+          executor
+          (Executors/newFixedThreadPool (int threads))
+
+          completion-service
+          (ExecutorCompletionService. executor)
+
+          {:keys [writer] :as merge-state}
+          (start-parquet-merge {:schema schema,
+                                :table-name table-name,
+                                :schema-version schema-version,
+                                :table-schema table-schema})]
+      (try
+        (loop [next-submit-idx
+               0
+
+               next-merge-idx
+               0
+
+               pending-chunks
+               {}
+
+               in-flight
+               0
+
+               source-exhausted?
+               false]
+          (let [[next-submit-idx in-flight source-exhausted?]
+                (loop [next-submit-idx
+                       next-submit-idx
+
+                       in-flight
+                       in-flight
+
+                       source-exhausted?
+                       source-exhausted?]
+                  (if (or source-exhausted?
+                          (>= in-flight max-in-flight-chunks))
+                    [next-submit-idx in-flight source-exhausted?]
+                    (let [produce-t0 (System/nanoTime)]
+                      (if-let [row-chunk
+                               (take-row-chunk row-iterator chunk-size)]
+                        (let [row-count (count row-chunk)
+                              produce-ms (/ (double (- (System/nanoTime) produce-t0)) 1e6)]
+                          (log/infof "write-parquet-bytes-lazy-parallel chunk-produced {:table-name %s, :chunk-idx %s, :row-count %s, :produce-ms %.3f, :in-flight-before-submit %s}"
+                                     table-name next-submit-idx row-count produce-ms in-flight)
+                          (.submit completion-service
+                                   (fn []
+                                     (let [encode-t0 (System/nanoTime)
+                                           chunk-bytes (write-chunk-to-bytes
+                                                        {:rows row-chunk,
+                                                         :schema schema,
+                                                         :table-name table-name,
+                                                         :compression compression,
+                                                         :schema-version schema-version,
+                                                         :table-schema table-schema})
+                                           encode-ms (/ (double (- (System/nanoTime) encode-t0)) 1e6)]
+                                       (log/infof "write-parquet-bytes-lazy-parallel chunk-encoded {:table-name %s, :chunk-idx %s, :row-count %s, :encode-ms %.3f, :chunk-bytes %s}"
+                                                  table-name next-submit-idx row-count encode-ms (alength ^bytes chunk-bytes))
+                                       {:chunk-idx next-submit-idx,
+                                        :row-count row-count,
+                                        :chunk-bytes chunk-bytes,
+                                        :encode-ms encode-ms,
+                                        :produce-ms produce-ms})))
+                          (recur (unchecked-inc next-submit-idx)
+                                 (unchecked-inc in-flight)
+                                 false))
+                        [next-submit-idx in-flight true]))))]
+            (if (zero? in-flight)
+              (do
+                (log/infof "write-parquet-bytes-lazy-parallel finish {:table-name %s, :submitted-chunks %s}"
+                           table-name
+                           next-submit-idx)
+                (finish-parquet-merge! merge-state))
+              (let [completed-future
+                    (.take completion-service)
+
+                    completed-result
+                    (try
+                      (.get completed-future)
+                      (catch ExecutionException e
+                        (throw (.getCause e))))
+
+                    pending-chunks
+                    (assoc pending-chunks
+                           (long (:chunk-idx completed-result))
+                           (:chunk-bytes completed-result))
+
+                    in-flight
+                    (dec in-flight)
+
+                    [pending-chunks next-merge-idx]
+                    (append-ready-parquet-chunks! writer
+                                                  pending-chunks
+                                                  next-merge-idx)]
+                (log/infof "write-parquet-bytes-lazy-parallel chunk-completed {:table-name %s, :chunk-idx %s, :row-count %s, :produce-ms %.3f, :encode-ms %.3f, :in-flight-after-complete %s, :pending-chunks %s, :next-merge-idx %s}"
+                           table-name
+                           (:chunk-idx completed-result)
+                           (:row-count completed-result)
+                           (double (:produce-ms completed-result))
+                           (double (:encode-ms completed-result))
+                           in-flight
+                           (count pending-chunks)
+                           next-merge-idx)
+                (recur (long next-submit-idx)
+                       (long next-merge-idx)
+                       pending-chunks
+                       (long in-flight)
+                       source-exhausted?)))))
+        (catch Throwable t
+          (.shutdownNow executor)
+          (throw t))
+        (finally
+          (.shutdown executor))))))
+
+(defn write-parquet-bytes
+  "Writes rows to Parquet format in memory.
+
+   Counted rows below threshold use single-threaded write.
+   Counted rows at or above threshold use existing parallel counted-row path.
+   Non-counted / lazy rows use bounded lazy-parallel path by default.
+   Set :lazy-parallel? false to force single-threaded lazy writing.
 
    Arguments (as a map):
    - :table-name (required) - Name for the table
@@ -783,29 +994,52 @@
    - :schema-version (optional) - Version string for metadata
    - :table-schema (optional) - Database schema name stored in Parquet key/value metadata
    - :threads (optional) - Number of parallel threads (default: available processors)
+   - :lazy-parallel? (optional) - Enable bounded lazy-parallel path for non-counted rows (default: true)
+   - :chunk-size (optional) - Lazy-parallel rows per chunk
+   - :max-in-flight-chunks (optional) - Lazy-parallel max queued / buffered chunks
 
    Returns byte[] containing the Parquet file contents."
   [{:keys [table-name schema rows compression schema-version table-schema
-           threads],
-    :or {compression :gzip,
-         threads (.. Runtime getRuntime availableProcessors)}}]
+           threads lazy-parallel? chunk-size max-in-flight-chunks],
+    :or {compression :snappy,
+         threads (.. Runtime getRuntime availableProcessors),
+         lazy-parallel? true}}]
   (let [is-lazy?
-        ((complement counted?) rows)]
-    (if (or is-lazy? (> parallel-row-threshold (count rows)))
-      ;; Below threshold or lazy seq passed - going single-threaded
-      (write-parquet-bytes-single {:table-name table-name,
-                                   :schema schema,
-                                   :rows rows,
-                                   :compression compression,
-                                   :schema-version schema-version,
-                                   :table-schema table-schema})
-      ;; Above threshold - parallel in-memory processing
+        ((complement counted?) rows)
+
+        single-write-opts
+        {:table-name table-name,
+         :schema schema,
+         :rows rows,
+         :compression compression,
+         :schema-version schema-version,
+         :table-schema table-schema}]
+    (cond
+      (and is-lazy? lazy-parallel?)
+      (let [lazy-write-opts
+            (cond-> {:table-name table-name,
+                     :schema schema,
+                     :rows rows,
+                     :compression compression,
+                     :schema-version schema-version,
+                     :table-schema table-schema,
+                     :threads threads}
+              (some? chunk-size) (assoc :chunk-size chunk-size)
+              (some? max-in-flight-chunks) (assoc :max-in-flight-chunks
+                                                  max-in-flight-chunks))]
+        (write-parquet-bytes-lazy-parallel lazy-write-opts))
+
+      (or is-lazy? (> parallel-row-threshold (count rows)))
+      (write-parquet-bytes-single single-write-opts)
+
+      :else
       (let [chunks
             (write-chunks-parallel-mem {:rows-vec rows,
                                         :schema schema,
                                         :table-name table-name,
                                         :compression compression,
                                         :schema-version schema-version,
+                                        :table-schema table-schema,
                                         :threads threads})]
         (merge-parquet-bytes-in-memory {:chunks chunks,
                                         :schema schema,

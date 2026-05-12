@@ -413,13 +413,49 @@ EOF
   echo "Checking Docker container status..."
   docker ps
 
+  POSTGRES_CONTAINER=$(docker compose ps -q postgres 2>/dev/null || echo "")
+  if [ -z "$POSTGRES_CONTAINER" ]; then
+    echo -e "${RED}ERROR: Could not resolve postgres container id from docker compose${NC}"
+    docker compose ps
+    return 1
+  fi
+
+  POSTGRES_NETWORK=$(docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{printf "%s\n" $k}}{{end}}' "$POSTGRES_CONTAINER" | head -n 1)
+  if [ -z "$POSTGRES_NETWORK" ]; then
+    echo -e "${RED}ERROR: Could not resolve docker network for postgres container${NC}"
+    docker inspect "$POSTGRES_CONTAINER"
+    return 1
+  fi
+
+  echo "Resolved postgres container: $POSTGRES_CONTAINER"
+  echo "Resolved docker network for Flyway: $POSTGRES_NETWORK"
+
+  echo -e "${GREEN}Waiting for Postgres to accept connections...${NC}"
+  POSTGRES_READY="false"
+  for attempt in $(seq 1 30); do
+    if docker exec "$POSTGRES_CONTAINER" pg_isready -h 127.0.0.1 -p 5432 -U postgres -d postgres >/dev/null 2>&1; then
+      POSTGRES_READY="true"
+      echo -e "${GREEN}Postgres is ready${NC}"
+      break
+    fi
+
+    echo -e "${YELLOW}Waiting for Postgres ($attempt/30)...${NC}"
+    sleep 2
+  done
+
+  if [ "$POSTGRES_READY" != "true" ]; then
+    echo -e "${RED}ERROR: Postgres did not become ready within timeout${NC}"
+    docker compose logs --tail 50 postgres
+    return 1
+  fi
+
   # Helper function to run flyway migration via Docker
   run_flyway_migration() {
     local schema=$1
     local locations=$2
     local volumes=$3
 
-    docker run --rm --network edd-core_opensearch-net \
+    docker run --rm --network "$POSTGRES_NETWORK" \
       $volumes \
       ${_DOCKER_URL_PREFIX}flyway/flyway:10.8 \
       -url=jdbc:postgresql://postgres:5432/postgres \

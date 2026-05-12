@@ -21,8 +21,12 @@
   org.clojure/data.csv                   {:mvn/version "1.1.1"}
   metosin/malli                          {:mvn/version "0.20.1"}
   java-http-clj/java-http-clj            {:mvn/version "0.4.3"}
+  ;; Keep Mikera runtime aligned across edd modules.
+  net.mikera/vectorz                     {:mvn/version "0.67.0"}
   net.mikera/vectorz-clj                 {:mvn/version "0.48.0"}
   net.mikera/core.matrix                 {:mvn/version "0.63.0"}
+  net.mikera/randomz                     {:mvn/version "0.3.0"}
+  net.mikera/mathz                       {:mvn/version "0.3.0"}
   org.slf4j/slf4j-api                    {:mvn/version "2.0.17"}
   com.alpha-prosoft/clj-aws-sign         {:mvn/version "0.1.1.18"}
   io.forward/yaml                        {:mvn/version "1.0.11"}

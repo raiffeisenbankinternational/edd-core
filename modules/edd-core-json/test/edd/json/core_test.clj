@@ -99,3 +99,7 @@
         result (json/to-json {:vectorz vector})]
     (is (= "{\"vectorz\":[1.0,2.0,3.0]}"
            result))))
+
+(deftest test-vectorz-hashcode-available
+  (let [vector (Vector/of (double-array [1.0 2.0 3.0]))]
+    (is (integer? (hash vector)))))

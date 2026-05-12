@@ -2,11 +2,9 @@
  {app-group-id/edd-core {:local/root "../../"}
   com.alpha-prosoft/jsonista {:mvn/version "0.3.8.11"}
   net.mikera/vectorz {:mvn/version "0.67.0"
-                      ;; We need a single class to extend a protocol
-                      ;; but not the whole Mikera stuff. Excluding.
-                      :exclusions [us.bpsm/edn-java
-                                   net.mikera/randomz
-                                   net.mikera/mathz]}}
+                      ;; AVector.hashCode and other vectorz runtime paths use
+                      ;; randomz/mathz transitively, so keep full runtime deps.
+                      :exclusions [us.bpsm/edn-java]}}
  :paths ["src" "resources"]
  :aliases
  {:build  {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.13"}}
