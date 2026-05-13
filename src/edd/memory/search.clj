@@ -2,6 +2,7 @@
   (:require
    [clojure.string :as str]
    [edd.search :refer [parse default-size]]
+   [edd.memory.event-store :as event-store]
    [lambda.test.fixture.state :as state]
    [clojure.tools.logging :as log]))
 
@@ -169,10 +170,9 @@
    items))
 
 (defn advanced-search-impl
-  [{:keys [query]}]
+  [{:keys [query] :as ctx}]
   {:pre [query]}
-  (let [state (->> @state/*dal-state*
-                   (:aggregate-store))
+  (let [state (event-store/get-realm-store ctx :aggregate-store)
         apply-filter (if (:filter query)
                        (parse mock (:filter query))
                        (fn [_%] true))

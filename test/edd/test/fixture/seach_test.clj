@@ -355,7 +355,7 @@
   (let [data [{:a {:b :e}
                :c :d}
               {:c :d}]]
-    (binding [state/*dal-state* (atom {:aggregate-store data})]
+    (binding [state/*dal-state* (atom {:realms {:test {:aggregate-store data}}})]
       (is (= {:from  0
               :hits  [{:a {:b :e}
                        :c :d}]
@@ -369,3 +369,27 @@
               :total 1}
              (advanced-search (assoc ctx
                                      :query {:filter [:not [:exists :a]]})))))))
+
+(deftest advanced-search-uses-realm-partitioned-store
+  (let [data [{:id #uuid "00000000-0000-0000-0000-000000000001"
+               :attrs {:name "alpha" :status :active}}
+              {:id #uuid "00000000-0000-0000-0000-000000000002"
+               :attrs {:name "beta" :status :inactive}}]]
+    (testing "finds aggregates stored under realm partition"
+      (binding [state/*dal-state* (atom {:realms {:test {:aggregate-store data}}})]
+        (is (= {:from 0
+                :hits [{:id #uuid "00000000-0000-0000-0000-000000000001"
+                        :attrs {:name "alpha" :status :active}}]
+                :size 50
+                :total 1}
+               (advanced-search (assoc ctx
+                                       :query {:filter [:eq :attrs.status :active]}))))))
+
+    (testing "returns empty when aggregate-store only at top level (not realm-partitioned)"
+      (binding [state/*dal-state* (atom {:aggregate-store data})]
+        (is (= {:from 0
+                :hits []
+                :size 50
+                :total 0}
+               (advanced-search (assoc ctx
+                                       :query {:filter [:eq :attrs.status :active]}))))))))

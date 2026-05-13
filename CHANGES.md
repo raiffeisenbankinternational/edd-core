@@ -2,6 +2,12 @@
 
 ## Changes
 
+**[CARS-7404]** Fix advanced-search realm partitioning
+- advanced-search-impl was reading from (:aggregate-store @*dal-state*)
+  which bypasses realm partitioning introduced in AP-800
+- Use event-store/get-realm-store to read from [:realms realm :aggregate-store]
+- Add unit test proving realm-partitioned store is used
+
 **[CARS-7438]** Store request-id in MDC in advance
 - store request-id in MDC before parsing JWT
 - add new tests
