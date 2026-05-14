@@ -1,7 +1,9 @@
 (ns lambda.core-test
-  (:require [clojure.test :refer [deftest is]]
-            [aws.lambda :as core]
-            [lambda.filters :as filters]))
+  (:require
+   [aws.lambda :as core]
+   [clojure.test :refer [deftest is]]
+   [lambda.filters :as filters]
+   [lambda.request :as request]))
 
 (def ctx-filter
   {:init (fn [ctx]
@@ -36,3 +38,20 @@
            (:some-value ctx)))
     (is (= "bla"
            (:init-value ctx)))))
+
+(deftest test-store-request-ids
+  (binding [request/*request*
+            (atom {:a "test"
+                   :mdc {:foo "bar"
+                         :invocation-id 999}})]
+    (let [payload {:request-id 1
+                   :invocation-id 2
+                   :interaction-id 3
+                   :test 42}]
+      (filters/store-request-ids! payload))
+    (is (= {:a "test"
+            :mdc {:foo "bar"
+                  :request-id 1
+                  :invocation-id 2
+                  :interaction-id 3}}
+           @request/*request*))))

@@ -9,7 +9,11 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-docker rm -f $(docker ps -aq)
+DOCKER_PIDS=$(docker ps -aq)
+
+if [[ -n $DOCKER_PIDS ]]; then
+    docker rm -f $DOCKER_PIDS
+fi
 
 _prebuild_main() {
   set -eo pipefail

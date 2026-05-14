@@ -266,6 +266,18 @@
            (cond-> {}
              trace-header (assoc "X-Amzn-Trace-Id" trace-header)))))
 
+(defn store-request-ids!
+  "
+  Update the current MDC with various ids from the payload.
+  "
+  [body]
+  (let [subset
+        (-> body
+            (select-keys [:request-id
+                          :invocation-id
+                          :interaction-id]))]
+    (swap! request/*request* update :mdc merge subset)))
+
 (defn- edd-header?
   [header-name]
   (string/starts-with?
@@ -336,6 +348,9 @@
 
         ctx
         (assoc ctx :body filtered)]
+    ;; The `assign-metadata` call might fail due to an invalid JWT.
+    ;; Store the `request-id` and other ids in MDC for debugging.
+    (store-request-ids! body)
     (assign-metadata ctx)))
 
 (def from-api

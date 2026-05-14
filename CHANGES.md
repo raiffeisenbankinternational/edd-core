@@ -2,6 +2,11 @@
 
 ## Changes
 
+**[CARS-7438]** Store request-id in MDC in advance
+- store request-id in MDC before parsing JWT
+- add new tests
+- downgrade honeysql in the top-level deps
+
 **[CARS-7372]** lazy-parallel parquet writer
 - [edd-core-parquet] lazy writer with comparable throughput with eager parallel mode while
   keeping peak memory low
