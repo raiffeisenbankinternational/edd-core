@@ -51,23 +51,38 @@
                                            :total-attempts total}
                                           (ex-data e))
                                    e)))
-                       (edd-util/try-parse-exception-data e)))]
-      (if (or
-           (:error response)
-           (> (long (:status response 0)) 499))
-        (do
-          (log/warnf
-           "Retrying %s/%s, because: %s"
-           (- total attempt)
-           total
-           (or (:error response)
-               (format "response status: %s, with body %s"
-                       (:status response)
-                       (:body response))))
-          (when (not= attempt total)
-            ;sleep only when second attempt
-            (Thread/sleep (long (+ 1000 (long (rand-int 1000))))))
-          (retry-n-impl f (dec attempt) total response meta))
+                       (edd-util/try-parse-exception-data e)))
+
+          retry?
+          (or (:error response)
+              (> (long (:status response 0)) 499))]
+
+      (if retry?
+        (let [cause
+              (or (:error response)
+                  (format "response status: %s, with body %s"
+                          (:status response)
+                          (:body response)))
+
+              n
+              (- total attempt)
+
+              stable-part
+              (+ 100 (* n 400))
+
+              jitter-part
+              (-> stable-part (/ 10.0) (* (Math/random)))
+
+              sleep-time
+              (+ stable-part jitter-part)]
+
+          (log/warnf "Retrying %s/%s, sleep: %.3f, because: %s"
+                     (inc n)
+                     total
+                     sleep-time
+                     cause)
+          (Thread/sleep (long sleep-time))
+          (recur f (dec attempt) total response meta))
         response))))
 
 (defn retry-n

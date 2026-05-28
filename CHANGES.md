@@ -2,6 +2,10 @@
 
 ## Changes
 
+**[CARS-7880]** Better retrying logic in edd-core
+- allow to pass retries for s3/put-object
+- increasing sleep time when retry
+
 **[CARS-7600]** Add SAST workflow
 
 **[CARS-7404]** Fix advanced-search realm partitioning

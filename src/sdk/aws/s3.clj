@@ -115,28 +115,31 @@
 
 (defn put-object
   "puts object.content (should be plain string) into object.s3.bucket.name under object.s3.bucket.key"
-  [{:keys [_aws] :as ctx} object]
-  (let [req
-        (merge (s3-request-helper ctx object)
-               {:method     "PUT"
-                :uri        (get-path object)})
-        common (common/authorize req)
-        url    (get-url req)
-        response (client/retry-n #(-> (util/http-put
-                                       url
-                                       (client/request->with-timeouts
-                                        %
-                                        {:as      :stream
-                                         :headers (-> (:headers req)
-                                                      (dissoc "Host")
-                                                      (assoc "Authorization" common))
-                                         :body    (get-in object [:s3 :object :content])})
-                                       :raw true)
-                                      (parse-response object)))
-        {:keys [error] :as response} response]
-    (if error
-      response
-      (io/reader (:body response) :encoding "UTF-8"))))
+  ([ctx object]
+   (put-object ctx object {:retries client/retry-count}))
+  ([{:keys [_aws] :as ctx} object {:keys [retries]}]
+   (let [req
+         (merge (s3-request-helper ctx object)
+                {:method     "PUT"
+                 :uri        (get-path object)})
+         common (common/authorize req)
+         url    (get-url req)
+         response (client/retry-n #(-> (util/http-put
+                                        url
+                                        (client/request->with-timeouts
+                                         %
+                                         {:as      :stream
+                                          :headers (-> (:headers req)
+                                                       (dissoc "Host")
+                                                       (assoc "Authorization" common))
+                                          :body    (get-in object [:s3 :object :content])})
+                                        :raw true)
+                                       (parse-response object))
+                                  :retries retries)
+         {:keys [error] :as response} response]
+     (if error
+       response
+       (io/reader (:body response) :encoding "UTF-8")))))
 
 (defn enhanced-binary-stream
   [response]
