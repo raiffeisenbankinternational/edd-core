@@ -21,7 +21,6 @@
     var: local_migrations
 
 - name: 'Copy migrations from edd-core as global migrations'
-  environment: "{{ parameters }}"
   s3_sync:
     region: "{{ parameters['Region'] }}"
     bucket: "{{ parameters['DeploymentS3BucketName'] }}"
@@ -31,7 +30,6 @@
     delete: true
 
 - name: 'Copy migration from service project as local migrations'
-  environment: "{{ parameters }}"
   s3_sync:
     region: "{{ parameters['Region'] }}"
     bucket: "{{ parameters['DeploymentS3BucketName'] }}"

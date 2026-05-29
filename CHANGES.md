@@ -2,6 +2,8 @@
 
 ## Changes
 
+**[CARS-7936]** Remove environment directive from s3_sync tasks to fix ValueError
+
 **[CARS-7880]** Better retrying logic in edd-core
 - allow to pass retries for s3/put-object
 - increasing sleep time when retry
