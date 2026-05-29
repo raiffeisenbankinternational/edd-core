@@ -2,6 +2,8 @@
 
 ## Changes
 
+**[CARS-7600]** Add SAST workflow
+
 **[CARS-7404]** Fix advanced-search realm partitioning
 - advanced-search-impl was reading from (:aggregate-store @*dal-state*)
   which bypasses realm partitioning introduced in AP-800
