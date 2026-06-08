@@ -2,6 +2,10 @@
 
 ## Changes
 
+**[AP-922]** Lazily load handler
+Because we dont want to run java handler when we import
+namespace (test  break)
+
 **[AP-897]** Add audit metadata to events and aggregates
 - improve startup of java lambda
 

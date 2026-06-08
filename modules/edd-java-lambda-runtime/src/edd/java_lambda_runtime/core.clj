@@ -179,15 +179,18 @@
            (.register (org.crac.Core/getGlobalContext) ~this-sym#)
            (clojure.tools.logging/info "lambda.Handler registered with CRaC global context.")))
 
+       ;; Deferred so building ~ctx (event-store/register, config fetch, ...)
+       ;; does not run at namespace load — only on first invocation, or when
+       ;; forced into the snapshot during -beforeCheckpoint.
        (def ~'-handler-fn
-         (edd.java-lambda-runtime.core/java-request-handler ~ctx ~handler ~@other))
+         (delay (edd.java-lambda-runtime.core/java-request-handler ~ctx ~handler ~@other)))
 
        (def ~'-handleRequest
          (fn [~this-sym#
               ^java.io.InputStream ~input-stream-sym#
               ^java.io.OutputStream ~output-stream-sym#
               ^com.amazonaws.services.lambda.runtime.Context ~lambda-context-sym#]
-           (~'-handler-fn ~this-sym# ~input-stream-sym# ~output-stream-sym# ~lambda-context-sym#)))
+           ((deref ~'-handler-fn) ~this-sym# ~input-stream-sym# ~output-stream-sym# ~lambda-context-sym#)))
 
        ;; Runs at build time; its cost is captured in the snapshot, not on the
        ;; restore path. Warm up to load/JIT the request path into the snapshot,
@@ -197,6 +200,7 @@
          (fn [~this-sym# ^org.crac.Context ~crac-context-sym#]
            (let [start# (System/nanoTime)]
              (reset! edd.java-lambda-runtime.core/restore-ctx ~ctx)
+             (deref ~'-handler-fn)
              (edd.java-lambda-runtime.core/run-warm-up! ~ctx)
              (swap! edd.java-lambda-runtime.core/init-cache dissoc
                     :aws :aws-ctx-initialized)
