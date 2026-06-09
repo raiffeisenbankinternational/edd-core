@@ -29,16 +29,15 @@
 
 (def ^:private creds-buffer-ms (* 5 60 1000))
 
-(defn- creds-stale?
+(defn- creds-fresh?
   [aws]
-  (if-let [exp (:aws-expiration aws)]
+  (when-let [expiration (:aws-expiration aws)]
     (try
-      (< (-> exp java.time.Instant/parse .toEpochMilli)
-         (+ (System/currentTimeMillis) creds-buffer-ms))
+      (<= (+ (System/currentTimeMillis) creds-buffer-ms)
+          (-> expiration java.time.Instant/parse .toEpochMilli))
       (catch Exception _
-        (log/warn "Could not parse :aws-expiration, treating credentials as stale:" exp)
-        true))
-    false))
+        (log/warn "Could not parse :aws-expiration, treating credentials as stale:" expiration)
+        false))))
 
 (defn- apply-cached-aws [ctx]
   (let [cached
@@ -46,7 +45,7 @@
 
         aws
         (:aws cached)]
-    (if (and aws (not (creds-stale? aws)))
+    (if (and aws (creds-fresh? aws))
       (assoc ctx :aws aws :aws-ctx-initialized true)
       ctx)))
 

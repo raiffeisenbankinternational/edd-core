@@ -2,6 +2,8 @@
 
 ## Changes
 
+**[AP-923]** Fix token expiration check
+
 **[AP-922]** Lazily load handler
 Because we dont want to run java handler when we import
 namespace (test  break)
