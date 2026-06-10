@@ -2,6 +2,8 @@
 
 ## Changes
 
+**[AP-929]** Fix token caching
+
 **[AP-923]** Fix token expiration check
 
 **[AP-922]** Lazily load handler

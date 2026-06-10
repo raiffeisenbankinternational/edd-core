@@ -6,8 +6,8 @@
                    :ns-default build}
            :test {:extra-paths ["test"]}
            :unit {:main-opts ["-m" "kaocha.runner" "unit"]
-                  :extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}}
+                  :extra-deps {lambdaisland/kaocha {:mvn/version "1.91.1392"}}
                   :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}
-           :it {:extra-deps {lambdaisland/kaocha {:mvn/version "1.75.1190"}},
+           :it {:extra-deps {lambdaisland/kaocha {:mvn/version "1.91.1392"}},
                 :main-opts ["-m" "kaocha.runner" "it"]
                 :jvm-opts ["-Dclojure.tools.logging.factory=lambda.logging-local/slf4j-local-factory"]}}}

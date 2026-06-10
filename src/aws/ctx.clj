@@ -41,10 +41,7 @@
             (:SecretAccessKey body)
 
             :aws-session-token
-            (or (:Token body) "")
-
-            :aws-expiration
-            (:Expiration body)})
+            (or (:Token body) "")})
          (do
            (log/warn "Fetched incomplete credentials from URI"
                      {:uri uri :response-keys (keys body)})
@@ -91,6 +88,14 @@
       (do (log/info "Using preloaded AWS credentials from context.")
           preloaded-creds)
 
+      ;; Before the static env keys: SnapStart freezes those in the snapshot,
+      ;; while this endpoint vends fresh credentials after every restore.
+      (some? container-uri)
+      (do (log/info "AWS_CONTAINER_CREDENTIALS_FULL_URI is set, attempting to fetch credentials.")
+          (or (fetch-creds-from-uri container-uri container-token)
+              (do (log/warn "Failed to retrieve credentials from AWS_CONTAINER_CREDENTIALS_FULL_URI!!.")
+                  nil)))
+
       (and direct-env-key
            direct-env-secret)
       (do (log/info (str "Using AWS credentials from direct environment variables "
@@ -106,12 +111,6 @@
           {:aws-access-key-id     direct-env-key
            :aws-secret-access-key direct-env-secret
            :aws-session-token     (util/get-env "AWS_SESSION_TOKEN" "")})
-
-      (some? container-uri)
-      (do (log/info "AWS_CONTAINER_CREDENTIALS_FULL_URI is set, attempting to fetch credentials.")
-          (or (fetch-creds-from-uri container-uri container-token)
-              (do (log/warn "Failed to retrieve credentials from AWS_CONTAINER_CREDENTIALS_FULL_URI!!.")
-                  nil)))
 
       (and (nil? container-uri) (nil? container-token))
       (do (log/info "Attempting to fetch credentials from IMDS.")

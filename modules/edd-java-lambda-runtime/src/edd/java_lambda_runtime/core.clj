@@ -27,32 +27,27 @@
 (defn ms-since [start-ns]
   (/ (- (System/nanoTime) (long start-ns)) 1e6))
 
-(def ^:private creds-buffer-ms (* 5 60 1000))
+(def ^:private creds-max-age-ms (* 30 60 1000))
 
-(defn- creds-fresh?
-  [aws]
-  (when-let [expiration (:aws-expiration aws)]
-    (try
-      (<= (+ (System/currentTimeMillis) creds-buffer-ms)
-          (-> expiration java.time.Instant/parse .toEpochMilli))
-      (catch Exception _
-        (log/warn "Could not parse :aws-expiration, treating credentials as stale:" expiration)
-        false))))
+(defn refresh-aws-creds!
+  [ctx]
+  (let [aws
+        (:aws (aws-ctx/init ctx))]
+    (swap! init-cache assoc
+           :aws aws
+           :aws-fetched-at (System/currentTimeMillis))
+    aws))
 
-(defn- apply-cached-aws [ctx]
-  (let [cached
-        @init-cache
-
-        aws
-        (:aws cached)]
-    (if (and aws (creds-fresh? aws))
-      (assoc ctx :aws aws :aws-ctx-initialized true)
-      ctx)))
-
-(defn- cache-aws! [ctx]
-  (swap! init-cache assoc
-         :aws (:aws ctx)
-         :aws-ctx-initialized true))
+(defn- cached-aws
+  [ctx]
+  (let [{:keys [aws aws-fetched-at]}
+        @init-cache]
+    (if (and aws
+             aws-fetched-at
+             (< (- (System/currentTimeMillis) (long aws-fetched-at))
+                creds-max-age-ms))
+      aws
+      (refresh-aws-creds! ctx))))
 
 (defn- ensure-metrics! [ctx]
   (when-not (:metrics-started @init-cache)
@@ -81,6 +76,7 @@
     (let [preloaded
           (-> base-ctx
               (lambda-ctx/init)
+              (aws-ctx/init)
               (lambda/init-filters))
 
           ctx
@@ -141,16 +137,15 @@
             (-> init-ctx
                 (assoc :filters filters
                        :handler handler
-                       :post-filter post-filter)
-                (apply-cached-aws)
+                       :post-filter post-filter
+                       :aws (cached-aws init-ctx)
+                       :aws-ctx-initialized true)
                 (lambda-ctx/init)
-                (aws-ctx/init)
                 (lambda/init-filters)
                 (assoc :from-api (lambda/is-from-api request)
                        :invocation-id (uuid/parse (.getAwsRequestId lambda-context))))]
 
         (ensure-metrics! ctx)
-        (cache-aws! ctx)
 
         (lambda/send-response
          (lambda/handle-request ctx request)
@@ -178,9 +173,6 @@
            (.register (org.crac.Core/getGlobalContext) ~this-sym#)
            (clojure.tools.logging/info "lambda.Handler registered with CRaC global context.")))
 
-       ;; Deferred so building ~ctx (event-store/register, config fetch, ...)
-       ;; does not run at namespace load — only on first invocation, or when
-       ;; forced into the snapshot during -beforeCheckpoint.
        (def ~'-handler-fn
          (delay (edd.java-lambda-runtime.core/java-request-handler ~ctx ~handler ~@other)))
 
@@ -191,10 +183,6 @@
               ^com.amazonaws.services.lambda.runtime.Context ~lambda-context-sym#]
            ((deref ~'-handler-fn) ~this-sym# ~input-stream-sym# ~output-stream-sym# ~lambda-context-sym#)))
 
-       ;; Runs at build time; its cost is captured in the snapshot, not on the
-       ;; restore path. Warm up to load/JIT the request path into the snapshot,
-       ;; drop credentials so the snapshot never carries stale ones, then GC to
-       ;; shrink the snapshot (smaller snapshot => faster restore).
        (def ~'-beforeCheckpoint
          (fn [~this-sym# ^org.crac.Context ~crac-context-sym#]
            (let [start# (System/nanoTime)]
@@ -202,29 +190,22 @@
              (deref ~'-handler-fn)
              (edd.java-lambda-runtime.core/run-warm-up! ~ctx)
              (swap! edd.java-lambda-runtime.core/init-cache dissoc
-                    :aws :aws-ctx-initialized)
+                    :aws :aws-fetched-at)
              (System/gc)
              (clojure.tools.logging/info
               (format "lambda.Handler -beforeCheckpoint done in %.1f ms"
                       (edd.java-lambda-runtime.core/ms-since start#))))))
 
-       ;; On the restore-critical path: keep it minimal. The metrics thread did
-       ;; not survive the snapshot, and the snapshot credentials are stale.
        (def ~'-afterRestore
          (fn [~this-sym# ^org.crac.Context ~crac-context-sym#]
            (let [start# (System/nanoTime)]
              (swap! edd.java-lambda-runtime.core/init-cache dissoc :metrics-started)
              (try
-               (let [fresh#
-                     (aws.ctx/init @edd.java-lambda-runtime.core/restore-ctx)]
-                 (swap! edd.java-lambda-runtime.core/init-cache assoc
-                        :aws (:aws fresh#)
-                        :aws-ctx-initialized true))
+               (edd.java-lambda-runtime.core/refresh-aws-creds!
+                @edd.java-lambda-runtime.core/restore-ctx)
                (catch Exception e#
-                 (swap! edd.java-lambda-runtime.core/init-cache dissoc
-                        :aws :aws-ctx-initialized)
                  (clojure.tools.logging/warn
-                  "lambda.Handler -afterRestore: credential refresh failed, refreshing on first invocation:"
+                  "lambda.Handler -afterRestore: credential refresh failed, retrying on first request:"
                   (ex-message e#))))
              (clojure.tools.logging/info
               (format "lambda.Handler -afterRestore done in %.1f ms"
