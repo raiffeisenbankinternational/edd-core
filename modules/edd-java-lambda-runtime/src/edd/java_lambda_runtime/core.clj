@@ -31,8 +31,16 @@
 
 (defn refresh-aws-creds!
   [ctx]
-  (let [aws
-        (:aws (aws-ctx/init ctx))]
+  (let [refresh-ctx
+        (-> ctx
+            (dissoc :aws-ctx-initialized)
+            (update :aws dissoc
+                    :aws-access-key-id
+                    :aws-secret-access-key
+                    :aws-session-token))
+
+        aws
+        (:aws (aws-ctx/init refresh-ctx))]
     (swap! init-cache assoc
            :aws aws
            :aws-fetched-at (System/currentTimeMillis))

@@ -2,7 +2,8 @@
   (:require
    [aws.ctx :as aws-ctx]
    [clojure.test :refer [deftest is use-fixtures]]
-   [edd.java-lambda-runtime.core :as core]))
+   [edd.java-lambda-runtime.core :as core]
+   [lambda.util :as util]))
 
 (def cached-aws
   #'core/cached-aws)
@@ -74,6 +75,36 @@
       (is
        (= 0
           @calls)))))
+
+(deftest refresh-resolves-fresh-creds-on-initialized-ctx
+  (let [env
+        {"AWS_ACCESS_KEY_ID" "fresh-key"
+         "AWS_SECRET_ACCESS_KEY" "fresh-secret"
+         "AWS_SESSION_TOKEN" "fresh-token"}
+
+        snapshot-ctx
+        {:aws-ctx-initialized true
+         :aws {:region "eu-west-1"
+               :account-id "123"
+               :aws-access-key-id "stale-key"
+               :aws-secret-access-key "stale-secret"
+               :aws-session-token "stale-token"}}]
+    (with-redefs [util/get-env (fn [name & [default]]
+                                 (get env name default))]
+      (let [result
+            (core/refresh-aws-creds! snapshot-ctx)]
+
+        (is
+         (= {:region "eu-west-1"
+             :account-id "123"
+             :aws-access-key-id "fresh-key"
+             :aws-secret-access-key "fresh-secret"
+             :aws-session-token "fresh-token"}
+            result))
+
+        (is
+         (= result
+            (:aws @core/init-cache)))))))
 
 (deftest stale-cache-refetches
   (let [calls
