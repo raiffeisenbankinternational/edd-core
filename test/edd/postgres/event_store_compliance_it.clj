@@ -1,40 +1,46 @@
-(ns edd.event-store-compliance-test
-  "Memory implementation of the event store compliance suite.
-   The shared tests live in edd.compliance.event-store; postgres and dynamodb
-   run the same suite as integration tests:
-   - edd.postgres.event-store-compliance-it
-   - edd.dynamodb.event-store-compliance-it"
-  (:require [clojure.test :refer [deftest is use-fixtures]]
+(ns edd.postgres.event-store-compliance-it
+  "Postgres implementation of the event store compliance suite.
+   Runs the shared tests from edd.compliance.event-store against a real
+   PostgreSQL instance.
+
+   Requires the integration environment (run with: make it):
+   - DatabaseEndpoint / DatabasePort / DatabasePassword
+   - test and prod realm schemas migrated (done by pre-build.sh)"
+  (:require [clojure.test :refer [deftest use-fixtures]]
             [edd.compliance.event-store :as compliance]
             [edd.dal :as dal]
-            [edd.memory.event-store :as event-store]
-            [edd.test.fixture.dal :as mock]
+            [edd.postgres.event-store :as event-store]
+            [lambda.util :as util]
             [lambda.uuid :as uuid]))
 
 ;;; ============================================================================
 ;;; Test Setup
 ;;; ============================================================================
 
-(defn make-memory-ctx
+(defn make-postgres-ctx
   [& {:keys [realm service-name]
       :or   {realm compliance/test-realm}}]
   (let [base-ctx
-        {:service-name           (or service-name
-                                     (keyword (str "compliance-" (uuid/gen))))
-         :hosted-zone-name       "example.com"
-         :environment-name-lower "local"
-         :meta                   {:realm realm}}]
+        {:service-name (or service-name
+                           (keyword (str "compliance-" (uuid/gen))))
+         :meta         {:realm realm}
+         :db           {:endpoint (util/get-env "DatabaseEndpoint")
+                        :port     (util/get-env "DatabasePort" "5432")
+                        :name     "postgres"
+                        :password (util/get-env "DatabasePassword" "no-secret")}}]
     (event-store/register base-ctx)))
 
-(defn with-memory-dal
+(defn with-postgres-dal
+  "Runs the test with the connection pool bound (pool/with-init via dal)."
   [test-fn]
-  (mock/with-mock-dal
-    (test-fn)))
+  (dal/with-init (make-postgres-ctx)
+    (fn [_ctx]
+      (test-fn))))
 
 (use-fixtures :each
   (fn [test-fn]
-    (binding [compliance/*ctx-factory* make-memory-ctx
-              compliance/*dal-wrapper* with-memory-dal]
+    (binding [compliance/*ctx-factory* make-postgres-ctx
+              compliance/*dal-wrapper* with-postgres-dal]
       (test-fn))))
 
 ;;; ============================================================================
@@ -160,67 +166,3 @@
 
 (deftest i5-realm-isolation
   (compliance/i5-realm-isolation))
-
-;;; ============================================================================
-;;; Memory-specific Observability (mock store internals, not portable)
-;;; ============================================================================
-
-(deftest log-request-lands-in-command-log
-  (mock/with-mock-dal
-    (let [ctx
-          (assoc (make-memory-ctx)
-                 :request-id (uuid/gen)
-                 :interaction-id (uuid/gen)
-                 :invocation-id (uuid/gen)
-                 :breadcrumbs [0])]
-      (dal/log-request ctx {:commands    [{:cmd-id :test-cmd}]
-                            :breadcrumbs [0]})
-
-      (is
-       (= 1
-          (count (mock/peek-state :command-log)))))))
-
-(deftest log-request-error-lands-in-request-error-log
-  (mock/with-mock-dal
-    (let [ctx
-          (assoc (make-memory-ctx)
-                 :request-id (uuid/gen)
-                 :interaction-id (uuid/gen)
-                 :invocation-id (uuid/gen)
-                 :breadcrumbs [0])]
-      (dal/log-request-error ctx
-                             {:breadcrumbs [0]}
-                             {:error "Test error"})
-
-      (is
-       (= 1
-          (count (mock/peek-state :request-error-log)))))))
-
-(deftest store-results-logs-summary-in-response-log
-  (mock/with-mock-dal
-    (let [ctx
-          (assoc (make-memory-ctx)
-                 :request-id (uuid/gen)
-                 :interaction-id (uuid/gen)
-                 :invocation-id (uuid/gen)
-                 :breadcrumbs [0])
-
-          summary
-          {:success true
-           :events  0}
-
-          _
-          (dal/store-results (assoc ctx :resp {:events     []
-                                               :effects    []
-                                               :identities []
-                                               :summary    summary}))
-
-          [response :as responses]
-          (mock/peek-state :response-log)]
-      (is
-       (= 1
-          (count responses)))
-
-      (is
-       (= summary
-          (:data response))))))

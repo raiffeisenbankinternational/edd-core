@@ -4,6 +4,8 @@
    collision (:identity-conflict) from a retryable event-seq clash
    (:concurrent-modification). Both the postgres and dynamodb stores must agree."
   (:require [clojure.test :refer [deftest is testing]]
+            [clojure.string :as str]
+            [edd.dal :as dal]
             [edd.postgres.event-store :as pg]
             [edd.dynamodb.event-store :as ddb]))
 
@@ -64,3 +66,52 @@
     (is
      (= :concurrent-modification
         (ddb/conflict-key {:CancellationReasons []} [:event :identity])))))
+
+(deftest dynamodb-condition-expressions-guard-real-attributes
+  (let [captured
+        (atom nil)
+
+        ctx
+        {:edd-event-store :dynamodb
+         :service-name    :some-svc
+         :request-id      (java.util.UUID/randomUUID)
+         :interaction-id  (java.util.UUID/randomUUID)
+         :invocation-id   (java.util.UUID/randomUUID)
+         :breadcrumbs     [0]
+         :resp            {:events     [{:event-id  :dummy-created
+                                         :id        (java.util.UUID/randomUUID)
+                                         :event-seq 7}]
+                           :effects    [{:service  :other-svc
+                                         :commands [{:cmd-id :do-it}]}]
+                           :identities [{:identity "name-1"
+                                         :id       (java.util.UUID/randomUUID)}]
+                           :summary    {:success true}}}]
+
+    (with-redefs [ddb/store-transaction
+                  (fn [_ctx items item-types]
+                    (reset! captured {:items items :item-types item-types}))]
+      (dal/store-results ctx))
+
+    (let [{:keys [items item-types]}
+          @captured]
+
+      (is
+       (= [:event :effect :identity :response-log]
+          item-types))
+
+      (testing "every Put's condition references an attribute present on its own item"
+        (doseq [{:keys [Put]} items]
+          (let [[_ attr]
+                (re-find #"attribute_not_exists\((\w+)\)"
+                         (:ConditionExpression Put))]
+
+            (is
+             (contains? (:Item Put) attr)
+             (str "condition guards '" attr "' but the item only has "
+                  (str/join ", " (keys (:Item Put)))
+                  " — the condition would always pass and allow overwrites")))))
+
+      (testing "the event Put guards the event-store key (AggregateId), not Id"
+        (is
+         (= "attribute_not_exists(AggregateId)"
+            (get-in (first items) [:Put :ConditionExpression])))))))

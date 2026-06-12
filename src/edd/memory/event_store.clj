@@ -66,18 +66,36 @@
       (util/to-json)
       (util/to-edn)))
 
+(defn- conflict-error
+  [key message]
+  (ex-info message
+           {:error {:key              key
+                    :original-message message}}))
+
+(defn- identity-key
+  [identity]
+  [(:identity identity) (:service-name identity)])
+
+(defn- identity-conflict?
+  [store identity]
+  (boolean
+   (some #(= (identity-key %)
+             (identity-key identity))
+         store)))
+
 (defn store-identity
   [ctx identity]
   (util/d-time
    (format "MemoryEventStore store-identity, id: %s" (:id identity))
-   (let [service-name (:service-name ctx)
-         id-fn (juxt :identity :service-name)
-         identity-with-service (assoc identity :service-name service-name)
-         id (id-fn identity-with-service)
-         store (get-realm-store ctx :identity-store)
-         id-already-exists (some #(= (id-fn %) id) store)]
-     (when id-already-exists
-       (throw (RuntimeException. "Identity already exists")))
+   (let [identity-with-service
+         (assoc identity :service-name (:service-name ctx))
+
+         store
+         (get-realm-store ctx :identity-store)]
+     (when (identity-conflict? store identity-with-service)
+       (throw (conflict-error :identity-conflict
+                              (format "Identity already exists: %s"
+                                      (:identity identity)))))
      (update-realm-store! ctx :identity-store
                           (fn [v] (conj (or v []) identity-with-service))))))
 
@@ -116,27 +134,79 @@
   []
   (get *dal-state* :command-store []))
 
+(defn- event-conflict?
+  [store event]
+  (boolean
+   (some (fn [e]
+           (and (= (:id e)
+                   (:id event))
+                (= (:event-seq e)
+                   (:event-seq event))))
+         store)))
+
+(defn- event-conflict-error
+  [event]
+  (conflict-error :concurrent-modification
+                  (format "Already existing event, id: %s, event-seq: %s"
+                          (:id event)
+                          (:event-seq event))))
+
 (defn store-event
   [ctx event]
   (util/d-time
    (format "MemoryEventStore store-event, id: %s, event-seq: %s" (:id event) (:event-seq event))
-   (let [aggregate-id (:id event)
-         store (get-realm-store ctx :event-store)]
-     (when (some (fn [e]
-                   (and (= (:id e)
-                           aggregate-id)
-                        (= (:event-seq e)
-                           (:event-seq event))))
-                 store)
-       (throw (ex-info "Already existing event" {:id        aggregate-id
-                                                 :event-seq (:event-seq event)})))
+   (let [store (get-realm-store ctx :event-store)]
+     (when (event-conflict? store event)
+       (throw (event-conflict-error event)))
      (update-realm-store! ctx :event-store
                           (fn [v] (conj (or v []) event))))))
+
+(defn- duplicated-within-batch
+  [items key-fn]
+  (let [keys (map key-fn items)]
+    (first
+     (keep (fn [[key occurrences]]
+             (when (> (count occurrences) 1)
+               key))
+           (group-by identity keys)))))
+
+(defn- validate-store-results
+  [ctx resp]
+  (let [event-store
+        (get-realm-store ctx :event-store)
+
+        events
+        (:events resp)
+
+        identity-store
+        (get-realm-store ctx :identity-store)
+
+        identities
+        (map #(assoc % :service-name (:service-name ctx))
+             (:identities resp))]
+    (when-let [conflict (or (some #(when (event-conflict? event-store %) %)
+                                  events)
+                            (when-let [[id event-seq] (duplicated-within-batch
+                                                       events
+                                                       (juxt :id :event-seq))]
+                              {:id id :event-seq event-seq}))]
+      (throw (event-conflict-error conflict)))
+    (when-let [conflict (or (some #(when (identity-conflict? identity-store %) %)
+                                  identities)
+                            (when-let [[identity-value] (duplicated-within-batch
+                                                         identities
+                                                         identity-key)]
+                              {:identity identity-value}))]
+      (throw (conflict-error :identity-conflict
+                             (format "Identity already exists: %s"
+                                     (:identity conflict)))))))
 
 (defn store-results-impl
   [{:keys [resp] :as ctx}]
   (let [resp (fix-keys resp)]
-    (log-response ctx)
+    (validate-store-results ctx resp)
+    (when (:summary resp)
+      (log-response (assoc ctx :response-summary (:summary resp))))
     (doseq [i (:events resp)]
       (store-event ctx i))
     (doseq [i (:identities resp)]

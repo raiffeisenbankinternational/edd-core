@@ -2,6 +2,8 @@
 
 ## Changes
 
+**[AP-946]** Fix compliance to run for all stores
+
 **[AP-937]** Fix credentails caching
 
 **[AP-929]** Fix token caching

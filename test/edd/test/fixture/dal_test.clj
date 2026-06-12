@@ -416,6 +416,7 @@
              (mock/get-commands-response ctx {:cmd-id :test-cmd
                                               :id     id})))
       (let [request-id (uuid/gen)
+            request-id-2 (uuid/gen)
             interaction-id (uuid/gen)]
         (testing "With included meta"
           (is (= {:effects    [{:breadcrumbs    [0
@@ -463,12 +464,12 @@
                                 :id        id}]
                   :identities []
                   :meta       [{:test-cmd-fx {:id id}}]}
-                 (mock/get-commands-response (assoc ctx :request-id request-id
+                 (mock/get-commands-response (assoc ctx :request-id request-id-2
                                                     :interaction-id interaction-id)
                                              {:commands       [{:cmd-id :test-cmd-fx
                                                                 :id     id}]
                                               :meta           {:realm :realm2}
-                                              :request-id     request-id
+                                              :request-id     request-id-2
                                               :interaction-id interaction-id}))))))))
 
 (defn my-command-handler

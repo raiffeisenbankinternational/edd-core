@@ -258,9 +258,9 @@
                           :event-store
                           (cond-> {}
                             request-id (assoc :request-id request-id)
-                            breadcrumbs (assoc :breadcrumbs request-id)
-                            interaction-id (assoc :interaction-id request-id)
-                            invocation-id (assoc :invocation-id request-id)))))))
+                            breadcrumbs (assoc :breadcrumbs breadcrumbs)
+                            interaction-id (assoc :interaction-id interaction-id)
+                            invocation-id (assoc :invocation-id invocation-id)))))))
 
 (defmethod get-max-event-seq
   :dynamodb
@@ -346,7 +346,7 @@
                                  "EventSeq"      {:N (str (:event-seq event))}
                                  "CreatedOn"     {:S created-on}
                                  "Data"          {:S (util/to-json event)}},
-                     :ConditionExpression "attribute_not_exists(Id)"
+                     :ConditionExpression "attribute_not_exists(AggregateId)"
                      :TableName (table-name ctx :event-store)}})
                  (:events resp))
                 (map

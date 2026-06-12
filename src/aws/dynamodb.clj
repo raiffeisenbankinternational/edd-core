@@ -25,15 +25,19 @@
   [{:keys [aws action body]}]
   (log/info "Make request" body)
   (let [table-names (extract-table-names body)
+        session-token (:aws-session-token aws)
+        base-headers {"X-Amz-Target" (str "DynamoDB_20120810." action)
+                      "Host"         (str "dynamodb." (:region aws) ".amazonaws.com")
+                      "Content-Type" "application/x-amz-json-1.0"
+                      "X-Amz-Date"   (common/create-date)}
         req {:method     "POST"
              :uri        "/"
              :query      ""
              :payload    (util/to-json body)
-             :headers    {"X-Amz-Target"         (str "DynamoDB_20120810." action)
-                          "Host"                 (str "dynamodb." (:region aws) ".amazonaws.com")
-                          "Content-Type"         "application/x-amz-json-1.0"
-                          "X-Amz-Security-Token" (:aws-session-token aws)
-                          "X-Amz-Date"           (common/create-date)}
+             :headers    (if (string/blank? session-token)
+                           base-headers
+                           (assoc base-headers
+                                  "X-Amz-Security-Token" session-token))
              :service    "dynamodb"
              :region     (:region aws)
              :access-key (:aws-access-key-id aws)

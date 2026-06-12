@@ -50,26 +50,27 @@ _prebuild_main() {
     --connect-timeout 5 \
     --max-time 10 2>/dev/null || echo "")
 
-  if [ -z "$IMDS_TOKEN" ]; then
-    echo -e "${RED}ERROR: Failed to get IMDSv2 token. Not running on EC2 or metadata service unavailable.${NC}"
-    return 1
+  EC2_REGION=""
+  if [ -n "$IMDS_TOKEN" ]; then
+    EC2_REGION=$(curl -s -f -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" \
+      "http://169.254.169.254/latest/meta-data/placement/region" \
+      --connect-timeout 5 \
+      --max-time 10 2>/dev/null || echo "")
+    echo -e "${GREEN}AWS region from EC2 metadata: $EC2_REGION${NC}"
+  else
+    echo -e "${YELLOW}IMDSv2 unavailable (not running on EC2), using local AWS configuration...${NC}"
+    EC2_REGION="${AWS_DEFAULT_REGION:-${AWS_REGION:-$(aws configure get region 2>/dev/null || echo "")}}"
+    echo -e "${GREEN}AWS region from local configuration: $EC2_REGION${NC}"
   fi
 
-  EC2_REGION=$(curl -s -f -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" \
-    "http://169.254.169.254/latest/meta-data/placement/region" \
-    --connect-timeout 5 \
-    --max-time 10 2>/dev/null || echo "")
-
   if [ -z "$EC2_REGION" ]; then
-    echo -e "${RED}ERROR: Failed to fetch region from EC2 instance metadata.${NC}"
-    return 1
+    EC2_REGION="eu-west-1"
+    echo -e "${YELLOW}No region configured, falling back to default: $EC2_REGION${NC}"
   fi
 
   export AWS_DEFAULT_REGION="$EC2_REGION"
   export AWS_REGION="$EC2_REGION"
   export Region="$EC2_REGION"
-
-  echo -e "${GREEN}AWS region from EC2 metadata: $AWS_DEFAULT_REGION${NC}"
 
   # Get account ID
   echo "Getting AWS account ID..."

@@ -1,40 +1,57 @@
-(ns edd.event-store-compliance-test
-  "Memory implementation of the event store compliance suite.
-   The shared tests live in edd.compliance.event-store; postgres and dynamodb
-   run the same suite as integration tests:
-   - edd.postgres.event-store-compliance-it
-   - edd.dynamodb.event-store-compliance-it"
-  (:require [clojure.test :refer [deftest is use-fixtures]]
+(ns edd.dynamodb.event-store-compliance-it
+  "DynamoDB implementation of the event store compliance suite.
+   Runs the shared tests from edd.compliance.event-store against real
+   DynamoDB tables — including the optimistic-locking and atomicity
+   categories (C and H) that depend on TransactWriteItems condition
+   expressions actually failing on conflicting writes.
+
+   Requires the integration environment (run with: make it):
+   - AWS credentials, AWS_DEFAULT_REGION
+   - EnvironmentNameLower, DatabaseName
+   - DynamoDB tables for the :test realm (deployed by pre-build.sh)
+
+   get-records and get-command-response read through GSIs, which are
+   eventually consistent — *read-attempts* makes the suite poll.
+
+   i5-realm-isolation is NOT re-exported: pre-build.sh only provisions
+   tables for the :test realm (table names embed the realm), so a second
+   realm cannot be exercised here. Cross-realm isolation is covered by the
+   memory and postgres runs."
+  (:require [clojure.test :refer [deftest use-fixtures]]
             [edd.compliance.event-store :as compliance]
-            [edd.dal :as dal]
-            [edd.memory.event-store :as event-store]
-            [edd.test.fixture.dal :as mock]
+            [edd.dynamodb.event-store :as event-store]
+            [lambda.util :as util]
             [lambda.uuid :as uuid]))
 
 ;;; ============================================================================
 ;;; Test Setup
 ;;; ============================================================================
 
-(defn make-memory-ctx
+(defn make-dynamodb-ctx
   [& {:keys [realm service-name]
       :or   {realm compliance/test-realm}}]
   (let [base-ctx
         {:service-name           (or service-name
                                      (keyword (str "compliance-" (uuid/gen))))
-         :hosted-zone-name       "example.com"
-         :environment-name-lower "local"
-         :meta                   {:realm realm}}]
+         :meta                   {:realm realm}
+         :environment-name-lower (util/get-env "EnvironmentNameLower")
+         :hosted-zone-name       (util/get-env "PublicHostedZoneName" "example.com")
+         :db                     {:name (util/get-env "DatabaseName" "dynamodb-svc")}
+         :aws                    {:region                (util/get-env "AWS_DEFAULT_REGION")
+                                  :aws-access-key-id     (util/get-env "AWS_ACCESS_KEY_ID")
+                                  :aws-secret-access-key (util/get-env "AWS_SECRET_ACCESS_KEY")
+                                  :aws-session-token     (util/get-env "AWS_SESSION_TOKEN")}}]
     (event-store/register base-ctx)))
 
-(defn with-memory-dal
+(defn with-dynamodb-dal
   [test-fn]
-  (mock/with-mock-dal
-    (test-fn)))
+  (test-fn))
 
 (use-fixtures :each
   (fn [test-fn]
-    (binding [compliance/*ctx-factory* make-memory-ctx
-              compliance/*dal-wrapper* with-memory-dal]
+    (binding [compliance/*ctx-factory*   make-dynamodb-ctx
+              compliance/*dal-wrapper*   with-dynamodb-dal
+              compliance/*read-attempts* 20]
       (test-fn))))
 
 ;;; ============================================================================
@@ -145,7 +162,7 @@
 (deftest h4-multiple-aggregates-in-transaction
   (compliance/h4-multiple-aggregates-in-transaction))
 
-;; Category I: Edge Cases
+;; Category I: Edge Cases (i5-realm-isolation excluded — see ns docstring)
 (deftest i1-empty-store-results
   (compliance/i1-empty-store-results))
 
@@ -157,70 +174,3 @@
 
 (deftest i4-max-event-seq-consistency
   (compliance/i4-max-event-seq-consistency))
-
-(deftest i5-realm-isolation
-  (compliance/i5-realm-isolation))
-
-;;; ============================================================================
-;;; Memory-specific Observability (mock store internals, not portable)
-;;; ============================================================================
-
-(deftest log-request-lands-in-command-log
-  (mock/with-mock-dal
-    (let [ctx
-          (assoc (make-memory-ctx)
-                 :request-id (uuid/gen)
-                 :interaction-id (uuid/gen)
-                 :invocation-id (uuid/gen)
-                 :breadcrumbs [0])]
-      (dal/log-request ctx {:commands    [{:cmd-id :test-cmd}]
-                            :breadcrumbs [0]})
-
-      (is
-       (= 1
-          (count (mock/peek-state :command-log)))))))
-
-(deftest log-request-error-lands-in-request-error-log
-  (mock/with-mock-dal
-    (let [ctx
-          (assoc (make-memory-ctx)
-                 :request-id (uuid/gen)
-                 :interaction-id (uuid/gen)
-                 :invocation-id (uuid/gen)
-                 :breadcrumbs [0])]
-      (dal/log-request-error ctx
-                             {:breadcrumbs [0]}
-                             {:error "Test error"})
-
-      (is
-       (= 1
-          (count (mock/peek-state :request-error-log)))))))
-
-(deftest store-results-logs-summary-in-response-log
-  (mock/with-mock-dal
-    (let [ctx
-          (assoc (make-memory-ctx)
-                 :request-id (uuid/gen)
-                 :interaction-id (uuid/gen)
-                 :invocation-id (uuid/gen)
-                 :breadcrumbs [0])
-
-          summary
-          {:success true
-           :events  0}
-
-          _
-          (dal/store-results (assoc ctx :resp {:events     []
-                                               :effects    []
-                                               :identities []
-                                               :summary    summary}))
-
-          [response :as responses]
-          (mock/peek-state :response-log)]
-      (is
-       (= 1
-          (count responses)))
-
-      (is
-       (= summary
-          (:data response))))))
