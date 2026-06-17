@@ -2,6 +2,8 @@
 
 ## Changes
 
+**[CARS-8484]** Update HikariCP and db config in edd-core
+
 **[CARS-7936]** Remove environment directive from s3_sync tasks to fix ValueError
 
 **[CARS-7880]** Better retrying logic in edd-core

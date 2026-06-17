@@ -82,10 +82,10 @@
 
         spec {:dbtype                    "postgres"
               :dbname                    "postgres"
-              :initializationFailTimeout 0
+              :initializationFailTimeout 5000
               :reWriteBatchedInserts     true
-              :minimumIdle 1
-              :validationTimeout 1000
+              :minimumIdle 5
+              :validationTimeout 5000
               :maximumPoolSize 10
               :password                  password
               :username                  "postgres"
