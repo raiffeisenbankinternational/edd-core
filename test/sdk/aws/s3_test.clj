@@ -1,5 +1,6 @@
 (ns sdk.aws.s3-test
   (:require
+   [clojure.java.io :as io]
    [sdk.aws.s3 :as s3]
    [clojure.test :refer [deftest is]]))
 
@@ -97,3 +98,30 @@
                                 #xml/element
                                  {:tag :xmlns.http%3A%2F%2Fs3.amazonaws.com%2Fdoc%2F2006-03-01%2F/StorageClass,
                                   :content ["STANDARD"]}]}]}))))
+
+(deftest test-s3-get-object-options
+  (let [ctx
+        {:aws {:aws-session-token "123123123"
+               :endpoint "http://test.com"}}
+
+        s3-object
+        {:s3 {:bucket {:name "foobar"}}}
+
+        args!
+        (atom nil)
+
+        result
+        (with-redefs [lambda.http-client/retry-n
+                      (fn [& args]
+                        (reset! args! args)
+                        {:body (io/input-stream
+                                (byte-array [95 95 95]))})]
+          (s3/get-object ctx
+                         s3-object
+                         {:binary true}))
+
+        [_ _ retries]
+        @args!]
+
+    (is (= 5 retries))
+    (is (= "___" (slurp result)))))

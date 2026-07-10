@@ -2,6 +2,10 @@
 
 ## Changes
 
+**[CARS-9307]** Fix s3 get-object options
+- fix s3/get-object retries parameter
+- add test
+
 **[CARS-8484]** Update HikariCP and db config in edd-core
 
 **[CARS-7936]** Remove environment directive from s3_sync tasks to fix ValueError

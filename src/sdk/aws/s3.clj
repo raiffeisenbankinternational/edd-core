@@ -16,6 +16,10 @@
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
 
+(def opt-default
+  {:retries client/retry-count
+   :binary false})
+
 (defn get-host
   ^String [ctx object]
   (str
@@ -163,11 +167,15 @@
 
 (defn get-object
   ([ctx object]
-   (get-object ctx object {:retries client/retry-count}))
-  ([ctx
-    object
-    {:keys [retries binary]}]
-   (let [req
+   (get-object ctx object nil))
+  ([ctx object opt]
+   (let [opt
+         (merge opt-default opt)
+
+         {:keys [binary retries]}
+         opt
+
+         req
          (merge (s3-request-helper ctx object)
                 {:method     "GET"
                  :uri        (get-path object)})
