@@ -11,7 +11,8 @@
             [edd.test.fixture.dal :as mock]
             [sdk.aws.sqs :as sqs]
             [clojure.tools.logging :as log]
-            [lambda.jwt :as jwt]))
+            [lambda.jwt :as jwt]
+            [lambda.request]))
 
 (deftest test-if-meta-is-resolved-to-query
 
@@ -99,3 +100,30 @@
           :filters [fl/from-api]
           :post-filter fl/to-api)
          (log/info "Nothing nere to check"))))))
+
+(deftest with-cache-caches-only-when-request-is-scoped
+  (let [calls (atom 0)
+        f (fn [_params] (swap! calls inc) :result)]
+
+    (binding [lambda.request/*request* (atom {:scoped true})]
+      (reset! calls 0)
+      (is
+       (= :result
+          (query/with-cache f {:url "u"})))
+
+      (is
+       (= :result
+          (query/with-cache f {:url "u"})))
+
+      (is
+       (= 1
+          @calls)))
+
+    (binding [lambda.request/*request* (atom {})]
+      (reset! calls 0)
+      (query/with-cache f {:url "u"})
+      (query/with-cache f {:url "u"})
+
+      (is
+       (= 2
+          @calls)))))

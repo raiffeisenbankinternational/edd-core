@@ -86,7 +86,7 @@
                 *queues* {:command-queue (atom [])
                           :seed 0}
                 util/*cache* init-cache
-                request/*request* (atom {})
+                request/*request* (atom {:scoped true})
                 log-state/*invocation-start-ns* (System/nanoTime)]
         (edd/with-stores
           ctx
@@ -106,8 +106,12 @@
                               post-filter (fn [ctx] ctx)}}]
 
   (fn [_this input output ^Context context]
+    ;; :scoped enables the per-invocation caches (see lambda.request/is-scoped).
+    ;; Without it edd.el.query/with-cache short circuits and every remote
+    ;; dependency is fetched over HTTP again, even when the resolved query is
+    ;; identical. The custom runtime sets it in aws.lambda/lambda-custom-runtime.
     (binding [util/*cache* init-cache
-              request/*request* (atom {})
+              request/*request* (atom {:scoped true})
               log-state/*invocation-start-ns* (System/nanoTime)]
       (let [cached-aws
             (:aws @init-cache)

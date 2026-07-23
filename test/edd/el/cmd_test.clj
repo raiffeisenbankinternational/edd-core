@@ -13,6 +13,7 @@
             [sdk.aws.sqs :as sqs]
             [edd.el.ctx :as el-ctx]
             [lambda.request :as request]
+            [edd.response.cache :as response-cache]
             [aws.aws :as aws])
   (:import (clojure.lang ExceptionInfo)))
 
@@ -150,6 +151,28 @@
                    {:key "response/1/0/local-test-part.1.json"}])
            (el-cmd/resp->cache-partitioned (el-ctx/set-effect-partition-size ctx 2)
                                            resp-2)))))
+
+(deftest test-history-excluded-from-cache
+  (testing ":history is not serialised into the response cache"
+    (let [captured (atom nil)]
+      (with-redefs [response-cache/cache-response
+                    (fn [_ctx resp] (reset! captured resp) {:key "k"})]
+        (el-cmd/resp->store-cache-partition
+         {:service-name :local-test :breadcrumbs "0" :request-id "1"}
+         {:effects [{:a :b}]
+          :events  [{:event-id :e}]
+          :history [{:snapshot {:big :data}}]}))
+      (is
+       (nil?
+        (:history @captured)))
+
+      (is
+       (= [{:a :b}]
+          (:effects @captured)))
+
+      (is
+       (= [{:event-id :e}]
+          (:events @captured))))))
 
 (deftest enqueue-response
   (binding [request/*request* (atom {:cache-keys [{:key "response/0/0/local-test-0.json"}

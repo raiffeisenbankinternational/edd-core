@@ -401,7 +401,13 @@
 
 (defn resp->store-cache-partition
   [ctx resp]
-  (response-cache/cache-response ctx resp))
+  ;; :history holds a full aggregate snapshot per command and is not consumed
+  ;; by any reader of the response cache (the router distributes :events and
+  ;; :effects; replay reads the summary from command_response_log). It is
+  ;; persisted separately to the aggregates_history table via store-history.
+  ;; Excluding it here keeps large multi-command batches from serialising
+  ;; hundreds of MB of duplicated snapshots into the S3 response cache.
+  (response-cache/cache-response ctx (dissoc resp :history)))
 
 (defn do-execute
   [jobs]

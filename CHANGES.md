@@ -2,6 +2,33 @@
 
 ## Changes
 
+**[CARS-9854]** Exclude :history from S3 cache, scope Java runtime requests
+The response cache (S3) stored the full command response including
+:history, which holds a complete aggregate snapshot per command. For
+large multi-command batches (e.g. 50 commands over one aggregate) this
+serialised hundreds of MB of duplicated, growing snapshots, taking ~18s
+and pushing memory to ~2GB per invocation.
+
+:history is not consumed by any reader of the response cache: the router
+distributes :events and :effects, and command replay reads the summary
+from command_response_log. It is persisted separately to the
+aggregates_history table via store-history, which is unaffected.
+
+The Java runtime also bound lambda.request/*request* without :scoped,
+which lambda.request/is-scoped checks. edd.el.query/with-cache therefore
+short circuited and every remote dependency was fetched over HTTP again,
+even when the resolved query was identical. Measured on a 99 command
+batch: 1038 dependency resolutions, 0 cache hits, 61s of dependency time,
+of which ~21s were repeated fetches of the same :application,
+:application-types and :latest-currency. The custom runtime always set
+:scoped, so this only affected services on the Java runtime.
+
+- resp->store-cache-partition drops :history before cache-response
+- java-request-handler and the SnapStart warm-up bind *request* with
+  :scoped true, matching aws.lambda/lambda-custom-runtime
+- add tests asserting :history is excluded while :events/:effects remain,
+  and that with-cache only caches when the request is scoped
+
 **[CARS-9307]** Fix s3 get-object options
 - fix s3/get-object retries parameter
 - add test
