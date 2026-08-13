@@ -192,6 +192,97 @@ The context map flows through all handlers containing:
          :previous (load-table :previous-date)])
 ```
 
+### 7. Features (`reg-feature`)
+
+**Purpose**: Cross-cutting hooks applied to every command/query without
+touching individual registrations.
+
+```clojure
+(edd/reg-feature ctx :my-feature
+  :deps {:system-config get-config-dep}   ;; resolved for every command
+                                          ;; and top-level query
+  :init (fn [ctx] ctx')                   ;; runs once after ALL registrations
+  :command-filter (fn [ctx cmd chain]     ;; servlet-style: call
+                    (chain ctx cmd))      ;; (chain ctx cmd) to proceed,
+  :query-filter (fn [ctx query chain]     ;; don't call it to short-circuit
+                  (chain ctx query))
+  :effect-filter (fn [ctx events chain]   ;; wraps effect production
+                   (chain ctx events))
+  :apply-filter (fn [ctx apply chain]     ;; wraps aggregate materialization
+                  (chain ctx apply))
+  :schema [:map [:auth AuthSchema]])      ;; reg-cmd/reg-query options this
+                                          ;; feature consumes, validated at init
+```
+
+**Key Points**:
+- `:init` runs once at startup (`lambda/start`) and automatically in
+  `mock/with-mock-dal` — never inside `reg-feature` (registration order
+  is arbitrary).
+- Filters wrap execution like servlet filters: the filter frame stays on
+  the stack, may modify ctx/request passed to the chain and post-process
+  the chain's response. Not calling the chain short-circuits: command
+  filters return `{:error ...}`, query filters throw; nothing is
+  persisted when the chain is not called.
+- `:command-filter` runs after deps are resolved and the aggregate
+  snapshot is loaded; `:query-filter` after query deps.
+- Registration options are validated strictly at init: the edd-core
+  option schemas merged with every feature `:schema` form a closed map,
+  so unknown/typo'd `reg-cmd`/`reg-query` options fail with the full
+  list. Feature `:schema` root keys must not overlap edd-core options
+  or other features.
+- Feature deps use namespaced keys. Dep-key conflicts are errors:
+  command/query deps colliding with feature deps, or two features
+  sharing a deps key, fail at init; registering the same feature-id
+  twice fails at `reg-feature`.
+- Dependency-resolution queries (deps lookups) bypass feature deps and
+  filters.
+- Filters nest in registration order — first registered is outermost.
+
+### 8. Authorization (`edd-core-security` module)
+
+Role-based policies evaluated before every command and top-level query.
+See `modules/edd-core-security/README.md` for the full reference.
+
+```clojure
+(security/register ctx
+  :policies [{:description "am can update created orders"
+              :principal {:role :account-manager}   ;; only :role; :* = any
+              :effect :allow                        ;; :allow | :deny
+              :action :update-*                     ;; cmd/query ids, wildcards, vectors
+              :condition [:map                      ;; optional malli over flat env
+                          [:aggregate [:map [:status [:= :created]]]]]}]
+  :deps {:system-config (fn [_ _] {:query-id :get-system-config})}
+  :mode :enforce)                                   ;; or :audit for rollout
+```
+
+Or inline per registration (compiled into allow policies at init):
+
+```clojure
+(edd/reg-cmd ctx :approve-order handler
+  :auth {:role [:supervisor :admin]        ;; keyword or vector = any of
+         :fn (fn [ctx cmd] boolean)})      ;; optional, AND with :role;
+                                           ;; ctx has resolved deps
+```
+
+**Key Points**:
+- The modes are exclusive: central `:policies` or inline `:auth`, never
+  both — mixing fails at init.
+- Inline `:auth` is inert without `security/register` — the module is what
+  enforces.
+- No built-in policies: everything not explicitly allowed is denied,
+  INCLUDING `:non-interactive` (effects, service-to-service). Services
+  with side effects must allow it explicitly or workflows break.
+- Evaluation order: deny → allow → implicit deny. Deny is the exceptional
+  escape hatch — express rules as conditional allows. A throwing condition
+  counts as not matching (fails closed); policies matching no registered
+  action are warned about at startup.
+- Condition env is `(merge {:aggregate aggregate} security-deps)`;
+  `:aggregate` is nil on creation commands and queries. `[:fn ...]`
+  conditions are allowed for cross-field checks.
+- Wildcards and conditions compile once at startup; malformed policies fail
+  registration, malformed conditions fail init.
+- Denial: `{:error {:message "Forbidden" :cmd-id ... :role ... :policy ...}}`.
+
 ## Module Pattern (Recommended Structure)
 
 **File**: `src/myapp/step/process_order.clj`

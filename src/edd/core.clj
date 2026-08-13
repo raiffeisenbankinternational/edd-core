@@ -17,17 +17,6 @@
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
 
-(def EddCoreRegCmd
-  (m/schema
-   [:map
-    [:handler [:fn fn?]]
-    [:id-fn [:fn fn?]]
-    [:deps [:or
-            [:map]
-            [:vector :any]]]
-    [:consumes
-     [:fn #(m/schema? (m/schema %))]]]))
-
 (defn ^{:deprecated "Use :deps instead of :dps"
         :superseded-by "reg-cmd :deps"}
   dps->deps [dps]
@@ -75,13 +64,108 @@
     (when (:spec input-options)
       (log/warn ":spec is deprecated, use :consumes instead. Will be removed in future"))
 
-    (when-not (m/validate EddCoreRegCmd options)
+    (when-not (m/validate edd-ctx/EddCoreRegCmd options)
       (throw (ex-info "Invalid command registration"
-                      {:explain (-> (m/explain EddCoreRegCmd options)
+                      {:explain (-> (m/explain edd-ctx/EddCoreRegCmd options)
                                     (me/humanize))})))
     (edd-ctx/put-cmd ctx
                      :cmd-id cmd-id
                      :options options)))
+
+(def EddCoreRegFeature
+  (m/schema
+   [:map {:closed true}
+    [:feature-id
+     {:description "Feature name, e.g. :security."}
+     :keyword]
+    [:deps
+     {:description
+      (str "Deps resolved for every command and top-level query, "
+           "same format as reg-cmd :deps. Use namespaced keys; "
+           "key conflicts with command/query deps or other features "
+           "fail at init-features.")}
+     [:or
+      [:map]
+      [:vector :any]]]
+    [:init
+     {:optional true
+      :description
+      (str "(fn [ctx] ctx') - runs once after ALL registrations, "
+           "via edd.ctx/init-features. Precompute lookup "
+           "structures here.")}
+     [:fn fn?]]
+    [:command-filter
+     {:optional true
+      :description
+      (str "(fn [ctx cmd chain]) - wraps the command handler, after "
+           "deps are resolved and the snapshot is loaded. Call "
+           "(chain ctx cmd) to proceed; not calling it "
+           "short-circuits, e.g. return {:error {...}}. Nothing is "
+           "persisted when the chain is not called.")}
+     [:fn fn?]]
+    [:query-filter
+     {:optional true
+      :description
+      (str "(fn [ctx query chain]) - wraps the query handler, after "
+           "deps. Call (chain ctx query) to proceed; throw to "
+           "reject. Dependency-resolution queries bypass the chain.")}
+     [:fn fn?]]
+    [:effect-filter
+     {:optional true
+      :description
+      (str "(fn [ctx events chain]) - wraps effect production for one "
+           "command's persisted events. (chain ctx events) returns "
+           "the effects; inspect, enrich or drop them.")}
+     [:fn fn?]]
+    [:apply-filter
+     {:optional true
+      :description
+      (str "(fn [ctx apply chain]) - wraps event application "
+           "(aggregate materialization). Not calling the chain "
+           "skips it.")}
+     [:fn fn?]]
+    [:schema
+     {:optional true
+      :description
+      (str "Malli :map schema of reg-cmd/reg-query options this "
+           "feature consumes, e.g. [:map [:auth Auth]]. Root keys "
+           "must not overlap edd-core options or other features. "
+           "Merged (keys made optional) into the registration "
+           "schemas, and the closed result validates every "
+           "registration strictly during init-features.")}
+     [:fn (fn [s]
+            (= :map (m/type (m/schema s))))]]]))
+
+(defn reg-feature
+  "Registers a cross-cutting feature. :deps are resolved for every command
+  and top-level query, :init runs once after all registrations (see
+  edd.ctx/init-features). :command-filter, :query-filter, :effect-filter
+  and :apply-filter are servlet-style chain filters (fn [ctx request chain])
+  wrapping the respective execution point; a filter proceeds by calling
+  (chain ctx request) and short-circuits by not calling it.
+  Dependency-resolution queries bypass feature deps and filters.
+  :schema declares registration options the feature consumes as a malli
+  :map schema; it is merged into the edd-core registration schemas and
+  the closed result validates every reg-cmd/reg-query strictly during
+  init-features, rejecting unknown option keys."
+  [ctx feature-id & rest]
+  (log/debug "Registering feature" feature-id)
+  (let [options
+        (reduce
+         (fn [c [k v]]
+           (assoc c k v))
+         {}
+         (partition 2 rest))
+
+        options
+        (assoc options
+               :feature-id feature-id
+               :deps (get options :deps {}))]
+    (when-not (m/validate EddCoreRegFeature options)
+      (throw (ex-info "Invalid feature registration"
+                      {:explain (-> (m/explain EddCoreRegFeature options)
+                                    (me/humanize))})))
+    (edd-ctx/put-feature ctx options)))
 
 (defn reg-event
   [ctx event-id reg-fn]
@@ -100,15 +184,6 @@
           (when reg-fn
             (fn [& rest]
               (apply reg-fn rest))))))
-
-(def EddCoreRegQuery
-  (m/schema
-   [:map
-    [:handler [:fn fn?]]
-    [:produces
-     [:fn #(m/schema? (m/schema %))]]
-    [:consumes
-     [:fn #(m/schema? (m/schema %))]]]))
 
 (defn reg-query
   [ctx query-id reg-fn & rest]
@@ -132,9 +207,9 @@
         options (assoc options :handler (when reg-fn
                                           (fn [& rest]
                                             (apply reg-fn rest))))]
-    (when-not (m/validate EddCoreRegQuery options)
+    (when-not (m/validate edd-ctx/EddCoreRegQuery options)
       (throw (ex-info "Invalid query registration"
-                      {:explain (-> (m/explain EddCoreRegQuery options)
+                      {:explain (-> (m/explain edd-ctx/EddCoreRegQuery options)
                                     (me/humanize))})))
     (assoc-in ctx [:edd-core :queries query-id] options)))
 

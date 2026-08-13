@@ -32,7 +32,10 @@
   (log/debug "Fetching context for: " cmd-id)
   (util/d-time
    (str "Fetching all deps for " cmd-id)
-   (let [{:keys [deps]} (edd-ctx/get-cmd ctx cmd-id)]
+   (let [{:keys [deps]} (edd-ctx/get-cmd ctx cmd-id)
+
+         deps
+         (query/merge-feature-deps ctx deps)]
      (query/fetch-dependencies-for-deps ctx deps cmd))))
 
 (defn with-breadcrumbs
@@ -71,11 +74,9 @@
          (filter #(seq (:commands %))))
     []))
 
-(defn handle-effects
-  [ctx & {:keys [resp aggregate]}]
-  (let [events (:events resp)
-        ctx (el-ctx/put-aggregate ctx aggregate)
-        effects (reduce
+(defn produce-effects
+  [ctx events]
+  (let [effects (reduce
                  (fn [cmd fx-fn]
                    (let [resp (fx-fn ctx events)]
                      (into cmd
@@ -85,18 +86,25 @@
                  []
                  (:fx ctx))
         effects (flatten effects)
-        effects (clean-effects ctx effects)
-        effects (map (fn [effect]
-                       (let [updated-fx
-                             (assoc effect
-                                    :request-id (:request-id ctx)
-                                    :interaction-id (:interaction-id ctx)
-                                    :meta (merge (:meta ctx {}) (:meta effect)))]
-                         (if (and (contains? (:meta effect) :group-id) (nil? (get-in effect [:meta :group-id])))
-                           (update updated-fx :meta dissoc :group-id)
-                           updated-fx)))
-                     effects)]
+        effects (clean-effects ctx effects)]
+    (map (fn [effect]
+           (let [updated-fx
+                 (assoc effect
+                        :request-id (:request-id ctx)
+                        :interaction-id (:interaction-id ctx)
+                        :meta (merge (:meta ctx {}) (:meta effect)))]
+             (if (and (contains? (:meta effect) :group-id) (nil? (get-in effect [:meta :group-id])))
+               (update updated-fx :meta dissoc :group-id)
+               updated-fx)))
+         effects)))
 
+(defn handle-effects
+  [ctx & {:keys [resp aggregate]}]
+  (let [ctx (el-ctx/put-aggregate ctx aggregate)
+        effects (edd-ctx/run-filters ctx
+                                     :effect-filter
+                                     produce-effects
+                                     (:events resp))]
     (assoc resp :effects effects)))
 
 (defn to-clean-vector
@@ -285,62 +293,76 @@
                              ctx
                              (el-ctx/put-aggregate ctx snapshot)
 
-                             resp
-                             (->> (get-response-from-command-handler
-                                   ctx
-                                   :cmd cmd
-                                   :command-handler handler)
-                                  (resp->validate-and-add-user ctx)
-                                  (resp->assign-event-seq ctx))
-
-                             resp
-                             (assoc resp :meta [{cmd-id {:id id}}])
-
-                             aggregate-schema
-                             (edd-ctx/get-service-schema ctx)
-
-                             aggregate
-                             (event/get-current-state
+                             handler-resp
+                             (edd-ctx/run-filters
                               ctx
-                              {:id id
-                               :events (:events resp [])
-                               :snapshot snapshot})
+                              :command-filter
+                              (fn [ctx cmd]
+                                (get-response-from-command-handler
+                                 ctx
+                                 :cmd cmd
+                                 :command-handler handler))
+                              cmd)]
+                         (if (:error handler-resp)
+                           (do
+                             (log/errorf "Command rejected, cmd-id: %s, id: %s, error: %s"
+                                         cmd-id
+                                         id
+                                         (pr-str (:error handler-resp)))
+                             handler-resp)
+                           (let [resp
+                                 (->> handler-resp
+                                      (resp->validate-and-add-user ctx)
+                                      (resp->assign-event-seq ctx))
 
-                             _
-                             (with-aggregate aggregate)]
+                                 resp
+                                 (assoc resp :meta [{cmd-id {:id id}}])
 
-                         (when (and
-                                aggregate
-                                (not
-                                 (m/validate aggregate-schema aggregate)))
-                           (throw (ex-info "Invalid aggregate state"
-                                           {:error (me/humanize
-                                                    (m/explain aggregate-schema aggregate))})))
+                                 aggregate-schema
+                                 (edd-ctx/get-service-schema ctx)
 
-                         (let [resp
-                               (handle-effects ctx
-                                               :resp resp
-                                               :aggregate aggregate)
+                                 aggregate
+                                 (event/get-current-state
+                                  ctx
+                                  {:id id
+                                   :events (:events resp [])
+                                   :snapshot snapshot})
 
-                               resp
-                               (resp->add-meta-to-events ctx resp)
+                                 _
+                                 (with-aggregate aggregate)]
 
-                               annotated-aggregate
-                               (event/annotate-aggregate aggregate snapshot (:events resp []))
+                             (when (and
+                                    aggregate
+                                    (not
+                                     (m/validate aggregate-schema aggregate)))
+                               (throw (ex-info "Invalid aggregate state"
+                                               {:error (me/humanize
+                                                        (m/explain aggregate-schema aggregate))})))
 
-                               history-entry
-                               {:snapshot snapshot
-                                :aggregate annotated-aggregate}
+                             (let [resp
+                                   (handle-effects ctx
+                                                   :resp resp
+                                                   :aggregate aggregate)
 
-                               conjv
-                               (fnil conj [])
+                                   resp
+                                   (resp->add-meta-to-events ctx resp)
 
-                               resp
-                               (update resp :history conjv history-entry)]
+                                   annotated-aggregate
+                                   (event/annotate-aggregate aggregate snapshot (:events resp []))
 
-                           (request-cache/update-aggregate ctx annotated-aggregate)
-                           (request-cache/store-identities ctx (:identities resp))
-                           resp)))))))
+                                   history-entry
+                                   {:snapshot snapshot
+                                    :aggregate annotated-aggregate}
+
+                                   conjv
+                                   (fnil conj [])
+
+                                   resp
+                                   (update resp :history conjv history-entry)]
+
+                               (request-cache/update-aggregate ctx annotated-aggregate)
+                               (request-cache/store-identities ctx (:identities resp))
+                               resp)))))))))
 
 (def initial-response
   {:meta       []

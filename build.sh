@@ -210,6 +210,7 @@ MODULE_BUILD_ORDER=(
   edd-core-dev
   edd-core-import
   edd-core-nippy
+  edd-core-security
   edd-router
   # Tier 3: depend on other modules
   edd-core-view-store-postgres

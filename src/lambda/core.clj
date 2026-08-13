@@ -3,6 +3,7 @@
   (:require [lambda.util :as util]
             [clojure.tools.logging :as log]
             [aws.lambda :as lambda]
+            [edd.ctx :as edd-ctx]
             [clojure.string :as str]))
 
 (set! *warn-on-reflection* true)
@@ -11,7 +12,8 @@
 (defn start
   [& params]
   (try
-    (let [ctx (first params)
+    (let [ctx (edd-ctx/init-features (first params))
+          params (cons ctx (rest params))
           startup-milis (Long/parseLong
                          (str
                           (util/get-property "edd.startup-milis" 0)))]

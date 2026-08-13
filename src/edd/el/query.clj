@@ -96,31 +96,35 @@
 (defn -http-call
   [{:keys [meta]
     :as ctx} {:keys [service query]}]
-  (let [token (aws/get-token ctx)
-        service-name (:service-name ctx)]
-    (cond
-      (service-query? query)
-      (with-cache -make-service-query-request {:url         (calc-service-query-url service meta)
+  ;; A dep query fn returning nil means "nothing to resolve" — bail out
+  ;; before fetching a token, which needs request-scoped state.
+  (when (or (service-query? query)
+            (service-rtf? query))
+    (let [token (aws/get-token ctx)
+          service-name (:service-name ctx)]
+      (cond
+        (service-query? query)
+        (with-cache -make-service-query-request {:url         (calc-service-query-url service meta)
+                                                 :meta        {:to-service   service
+                                                               :from-service service-name
+                                                               :query-id     (:query-id query)}
+                                                 :body        (util/to-json
+                                                               {:query          query
+                                                                :meta           (:meta ctx)
+                                                                :request-id     (:request-id ctx)
+                                                                :interaction-id (:interaction-id ctx)})
+
+                                                 :headers     {"Content-Type"    "application/json"
+                                                               "X-Authorization" token}})
+
+        (service-rtf? query)
+        (with-cache -make-service-rtf-request {:url         (calc-service-rtf-url service query)
                                                :meta        {:to-service   service
                                                              :from-service service-name
-                                                             :query-id     (:query-id query)}
-                                               :body        (util/to-json
-                                                             {:query          query
-                                                              :meta           (:meta ctx)
-                                                              :request-id     (:request-id ctx)
-                                                              :interaction-id (:interaction-id ctx)})
+                                                             :ref          (:ref query)}
 
-                                               :headers     {"Content-Type"    "application/json"
-                                                             "X-Authorization" token}})
-
-      (service-rtf? query)
-      (with-cache -make-service-rtf-request {:url         (calc-service-rtf-url service query)
-                                             :meta        {:to-service   service
-                                                           :from-service service-name
-                                                           :ref          (:ref query)}
-
-                                             :headers     {"Accept"          "*/*"
-                                                           "X-Authorization" token}}))))
+                                               :headers     {"Accept"          "*/*"
+                                                             "X-Authorization" token}})))))
 
 (defn resolve-remote-dependency
   [ctx cmd {:keys [service query]}]
@@ -208,7 +212,8 @@
    "Resolving local dependency"
    (let [query (call-query-fn ctx cmd query-fn)]
      (when query
-       (let [resp (handle-query ctx {:query query})]
+       (let [ctx (assoc-in ctx [:edd-core :dependency-resolution] true)
+             resp (handle-query ctx {:query query})]
          (if (:error resp)
            (throw (ex-info "Failed to resolve local deps" {:error resp}))
            resp))))))
@@ -246,6 +251,28 @@
      ctx
      deps)))
 
+(defn- deps->pairs
+  [deps]
+  (if (vector? deps)
+    (partition 2 deps)
+    (seq deps)))
+
+(defn merge-feature-deps
+  "Merges registration deps with the deps of every registered feature
+  into one resolution list, registration deps first. Key conflicts are
+  rejected at init-features, so the merge is unambiguous."
+  [ctx deps]
+  (concat
+   (deps->pairs deps)
+   (mapcat
+    (fn [feature]
+      (deps->pairs (:deps feature)))
+    (edd-ctx/get-features ctx))))
+
+(defn- dependency-resolution?
+  [ctx]
+  (true? (get-in ctx [:edd-core :dependency-resolution])))
+
 (defn handle-query
   [ctx body]
   (let [query (:query body)
@@ -266,10 +293,21 @@
                         (throw (ex-info "Invalid request"
                                         {:error (schema/explain-error consumes query)})))
                       (let [{:keys [deps]} (edd-ctx/get-query ctx query-id)
+                            for-dependency (dependency-resolution? ctx)
+                            deps (if for-dependency
+                                   deps
+                                   (merge-feature-deps ctx deps))
                             ctx (fetch-dependencies-for-deps ctx deps query)
-                            resp (util/d-time
-                                  (str "handling-query: " query-id)
-                                  (handler ctx query))]
+                            invoke-handler (fn [ctx query]
+                                             (util/d-time
+                                              (str "handling-query: " query-id)
+                                              (handler ctx query)))
+                            resp (if for-dependency
+                                   (invoke-handler ctx query)
+                                   (edd-ctx/run-filters ctx
+                                                        :query-filter
+                                                        invoke-handler
+                                                        query))]
                         (log/debug "Query response" resp)
                         (maybe-validate-response ctx produces resp)
                         resp)))))

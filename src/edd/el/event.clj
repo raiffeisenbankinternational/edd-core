@@ -1,6 +1,7 @@
 (ns edd.el.event
   (:require
    [clojure.tools.logging :as log]
+   [edd.ctx :as edd-ctx]
    [edd.dal :as dal]
    [edd.request-cache :as request-cache]
    [lambda.request :as request]
@@ -129,7 +130,7 @@
     (search/update-aggregate ctx aggregate)
     ctx))
 
-(defn handle-event
+(defn- apply-events-to-aggregate
   [{:keys [apply] :as ctx}]
   (let [meta (or (:meta apply) (:meta ctx))
         ctx (assoc ctx :meta meta)
@@ -156,3 +157,12 @@
        (swap! request/*request*
               #(assoc-in % [:applied realm agg-id] {:apply true})))
      {:apply true})))
+
+(defn handle-event
+  [ctx]
+  (edd-ctx/run-filters ctx
+                       :apply-filter
+                       (fn [ctx apply-request]
+                         (apply-events-to-aggregate
+                          (assoc ctx :apply apply-request)))
+                       (:apply ctx)))

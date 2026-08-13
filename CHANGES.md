@@ -4,6 +4,11 @@
 
 **[CARS-10269]** Update all deps
 
+**[AP-976]** Add features extension point
+We can use it to implement general extensions
+for edd-core application. We use security as
+ referece implementation
+
 **[AP-946]** Fix compliance to run for all stores
 
 **[AP-937]** Fix credentails caching

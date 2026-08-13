@@ -32,6 +32,7 @@
             [lambda.test.fixture.state :refer [*dal-state* *queues*]]
             [lambda.request :as request]
             [edd.el.query :as query]
+            [edd.ctx :as edd-ctx]
             [aws.aws :as aws]
             [lambda.ctx :as lambda-ctx]))
 
@@ -390,7 +391,8 @@
                                                      interaction-id]
                                               :as cmd}]
   (try
-    (let [ctx (cond-> ctx
+    (let [ctx (edd-ctx/init-features ctx)
+          ctx (cond-> ctx
                 request-id (assoc :request-id request-id)
                 interaction-id (assoc :interaction-id interaction-id))
           resp (if (contains? cmd :commands)
@@ -495,9 +497,10 @@
 
 (defn query
   [ctx query]
-  (if (contains? query :query)
-    (query/handle-query ctx (re-parse query))
-    (query/handle-query ctx (re-parse {:query query}))))
+  (let [ctx (edd-ctx/init-features ctx)]
+    (if (contains? query :query)
+      (query/handle-query ctx (re-parse query))
+      (query/handle-query ctx (re-parse {:query query})))))
 
 (defn get-by-id
   "Retrieves aggregate by ID using event sourcing (replays events).

@@ -197,8 +197,36 @@ If this is not the case then user wil receive anonymous role:
           :role :anonymous}}
 ```
 
+## Authorization
 
+The `edd-core-security` module adds role-based authorization on top of
+authentication. Policies are AWS-IAM-style data with Malli conditions,
+compiled at startup and evaluated before every command and top-level query:
 
+```
+(security/register ctx
+  :policies [{:description "am can create orders"
+              :principal {:role :account-manager}
+              :effect :allow
+              :action :create-*}])
+```
+
+Alternatively — exclusively, not combined with `:policies` — authorization is
+declared inline on each registration and compiled into the same policies at
+startup:
+
+```
+(edd/reg-cmd ctx :approve-order handler
+  :auth {:role [:supervisor :admin]
+         :fn (fn [ctx cmd] boolean)})
+```
+
+Everything not explicitly allowed is denied — including `:non-interactive`
+(service-to-service) traffic, which needs its own allow policy to keep
+effects and workflows running. Inline `:auth` is only enforced once
+`security/register` is called.
+See `modules/edd-core-security/README.md` for the policy format, condition
+env, evaluation order and audit-mode rollout.
 
 # How to test
 

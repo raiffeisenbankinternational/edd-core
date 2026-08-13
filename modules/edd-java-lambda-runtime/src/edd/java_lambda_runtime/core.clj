@@ -12,6 +12,7 @@
    [lambda.uuid :as uuid]
    [lambda.request :as request]
    [edd.core :as edd]
+   [edd.ctx :as edd-ctx]
    [edd.el.cmd :as el-cmd]
    [edd.memory.view-store :as memory-view-store]
    [edd.memory.event-store :as memory-event-store]
@@ -63,7 +64,11 @@
     (swap! init-cache assoc :metrics-started true)))
 
 (defn- warm-up-ctx [ctx]
+  ;; Warm-up traffic is infrastructure: registered features (e.g. security
+  ;; filters and their deps) must not run against the synthetic warmup-cmd,
+  ;; which is registered after init-features and would be denied.
   (-> ctx
+      (update :edd-core dissoc :features)
       (assoc :meta {:realm :warmup})
       (memory-view-store/register)
       (memory-event-store/register)
@@ -130,35 +135,38 @@
   [init-ctx handler & {:keys [filters post-filter]
                        :or   {filters     []
                               post-filter (fn [ctx] ctx)}}]
-  (fn [_this input output ^Context lambda-context]
-    ;; :scoped enables the per-invocation caches (see lambda.request/is-scoped).
-    ;; Without it edd.el.query/with-cache short circuits and every remote
-    ;; dependency is fetched over HTTP again, even when the resolved query is
-    ;; identical. The custom runtime sets it in aws.lambda/lambda-custom-runtime.
-    (binding [util/*cache* init-cache
-              request/*request* (atom {:scoped true})
-              log-state/*invocation-start-ns* (System/nanoTime)]
-      (let [request
-            {:body (util/to-edn (slurp input))}
+  ;; Features (edd/reg-feature) are compiled once here, mirroring
+  ;; lambda.core/start for the custom runtime.
+  (let [init-ctx (edd-ctx/init-features init-ctx)]
+    (fn [_this input output ^Context lambda-context]
+      ;; :scoped enables the per-invocation caches (see lambda.request/is-scoped).
+      ;; Without it edd.el.query/with-cache short circuits and every remote
+      ;; dependency is fetched over HTTP again, even when the resolved query is
+      ;; identical. The custom runtime sets it in aws.lambda/lambda-custom-runtime.
+      (binding [util/*cache* init-cache
+                request/*request* (atom {:scoped true})
+                log-state/*invocation-start-ns* (System/nanoTime)]
+        (let [request
+              {:body (util/to-edn (slurp input))}
 
-            ctx
-            (-> init-ctx
-                (assoc :filters filters
-                       :handler handler
-                       :post-filter post-filter
-                       :aws (cached-aws init-ctx)
-                       :aws-ctx-initialized true)
-                (lambda-ctx/init)
-                (lambda/init-filters)
-                (assoc :from-api (lambda/is-from-api request)
-                       :invocation-id (uuid/parse (.getAwsRequestId lambda-context))))]
+              ctx
+              (-> init-ctx
+                  (assoc :filters filters
+                         :handler handler
+                         :post-filter post-filter
+                         :aws (cached-aws init-ctx)
+                         :aws-ctx-initialized true)
+                  (lambda-ctx/init)
+                  (lambda/init-filters)
+                  (assoc :from-api (lambda/is-from-api request)
+                         :invocation-id (uuid/parse (.getAwsRequestId lambda-context))))]
 
-        (ensure-metrics! ctx)
+          (ensure-metrics! ctx)
 
-        (lambda/send-response
-         (lambda/handle-request ctx request)
-         {:on-success-fn (fn [c r] (on-success c r output))
-          :on-error-fn   (fn [c r] (on-error c r output))})))))
+          (lambda/send-response
+           (lambda/handle-request ctx request)
+           {:on-success-fn (fn [c r] (on-success c r output))
+            :on-error-fn   (fn [c r] (on-error c r output))}))))))
 
 (defmacro start
   [ctx handler & other]
