@@ -5,6 +5,8 @@ on:
     - cron: "5 20 * * 6"
   push:
     branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
 jobs:
   sast:
     uses: raiffeisen/glms-gh-actions/.github/workflows/sast.yaml@main

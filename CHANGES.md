@@ -2,6 +2,8 @@
 
 ## Changes
 
+**[CARS-10269]** Update all deps
+
 **[AP-946]** Fix compliance to run for all stores
 
 **[AP-937]** Fix credentails caching
