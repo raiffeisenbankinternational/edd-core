@@ -2,12 +2,14 @@
 
 ## Changes
 
-**[CARS-10269]** Update all deps
+**[AP-982]** Add e2e tests for edd features
 
 **[AP-976]** Add features extension point
 We can use it to implement general extensions
 for edd-core application. We use security as
  referece implementation
+
+**[CARS-10269]** Update all deps
 
 **[AP-946]** Fix compliance to run for all stores
 

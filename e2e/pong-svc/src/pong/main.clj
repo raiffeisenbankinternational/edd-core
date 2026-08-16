@@ -6,23 +6,43 @@
             [edd.s3.view-store :as view-store]
             [edd.common :as common]
             [edd.core :as edd]
+            [edd.security :as security]
             [lambda.util :as util]
             [lambda.filters :as filters]))
 
 (def max-hops 5)
 
 ;; No-auth API filter for the E2E only: unlike lambda.filters/from-api it skips
-;; JWT/Cognito and takes realm + user straight from the request body.
+;; JWT/Cognito and takes realm + user straight from the request body. Mirrors
+;; assign-metadata semantics: an interactive :user lands in [:meta :user],
+;; without one the incoming :meta passes through untouched (m2m traffic).
 (def from-api-public
   {:cond (fn [{:keys [body]}]
            (contains? body :path))
    :fn (fn [{:keys [req] :as ctx}]
-         (let [request (util/to-edn (:body req))]
+         (let [request (util/to-edn (:body req))
+               user (:user request)]
            (assoc ctx
                   :from-api true
                   :body request
-                  :meta (:meta request)
-                  :user {:id "e2e" :role :non-interactive})))})
+                  :meta (if user
+                          (assoc (:meta request) :user user)
+                          (:meta request))
+                  :user (or user {:id "e2e" :role :non-interactive}))))})
+
+;; Effects arrive via SQS from the router; they run as the service's
+;; :non-interactive user regardless of who triggered the originating command.
+(def from-queue-non-interactive
+  (update filters/from-queue :fn
+          (fn [queue-fn]
+            (fn [ctx]
+              ;; stamp the request body's meta: handle-commands merges body
+              ;; meta over ctx meta, so a ctx-level stamp would lose to the
+              ;; origin user carried inside the effect payload
+              (assoc-in (queue-fn ctx)
+                        [:body :meta :user]
+                        {:id (name (:service-name ctx))
+                         :role :non-interactive})))))
 
 (defn current-dep
   [_deps cmd]
@@ -103,18 +123,26 @@
 (defn register [ctx]
   (-> ctx
       (assoc :service-name :pong-svc)
+      ;; effect-only: :pong is reachable only through the ping->pong effect
+      ;; chain, so the loop completing proves effects run as :non-interactive
       (edd/reg-cmd :pong cmd-pong
-                   :deps [:current current-dep])
+                   :deps [:current current-dep]
+                   :auth {:role :non-interactive})
       (edd/reg-cmd :combine cmd-combine
-                   :deps [:ping ping-value-dep])
-      (edd/reg-cmd :set-value cmd-set-value)
+                   :deps [:ping ping-value-dep]
+                   :auth {:role :e2e-tester})
+      (edd/reg-cmd :set-value cmd-set-value
+                   :auth {:role [:e2e-tester :non-interactive]})
       (edd/reg-event :ponged evt-ponged)
       (edd/reg-event :combined evt-combined)
       (edd/reg-event :value-set evt-value-set)
       (edd/reg-event-fx :ponged fx-ponged)
-      (edd/reg-query :get-by-id common/get-by-id)
+      (edd/reg-query :get-by-id common/get-by-id
+                     :auth {:role [:e2e-tester :non-interactive]})
       (edd/reg-query :summary query-summary
-                     :deps [:agg summary-dep])))
+                     :deps [:agg summary-dep]
+                     :auth {:role :e2e-tester})
+      (security/register)))
 
 (runtime/start
  (register (-> {}
@@ -122,6 +150,6 @@
                (view-store/register)))
  edd/handler
  :filters [from-api-public
-           filters/from-queue
+           from-queue-non-interactive
            filters/from-bucket]
  :post-filter filters/to-api)

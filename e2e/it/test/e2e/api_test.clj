@@ -15,6 +15,11 @@
 
 (def realm :test)
 
+(def default-user
+  "Services enforce inline :auth policies; requests act as this
+   interactive user unless a test overrides :user (:anonymous sends none)."
+  {:id "e2e" :role :e2e-tester})
+
 (defn post
   [path payload]
   (util/http-post (str api-url path)
@@ -23,23 +28,27 @@
                    :headers {"Content-Type" "application/json"}}))
 
 (defn cmd!
-  [svc cmd-id id attrs & {:keys [request-id version]}]
+  [svc cmd-id id attrs & {:keys [request-id version user]
+                          :or {user default-user}}]
   (post (str "/" svc "/commands")
-        {:request-id (or request-id (uuid/gen))
-         :interaction-id (uuid/gen)
-         :meta {:realm realm}
-         :commands [(cond-> {:cmd-id cmd-id
-                             :id id
-                             :attrs attrs}
-                      version (assoc :version version))]}))
+        (cond-> {:request-id (or request-id (uuid/gen))
+                 :interaction-id (uuid/gen)
+                 :meta {:realm realm}
+                 :commands [(cond-> {:cmd-id cmd-id
+                                     :id id
+                                     :attrs attrs}
+                              version (assoc :version version))]}
+          (not= user :anonymous) (assoc :user user))))
 
 (defn query
-  [svc q]
+  [svc q & {:keys [user]
+            :or {user default-user}}]
   (post (str "/" svc "/query")
-        {:request-id (uuid/gen)
-         :interaction-id (uuid/gen)
-         :meta {:realm realm}
-         :query q}))
+        (cond-> {:request-id (uuid/gen)
+                 :interaction-id (uuid/gen)
+                 :meta {:realm realm}
+                 :query q}
+          (not= user :anonymous) (assoc :user user))))
 
 (defn aggregate
   [svc id]
@@ -75,12 +84,85 @@
       (is
        (success? resp))
 
-      (let [agg
-            (wait-for #(= 5 (:hops %))
-                      #(aggregate "pong-svc" id))]
+      (testing "pong's :pong allows only :non-interactive, so completing the loop proves effects run as the non-interactive user"
+        (let [agg
+              (wait-for #(= 5 (:hops %))
+                        #(aggregate "pong-svc" id))]
 
-        (is
-         (= 5 (:hops agg)))))))
+          (is
+           (= 5 (:hops agg)))))
+
+      (testing "the same :pong command invoked directly via the API is Forbidden"
+        (let [denied
+              (cmd! "pong-svc" :pong id {:hops 0})]
+
+          (is
+           (= 500 (:status denied)))
+
+          (is
+           (= "Forbidden" (get-in denied [:body :error :message])))
+
+          (is
+           (= :implicit (get-in denied [:body :error :policy]))))))))
+
+(deftest authorization
+  (testing "a role listed in the command's :auth is allowed"
+    (is
+     (success? (cmd! "ping-svc" :set-value (uuid/gen) {:value "authorized"}))))
+
+  (testing "a role not listed in the command's :auth is denied"
+    (let [denied
+          (cmd! "ping-svc" :set-score (uuid/gen) {:score 1}
+                :user {:id "mallory" :role :intruder})]
+
+      (is
+       (= 500 (:status denied)))
+
+      (is
+       (= "Forbidden" (get-in denied [:body :error :message])))
+
+      (is
+       (= :set-score (get-in denied [:body :error :cmd-id])))
+
+      (is
+       (= :intruder (get-in denied [:body :error :role])))))
+
+  (testing "a request without any user is denied (deny by default)"
+    (let [denied
+          (cmd! "ping-svc" :set-value (uuid/gen) {:value "anon"}
+                :user :anonymous)]
+
+      (is
+       (= 500 (:status denied)))
+
+      (is
+       (= "Forbidden" (get-in denied [:body :error :message])))))
+
+  (testing ":auth :fn is ANDed with the role: right role, failing predicate"
+    (let [denied
+          (cmd! "ping-svc" :broadcast (uuid/gen)
+                {:ping-target (uuid/gen)
+                 :pong-target (uuid/gen)
+                 :value "x"}
+                :user {:id "mallory" :role :e2e-tester})]
+
+      (is
+       (= 500 (:status denied)))
+
+      (is
+       (= "Forbidden" (get-in denied [:body :error :message])))))
+
+  (testing "a query with :auth denies a role that is not listed"
+    (let [denied
+          (query "ping-svc" {:query-id :summary
+                             :id (uuid/gen)}
+                 :user {:id "mallory" :role :intruder})]
+
+      (is
+       (= 500 (:status denied)))
+
+      (is
+       (= "Forbidden" (get-in denied [:body :exception :message]))))))
 
 (deftest s3-bucket-filter
   (testing "a file uploaded to the import bucket becomes an :object-uploaded command"
